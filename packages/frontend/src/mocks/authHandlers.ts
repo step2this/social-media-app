@@ -43,6 +43,16 @@ const mockTokens = new Map<string, {
   expiresAt: string;
 }>();
 
+// Helper function to generate a valid UUID v4 format
+const generateMockUUID = (): string => {
+  // Generate UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 // Helper function to generate mock tokens
 const generateMockTokens = (userId: string): AuthTokens => {
   const accessToken = `mock_access_${userId}_${Date.now()}`;
@@ -175,7 +185,7 @@ export const authHandlers = [
       }
 
       // Create new user
-      const userId = `user_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+      const userId = generateMockUUID();
       const now = new Date().toISOString();
 
       const newUser = {
@@ -199,8 +209,7 @@ export const authHandlers = [
           username: newUser.username,
           fullName: newUser.fullName,
           emailVerified: newUser.emailVerified,
-          createdAt: newUser.createdAt,
-          updatedAt: newUser.updatedAt
+          createdAt: newUser.createdAt
         }
       };
 
