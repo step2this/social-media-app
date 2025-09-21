@@ -277,6 +277,25 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
     },
 
     /**
+     * Development utilities (only available in development mode)
+     */
+    dev: import.meta.env.DEV ? {
+      /**
+       * Clear all mock data (users and tokens)
+       */
+      clearMockData: async (): Promise<{ message: string; cleared: { users: number; tokens: number } }> => {
+        return sendRequest('/dev/reset-mock-data', { method: 'DELETE' });
+      },
+
+      /**
+       * List all mock users
+       */
+      listMockUsers: async (): Promise<{ users: Array<{ id: string; email: string; username: string; fullName?: string; createdAt: string }>; count: number }> => {
+        return sendRequest('/dev/users', { method: 'GET' });
+      }
+    } : undefined,
+
+    /**
      * Authentication API methods
      */
     auth: {

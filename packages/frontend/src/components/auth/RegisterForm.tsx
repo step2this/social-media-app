@@ -159,6 +159,17 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         {error && (
           <div className="error-message" role="alert">
             {error}
+            {(error.includes('email already exists') || error.includes('username already exists')) && (
+              <div className="error-help">
+                <p>
+                  <strong>Development tip:</strong> You can clear mock data by running:
+                </p>
+                <code>
+                  fetch('http://localhost:3001/dev/reset-mock-data', {'{ method: \'DELETE\' }'})
+                </code>
+                <p>in your browser console, or refresh the page to start fresh.</p>
+              </div>
+            )}
           </div>
         )}
 

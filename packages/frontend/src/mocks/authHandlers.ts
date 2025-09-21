@@ -7,7 +7,8 @@ import {
   LogoutRequestSchema,
   RefreshTokenRequestSchema,
   RefreshTokenResponseSchema,
-  UserProfileResponseSchema,
+  GetProfileResponseSchema,
+  UpdateProfileResponseSchema,
   UpdateProfileRequestSchema,
   type RegisterRequest,
   type RegisterResponse,
@@ -16,8 +17,9 @@ import {
   type RefreshTokenRequest,
   type RefreshTokenResponse,
   type UserProfile,
-  type UserProfileResponse,
+  type GetProfileResponse,
   type UpdateProfileRequest,
+  type UpdateProfileResponse,
   type AuthTokens
 } from '@social-media-app/shared';
 
@@ -45,7 +47,8 @@ const mockTokens = new Map<string, {
 const generateMockTokens = (userId: string): AuthTokens => {
   const accessToken = `mock_access_${userId}_${Date.now()}`;
   const refreshToken = `mock_refresh_${userId}_${Date.now()}`;
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+  const expiresIn = 3600; // 1 hour in seconds
+  const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString(); // For internal tracking
 
   mockTokens.set(accessToken, {
     userId,
@@ -57,7 +60,7 @@ const generateMockTokens = (userId: string): AuthTokens => {
   return {
     accessToken,
     refreshToken,
-    expiresAt
+    expiresIn
   };
 };
 
@@ -95,6 +98,56 @@ const addDelay = (min = 200, max = 800) =>
  * Authentication mock handlers for development mode
  */
 export const authHandlers = [
+  // Development helper endpoint to reset mock data
+  http.delete('http://localhost:3001/dev/reset-mock-data', async () => {
+    mockUsers.clear();
+    mockTokens.clear();
+    await addDelay(50, 100);
+
+    return HttpResponse.json(
+      {
+        message: 'Mock data cleared successfully',
+        cleared: {
+          users: 0,
+          tokens: 0
+        }
+      },
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
+      }
+    );
+  }),
+
+  // Development helper endpoint to list existing mock users
+  http.get('http://localhost:3001/dev/users', async () => {
+    const users = Array.from(mockUsers.values()).map(user => ({
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      fullName: user.fullName,
+      createdAt: user.createdAt
+    }));
+
+    await addDelay(50, 100);
+
+    return HttpResponse.json(
+      {
+        users,
+        count: users.length
+      },
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
+      }
+    );
+  }),
   // Register endpoint
   http.post('http://localhost:3001/auth/register', async ({ request }) => {
     try {
@@ -364,7 +417,7 @@ export const authHandlers = [
         );
       }
 
-      const response: UserProfileResponse = {
+      const response: GetProfileResponse = {
         user: {
           id: fullUser.id,
           email: fullUser.email,
@@ -376,7 +429,7 @@ export const authHandlers = [
         }
       };
 
-      const validatedResponse = UserProfileResponseSchema.parse(response);
+      const validatedResponse = GetProfileResponseSchema.parse(response);
       await addDelay(100, 300);
 
       return HttpResponse.json(validatedResponse, {
@@ -446,7 +499,7 @@ export const authHandlers = [
 
       mockUsers.set(user.id, updatedUser);
 
-      const response: UserProfileResponse = {
+      const response: UpdateProfileResponse = {
         user: {
           id: updatedUser.id,
           email: updatedUser.email,
@@ -458,7 +511,7 @@ export const authHandlers = [
         }
       };
 
-      const validatedResponse = UserProfileResponseSchema.parse(response);
+      const validatedResponse = UpdateProfileResponseSchema.parse(response);
       await addDelay(200, 400);
 
       return HttpResponse.json(validatedResponse, {
