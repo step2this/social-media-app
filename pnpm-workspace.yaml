@@ -1,0 +1,4 @@
+packages:
+  - 'packages/*'
+  - 'infrastructure'
+  - 'e2e'

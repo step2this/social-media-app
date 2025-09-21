@@ -1,0 +1,45 @@
+{
+  "name": "social-media-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Full-stack social media application with ESM, TypeScript, and AWS",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "test:unit": "pnpm -r test:unit",
+    "test:integration": "pnpm -r test:integration",
+    "test:e2e": "pnpm -r test:e2e",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "dev": "pnpm -r --parallel dev",
+    "clean": "pnpm -r clean",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-functional": "^6.0.0",
+    "husky": "^8.0.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}

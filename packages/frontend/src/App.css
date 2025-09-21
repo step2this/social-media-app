@@ -1,0 +1,79 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.app-header {
+  width: 100%;
+}
+
+.app-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.app-main {
+  width: 100%;
+  max-width: 600px;
+}
+
+.hello-world {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.hello-form {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.hello-input {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  min-width: 200px;
+}
+
+.hello-button {
+  padding: 0.5rem 1.5rem;
+  font-size: 1rem;
+  background-color: #0070f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.hello-button:hover {
+  background-color: #0051cc;
+}
+
+.hello-button:disabled {
+  background-color: #666;
+  cursor: not-allowed;
+}
+
+.hello-response {
+  padding: 1.5rem;
+  background-color: rgba(0, 112, 243, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 112, 243, 0.3);
+}
+
+.hello-response h2 {
+  margin-bottom: 0.5rem;
+}
+
+.error-message {
+  padding: 1rem;
+  background-color: rgba(243, 0, 0, 0.1);
+  border: 1px solid rgba(243, 0, 0, 0.3);
+  border-radius: 4px;
+  color: #ff6b6b;
+}
