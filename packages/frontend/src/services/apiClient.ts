@@ -1,4 +1,31 @@
-import { HelloRequestSchema, HelloResponseSchema, type HelloRequest, type HelloResponse } from '@social-media-app/shared';
+import {
+  HelloRequestSchema,
+  HelloResponseSchema,
+  RegisterRequestSchema,
+  RegisterResponseSchema,
+  LoginRequestSchema,
+  LoginResponseSchema,
+  RefreshTokenRequestSchema,
+  RefreshTokenResponseSchema,
+  LogoutRequestSchema,
+  LogoutResponseSchema,
+  UpdateProfileRequestSchema,
+  UpdateProfileResponseSchema,
+  GetProfileResponseSchema,
+  type HelloRequest,
+  type HelloResponse,
+  type RegisterRequest,
+  type RegisterResponse,
+  type LoginRequest,
+  type LoginResponse,
+  type RefreshTokenRequest,
+  type RefreshTokenResponse,
+  type LogoutRequest,
+  type LogoutResponse,
+  type UpdateProfileRequest,
+  type UpdateProfileResponse,
+  type GetProfileResponse
+} from '@social-media-app/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -67,13 +94,76 @@ const sleep = (ms: number): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, ms));
 
 /**
+ * Token storage interface
+ */
+interface TokenStorage {
+  getAccessToken: () => string | null;
+  getRefreshToken: () => string | null;
+  setTokens: (accessToken: string, refreshToken: string) => void;
+  clearTokens: () => void;
+}
+
+/**
+ * Default token storage using localStorage
+ */
+const defaultTokenStorage: TokenStorage = {
+  getAccessToken: () => {
+    try {
+      const authStorage = localStorage.getItem('auth-storage');
+      if (!authStorage) return null;
+      const parsed = JSON.parse(authStorage);
+      return parsed.state?.tokens?.accessToken || null;
+    } catch {
+      return null;
+    }
+  },
+  getRefreshToken: () => {
+    try {
+      const authStorage = localStorage.getItem('auth-storage');
+      if (!authStorage) return null;
+      const parsed = JSON.parse(authStorage);
+      return parsed.state?.tokens?.refreshToken || null;
+    } catch {
+      return null;
+    }
+  },
+  setTokens: (accessToken: string, refreshToken: string) => {
+    try {
+      const authStorage = localStorage.getItem('auth-storage');
+      if (authStorage) {
+        const parsed = JSON.parse(authStorage);
+        parsed.state.tokens = { accessToken, refreshToken, expiresIn: 900 };
+        localStorage.setItem('auth-storage', JSON.stringify(parsed));
+      }
+    } catch {
+      // Handle storage errors gracefully
+    }
+  },
+  clearTokens: () => {
+    try {
+      const authStorage = localStorage.getItem('auth-storage');
+      if (authStorage) {
+        const parsed = JSON.parse(authStorage);
+        parsed.state.tokens = null;
+        parsed.state.user = null;
+        parsed.state.isAuthenticated = false;
+        localStorage.setItem('auth-storage', JSON.stringify(parsed));
+      }
+    } catch {
+      // Handle storage errors gracefully
+    }
+  }
+};
+
+/**
  * Functional API client with automatic validation, retry logic, and comprehensive error handling
  */
-const createApiClient = () => {
+const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
   const sendRequest = async <T>(
     endpoint: string,
     options: RequestInit = {},
-    retryConfig: RetryConfig = defaultRetryConfig
+    retryConfig: RetryConfig = defaultRetryConfig,
+    includeAuth: boolean = false
   ): Promise<T> => {
     let lastError: unknown;
 
@@ -82,12 +172,23 @@ const createApiClient = () => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
+        // Prepare headers
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          ...options.headers as Record<string, string>
+        };
+
+        // Add authorization header if needed
+        if (includeAuth) {
+          const accessToken = tokenStorage.getAccessToken();
+          if (accessToken) {
+            headers.Authorization = `Bearer ${accessToken}`;
+          }
+        }
+
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
           ...options,
-          headers: {
-            'Content-Type': 'application/json',
-            ...options.headers
-          },
+          headers,
           signal: controller.signal
         });
 
@@ -173,6 +274,125 @@ const createApiClient = () => {
      */
     healthCheck: async (): Promise<{ status: string; timestamp: string; service: string }> => {
       return sendRequest('/health', { method: 'GET' });
+    },
+
+    /**
+     * Authentication API methods
+     */
+    auth: {
+      register: async (request: RegisterRequest): Promise<RegisterResponse> => {
+        try {
+          const validatedRequest = RegisterRequestSchema.parse(request);
+          const response = await sendRequest<RegisterResponse>('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify(validatedRequest)
+          });
+          return RegisterResponseSchema.parse(response);
+        } catch (error) {
+          if (error?.name === 'ZodError') {
+            throw new ValidationError('Request validation failed', error.errors);
+          }
+          throw error;
+        }
+      },
+
+      login: async (request: LoginRequest): Promise<LoginResponse> => {
+        try {
+          const validatedRequest = LoginRequestSchema.parse(request);
+          const response = await sendRequest<LoginResponse>('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify(validatedRequest)
+          });
+          const validatedResponse = LoginResponseSchema.parse(response);
+
+          // Store tokens after successful login
+          tokenStorage.setTokens(
+            validatedResponse.tokens.accessToken,
+            validatedResponse.tokens.refreshToken
+          );
+
+          return validatedResponse;
+        } catch (error) {
+          if (error?.name === 'ZodError') {
+            throw new ValidationError('Request validation failed', error.errors);
+          }
+          throw error;
+        }
+      },
+
+      refreshToken: async (request: RefreshTokenRequest): Promise<RefreshTokenResponse> => {
+        try {
+          const validatedRequest = RefreshTokenRequestSchema.parse(request);
+          const response = await sendRequest<RefreshTokenResponse>('/auth/refresh', {
+            method: 'POST',
+            body: JSON.stringify(validatedRequest)
+          });
+          const validatedResponse = RefreshTokenResponseSchema.parse(response);
+
+          // Update stored tokens
+          tokenStorage.setTokens(
+            validatedResponse.tokens.accessToken,
+            validatedResponse.tokens.refreshToken
+          );
+
+          return validatedResponse;
+        } catch (error) {
+          if (error?.name === 'ZodError') {
+            throw new ValidationError('Request validation failed', error.errors);
+          }
+          throw error;
+        }
+      },
+
+      logout: async (request: LogoutRequest): Promise<LogoutResponse> => {
+        try {
+          const validatedRequest = LogoutRequestSchema.parse(request);
+          const response = await sendRequest<LogoutResponse>('/auth/logout', {
+            method: 'POST',
+            body: JSON.stringify(validatedRequest)
+          }, defaultRetryConfig, true); // Include auth header
+
+          const validatedResponse = LogoutResponseSchema.parse(response);
+
+          // Clear stored tokens after successful logout
+          tokenStorage.clearTokens();
+
+          return validatedResponse;
+        } catch (error) {
+          // Clear tokens even if logout fails
+          tokenStorage.clearTokens();
+
+          if (error?.name === 'ZodError') {
+            throw new ValidationError('Request validation failed', error.errors);
+          }
+          throw error;
+        }
+      },
+
+      getProfile: async (): Promise<GetProfileResponse> => {
+        const response = await sendRequest<GetProfileResponse>('/auth/profile', {
+          method: 'GET'
+        }, defaultRetryConfig, true); // Include auth header
+
+        return GetProfileResponseSchema.parse(response);
+      },
+
+      updateProfile: async (request: UpdateProfileRequest): Promise<UpdateProfileResponse> => {
+        try {
+          const validatedRequest = UpdateProfileRequestSchema.parse(request);
+          const response = await sendRequest<UpdateProfileResponse>('/auth/profile', {
+            method: 'PUT',
+            body: JSON.stringify(validatedRequest)
+          }, defaultRetryConfig, true); // Include auth header
+
+          return UpdateProfileResponseSchema.parse(response);
+        } catch (error) {
+          if (error?.name === 'ZodError') {
+            throw new ValidationError('Request validation failed', error.errors);
+          }
+          throw error;
+        }
+      }
     }
   };
 };

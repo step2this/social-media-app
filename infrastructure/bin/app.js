@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import 'source-map-support/register';
 import { App } from 'aws-cdk-lib';
 import { ApiStack } from '../lib/stacks/api-stack.js';
 import { FrontendStack } from '../lib/stacks/frontend-stack.js';
