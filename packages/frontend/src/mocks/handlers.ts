@@ -1,10 +1,13 @@
 import { http, HttpResponse } from 'msw';
 import { HelloRequestSchema, HelloResponseSchema, type HelloRequest, type HelloResponse } from '@social-media-app/shared';
+import { authHandlers } from './authHandlers.js';
 
 /**
  * Mock API handlers for development mode
  */
 export const handlers = [
+  // Authentication handlers
+  ...authHandlers,
   // Hello endpoint handler
   http.post('http://localhost:3001/hello', async ({ request }) => {
     try {
