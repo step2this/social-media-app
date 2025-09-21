@@ -1,0 +1,30 @@
+#!/usr/bin/env node
+import 'source-map-support/register';
+import { App } from 'aws-cdk-lib';
+import { ApiStack } from '../lib/stacks/api-stack.js';
+import { FrontendStack } from '../lib/stacks/frontend-stack.js';
+const app = new App();
+const environment = app.node.tryGetContext('environment') || 'dev';
+const stackPrefix = `SocialMediaApp-${environment}`;
+// Create API Stack with Lambda functions
+const apiStack = new ApiStack(app, `${stackPrefix}-Api`, {
+    env: {
+        account: process.env.CDK_DEFAULT_ACCOUNT,
+        region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
+    },
+    environment,
+    description: 'API stack with Lambda functions and API Gateway'
+});
+// Create Frontend Stack with S3 and CloudFront
+const frontendStack = new FrontendStack(app, `${stackPrefix}-Frontend`, {
+    env: {
+        account: process.env.CDK_DEFAULT_ACCOUNT,
+        region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
+    },
+    environment,
+    apiUrl: apiStack.apiUrl,
+    description: 'Frontend stack with S3 and CloudFront'
+});
+frontendStack.addDependency(apiStack);
+app.synth();
+//# sourceMappingURL=app.js.map

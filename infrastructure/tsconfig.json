@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": ".",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "target": "ES2022",
+    "moduleResolution": "bundler"
+  },
+  "include": ["lib/**/*.ts", "bin/**/*.ts"],
+  "exclude": ["node_modules", "cdk.out", "**/*.test.ts", "**/*.spec.ts"]
+}
