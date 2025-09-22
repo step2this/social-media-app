@@ -39,15 +39,28 @@ export class ApiStack extends Stack {
     const httpApi = new apigateway.HttpApi(this, 'HttpApi', {
       apiName: `social-media-app-api-${props.environment}`,
       corsPreflight: {
-        allowOrigins: ['*'],
+        allowOrigins: props.environment === 'prod'
+          ? ['https://yourdomain.com'] // Replace with actual production domain when available
+          : ['http://localhost:3000', 'http://localhost:5173'], // Development origins
         allowMethods: [
           apigateway.CorsHttpMethod.GET,
           apigateway.CorsHttpMethod.POST,
           apigateway.CorsHttpMethod.PUT,
           apigateway.CorsHttpMethod.DELETE,
-          apigateway.CorsHttpMethod.OPTIONS
+          apigateway.CorsHttpMethod.OPTIONS,
+          apigateway.CorsHttpMethod.PATCH
         ],
-        allowHeaders: ['Content-Type', 'Authorization']
+        allowHeaders: [
+          'Content-Type',
+          'Authorization',
+          'X-Amz-Date',
+          'X-Api-Key',
+          'X-Amz-Security-Token',
+          'X-Correlation-Id'
+        ],
+        exposeHeaders: ['X-Correlation-Id'],
+        allowCredentials: false,
+        maxAge: Duration.hours(1)
       }
     });
 
@@ -58,6 +71,27 @@ export class ApiStack extends Stack {
       integration: new apigatewayIntegrations.HttpLambdaIntegration(
         'HelloIntegration',
         helloLambda
+      )
+    });
+
+    // Add explicit OPTIONS route for CORS debugging
+    // This helps with preflight request debugging and ensures proper CORS headers
+    httpApi.addRoutes({
+      path: '/{proxy+}',
+      methods: [apigateway.HttpMethod.OPTIONS],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'OptionsIntegration',
+        helloLambda, // Temporary - will be replaced when CORS handler is created
+        {
+          responseParameters: {
+            'overwrite:header.Access-Control-Allow-Origin': props.environment === 'prod'
+              ? 'https://yourdomain.com'
+              : '*',
+            'overwrite:header.Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,X-Correlation-Id',
+            'overwrite:header.Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
+            'overwrite:header.Access-Control-Max-Age': '3600'
+          }
+        }
       )
     });
 

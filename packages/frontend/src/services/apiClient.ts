@@ -44,6 +44,13 @@ export class ApiError extends Error {
   }
 }
 
+export class CorsError extends ApiError {
+  constructor(message: string, public origin?: string, public requestedUrl?: string) {
+    super(`CORS Error: ${message}`, undefined, 'CORS_ERROR');
+    this.name = 'CorsError';
+  }
+}
+
 export class NetworkError extends ApiError {
   constructor(message: string, public originalError?: unknown) {
     super(message, undefined, 'NETWORK_ERROR');
@@ -159,6 +166,12 @@ const defaultTokenStorage: TokenStorage = {
  * Functional API client with automatic validation, retry logic, and comprehensive error handling
  */
 const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
+  // Validate API configuration at startup
+  if (!API_BASE_URL || API_BASE_URL.includes('yourdomain.com')) {
+    console.warn('⚠️  API URL not properly configured. Using:', API_BASE_URL);
+    console.warn('💡 Set VITE_API_URL environment variable to the correct API Gateway URL');
+  }
+
   const sendRequest = async <T>(
     endpoint: string,
     options: RequestInit = {},
@@ -219,15 +232,25 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
       } catch (error) {
         lastError = error;
 
-        // Handle network errors
+        // Handle network errors and CORS issues
         if (error instanceof TypeError || error.name === 'AbortError') {
-          const networkError = new NetworkError(
-            error.name === 'AbortError'
-              ? 'Request timeout'
-              : 'Network connection failed',
-            error
-          );
-          lastError = networkError;
+          // Check if this is a CORS error
+          if (error.message.includes('CORS') || error.message.includes('fetch')) {
+            const corsError = new CorsError(
+              `Failed to connect to API. This might be a CORS issue. Check that VITE_API_URL (${API_BASE_URL}) is correct and accessible.`,
+              window.location.origin,
+              `${API_BASE_URL}${endpoint}`
+            );
+            lastError = corsError;
+          } else {
+            const networkError = new NetworkError(
+              error.name === 'AbortError'
+                ? 'Request timeout'
+                : 'Network connection failed',
+              error
+            );
+            lastError = networkError;
+          }
         }
 
         // Check if we should retry
