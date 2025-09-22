@@ -3,14 +3,17 @@ import type { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigatewayv2';
 import * as apigatewayIntegrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { AuthLambdas } from '../constructs/auth-lambdas.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 interface ApiStackProps extends StackProps {
   environment: string;
+  table: dynamodb.Table;
 }
 
 export class ApiStack extends Stack {
@@ -33,6 +36,12 @@ export class ApiStack extends Stack {
         NODE_ENV: props.environment,
         LOG_LEVEL: props.environment === 'prod' ? 'warn' : 'debug'
       }
+    });
+
+    // Create authentication Lambda functions
+    const authLambdas = new AuthLambdas(this, 'AuthLambdas', {
+      environment: props.environment,
+      table: props.table
     });
 
     // Create HTTP API Gateway
@@ -71,6 +80,58 @@ export class ApiStack extends Stack {
       integration: new apigatewayIntegrations.HttpLambdaIntegration(
         'HelloIntegration',
         helloLambda
+      )
+    });
+
+    // Add authentication routes
+
+    // Register endpoint
+    httpApi.addRoutes({
+      path: '/auth/register',
+      methods: [apigateway.HttpMethod.POST],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'RegisterIntegration',
+        authLambdas.registerFunction
+      )
+    });
+
+    // Login endpoint
+    httpApi.addRoutes({
+      path: '/auth/login',
+      methods: [apigateway.HttpMethod.POST],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'LoginIntegration',
+        authLambdas.loginFunction
+      )
+    });
+
+    // Logout endpoint (requires authentication)
+    httpApi.addRoutes({
+      path: '/auth/logout',
+      methods: [apigateway.HttpMethod.POST],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'LogoutIntegration',
+        authLambdas.logoutFunction
+      )
+    });
+
+    // Refresh token endpoint
+    httpApi.addRoutes({
+      path: '/auth/refresh',
+      methods: [apigateway.HttpMethod.POST],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'RefreshIntegration',
+        authLambdas.refreshFunction
+      )
+    });
+
+    // Profile endpoints (requires authentication)
+    httpApi.addRoutes({
+      path: '/auth/profile',
+      methods: [apigateway.HttpMethod.GET, apigateway.HttpMethod.PUT],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'ProfileIntegration',
+        authLambdas.profileFunction
       )
     });
 
