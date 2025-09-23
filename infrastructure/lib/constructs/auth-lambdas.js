@@ -1,5 +1,6 @@
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Duration } from 'aws-cdk-lib';
 import * as path from 'path';
@@ -23,47 +24,60 @@ export class AuthLambdas extends Construct {
             JWT_EXPIRES_IN: '900', // 15 minutes in seconds
             REFRESH_TOKEN_EXPIRES_IN: '2592000' // 30 days in seconds
         };
-        // Common Lambda configuration
+        // Common NodejsFunction configuration for proper bundling
         const commonConfig = {
             runtime: lambda.Runtime.NODEJS_20_X,
             timeout: Duration.seconds(30),
             memorySize: 512,
             environment: commonEnv,
-            code: lambda.Code.fromAsset(path.join(__dirname, '../../../packages/backend/dist/handlers'))
+            // Point to project root for workspace dependency resolution
+            projectRoot: path.join(__dirname, '../../../'),
+            depsLockFilePath: path.join(__dirname, '../../../pnpm-lock.yaml'),
+            bundling: {
+                format: OutputFormat.ESM,
+                target: 'es2022',
+                platform: 'node',
+                mainFields: ['module', 'main']
+            }
         };
         // Register Lambda
-        this.registerFunction = new lambda.Function(this, 'RegisterFunction', {
+        this.registerFunction = new NodejsFunction(this, 'RegisterFunction', {
             ...commonConfig,
             functionName: `social-media-app-register-${props.environment}`,
-            handler: 'auth/register.handler',
+            entry: path.join(__dirname, '../../../packages/backend/src/handlers/auth/register.ts'),
+            handler: 'handler',
             description: 'User registration handler'
         });
         // Login Lambda
-        this.loginFunction = new lambda.Function(this, 'LoginFunction', {
+        this.loginFunction = new NodejsFunction(this, 'LoginFunction', {
             ...commonConfig,
             functionName: `social-media-app-login-${props.environment}`,
-            handler: 'auth/login.handler',
+            entry: path.join(__dirname, '../../../packages/backend/src/handlers/auth/login.ts'),
+            handler: 'handler',
             description: 'User login handler'
         });
         // Logout Lambda
-        this.logoutFunction = new lambda.Function(this, 'LogoutFunction', {
+        this.logoutFunction = new NodejsFunction(this, 'LogoutFunction', {
             ...commonConfig,
             functionName: `social-media-app-logout-${props.environment}`,
-            handler: 'auth/logout.handler',
+            entry: path.join(__dirname, '../../../packages/backend/src/handlers/auth/logout.ts'),
+            handler: 'handler',
             description: 'User logout handler'
         });
         // Refresh Token Lambda
-        this.refreshFunction = new lambda.Function(this, 'RefreshFunction', {
+        this.refreshFunction = new NodejsFunction(this, 'RefreshFunction', {
             ...commonConfig,
             functionName: `social-media-app-refresh-${props.environment}`,
-            handler: 'auth/refresh.handler',
+            entry: path.join(__dirname, '../../../packages/backend/src/handlers/auth/refresh.ts'),
+            handler: 'handler',
             description: 'Token refresh handler'
         });
         // Profile Lambda
-        this.profileFunction = new lambda.Function(this, 'ProfileFunction', {
+        this.profileFunction = new NodejsFunction(this, 'ProfileFunction', {
             ...commonConfig,
             functionName: `social-media-app-profile-${props.environment}`,
-            handler: 'auth/profile.handler',
+            entry: path.join(__dirname, '../../../packages/backend/src/handlers/auth/profile.ts'),
+            handler: 'handler',
             description: 'User profile handler'
         });
         // Grant DynamoDB permissions to all auth Lambdas

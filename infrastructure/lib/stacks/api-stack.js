@@ -1,5 +1,6 @@
 import { Stack, CfnOutput, Duration } from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as apigateway from 'aws-cdk-lib/aws-apigatewayv2';
 import * as apigatewayIntegrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as path from 'path';
@@ -12,16 +13,24 @@ export class ApiStack extends Stack {
     constructor(scope, id, props) {
         super(scope, id, props);
         // Create Lambda function for Hello endpoint
-        const helloLambda = new lambda.Function(this, 'HelloFunction', {
+        const helloLambda = new NodejsFunction(this, 'HelloFunction', {
             functionName: `social-media-app-hello-${props.environment}`,
-            runtime: lambda.Runtime.NODEJS_20_X, // Node 22 not yet available in CDK
-            handler: 'hello.handler',
-            code: lambda.Code.fromAsset(path.join(__dirname, '../../../packages/backend/dist/handlers')),
+            runtime: lambda.Runtime.NODEJS_20_X,
+            entry: path.join(__dirname, '../../../packages/backend/src/handlers/hello.ts'),
+            handler: 'handler',
             timeout: Duration.seconds(30),
             memorySize: 512,
             environment: {
                 NODE_ENV: props.environment,
                 LOG_LEVEL: props.environment === 'prod' ? 'warn' : 'debug'
+            },
+            projectRoot: path.join(__dirname, '../../../'),
+            depsLockFilePath: path.join(__dirname, '../../../pnpm-lock.yaml'),
+            bundling: {
+                format: OutputFormat.ESM,
+                target: 'es2022',
+                platform: 'node',
+                mainFields: ['module', 'main']
             }
         });
         // Create authentication Lambda functions

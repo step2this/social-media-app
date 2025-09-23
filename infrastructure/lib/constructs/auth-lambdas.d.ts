@@ -1,16 +1,16 @@
 import { Construct } from 'constructs';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 interface AuthLambdasProps {
     environment: string;
     table: dynamodb.Table;
 }
 export declare class AuthLambdas extends Construct {
-    readonly registerFunction: lambda.Function;
-    readonly loginFunction: lambda.Function;
-    readonly logoutFunction: lambda.Function;
-    readonly refreshFunction: lambda.Function;
-    readonly profileFunction: lambda.Function;
+    readonly registerFunction: NodejsFunction;
+    readonly loginFunction: NodejsFunction;
+    readonly logoutFunction: NodejsFunction;
+    readonly refreshFunction: NodejsFunction;
+    readonly profileFunction: NodejsFunction;
     constructor(scope: Construct, id: string, props: AuthLambdasProps);
 }
 export {};
