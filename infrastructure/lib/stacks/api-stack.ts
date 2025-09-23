@@ -142,17 +142,7 @@ export class ApiStack extends Stack {
       methods: [apigateway.HttpMethod.OPTIONS],
       integration: new apigatewayIntegrations.HttpLambdaIntegration(
         'OptionsIntegration',
-        helloLambda, // Temporary - will be replaced when CORS handler is created
-        {
-          responseParameters: {
-            'overwrite:header.Access-Control-Allow-Origin': props.environment === 'prod'
-              ? 'https://yourdomain.com'
-              : '*',
-            'overwrite:header.Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,X-Correlation-Id',
-            'overwrite:header.Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS,PATCH',
-            'overwrite:header.Access-Control-Max-Age': '3600'
-          }
-        }
+        helloLambda // Temporary - will be replaced when CORS handler is created
       )
     });
 

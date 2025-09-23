@@ -35,7 +35,7 @@ export class AuthLambdas extends Construct {
     };
 
     // Common Lambda configuration
-    const commonConfig: Partial<lambda.FunctionProps> = {
+    const commonConfig = {
       runtime: lambda.Runtime.NODEJS_20_X,
       timeout: Duration.seconds(30),
       memorySize: 512,
