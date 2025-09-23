@@ -8,6 +8,8 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { AuthLambdas } from '../constructs/auth-lambdas.js';
+import { ProfileLambdas } from '../constructs/profile-lambdas.js';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,6 +17,8 @@ const __dirname = path.dirname(__filename);
 interface ApiStackProps extends StackProps {
   environment: string;
   table: dynamodb.Table;
+  mediaBucket: s3.Bucket;
+  cloudFrontDomain: string;
 }
 
 export class ApiStack extends Stack {
@@ -49,6 +53,14 @@ export class ApiStack extends Stack {
     const authLambdas = new AuthLambdas(this, 'AuthLambdas', {
       environment: props.environment,
       table: props.table
+    });
+
+    // Create profile and posts Lambda functions
+    const profileLambdas = new ProfileLambdas(this, 'ProfileLambdas', {
+      environment: props.environment,
+      table: props.table,
+      mediaBucket: props.mediaBucket,
+      cloudFrontDomain: props.cloudFrontDomain
     });
 
     // Create HTTP API Gateway
@@ -139,6 +151,70 @@ export class ApiStack extends Stack {
       integration: new apigatewayIntegrations.HttpLambdaIntegration(
         'ProfileIntegration',
         authLambdas.profileFunction
+      )
+    });
+
+    // Profile management endpoints
+
+    // Get public profile by handle
+    httpApi.addRoutes({
+      path: '/profile/{handle}',
+      methods: [apigateway.HttpMethod.GET],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'GetProfileIntegration',
+        profileLambdas.getProfile
+      )
+    });
+
+    // Update authenticated user profile
+    httpApi.addRoutes({
+      path: '/profile',
+      methods: [apigateway.HttpMethod.PUT],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'UpdateProfileIntegration',
+        profileLambdas.updateProfile
+      )
+    });
+
+    // Get presigned URL for uploads
+    httpApi.addRoutes({
+      path: '/profile/upload-url',
+      methods: [apigateway.HttpMethod.POST],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'GetUploadUrlIntegration',
+        profileLambdas.getUploadUrl
+      )
+    });
+
+    // Posts endpoints
+
+    // Create a new post
+    httpApi.addRoutes({
+      path: '/posts',
+      methods: [apigateway.HttpMethod.POST],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'CreatePostIntegration',
+        profileLambdas.createPost
+      )
+    });
+
+    // Get posts by user handle
+    httpApi.addRoutes({
+      path: '/profile/{handle}/posts',
+      methods: [apigateway.HttpMethod.GET],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'GetUserPostsIntegration',
+        profileLambdas.getUserPosts
+      )
+    });
+
+    // Delete a post
+    httpApi.addRoutes({
+      path: '/posts/{postId}',
+      methods: [apigateway.HttpMethod.DELETE],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'DeletePostIntegration',
+        profileLambdas.deletePost
       )
     });
 

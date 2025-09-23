@@ -4,6 +4,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute.js';
 import { AuthModal } from './components/auth/AuthModal.js';
 import { useAuth } from './hooks/useAuth.js';
 import { HelloWorld } from './components/HelloWorld';
+import { ProfilePage } from './components/profile/ProfilePage';
 import './App.css';
 
 function App() {
@@ -46,6 +47,10 @@ function App() {
               <ProtectedRoute requireAuth={true}>
                 <HelloWorld />
               </ProtectedRoute>
+            } />
+
+            <Route path="/profile/:handle" element={
+              <ProfilePage />
             } />
 
             <Route path="*" element={<Navigate to="/" replace />} />
