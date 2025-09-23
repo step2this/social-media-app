@@ -10,6 +10,9 @@
   },
   "scripts": {
     "build": "pnpm -r build",
+    "build:shared": "pnpm --filter @social-media-app/shared build",
+    "build:all": "pnpm build:shared && pnpm -r build",
+    "dev:frontend": "pnpm build:shared && pnpm --filter @social-media-app/frontend dev",
     "test": "pnpm -r test",
     "test:unit": "pnpm -r test:unit",
     "test:integration": "pnpm -r test:integration",

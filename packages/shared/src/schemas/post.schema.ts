@@ -1,46 +1,56 @@
 import { z } from 'zod';
+import {
+  UUIDField,
+  URLField,
+  OptionalCaptionField,
+  TagsArrayField,
+  OptionalTagsArrayField,
+  CountField,
+  TimestampField,
+  PaginationRequestSchema,
+  PaginationResponseSchema,
+  SuccessResponseSchema
+} from './base.schema.js';
 
 /**
  * Post entity schema
  */
 export const PostSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().uuid(),
+  id: UUIDField,
+  userId: UUIDField,
   userHandle: z.string(),
-  imageUrl: z.string().url(),
-  thumbnailUrl: z.string().url(),
-  caption: z.string().max(2200).optional(),
-  tags: z.array(z.string().max(50)).max(30).default([]),
-  likesCount: z.number().int().nonnegative().default(0),
-  commentsCount: z.number().int().nonnegative().default(0),
+  imageUrl: URLField,
+  thumbnailUrl: URLField,
+  caption: OptionalCaptionField,
+  tags: TagsArrayField,
+  likesCount: CountField,
+  commentsCount: CountField,
   isPublic: z.boolean().default(true),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime()
+  createdAt: TimestampField,
+  updatedAt: TimestampField
 });
 
 /**
  * Request schemas
  */
 export const CreatePostRequestSchema = z.object({
-  caption: z.string().max(2200).trim().optional(),
-  tags: z.array(z.string().max(50).trim()).max(30).optional(),
+  caption: OptionalCaptionField,
+  tags: OptionalTagsArrayField,
   isPublic: z.boolean().optional()
 });
 
 export const UpdatePostRequestSchema = z.object({
-  caption: z.string().max(2200).trim().optional(),
-  tags: z.array(z.string().max(50).trim()).max(30).optional(),
+  caption: OptionalCaptionField,
+  tags: OptionalTagsArrayField,
   isPublic: z.boolean().optional()
 });
 
-export const GetUserPostsRequestSchema = z.object({
-  handle: z.string(),
-  limit: z.number().int().positive().max(100).default(24),
-  cursor: z.string().optional()
+export const GetUserPostsRequestSchema = PaginationRequestSchema.extend({
+  handle: z.string()
 });
 
 export const DeletePostRequestSchema = z.object({
-  postId: z.string().uuid()
+  postId: UUIDField
 });
 
 /**
@@ -52,20 +62,15 @@ export const PostResponseSchema = z.object({
 
 export const CreatePostResponseSchema = z.object({
   post: PostSchema,
-  uploadUrl: z.string().url(),
-  thumbnailUploadUrl: z.string().url()
+  uploadUrl: URLField,
+  thumbnailUploadUrl: URLField
 });
 
-export const PostsListResponseSchema = z.object({
-  posts: z.array(PostSchema),
-  nextCursor: z.string().optional(),
-  hasMore: z.boolean()
+export const PostsListResponseSchema = PaginationResponseSchema.extend({
+  posts: z.array(PostSchema)
 });
 
-export const DeletePostResponseSchema = z.object({
-  success: z.boolean(),
-  message: z.string()
-});
+export const DeletePostResponseSchema = SuccessResponseSchema;
 
 /**
  * Post grid item - minimal data for grid display
@@ -79,10 +84,8 @@ export const PostGridItemSchema = PostSchema.pick({
   createdAt: true
 });
 
-export const PostGridResponseSchema = z.object({
+export const PostGridResponseSchema = PaginationResponseSchema.extend({
   posts: z.array(PostGridItemSchema),
-  nextCursor: z.string().optional(),
-  hasMore: z.boolean(),
   totalCount: z.number().int().nonnegative()
 });
 

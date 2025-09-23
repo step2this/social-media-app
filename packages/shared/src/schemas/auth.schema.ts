@@ -1,4 +1,16 @@
 import { z } from 'zod';
+import {
+  OptionalFullNameField,
+  BioField,
+  OptionalURLField,
+  UUIDField,
+  TokenField,
+  PasswordTokenField,
+  RefreshTokenField,
+  VerificationTokenField,
+  ResetTokenField,
+  TimestampField
+} from './base.schema.js';
 
 /**
  * Common validation schemas for authentication
@@ -31,12 +43,12 @@ export const RegisterRequestSchema = z.object({
   email: EmailSchema,
   password: PasswordSchema,
   username: UsernameSchema,
-  fullName: z.string().min(1).max(100).trim().optional()
+  fullName: OptionalFullNameField
 });
 
 export const LoginRequestSchema = z.object({
   email: EmailSchema,
-  password: z.string().min(1, 'Password is required'),
+  password: PasswordTokenField,
   deviceInfo: z.object({
     userAgent: z.string().max(500).optional(),
     platform: z.string().max(50).optional()
@@ -44,11 +56,11 @@ export const LoginRequestSchema = z.object({
 });
 
 export const LogoutRequestSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required')
+  refreshToken: RefreshTokenField
 });
 
 export const RefreshTokenRequestSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required')
+  refreshToken: RefreshTokenField
 });
 
 export const PasswordResetRequestSchema = z.object({
@@ -56,39 +68,39 @@ export const PasswordResetRequestSchema = z.object({
 });
 
 export const PasswordResetConfirmSchema = z.object({
-  token: z.string().min(1, 'Reset token is required'),
+  token: ResetTokenField,
   newPassword: PasswordSchema
 });
 
 export const VerifyEmailRequestSchema = z.object({
-  token: z.string().min(1, 'Verification token is required')
+  token: VerificationTokenField
 });
 
-export const UpdateProfileRequestSchema = z.object({
-  fullName: z.string().min(1).max(100).trim().optional(),
-  bio: z.string().max(500).trim().optional(),
-  avatarUrl: z.string().url('Invalid avatar URL').optional()
+export const UpdateUserProfileRequestSchema = z.object({
+  fullName: OptionalFullNameField,
+  bio: BioField,
+  avatarUrl: OptionalURLField
 });
 
 /**
  * Response schemas
  */
 export const AuthTokensSchema = z.object({
-  accessToken: z.string().min(1),
-  refreshToken: z.string().min(1),
+  accessToken: TokenField,
+  refreshToken: RefreshTokenField,
   expiresIn: z.number().positive()
 });
 
 export const UserProfileSchema = z.object({
-  id: z.string().uuid(),
+  id: UUIDField,
   email: EmailSchema,
   username: UsernameSchema,
-  fullName: z.string().optional(),
-  bio: z.string().max(500).optional(),
-  avatarUrl: z.string().url().optional(),
+  fullName: OptionalFullNameField,
+  bio: BioField,
+  avatarUrl: OptionalURLField,
   emailVerified: z.boolean(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime()
+  createdAt: TimestampField,
+  updatedAt: TimestampField
 });
 
 export const RegisterResponseSchema = z.object({
@@ -138,7 +150,7 @@ export const GetProfileResponseSchema = z.object({
   user: UserProfileSchema
 });
 
-export const UpdateProfileResponseSchema = z.object({
+export const UpdateUserProfileResponseSchema = z.object({
   user: UserProfileSchema
 });
 
@@ -159,8 +171,8 @@ export type PasswordResetConfirm = z.infer<typeof PasswordResetConfirmSchema>;
 export type PasswordResetConfirmResponse = z.infer<typeof PasswordResetConfirmResponseSchema>;
 export type VerifyEmailRequest = z.infer<typeof VerifyEmailRequestSchema>;
 export type VerifyEmailResponse = z.infer<typeof VerifyEmailResponseSchema>;
-export type UpdateProfileRequest = z.infer<typeof UpdateProfileRequestSchema>;
-export type UpdateProfileResponse = z.infer<typeof UpdateProfileResponseSchema>;
+export type UpdateUserProfileRequest = z.infer<typeof UpdateUserProfileRequestSchema>;
+export type UpdateUserProfileResponse = z.infer<typeof UpdateUserProfileResponseSchema>;
 export type GetProfileResponse = z.infer<typeof GetProfileResponseSchema>;
 export type UserProfile = z.infer<typeof UserProfileSchema>;
 export type AuthTokens = z.infer<typeof AuthTokensSchema>;

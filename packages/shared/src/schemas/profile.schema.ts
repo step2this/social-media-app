@@ -1,26 +1,30 @@
 import { z } from 'zod';
 import { UserProfileSchema } from './auth.schema.js';
+import {
+  HandleField,
+  OptionalFullNameField,
+  BioField,
+  OptionalURLField,
+  CountField,
+  PresignedUrlRequestSchema,
+  PresignedUrlResponseSchema
+} from './base.schema.js';
 
 /**
- * Handle validation schema
+ * Handle validation schema (from base schema)
  */
-export const HandleSchema = z.string()
-  .trim()
-  .toLowerCase()
-  .min(3, 'Handle must be at least 3 characters')
-  .max(30, 'Handle must not exceed 30 characters')
-  .regex(/^[a-zA-Z0-9_]+$/, 'Handle can only contain letters, numbers, and underscores');
+export const HandleSchema = HandleField;
 
 /**
  * Enhanced profile schema with handle and profile picture
  */
 export const ProfileSchema = UserProfileSchema.extend({
   handle: HandleSchema,
-  profilePictureUrl: z.string().url().optional(),
-  profilePictureThumbnailUrl: z.string().url().optional(),
-  postsCount: z.number().int().nonnegative().default(0),
-  followersCount: z.number().int().nonnegative().default(0),
-  followingCount: z.number().int().nonnegative().default(0)
+  profilePictureUrl: OptionalURLField,
+  profilePictureThumbnailUrl: OptionalURLField,
+  postsCount: CountField,
+  followersCount: CountField,
+  followingCount: CountField
 });
 
 /**
@@ -28,18 +32,15 @@ export const ProfileSchema = UserProfileSchema.extend({
  */
 export const UpdateProfileWithHandleRequestSchema = z.object({
   handle: HandleSchema.optional(),
-  bio: z.string().max(500).trim().optional(),
-  fullName: z.string().min(1).max(100).trim().optional()
+  bio: BioField,
+  fullName: OptionalFullNameField
 });
 
 export const GetProfileByHandleRequestSchema = z.object({
   handle: HandleSchema
 });
 
-export const GetPresignedUrlRequestSchema = z.object({
-  fileType: z.enum(['image/jpeg', 'image/png', 'image/gif', 'image/webp']),
-  purpose: z.enum(['profile-picture', 'post-image'])
-});
+export const GetPresignedUrlRequestSchema = PresignedUrlRequestSchema;
 
 /**
  * Response schemas
@@ -53,12 +54,7 @@ export const UpdateProfileResponseSchema = z.object({
   message: z.string()
 });
 
-export const GetPresignedUrlResponseSchema = z.object({
-  uploadUrl: z.string().url(),
-  publicUrl: z.string().url(),
-  thumbnailUrl: z.string().url().optional(),
-  expiresIn: z.number().positive()
-});
+export const GetPresignedUrlResponseSchema = PresignedUrlResponseSchema;
 
 export const PublicProfileSchema = ProfileSchema.pick({
   id: true,
