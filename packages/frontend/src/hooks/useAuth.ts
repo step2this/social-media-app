@@ -26,20 +26,25 @@ export const useAuth = () => {
    * Register new user
    */
   const register = useCallback(async (userData: RegisterRequest) => {
+    console.log('🔐 useAuth: Starting registration for:', userData.email);
     setLoading(true);
     setError(null);
 
     try {
+      console.log('🌐 useAuth: Calling apiClient.auth.register...');
       const response = await apiClient.auth.register(userData);
+      console.log('✅ useAuth: Registration API call successful:', response);
 
       // Registration doesn't automatically log in - user needs to verify email
       setLoading(false);
       return response;
     } catch (err) {
+      console.error('❌ useAuth: Registration error caught:', err);
       const errorMessage = err instanceof ApiError || err instanceof NetworkError || err instanceof ValidationError
         ? err.message
         : 'Registration failed. Please try again.';
 
+      console.error('🔴 useAuth: Setting error message:', errorMessage);
       setError(errorMessage);
       setLoading(false);
       throw err;

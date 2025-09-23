@@ -29,6 +29,14 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// Log API configuration on startup
+console.log('🌐 API Client Configuration:', {
+  API_BASE_URL,
+  environment: import.meta.env.MODE,
+  isProd: import.meta.env.PROD,
+  isDev: import.meta.env.DEV
+});
+
 /**
  * Custom error classes for better error handling
  */
@@ -178,6 +186,15 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
     retryConfig: RetryConfig = defaultRetryConfig,
     includeAuth: boolean = false
   ): Promise<T> => {
+    const requestId = Math.random().toString(36).substring(7);
+    console.log(`🔵 [${requestId}] API Request:`, {
+      endpoint,
+      method: options.method || 'GET',
+      url: `${API_BASE_URL}${endpoint}`,
+      includeAuth,
+      hasBody: !!options.body
+    });
+
     let lastError: unknown;
 
     for (let attempt = 0; attempt <= retryConfig.maxRetries; attempt++) {
@@ -196,9 +213,11 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
           const accessToken = tokenStorage.getAccessToken();
           if (accessToken) {
             headers.Authorization = `Bearer ${accessToken}`;
+            console.log(`🔑 [${requestId}] Adding auth token to request`);
           }
         }
 
+        console.log(`📤 [${requestId}] Sending request (attempt ${attempt + 1}/${retryConfig.maxRetries + 1})...`);
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
           ...options,
           headers,
@@ -206,20 +225,30 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
         });
 
         clearTimeout(timeoutId);
+        console.log(`📥 [${requestId}] Response received:`, {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok
+        });
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({
             error: `HTTP ${response.status}`
           }));
 
+          console.error(`❌ [${requestId}] Request failed:`, {
+            status: response.status,
+            errorData
+          });
+
           if (response.status >= 400 && response.status < 500) {
             throw new ValidationError(
-              errorData.error || `Client error: ${response.status}`,
+              errorData.error || errorData.message || `Client error: ${response.status}`,
               errorData.details
             );
           } else {
             throw new ApiError(
-              errorData.error || `Server error: ${response.status}`,
+              errorData.error || errorData.message || `Server error: ${response.status}`,
               response.status,
               'SERVER_ERROR',
               errorData
@@ -227,7 +256,9 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
           }
         }
 
-        return response.json();
+        const responseData = await response.json();
+        console.log(`✅ [${requestId}] Request successful:`, responseData);
+        return responseData;
 
       } catch (error) {
         lastError = error;

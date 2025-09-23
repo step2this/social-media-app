@@ -21,7 +21,7 @@ export const handler = async (
     }
 
     const jwtConfig = getJWTConfigFromEnv();
-    const decodedToken = verifyAccessToken(accessToken, jwtConfig.secret);
+    const decodedToken = await verifyAccessToken(accessToken, jwtConfig.secret);
 
     if (!decodedToken) {
       return unauthorizedResponse('Invalid access token');

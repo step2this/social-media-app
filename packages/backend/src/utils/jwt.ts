@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import { SignJWT, jwtVerify } from 'jose';
 import { randomBytes } from 'crypto';
 import type { AuthServiceDependencies } from '@social-media-app/dal';
 
@@ -25,17 +25,16 @@ export interface JWTConfig {
  * Create JWT provider implementation
  */
 export const createJWTProvider = (config: Readonly<JWTConfig>): AuthServiceDependencies['jwtProvider'] => {
+  const secret = new TextEncoder().encode(config.secret);
+
   const generateAccessToken = async (payload: Readonly<{ userId: string; email: string }>): Promise<string> =>
-    jwt.sign(
-      payload,
-      config.secret,
-      {
-        expiresIn: config.accessTokenExpiry,
-        algorithm: 'HS256',
-        issuer: 'social-media-app',
-        audience: 'social-media-app-users'
-      }
-    );
+    await new SignJWT(payload)
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setIssuer('social-media-app')
+      .setAudience('social-media-app-users')
+      .setExpirationTime(`${config.accessTokenExpiry}s`)
+      .sign(secret);
 
   const generateRefreshToken = (): string =>
     // Generate a secure random refresh token
@@ -57,15 +56,28 @@ export const createJWTProvider = (config: Readonly<JWTConfig>): AuthServiceDepen
 /**
  * Verify and decode JWT access token
  */
-export const verifyAccessToken = (token: string, secret: string): JWTPayload | null => {
+export const verifyAccessToken = async (token: string, secret: string): Promise<JWTPayload | null> => {
   try {
-    const decoded = jwt.verify(token, secret, {
-      algorithms: ['HS256'],
+    const secretKey = new TextEncoder().encode(secret);
+    const { payload } = await jwtVerify(token, secretKey, {
       issuer: 'social-media-app',
-      audience: 'social-media-app-users'
-    }) as JWTPayload;
+      audience: 'social-media-app-users',
+      algorithms: ['HS256']
+    });
 
-    return decoded;
+    // Extract and validate the required fields from the payload
+    if (typeof payload.userId !== 'string' || typeof payload.email !== 'string' ||
+        typeof payload.iat !== 'number' || typeof payload.exp !== 'number') {
+      console.warn('JWT payload missing required fields or has incorrect types');
+      return null;
+    }
+
+    return {
+      userId: payload.userId,
+      email: payload.email,
+      iat: payload.iat,
+      exp: payload.exp
+    };
   } catch (error) {
     console.warn('JWT verification failed:', error instanceof Error ? error.message : String(error));
     return null;

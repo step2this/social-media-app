@@ -21,7 +21,7 @@ export const getHandler = async (
     }
 
     const jwtConfig = getJWTConfigFromEnv();
-    const decodedToken = verifyAccessToken(accessToken, jwtConfig.secret);
+    const decodedToken = await verifyAccessToken(accessToken, jwtConfig.secret);
 
     if (!decodedToken) {
       return unauthorizedResponse('Invalid access token');
@@ -69,7 +69,7 @@ export const updateHandler = async (
     }
 
     const jwtConfig = getJWTConfigFromEnv();
-    const decodedToken = verifyAccessToken(accessToken, jwtConfig.secret);
+    const decodedToken = await verifyAccessToken(accessToken, jwtConfig.secret);
 
     if (!decodedToken) {
       return unauthorizedResponse('Invalid access token');
@@ -116,5 +116,32 @@ export const updateHandler = async (
     });
 
     return internalServerErrorResponse();
+  }
+};
+
+/**
+ * Main handler that routes to appropriate function based on HTTP method
+ */
+export const handler = async (
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> => {
+  const method = event.requestContext.http.method;
+
+  switch (method) {
+    case 'GET':
+      return getHandler(event);
+    case 'PUT':
+      return updateHandler(event);
+    default:
+      return {
+        statusCode: 405,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          error: 'Method not allowed',
+          message: `HTTP method ${method} is not supported for this endpoint`
+        })
+      };
   }
 };

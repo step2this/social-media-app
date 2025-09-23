@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CORS Test from localhost:3001</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background: #2d5016; }
+        .error { background: #660000; }
+        .info { background: #1a3a52; }
+        pre {
+            background: #000;
+            padding: 10px;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>CORS Test from localhost:3001</h1>
+    <p>This page must be served from http://localhost:3001 to test CORS</p>
+
+    <div id="output"></div>
+
+    <script>
+        const output = document.getElementById('output');
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            output.appendChild(div);
+        }
+
+        async function testCORS() {
+            const apiUrl = 'https://sdf1ljix88.execute-api.us-east-1.amazonaws.com';
+
+            log(`🔍 Testing CORS from origin: ${window.location.origin}`);
+            log(`🎯 API URL: ${apiUrl}`);
+
+            // Test 1: Preflight request (OPTIONS)
+            log('📤 Test 1: Sending preflight OPTIONS request...');
+            try {
+                const preflightResponse = await fetch(`${apiUrl}/auth/register`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin,
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+
+                if (preflightResponse.ok) {
+                    log('✅ Preflight request succeeded', 'success');
+
+                    // Check CORS headers
+                    const corsHeaders = {
+                        'Access-Control-Allow-Origin': preflightResponse.headers.get('Access-Control-Allow-Origin'),
+                        'Access-Control-Allow-Methods': preflightResponse.headers.get('Access-Control-Allow-Methods'),
+                        'Access-Control-Allow-Headers': preflightResponse.headers.get('Access-Control-Allow-Headers')
+                    };
+
+                    log(`<pre>CORS Headers:\n${JSON.stringify(corsHeaders, null, 2)}</pre>`, 'info');
+                } else {
+                    log(`❌ Preflight failed with status: ${preflightResponse.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Preflight error: ${error.message}`, 'error');
+            }
+
+            // Test 2: Actual POST request
+            log('📤 Test 2: Sending actual POST request to /auth/register...');
+
+            const testData = {
+                email: `test${Date.now()}@example.com`,
+                username: `testuser${Date.now()}`,
+                password: 'TestPassword123!',
+                fullName: 'CORS Test User'
+            };
+
+            try {
+                const response = await fetch(`${apiUrl}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                const responseData = await response.json();
+
+                if (response.ok) {
+                    log('✅ POST request succeeded! CORS is working correctly', 'success');
+                    log(`<pre>Response:\n${JSON.stringify(responseData, null, 2)}</pre>`, 'success');
+                } else {
+                    log(`⚠️ Request completed but returned error status: ${response.status}`, 'error');
+                    log(`<pre>Error Response:\n${JSON.stringify(responseData, null, 2)}</pre>`, 'error');
+                }
+            } catch (error) {
+                log(`❌ POST request failed: ${error.message}`, 'error');
+                if (error.message.includes('CORS')) {
+                    log('🚫 This is a CORS error - the API is not allowing requests from this origin', 'error');
+                }
+            }
+        }
+
+        // Run test when page loads
+        window.addEventListener('load', () => {
+            if (window.location.port !== '3001') {
+                log('⚠️ WARNING: This page should be served from port 3001 for accurate testing', 'error');
+                log(`Current origin: ${window.location.origin}`, 'error');
+            }
+
+            testCORS();
+        });
+    </script>
+</body>
+</html>

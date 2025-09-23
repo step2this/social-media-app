@@ -23,16 +23,34 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    console.log('📝 RegisterForm: Form submitted with data:', {
+      email: formData.email,
+      username: formData.username,
+      fullName: formData.fullName,
+      hasPassword: !!formData.password,
+      passwordLength: formData.password.length
+    });
+
     // Check password confirmation
     if (formData.password !== confirmPassword) {
+      console.warn('❌ RegisterForm: Password confirmation failed');
       return; // Error shown in UI
     }
 
+    console.log('🚀 RegisterForm: Calling register function...');
     try {
-      await register(formData);
+      const result = await register(formData);
+      console.log('✅ RegisterForm: Registration successful!', result);
       onSuccess?.();
-    } catch {
+    } catch (error) {
       // Error is handled by the hook and stored in the error state
+      console.error('❌ RegisterForm: Registration failed:', error);
+      console.error('Error details:', {
+        name: error?.name,
+        message: error?.message,
+        status: error?.status,
+        code: error?.code
+      });
     }
   };
 

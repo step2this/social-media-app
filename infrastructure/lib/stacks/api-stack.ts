@@ -57,7 +57,7 @@ export class ApiStack extends Stack {
       corsPreflight: {
         allowOrigins: props.environment === 'prod'
           ? ['https://yourdomain.com'] // Replace with actual production domain when available
-          : ['http://localhost:3000', 'http://localhost:5173'], // Development origins
+          : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'], // Development origins
         allowMethods: [
           apigateway.CorsHttpMethod.GET,
           apigateway.CorsHttpMethod.POST,
@@ -76,7 +76,7 @@ export class ApiStack extends Stack {
         ],
         exposeHeaders: ['X-Correlation-Id'],
         allowCredentials: false,
-        maxAge: Duration.hours(1)
+        maxAge: Duration.seconds(3600) // 1 hour
       }
     });
 
