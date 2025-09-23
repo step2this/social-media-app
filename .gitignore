@@ -10,6 +10,16 @@ out/
 *.tsbuildinfo
 cdk.out/
 
+# TypeScript compilation artifacts
+*.js
+*.js.map
+# But allow specific JS files we want to keep
+!*.config.js
+!jest.config.js
+!webpack.config.js
+!rollup.config.js
+!vite.config.js
+
 # Testing
 coverage/
 *.lcov
