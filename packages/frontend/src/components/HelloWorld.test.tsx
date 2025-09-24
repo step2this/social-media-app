@@ -5,11 +5,15 @@ import { HelloWorld } from './HelloWorld';
 import { apiClient } from '../services/apiClient';
 import { useHelloStore } from '../stores/helloStore';
 
-vi.mock('../services/apiClient', () => ({
-  apiClient: {
-    sendHello: vi.fn()
-  }
-}));
+vi.mock('../services/apiClient', async (importOriginal) => {
+  const actual = await importOriginal() as any;
+  return {
+    ...actual,
+    apiClient: {
+      sendHello: vi.fn()
+    }
+  };
+});
 
 describe('HelloWorld Component', () => {
   beforeEach(() => {

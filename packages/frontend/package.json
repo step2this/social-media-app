@@ -4,13 +4,14 @@
   "type": "module",
   "description": "Frontend for social media app",
   "scripts": {
+    "build": "tsc && vite build",
     "dev": "vite",
     "dev:aws": "rm -f .env.local && vite --port 3001",
     "dev:local": "cp .env.local.example .env.local 2>/dev/null || echo 'VITE_API_URL=http://localhost:3001\nVITE_ENABLE_MSW=true' > .env.local && vite --port 3001",
-    "build": "tsc && vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "test": "vitest run",
+    "test:unit": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src/**/*.{ts,tsx}",
     "typecheck": "tsc --noEmit"

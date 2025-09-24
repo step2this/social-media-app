@@ -8,12 +8,14 @@
   },
   "scripts": {
     "build": "tsc",
-    "watch": "tsc -w",
+    "dev": "tsc -w",
     "cdk": "cdk",
     "deploy": "cdk deploy --all",
     "destroy": "cdk destroy --all",
     "synth": "cdk synth",
     "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint lib/**/*.ts bin/**/*.ts",
     "typecheck": "tsc --noEmit"
   },
