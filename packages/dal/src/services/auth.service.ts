@@ -9,7 +9,8 @@ import type {
   UserProfile,
   AuthTokens,
   RefreshTokenRequest,
-  RefreshTokenResponse
+  RefreshTokenResponse,
+  UpdateUserProfileRequest
 } from '@social-media-app/shared';
 import { randomBytes, pbkdf2Sync, timingSafeEqual } from 'crypto';
 
@@ -398,12 +399,72 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
     }
   };
 
+  /**
+   * Update user profile (minimal implementation for TDD)
+   */
+  const updateUserProfile = async (userId: string, updates: UpdateUserProfileRequest): Promise<UserProfile> => {
+    // Get current user first
+    const currentUser = await getUserById(userId);
+    if (!currentUser) {
+      throw new Error('User not found');
+    }
+
+    // Update user with simple field updates
+    const now = deps.timeProvider();
+
+    const updateExpression: string[] = [];
+    const expressionAttributeNames: Record<string, string> = {};
+    const expressionAttributeValues: Record<string, unknown> = {};
+
+    if (updates.fullName !== undefined) {
+      updateExpression.push('#fullName = :fullName');
+      expressionAttributeNames['#fullName'] = 'fullName';
+      expressionAttributeValues[':fullName'] = updates.fullName;
+    }
+
+    if (updates.bio !== undefined) {
+      updateExpression.push('#bio = :bio');
+      expressionAttributeNames['#bio'] = 'bio';
+      expressionAttributeValues[':bio'] = updates.bio;
+    }
+
+    if (updates.avatarUrl !== undefined) {
+      updateExpression.push('#avatarUrl = :avatarUrl');
+      expressionAttributeNames['#avatarUrl'] = 'avatarUrl';
+      expressionAttributeValues[':avatarUrl'] = updates.avatarUrl;
+    }
+
+    // Always update the updatedAt field
+    updateExpression.push('#updatedAt = :updatedAt');
+    expressionAttributeNames['#updatedAt'] = 'updatedAt';
+    expressionAttributeValues[':updatedAt'] = now;
+
+    await deps.dynamoClient.send(new UpdateCommand({
+      TableName: deps.tableName,
+      Key: {
+        PK: `USER#${userId}`,
+        SK: 'PROFILE'
+      },
+      UpdateExpression: `SET ${updateExpression.join(', ')}`,
+      ExpressionAttributeNames: expressionAttributeNames,
+      ExpressionAttributeValues: expressionAttributeValues
+    }));
+
+    // Return updated user
+    return {
+      ...currentUser,
+      ...updates,
+      updatedAt: now
+    };
+  };
+
   return {
     register,
     login,
     refreshToken,
     getUserById,
-    logout
+    logout,
+    updateUserProfile
   };
 };
 

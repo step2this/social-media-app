@@ -94,16 +94,10 @@ export const updateHandler = async (
       return notFoundResponse('User not found');
     }
 
-    // Note: For this implementation, we'll need to add an updateProfile method to the auth service
-    // For now, return the current user (placeholder implementation)
+    // Update the user profile using the auth service
+    const updatedUser = await authService.updateUserProfile(decodedToken.userId, validatedRequest);
 
-    return successResponse(200, {
-      user: {
-        ...currentUser,
-        ...validatedRequest,
-        updatedAt: new Date().toISOString()
-      }
-    });
+    return successResponse(200, { user: updatedUser });
 
   } catch (error) {
     // Handle validation errors

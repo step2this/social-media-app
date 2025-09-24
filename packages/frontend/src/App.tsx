@@ -5,6 +5,7 @@ import { AuthModal } from './components/auth/AuthModal.js';
 import { useAuth } from './hooks/useAuth.js';
 import { HelloWorld } from './components/HelloWorld';
 import { ProfilePage } from './components/profile/ProfilePage';
+import { MyProfilePage } from './components/profile/MyProfilePage';
 import './App.css';
 
 function App() {
@@ -20,6 +21,9 @@ function App() {
             {isAuthenticated && user ? (
               <div className="nav-user">
                 <span>Welcome, {user.username}!</span>
+                <a href="/profile" className="btn btn-primary">
+                  My Profile
+                </a>
                 <button onClick={logout} className="btn btn-secondary">
                   Logout
                 </button>
@@ -46,6 +50,12 @@ function App() {
             <Route path="/" element={
               <ProtectedRoute requireAuth={true}>
                 <HelloWorld />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/profile" element={
+              <ProtectedRoute requireAuth={true}>
+                <MyProfilePage />
               </ProtectedRoute>
             } />
 
