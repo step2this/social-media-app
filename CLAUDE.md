@@ -54,3 +54,89 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ❌ **Runtime Errors**: Type mismatches causing production failures
 - ❌ **Duplicate Maintenance**: Updating schemas in multiple places
 - ❌ **Integration Issues**: API contracts changing without notice
+
+## Monorepo Architecture & Dependency Management
+
+### Package Responsibilities
+
+#### `@social-media-app/shared`
+- **Purpose**: Domain schemas, types, and business validation rules ONLY
+- **Exports**: Zod schemas, TypeScript types, business logic
+- **Never Export**: Third-party library re-exports, utility functions, infrastructure code
+```typescript
+// ✅ GOOD: Domain schemas and types
+export const UserSchema = z.object({...});
+export type User = z.infer<typeof UserSchema>;
+
+// ❌ BAD: Third-party re-exports
+export { z } from 'zod';
+export { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+```
+
+#### `@social-media-app/dal`
+- **Purpose**: Data access layer with clean service interfaces
+- **Exports**: Service classes, data access patterns
+- **Dependencies**: Direct dependencies on AWS SDKs, shared schemas
+```typescript
+// ✅ GOOD: Service exports
+export class ProfileService { ... }
+export class PostService { ... }
+```
+
+#### `@social-media-app/backend`
+- **Purpose**: Lambda handlers and backend utilities
+- **Exports**: Lambda handlers (individual files, no package exports needed)
+- **Dependencies**: Direct dependencies on all needed libraries
+
+### Dependency Management Principles
+
+#### 1. Direct Dependencies Over Proxy Imports
+```typescript
+// ✅ GOOD: Each package declares its own dependencies
+import { z } from 'zod';                               // Direct import
+import { PostSchema } from '@social-media-app/shared';  // Domain logic
+
+// ❌ BAD: Using shared as proxy for third-party libraries
+import { z } from '@social-media-app/shared';
+```
+
+#### 2. Barrel Exports for Internal Organization
+```typescript
+// ✅ GOOD: Internal package organization
+// src/utils/index.ts
+export * from './responses.js';
+export * from './jwt.js';
+export * from './dynamodb.js';
+
+// Then import cleanly:
+import { errorResponse, verifyToken } from '../utils/index.js';
+
+// ❌ BAD: Hardcoded relative paths
+import { errorResponse } from '../../utils/responses.js';
+```
+
+#### 3. Package Boundaries
+- **shared**: Only domain logic, no infrastructure dependencies
+- **dal**: Data access patterns, depends on shared + AWS SDKs
+- **backend**: Lambda handlers, depends on dal + shared + all needed libs
+- **frontend**: UI components, depends on shared only
+
+#### 4. Clean Import Patterns
+```typescript
+// ✅ GOOD: Clean, maintainable imports
+import { z } from 'zod';
+import { PostSchema, type Post } from '@social-media-app/shared';
+import { PostService } from '@social-media-app/dal';
+import { errorResponse } from '../utils/index.js';
+
+// ❌ BAD: Hardcoded, brittle paths
+import { errorResponse } from '../../utils/responses.js';
+import { verifyToken } from '../../utils/jwt.js';
+```
+
+### Architecture Benefits
+- ✅ **Clear Separation**: Each package has single responsibility
+- ✅ **No God Packages**: shared doesn't become a dependency proxy
+- ✅ **Maintainable**: Changes don't cascade unnecessarily
+- ✅ **Testable**: Each package can be tested independently
+- ✅ **Scalable**: Easy to add new packages without breaking others

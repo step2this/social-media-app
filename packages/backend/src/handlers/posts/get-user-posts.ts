@@ -7,7 +7,7 @@ import {
   type PostGridResponse,
   type GetUserPostsRequest
 } from '@social-media-app/shared';
-import { createErrorResponse, createSuccessResponse } from '../../utils/responses.js';
+import { errorResponse, successResponse } from '../../utils/index.js';
 import { z } from 'zod';
 
 const dynamoClient = new DynamoDBClient({});
@@ -32,7 +32,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     const handle = event.pathParameters?.handle;
 
     if (!handle) {
-      return createErrorResponse(400, 'Handle is required');
+      return errorResponse(400, 'Handle is required');
     }
 
     // Get query parameters for pagination
@@ -44,7 +44,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     // Validate limit
     if (isNaN(limit) || limit < 1 || limit > 100) {
-      return createErrorResponse(400, 'Invalid limit parameter');
+      return errorResponse(400, 'Invalid limit parameter');
     }
 
     const request: GetUserPostsRequest = {
@@ -59,14 +59,14 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     // Validate response
     const validatedResponse = PostGridResponseSchema.parse(postsData);
 
-    return createSuccessResponse(validatedResponse);
+    return successResponse(validatedResponse);
   } catch (error) {
     console.error('Error getting user posts:', error);
 
     if (error instanceof z.ZodError) {
-      return createErrorResponse(400, 'Invalid response data', error.errors);
+      return errorResponse(400, 'Invalid response data', error.errors);
     }
 
-    return createErrorResponse(500, 'Internal server error');
+    return errorResponse(500, 'Internal server error');
   }
 };

@@ -295,10 +295,10 @@ export class ProfileService {
       },
       UpdateExpression: 'SET postsCount = postsCount - :dec',
       ExpressionAttributeValues: {
-        ':dec': 1
+        ':dec': 1,
+        ':zero': 0
       },
-      ConditionExpression: 'postsCount > :zero',
-      ExpressionAttributeNamesInferred: true
+      ConditionExpression: 'postsCount > :zero'
     }));
   }
 

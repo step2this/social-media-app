@@ -7,8 +7,7 @@ import {
   CreatePostResponseSchema,
   type CreatePostResponse
 } from '@social-media-app/shared';
-import { createErrorResponse, createSuccessResponse } from '../../utils/responses.js';
-import { verifyToken } from '../../utils/jwt.js';
+import { errorResponse, successResponse, verifyAccessToken } from '../../utils/index.js';
 import { z } from 'zod';
 
 const dynamoClient = new DynamoDBClient({});
@@ -32,20 +31,20 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     // Verify authentication
     const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      return createErrorResponse(401, 'Unauthorized');
+      return errorResponse(401, 'Unauthorized');
     }
 
     const token = authHeader.substring(7);
-    const decoded = await verifyToken(token);
+    const decoded = await verifyAccessToken(token);
 
     if (!decoded || !decoded.userId) {
-      return createErrorResponse(401, 'Invalid token');
+      return errorResponse(401, 'Invalid token');
     }
 
     // Get user profile to get handle
     const userProfile = await profileService.getProfileById(decoded.userId);
     if (!userProfile) {
-      return createErrorResponse(404, 'User profile not found');
+      return errorResponse(404, 'User profile not found');
     }
 
     // Parse and validate request body
@@ -79,14 +78,14 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     const validatedResponse = CreatePostResponseSchema.parse(response);
 
-    return createSuccessResponse(validatedResponse);
+    return successResponse(validatedResponse);
   } catch (error) {
     console.error('Error creating post:', error);
 
     if (error instanceof z.ZodError) {
-      return createErrorResponse(400, 'Invalid request data', error.errors);
+      return errorResponse(400, 'Invalid request data', error.errors);
     }
 
-    return createErrorResponse(500, 'Internal server error');
+    return errorResponse(500, 'Internal server error');
   }
 };

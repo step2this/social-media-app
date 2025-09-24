@@ -1,7 +1,7 @@
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import {
   PutCommand,
-  GetCommand,
+  UpdateCommand,
   DeleteCommand,
   QueryCommand,
   type QueryCommandInput
@@ -141,10 +141,6 @@ export class PostService {
     const queryResult = await this.dynamoClient.send(new QueryCommand({
       TableName: this.tableName,
       KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
-      ExpressionAttributeValues: {
-        ':pk': `USER#${userId}`,
-        ':skPrefix': 'POST#'
-      },
       FilterExpression: 'id = :postId',
       ExpressionAttributeValues: {
         ':pk': `USER#${userId}`,
@@ -197,6 +193,9 @@ export class PostService {
       ReturnValues: 'ALL_NEW'
     }));
 
+    if (!result.Attributes) {
+      throw new Error('Failed to update post - no data returned');
+    }
     return this.mapEntityToPost(result.Attributes as PostEntity);
   }
 
@@ -219,7 +218,10 @@ export class PostService {
         ':skPrefix': 'POST#'
       },
       FilterExpression: 'id = :postId',
-      ExpressionAttributeNamesInferred: true
+      ExpressionAttributeNames: {
+        '#isPublic': 'isPublic',
+        '#createdAt': 'createdAt'
+      }
     }));
 
     if (!queryResult.Items || queryResult.Items.length === 0) {

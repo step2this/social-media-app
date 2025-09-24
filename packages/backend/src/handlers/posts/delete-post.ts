@@ -6,8 +6,7 @@ import {
   DeletePostResponseSchema,
   type DeletePostResponse
 } from '@social-media-app/shared';
-import { createErrorResponse, createSuccessResponse } from '../../utils/responses.js';
-import { verifyToken } from '../../utils/jwt.js';
+import { errorResponse, successResponse, verifyAccessToken } from '../../utils/index.js';
 import { z } from 'zod';
 
 const dynamoClient = new DynamoDBClient({});
@@ -31,28 +30,28 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     // Verify authentication
     const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      return createErrorResponse(401, 'Unauthorized');
+      return errorResponse(401, 'Unauthorized');
     }
 
     const token = authHeader.substring(7);
-    const decoded = await verifyToken(token);
+    const decoded = await verifyAccessToken(token);
 
     if (!decoded || !decoded.userId) {
-      return createErrorResponse(401, 'Invalid token');
+      return errorResponse(401, 'Invalid token');
     }
 
     // Get post ID from path parameters
     const postId = event.pathParameters?.postId;
 
     if (!postId) {
-      return createErrorResponse(400, 'Post ID is required');
+      return errorResponse(400, 'Post ID is required');
     }
 
     // Delete the post
     const deleted = await postService.deletePost(postId, decoded.userId);
 
     if (!deleted) {
-      return createErrorResponse(404, 'Post not found or unauthorized');
+      return errorResponse(404, 'Post not found or unauthorized');
     }
 
     // Validate response
@@ -63,14 +62,14 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     const validatedResponse = DeletePostResponseSchema.parse(response);
 
-    return createSuccessResponse(validatedResponse);
+    return successResponse(validatedResponse);
   } catch (error) {
     console.error('Error deleting post:', error);
 
     if (error instanceof z.ZodError) {
-      return createErrorResponse(400, 'Invalid response data', error.errors);
+      return errorResponse(400, 'Invalid response data', error.errors);
     }
 
-    return createErrorResponse(500, 'Internal server error');
+    return errorResponse(500, 'Internal server error');
   }
 };

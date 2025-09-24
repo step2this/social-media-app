@@ -6,7 +6,7 @@ import {
   PublicProfileResponseSchema,
   type PublicProfileResponse
 } from '@social-media-app/shared';
-import { createErrorResponse, createSuccessResponse } from '../../utils/responses.js';
+import { errorResponse, successResponse } from '../../utils/index.js';
 import { z } from 'zod';
 
 const dynamoClient = new DynamoDBClient({});
@@ -29,14 +29,14 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     const handle = event.pathParameters?.handle;
 
     if (!handle) {
-      return createErrorResponse(400, 'Handle is required');
+      return errorResponse(400, 'Handle is required');
     }
 
     // Get profile by handle
     const profile = await profileService.getProfileByHandle(handle);
 
     if (!profile) {
-      return createErrorResponse(404, 'Profile not found');
+      return errorResponse(404, 'Profile not found');
     }
 
     // Validate response
@@ -46,14 +46,14 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     const validatedResponse = PublicProfileResponseSchema.parse(response);
 
-    return createSuccessResponse(validatedResponse);
+    return successResponse(validatedResponse);
   } catch (error) {
     console.error('Error getting profile:', error);
 
     if (error instanceof z.ZodError) {
-      return createErrorResponse(400, 'Invalid response data', error.errors);
+      return errorResponse(400, 'Invalid response data', error.errors);
     }
 
-    return createErrorResponse(500, 'Internal server error');
+    return errorResponse(500, 'Internal server error');
   }
 };
