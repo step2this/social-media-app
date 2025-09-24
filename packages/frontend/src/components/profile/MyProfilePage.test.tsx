@@ -238,7 +238,7 @@ describe('MyProfilePage Component', () => {
       await user.type(bioInput, 'Updated bio');
 
       // Submit form
-      const saveButton = screen.getByRole('button', { name: 'Save' });
+      const saveButton = screen.getByRole('button', { name: 'Save Changes' });
       await user.click(saveButton);
 
       // Should call API and close modal
@@ -279,7 +279,7 @@ describe('MyProfilePage Component', () => {
       const fullNameInput = screen.getByLabelText('Full Name');
       await user.clear(fullNameInput);
 
-      const saveButton = screen.getByRole('button', { name: 'Save' });
+      const saveButton = screen.getByRole('button', { name: 'Save Changes' });
       await user.click(saveButton);
 
       // Should show validation error
@@ -313,7 +313,7 @@ describe('MyProfilePage Component', () => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();
       });
 
-      const saveButton = screen.getByRole('button', { name: 'Save' });
+      const saveButton = screen.getByRole('button', { name: 'Save Changes' });
       await user.click(saveButton);
 
       // Should show error message
@@ -346,7 +346,7 @@ describe('MyProfilePage Component', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Failed to load profile')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Try Again' })).toBeInTheDocument();
       });
     });
 
@@ -362,7 +362,7 @@ describe('MyProfilePage Component', () => {
         expect(screen.getByText('Failed to load profile')).toBeInTheDocument();
       });
 
-      const retryButton = screen.getByRole('button', { name: 'Retry' });
+      const retryButton = screen.getByRole('button', { name: 'Try Again' });
       await user.click(retryButton);
 
       await waitFor(() => {

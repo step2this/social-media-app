@@ -1,5 +1,7 @@
 import React from 'react';
 import type { PublicProfile, UserProfile } from '@social-media-app/shared';
+import { StoryRing } from '../layout/AppLayout';
+import './ProfileDisplay.css';
 
 interface ProfileDisplayProps {
   profile: PublicProfile | UserProfile;
@@ -18,72 +20,74 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({
   className = ""
 }) => {
   return (
-    <div className={`flex flex-col md:flex-row gap-8 items-start ${className}`}>
+    <div className={`profile-display ${className}`}>
       {/* Profile Picture */}
-      <div className="flex-shrink-0">
-        <div
-          className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden bg-gray-200"
-          data-testid="profile-avatar"
-        >
-          {profile.profilePictureThumbnailUrl ? (
-            <img
-              src={profile.profilePictureThumbnailUrl}
-              alt="Profile picture"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400">
-              <svg
-                className="w-16 h-16"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-              </svg>
-            </div>
-          )}
-        </div>
+      <div className="profile-display__avatar">
+        <StoryRing size="lg" hasStory={false}>
+          <div
+            className="avatar-container"
+            data-testid="profile-avatar"
+          >
+            {profile.profilePictureThumbnailUrl ? (
+              <img
+                src={profile.profilePictureThumbnailUrl}
+                alt="Profile picture"
+                className="avatar-image"
+              />
+            ) : (
+              <div className="avatar-placeholder">
+                <svg
+                  className="avatar-icon"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                </svg>
+              </div>
+            )}
+          </div>
+        </StoryRing>
       </div>
 
       {/* Profile Info */}
-      <div className="flex-1">
-        <div className="mb-4">
-          <h2 className="text-2xl font-bold">
+      <div className="profile-display__info">
+        <div className="profile-display__header">
+          <h2 className="profile-username neon-text">
             @{'handle' in profile ? profile.handle : profile.username}
           </h2>
           {profile.fullName && (
-            <p className="text-lg text-gray-600 mt-1">{profile.fullName}</p>
+            <p className="profile-fullname">{profile.fullName}</p>
           )}
         </div>
 
         {/* Stats (for public profiles) */}
         {'postsCount' in profile && (
-          <div className="flex gap-6 mb-4">
-            <div className="text-center">
-              <div className="font-bold text-xl">{profile.postsCount}</div>
-              <div className="text-gray-500 text-sm">Posts</div>
+          <div className="profile-stats">
+            <div className="stat-item">
+              <div className="stat-number">{profile.postsCount}</div>
+              <div className="stat-label">Posts</div>
             </div>
-            <div className="text-center">
-              <div className="font-bold text-xl">{profile.followersCount}</div>
-              <div className="text-gray-500 text-sm">Followers</div>
+            <div className="stat-item">
+              <div className="stat-number">{profile.followersCount}</div>
+              <div className="stat-label">Followers</div>
             </div>
-            <div className="text-center">
-              <div className="font-bold text-xl">{profile.followingCount}</div>
-              <div className="text-gray-500 text-sm">Following</div>
+            <div className="stat-item">
+              <div className="stat-number">{profile.followingCount}</div>
+              <div className="stat-label">Following</div>
             </div>
           </div>
         )}
 
         {/* Bio */}
         {profile.bio && (
-          <div className="mb-4">
-            <p className="text-gray-700 whitespace-pre-wrap">{profile.bio}</p>
+          <div className="profile-bio">
+            <p className="bio-text">{profile.bio}</p>
           </div>
         )}
 
         {/* Member Since (for public profiles) */}
         {'createdAt' in profile && (
-          <div className="mb-4 text-sm text-gray-500">
+          <div className="profile-meta">
             Member since {new Date(profile.createdAt).toLocaleDateString()}
           </div>
         )}
@@ -92,7 +96,7 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({
         {showEditButton && onEditClick && (
           <button
             onClick={onEditClick}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="btn btn-retro profile-edit-btn"
           >
             Edit Profile
           </button>

@@ -1,4 +1,5 @@
 import React from 'react';
+import './LoadingStates.css';
 
 interface LoadingSpinnerProps {
   message?: string;
@@ -12,21 +13,26 @@ interface ErrorStateProps {
 }
 
 /**
- * Reusable loading spinner component
+ * Reusable loading spinner component with 80s neon aesthetic
  */
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   message = "Loading...",
   className = ""
 }) => {
   return (
-    <div className={`flex justify-center items-center min-h-screen ${className}`}>
-      <div className="text-lg">{message}</div>
+    <div className={`loading-container ${className}`}>
+      <div className="neon-spinner">
+        <div className="spinner-ring"></div>
+        <div className="spinner-ring"></div>
+        <div className="spinner-ring"></div>
+      </div>
+      <div className="loading-message neon-text">{message}</div>
     </div>
   );
 };
 
 /**
- * Reusable error state component
+ * Reusable error state component with 80s aesthetic
  */
 export const ErrorState: React.FC<ErrorStateProps> = ({
   message = "Something went wrong",
@@ -34,14 +40,15 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   className = ""
 }) => {
   return (
-    <div className={`flex flex-col justify-center items-center min-h-screen gap-4 ${className}`}>
-      <div className="text-lg text-red-500">{message}</div>
+    <div className={`error-container ${className}`}>
+      <div className="error-icon">⚠️</div>
+      <div className="error-message">{message}</div>
       {onRetry && (
         <button
           onClick={onRetry}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          className="btn btn-retro error-retry-btn"
         >
-          Retry
+          Try Again
         </button>
       )}
     </div>

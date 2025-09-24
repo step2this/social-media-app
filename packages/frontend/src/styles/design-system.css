@@ -1,0 +1,264 @@
+/*
+  Design System: 80s Snowboarding Aesthetic
+  Inspired by neon windbreakers, fluorescent colors, and retro ski wear
+*/
+
+:root {
+  /* Color Palette - Late 80s Snowboarding Outerwear */
+
+  /* Primary Colors - Electric/Neon */
+  --electric-blue: #00d4ff;
+  --neon-pink: #ff00dc;
+  --lime-green: #39ff14;
+  --hot-magenta: #ff006e;
+  --cyan-blue: #00ffff;
+
+  /* Secondary Colors - Classic 80s */
+  --sunset-orange: #ff6b35;
+  --purple-haze: #8a2be2;
+  --teal-accent: #20b2aa;
+  --coral-pink: #ff7f7f;
+  --yellow-neon: #ffff00;
+
+  /* Base Colors */
+  --deep-navy: #0a0e27;
+  --charcoal: #1a1a2e;
+  --medium-gray: #16213e;
+  --light-gray: #e94560;
+  --off-white: #f8f9fa;
+  --pure-white: #ffffff;
+
+  /* Gradient Colors */
+  --gradient-primary: linear-gradient(135deg, var(--electric-blue) 0%, var(--neon-pink) 50%, var(--lime-green) 100%);
+  --gradient-secondary: linear-gradient(45deg, var(--sunset-orange) 0%, var(--purple-haze) 100%);
+  --gradient-accent: linear-gradient(90deg, var(--cyan-blue) 0%, var(--hot-magenta) 100%);
+  --gradient-dark: linear-gradient(180deg, var(--deep-navy) 0%, var(--charcoal) 100%);
+
+  /* Typography */
+  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', var(--font-primary);
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+  /* Font Weights */
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-black: 900;
+
+  /* Font Sizes - Fluid Typography */
+  --text-xs: clamp(0.75rem, 0.71rem + 0.2vw, 0.875rem);
+  --text-sm: clamp(0.875rem, 0.82rem + 0.28vw, 1rem);
+  --text-base: clamp(1rem, 0.93rem + 0.36vw, 1.125rem);
+  --text-lg: clamp(1.125rem, 1.04rem + 0.43vw, 1.25rem);
+  --text-xl: clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem);
+  --text-2xl: clamp(1.5rem, 1.36rem + 0.71vw, 1.875rem);
+  --text-3xl: clamp(1.875rem, 1.68rem + 0.98vw, 2.25rem);
+  --text-4xl: clamp(2.25rem, 1.96rem + 1.43vw, 3rem);
+  --text-5xl: clamp(3rem, 2.57rem + 2.14vw, 4rem);
+
+  /* Spacing System - 8px base */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  --space-20: 5rem;     /* 80px */
+  --space-24: 6rem;     /* 96px */
+
+  /* Border Radius */
+  --radius-sm: 0.25rem;   /* 4px */
+  --radius-md: 0.5rem;    /* 8px */
+  --radius-lg: 0.75rem;   /* 12px */
+  --radius-xl: 1rem;      /* 16px */
+  --radius-2xl: 1.5rem;   /* 24px */
+  --radius-3xl: 2rem;     /* 32px */
+  --radius-full: 50%;
+
+  /* Shadows - 80s Neon Effect */
+  --shadow-neon-sm: 0 0 10px var(--electric-blue);
+  --shadow-neon-md: 0 0 20px var(--neon-pink), 0 0 40px var(--neon-pink);
+  --shadow-neon-lg: 0 0 30px var(--lime-green), 0 0 60px var(--lime-green);
+  --shadow-glow: 0 0 15px rgba(0, 212, 255, 0.6);
+
+  /* Standard Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  /* Animation */
+  --transition-fast: 0.15s ease-out;
+  --transition-normal: 0.25s ease-out;
+  --transition-slow: 0.4s ease-out;
+
+  /* Z-Index */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-toast: 1080;
+
+  /* Breakpoints */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+/* Dark Mode Overrides */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --deep-navy: #0a0e27;
+    --charcoal: #1a1a2e;
+    --medium-gray: #16213e;
+    --off-white: #f8f9fa;
+  }
+}
+
+/* 80s Retro Keyframe Animations */
+@keyframes neon-pulse {
+  0%, 100% {
+    text-shadow:
+      0 0 5px var(--electric-blue),
+      0 0 10px var(--electric-blue),
+      0 0 15px var(--electric-blue);
+  }
+  50% {
+    text-shadow:
+      0 0 2px var(--electric-blue),
+      0 0 5px var(--electric-blue),
+      0 0 8px var(--electric-blue);
+  }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes retro-bounce {
+  0%, 20%, 53%, 80%, 100% { transform: translateY(0px); }
+  40%, 43% { transform: translateY(-15px); }
+  70% { transform: translateY(-7px); }
+  90% { transform: translateY(-2px); }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Utility Classes */
+.neon-text {
+  color: var(--electric-blue);
+  text-shadow:
+    0 0 5px var(--electric-blue),
+    0 0 10px var(--electric-blue),
+    0 0 15px var(--electric-blue);
+  animation: neon-pulse 2s ease-in-out infinite alternate;
+}
+
+.gradient-text {
+  background: var(--gradient-primary);
+  background-size: 300% 300%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 3s ease infinite;
+}
+
+.retro-card {
+  background: var(--deep-navy);
+  border: 2px solid var(--electric-blue);
+  box-shadow:
+    0 0 20px rgba(0, 212, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+.retro-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(0, 212, 255, 0.2),
+    transparent
+  );
+  transition: left var(--transition-slow);
+}
+
+.retro-card:hover::before {
+  left: 100%;
+}
+
+/* Component Base Styles */
+.btn-retro {
+  background: var(--gradient-primary);
+  background-size: 300% 300%;
+  border: none;
+  color: var(--deep-navy);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-neon-sm);
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-retro:hover {
+  animation: gradient-shift 0.5s ease;
+  box-shadow: var(--shadow-neon-md);
+  transform: translateY(-2px);
+}
+
+.btn-retro:active {
+  transform: translateY(0);
+}
+
+/* Responsive Design Utilities */
+@media (max-width: 640px) {
+  .hidden-mobile { display: none; }
+  .show-mobile { display: block; }
+}
+
+@media (min-width: 641px) {
+  .hidden-desktop { display: none; }
+  .show-desktop { display: block; }
+}
