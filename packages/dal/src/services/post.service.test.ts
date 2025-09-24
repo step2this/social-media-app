@@ -1,0 +1,574 @@
+/* eslint-disable max-lines-per-function, max-statements, complexity, max-depth, functional/prefer-immutable-types */
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { PostService, type PostEntity } from './post.service';
+import { ProfileService } from './profile.service';
+import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import type { CreatePostRequest, UpdatePostRequest, GetUserPostsRequest } from '@social-media-app/shared';
+
+interface MockDynamoCommand {
+  readonly constructor: { readonly name: string };
+  readonly input: {
+    readonly TableName?: string;
+    readonly Item?: Record<string, unknown>;
+    readonly Key?: Record<string, unknown>;
+    readonly IndexName?: string;
+    readonly KeyConditionExpression?: string;
+    readonly ExpressionAttributeValues?: Record<string, unknown>;
+    readonly FilterExpression?: string;
+    readonly ExpressionAttributeNames?: Record<string, unknown>;
+    readonly Limit?: number;
+    readonly ScanIndexForward?: boolean;
+    readonly ExclusiveStartKey?: Record<string, unknown>;
+    readonly UpdateExpression?: string;
+    readonly ReturnValues?: string;
+    readonly ConditionExpression?: string;
+  };
+}
+
+// Mock ProfileService
+const createMockProfileService = () => ({
+  incrementPostsCount: vi.fn(),
+  decrementPostsCount: vi.fn(),
+  getProfileByHandle: vi.fn(),
+  getProfileById: vi.fn(),
+  updateProfile: vi.fn(),
+  generatePresignedUrl: vi.fn()
+});
+
+// Mock DynamoDB client with proper typing
+const createMockDynamoClient = () => {
+  const items = new Map<string, Record<string, unknown>>();
+  const gsi1Items = new Map<string, Record<string, unknown>[]>();
+
+  const updateGSI1 = (item: Record<string, unknown>) => {
+    const gsi1Key = item.GSI1PK as string;
+    if (gsi1Key) {
+      if (!gsi1Items.has(gsi1Key)) {
+        gsi1Items.set(gsi1Key, []);
+      }
+      gsi1Items.get(gsi1Key)!.push(item);
+    }
+  };
+
+  const handlePutCommand = (command: MockDynamoCommand) => {
+    const item = command.input.Item!;
+    const key = `${item.PK}#${item.SK}`;
+
+    // Check condition expression
+    if (command.input.ConditionExpression === 'attribute_not_exists(PK)' && items.has(key)) {
+      throw new Error('ConditionalCheckFailedException');
+    }
+
+    items.set(key, item);
+    updateGSI1(item);
+    return { $metadata: {} };
+  };
+
+  const handleQueryCommand = (command: MockDynamoCommand) => {
+    const { KeyConditionExpression, IndexName, ExpressionAttributeValues, FilterExpression, Limit, ScanIndexForward, ExclusiveStartKey } = command.input;
+    let results: Record<string, unknown>[] = [];
+
+    if (IndexName === 'GSI1' && KeyConditionExpression === 'GSI1PK = :pk') {
+      const pk = ExpressionAttributeValues?.[':pk'] as string;
+      results = gsi1Items.get(pk) || [];
+    } else if (KeyConditionExpression?.includes('PK = :pk')) {
+      const pk = ExpressionAttributeValues?.[':pk'] as string;
+      const skPrefix = ExpressionAttributeValues?.[':skPrefix'] as string;
+
+      results = Array.from(items.values()).filter(item => {
+        const itemPK = item.PK as string;
+        const itemSK = item.SK as string;
+        return itemPK === pk && itemSK.startsWith(skPrefix);
+      });
+
+      // Apply filter expression
+      if (FilterExpression === 'id = :postId') {
+        const postId = ExpressionAttributeValues?.[':postId'] as string;
+        results = results.filter(item => item.id === postId);
+      }
+    }
+
+    // Sort by SK (timestamp) - newest first if ScanIndexForward is false
+    results.sort((a, b) => {
+      const aSK = a.SK as string;
+      const bSK = b.SK as string;
+      return ScanIndexForward === false ? bSK.localeCompare(aSK) : aSK.localeCompare(bSK);
+    });
+
+    // Handle pagination
+    let startIndex = 0;
+    if (ExclusiveStartKey) {
+      const startKey = `${ExclusiveStartKey.PK}#${ExclusiveStartKey.SK}`;
+      startIndex = results.findIndex(item => `${item.PK}#${item.SK}` === startKey) + 1;
+    }
+
+    const limit = Limit || results.length;
+    const paginatedResults = results.slice(startIndex, startIndex + limit);
+    const hasMore = startIndex + limit < results.length;
+
+    return {
+      Items: paginatedResults,
+      LastEvaluatedKey: hasMore ? { PK: paginatedResults[paginatedResults.length - 1]?.PK, SK: paginatedResults[paginatedResults.length - 1]?.SK } : undefined
+    };
+  };
+
+  const handleUpdateCommand = (command: MockDynamoCommand) => {
+    const { Key, UpdateExpression, ExpressionAttributeNames, ExpressionAttributeValues } = command.input;
+    const key = `${Key!.PK}#${Key!.SK}`;
+    const item = items.get(key);
+
+    if (!item) {
+      return { Attributes: null };
+    }
+
+    const updatedItem = { ...item };
+
+    // Parse UPDATE expression - simplified for test purposes
+    if (UpdateExpression?.includes('#updatedAt = :updatedAt')) {
+      updatedItem.updatedAt = ExpressionAttributeValues?.[':updatedAt'];
+    }
+    if (UpdateExpression?.includes('#caption = :caption')) {
+      updatedItem.caption = ExpressionAttributeValues?.[':caption'];
+    }
+    if (UpdateExpression?.includes('#tags = :tags')) {
+      updatedItem.tags = ExpressionAttributeValues?.[':tags'];
+    }
+    if (UpdateExpression?.includes('#isPublic = :isPublic')) {
+      updatedItem.isPublic = ExpressionAttributeValues?.[':isPublic'];
+    }
+
+    items.set(key, updatedItem);
+    return { Attributes: updatedItem };
+  };
+
+  const handleDeleteCommand = (command: MockDynamoCommand) => {
+    const { Key } = command.input;
+    const key = `${Key!.PK}#${Key!.SK}`;
+    items.delete(key);
+
+    // Remove from GSI1
+    for (const [gsiKey, gsiItems] of gsi1Items.entries()) {
+      const index = gsiItems.findIndex(item => `${item.PK}#${item.SK}` === key);
+      if (index !== -1) {
+        gsiItems.splice(index, 1);
+        if (gsiItems.length === 0) {
+          gsi1Items.delete(gsiKey);
+        }
+        break;
+      }
+    }
+
+    return { $metadata: {} };
+  };
+
+  return {
+    send: vi.fn().mockImplementation((command: MockDynamoCommand) => {
+      switch (command.constructor.name) {
+        case 'PutCommand':
+          return Promise.resolve(handlePutCommand(command));
+        case 'QueryCommand':
+          return Promise.resolve(handleQueryCommand(command));
+        case 'UpdateCommand':
+          return Promise.resolve(handleUpdateCommand(command));
+        case 'DeleteCommand':
+          return Promise.resolve(handleDeleteCommand(command));
+        default:
+          return Promise.reject(new Error(`Unknown command: ${command.constructor.name}`));
+      }
+    }),
+    // Expose internal state for testing
+    _getItems: () => items,
+    _getGSI1Items: () => gsi1Items
+  };
+};
+
+describe('PostService', () => {
+  let postService: PostService;
+  let mockDynamoClient: ReturnType<typeof createMockDynamoClient>;
+  let mockProfileService: ReturnType<typeof createMockProfileService>;
+  const tableName = 'test-table';
+
+  beforeEach(() => {
+    mockDynamoClient = createMockDynamoClient();
+    mockProfileService = createMockProfileService();
+    postService = new PostService(
+      mockDynamoClient as unknown as DynamoDBDocumentClient,
+      tableName,
+      mockProfileService as unknown as ProfileService
+    );
+  });
+
+  describe('createPost', () => {
+    it('should create a new post successfully', async () => {
+      const userId = 'user123';
+      const userHandle = 'testuser';
+      const request: CreatePostRequest = {
+        caption: 'Test caption',
+        tags: ['test', 'photo'],
+        isPublic: true
+      };
+      const imageUrl = 'https://example.com/image.jpg';
+      const thumbnailUrl = 'https://example.com/thumb.jpg';
+
+      const result = await postService.createPost(userId, userHandle, request, imageUrl, thumbnailUrl);
+
+      expect(result).toMatchObject({
+        userId,
+        userHandle,
+        imageUrl,
+        thumbnailUrl,
+        caption: 'Test caption',
+        tags: ['test', 'photo'],
+        likesCount: 0,
+        commentsCount: 0,
+        isPublic: true
+      });
+      expect(result.id).toBeTruthy();
+      expect(result.createdAt).toBeTruthy();
+      expect(result.updatedAt).toBeTruthy();
+      expect(mockProfileService.incrementPostsCount).toHaveBeenCalledWith(userId);
+    });
+
+    it('should create post with default values', async () => {
+      const userId = 'user123';
+      const userHandle = 'testuser';
+      const request: CreatePostRequest = {};
+      const imageUrl = 'https://example.com/image.jpg';
+      const thumbnailUrl = 'https://example.com/thumb.jpg';
+
+      const result = await postService.createPost(userId, userHandle, request, imageUrl, thumbnailUrl);
+
+      expect(result.caption).toBeUndefined();
+      expect(result.tags).toEqual([]);
+      expect(result.isPublic).toBe(true);
+    });
+
+    it('should handle DynamoDB errors', async () => {
+      mockDynamoClient.send.mockRejectedValueOnce(new Error('Database connection failed'));
+
+      await expect(postService.createPost('user123', 'testuser', {}, 'image.jpg', 'thumb.jpg'))
+        .rejects.toThrow('Database connection failed');
+
+      expect(mockProfileService.incrementPostsCount).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getPostById', () => {
+    it('should return post when found', async () => {
+      const postId = 'post123';
+      const postEntity: PostEntity = {
+        PK: 'USER#user123',
+        SK: 'POST#2024-01-01T00:00:00.000Z#post123',
+        GSI1PK: `POST#${postId}`,
+        GSI1SK: 'USER#user123',
+        id: postId,
+        userId: 'user123',
+        userHandle: 'testuser',
+        imageUrl: 'image.jpg',
+        thumbnailUrl: 'thumb.jpg',
+        caption: 'Test caption',
+        tags: ['test'],
+        likesCount: 5,
+        commentsCount: 3,
+        isPublic: true,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        entityType: 'POST'
+      };
+
+      // Add to mock database
+      mockDynamoClient._getGSI1Items().set(`POST#${postId}`, [postEntity]);
+
+      const result = await postService.getPostById(postId);
+
+      expect(result).toMatchObject({
+        id: postId,
+        userId: 'user123',
+        userHandle: 'testuser',
+        caption: 'Test caption',
+        tags: ['test'],
+        likesCount: 5,
+        commentsCount: 3,
+        isPublic: true
+      });
+    });
+
+    it('should return null when post not found', async () => {
+      const result = await postService.getPostById('nonexistent');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('updatePost', () => {
+    const postId = 'post123';
+    const userId = 'user123';
+    const postEntity: PostEntity = {
+      PK: 'USER#user123',
+      SK: 'POST#2024-01-01T00:00:00.000Z#post123',
+      GSI1PK: `POST#${postId}`,
+      GSI1SK: 'USER#user123',
+      id: postId,
+      userId,
+      userHandle: 'testuser',
+      imageUrl: 'image.jpg',
+      thumbnailUrl: 'thumb.jpg',
+      caption: 'Original caption',
+      tags: ['original'],
+      likesCount: 0,
+      commentsCount: 0,
+      isPublic: true,
+      createdAt: '2024-01-01T00:00:00.000Z',
+      updatedAt: '2024-01-01T00:00:00.000Z',
+      entityType: 'POST'
+    };
+
+    beforeEach(() => {
+      // Add post to mock database
+      const key = `${postEntity.PK}#${postEntity.SK}`;
+      mockDynamoClient._getItems().set(key, postEntity);
+      mockDynamoClient._getGSI1Items().set(`POST#${postId}`, [postEntity]);
+    });
+
+    it('should update post successfully', async () => {
+      const updates: UpdatePostRequest = {
+        caption: 'Updated caption',
+        tags: ['updated', 'test'],
+        isPublic: false
+      };
+
+      const result = await postService.updatePost(postId, userId, updates);
+
+      expect(result).toMatchObject({
+        id: postId,
+        caption: 'Updated caption',
+        tags: ['updated', 'test'],
+        isPublic: false
+      });
+      expect(result!.updatedAt).not.toBe(postEntity.updatedAt);
+    });
+
+    it('should return null for non-existent post', async () => {
+      const result = await postService.updatePost('nonexistent', userId, { caption: 'test' });
+      expect(result).toBeNull();
+    });
+
+    it('should return null when user is not the owner', async () => {
+      const result = await postService.updatePost(postId, 'different-user', { caption: 'test' });
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('deletePost', () => {
+    const postId = 'post123';
+    const userId = 'user123';
+    const postEntity: PostEntity = {
+      PK: 'USER#user123',
+      SK: 'POST#2024-01-01T00:00:00.000Z#post123',
+      GSI1PK: `POST#${postId}`,
+      GSI1SK: 'USER#user123',
+      id: postId,
+      userId,
+      userHandle: 'testuser',
+      imageUrl: 'image.jpg',
+      thumbnailUrl: 'thumb.jpg',
+      caption: 'Test caption',
+      tags: ['test'],
+      likesCount: 0,
+      commentsCount: 0,
+      isPublic: true,
+      createdAt: '2024-01-01T00:00:00.000Z',
+      updatedAt: '2024-01-01T00:00:00.000Z',
+      entityType: 'POST'
+    };
+
+    beforeEach(() => {
+      // Add post to mock database
+      const key = `${postEntity.PK}#${postEntity.SK}`;
+      mockDynamoClient._getItems().set(key, postEntity);
+      mockDynamoClient._getGSI1Items().set(`POST#${postId}`, [postEntity]);
+    });
+
+    it('should delete post successfully', async () => {
+      const result = await postService.deletePost(postId, userId);
+
+      expect(result).toBe(true);
+      expect(mockProfileService.decrementPostsCount).toHaveBeenCalledWith(userId);
+
+      // Verify post is removed from mock database
+      const key = `${postEntity.PK}#${postEntity.SK}`;
+      expect(mockDynamoClient._getItems().has(key)).toBe(false);
+    });
+
+    it('should return false for non-existent post', async () => {
+      const result = await postService.deletePost('nonexistent', userId);
+      expect(result).toBe(false);
+      expect(mockProfileService.decrementPostsCount).not.toHaveBeenCalled();
+    });
+
+    it('should return false when user is not the owner', async () => {
+      const result = await postService.deletePost(postId, 'different-user');
+      expect(result).toBe(false);
+      expect(mockProfileService.decrementPostsCount).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getUserPostsByHandle', () => {
+    const userProfile = {
+      id: 'user123',
+      handle: 'testuser',
+      postsCount: 2
+    };
+
+    beforeEach(() => {
+      mockProfileService.getProfileByHandle.mockResolvedValue(userProfile);
+    });
+
+    it('should return user posts successfully', async () => {
+      const post1: PostEntity = {
+        PK: 'USER#user123',
+        SK: 'POST#2024-01-02T00:00:00.000Z#post2',
+        GSI1PK: 'POST#post2',
+        GSI1SK: 'USER#user123',
+        id: 'post2',
+        userId: 'user123',
+        userHandle: 'testuser',
+        imageUrl: 'image2.jpg',
+        thumbnailUrl: 'thumb2.jpg',
+        tags: [],
+        likesCount: 10,
+        commentsCount: 5,
+        isPublic: true,
+        createdAt: '2024-01-02T00:00:00.000Z',
+        updatedAt: '2024-01-02T00:00:00.000Z',
+        entityType: 'POST'
+      };
+
+      const post2: PostEntity = {
+        PK: 'USER#user123',
+        SK: 'POST#2024-01-01T00:00:00.000Z#post1',
+        GSI1PK: 'POST#post1',
+        GSI1SK: 'USER#user123',
+        id: 'post1',
+        userId: 'user123',
+        userHandle: 'testuser',
+        imageUrl: 'image1.jpg',
+        thumbnailUrl: 'thumb1.jpg',
+        tags: [],
+        likesCount: 5,
+        commentsCount: 2,
+        isPublic: true,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        entityType: 'POST'
+      };
+
+      // Add posts to mock database
+      mockDynamoClient._getItems().set(`${post1.PK}#${post1.SK}`, post1);
+      mockDynamoClient._getItems().set(`${post2.PK}#${post2.SK}`, post2);
+
+      const request: GetUserPostsRequest = {
+        handle: 'testuser',
+        limit: 24
+      };
+
+      const result = await postService.getUserPostsByHandle(request);
+
+      expect(result.posts).toHaveLength(2);
+      expect(result.posts[0].id).toBe('post2'); // Newer post first
+      expect(result.posts[1].id).toBe('post1');
+      expect(result.hasMore).toBe(false);
+      expect(result.totalCount).toBe(2);
+      expect(mockProfileService.getProfileByHandle).toHaveBeenCalledWith('testuser');
+    });
+
+    it('should return empty result when user not found', async () => {
+      mockProfileService.getProfileByHandle.mockResolvedValue(null);
+
+      const request: GetUserPostsRequest = {
+        handle: 'nonexistent',
+        limit: 24
+      };
+
+      const result = await postService.getUserPostsByHandle(request);
+
+      expect(result).toEqual({
+        posts: [],
+        hasMore: false,
+        totalCount: 0
+      });
+    });
+
+    it('should handle pagination with cursor', async () => {
+      const post1: PostEntity = {
+        PK: 'USER#user123',
+        SK: 'POST#2024-01-02T00:00:00.000Z#post2',
+        GSI1PK: 'POST#post2',
+        GSI1SK: 'USER#user123',
+        id: 'post2',
+        userId: 'user123',
+        userHandle: 'testuser',
+        imageUrl: 'image2.jpg',
+        thumbnailUrl: 'thumb2.jpg',
+        tags: [],
+        likesCount: 10,
+        commentsCount: 5,
+        isPublic: true,
+        createdAt: '2024-01-02T00:00:00.000Z',
+        updatedAt: '2024-01-02T00:00:00.000Z',
+        entityType: 'POST'
+      };
+
+      mockDynamoClient._getItems().set(`${post1.PK}#${post1.SK}`, post1);
+
+      const cursor = Buffer.from(JSON.stringify({ PK: 'USER#user123', SK: 'POST#2024-01-01T00:00:00.000Z#post1' })).toString('base64');
+
+      const request: GetUserPostsRequest = {
+        handle: 'testuser',
+        limit: 1,
+        cursor
+      };
+
+      const result = await postService.getUserPostsByHandle(request);
+
+      expect(result.posts).toHaveLength(1);
+      expect(result.posts[0].id).toBe('post2');
+    });
+  });
+
+  describe('getUserPosts', () => {
+    it('should return authenticated user posts', async () => {
+      const userId = 'user123';
+      const post: PostEntity = {
+        PK: 'USER#user123',
+        SK: 'POST#2024-01-01T00:00:00.000Z#post1',
+        GSI1PK: 'POST#post1',
+        GSI1SK: 'USER#user123',
+        id: 'post1',
+        userId,
+        userHandle: 'testuser',
+        imageUrl: 'image1.jpg',
+        thumbnailUrl: 'thumb1.jpg',
+        caption: 'Private post',
+        tags: ['private'],
+        likesCount: 5,
+        commentsCount: 2,
+        isPublic: false,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        entityType: 'POST'
+      };
+
+      mockDynamoClient._getItems().set(`${post.PK}#${post.SK}`, post);
+
+      const result = await postService.getUserPosts(userId);
+
+      expect(result.posts).toHaveLength(1);
+      expect(result.posts[0]).toMatchObject({
+        id: 'post1',
+        caption: 'Private post',
+        isPublic: false
+      });
+      expect(result.hasMore).toBe(false);
+    });
+  });
+});

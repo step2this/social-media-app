@@ -1,32 +1,19 @@
-import type { APIGatewayProxyHandler } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { PostService, ProfileService } from '@social-media-app/dal';
 import {
   PostGridResponseSchema,
-  type PostGridResponse,
   type GetUserPostsRequest
 } from '@social-media-app/shared';
 import { errorResponse, successResponse } from '../../utils/index.js';
+import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
 import { z } from 'zod';
-
-const dynamoClient = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(dynamoClient);
-const tableName = process.env.TABLE_NAME || 'social-media-app';
-
-const profileService = new ProfileService(
-  docClient,
-  tableName,
-  process.env.MEDIA_BUCKET_NAME,
-  process.env.CLOUDFRONT_DOMAIN
-);
-
-const postService = new PostService(docClient, tableName, profileService);
 
 /**
  * Handler to get posts by user handle
  */
-export const handler: APIGatewayProxyHandler = async (event) => {
+export const handler = async (
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> => {
   try {
     // Get handle from path parameters
     const handle = event.pathParameters?.handle;
@@ -53,13 +40,26 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       cursor
     };
 
+    // Initialize dependencies
+    const dynamoClient = createDynamoDBClient();
+    const tableName = getTableName();
+
+    const profileService = new ProfileService(
+      dynamoClient,
+      tableName,
+      process.env.MEDIA_BUCKET_NAME,
+      process.env.CLOUDFRONT_DOMAIN
+    );
+
+    const postService = new PostService(dynamoClient, tableName, profileService);
+
     // Get user posts
     const postsData = await postService.getUserPostsByHandle(request);
 
     // Validate response
     const validatedResponse = PostGridResponseSchema.parse(postsData);
 
-    return successResponse(validatedResponse);
+    return successResponse(200, validatedResponse);
   } catch (error) {
     console.error('Error getting user posts:', error);
 

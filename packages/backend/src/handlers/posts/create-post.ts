@@ -1,33 +1,32 @@
-import type { APIGatewayProxyHandler } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { PostService, ProfileService } from '@social-media-app/dal';
 import {
   CreatePostRequestSchema,
   CreatePostResponseSchema,
   type CreatePostResponse
 } from '@social-media-app/shared';
-import { errorResponse, successResponse, verifyAccessToken } from '../../utils/index.js';
+import { errorResponse, successResponse, verifyAccessToken, getJWTConfigFromEnv } from '../../utils/index.js';
+import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
 import { z } from 'zod';
-
-const dynamoClient = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(dynamoClient);
-const tableName = process.env.TABLE_NAME || 'social-media-app';
-
-const profileService = new ProfileService(
-  docClient,
-  tableName,
-  process.env.MEDIA_BUCKET_NAME,
-  process.env.CLOUDFRONT_DOMAIN
-);
-
-const postService = new PostService(docClient, tableName, profileService);
 
 /**
  * Handler to create a new post
  */
-export const handler: APIGatewayProxyHandler = async (event) => {
+export const handler = async (
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> => {
   try {
+    // Parse request body early
+    let body: unknown;
+    try {
+      body = JSON.parse(event.body || '{}');
+    } catch {
+      return errorResponse(400, 'Invalid JSON in request body');
+    }
+
+    // Validate request body
+    const validatedRequest = CreatePostRequestSchema.parse(body);
+
     // Verify authentication
     const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader?.startsWith('Bearer ')) {
@@ -35,21 +34,31 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     }
 
     const token = authHeader.substring(7);
-    const decoded = await verifyAccessToken(token);
+    const jwtConfig = getJWTConfigFromEnv();
+    const decoded = await verifyAccessToken(token, jwtConfig.secret);
 
     if (!decoded || !decoded.userId) {
       return errorResponse(401, 'Invalid token');
     }
+
+    // Initialize dependencies
+    const dynamoClient = createDynamoDBClient();
+    const tableName = getTableName();
+
+    const profileService = new ProfileService(
+      dynamoClient,
+      tableName,
+      process.env.MEDIA_BUCKET_NAME,
+      process.env.CLOUDFRONT_DOMAIN
+    );
+
+    const postService = new PostService(dynamoClient, tableName, profileService);
 
     // Get user profile to get handle
     const userProfile = await profileService.getProfileById(decoded.userId);
     if (!userProfile) {
       return errorResponse(404, 'User profile not found');
     }
-
-    // Parse and validate request body
-    const body = JSON.parse(event.body || '{}');
-    const validatedRequest = CreatePostRequestSchema.parse(body);
 
     // Generate presigned URLs for image upload
     const imageUploadData = await profileService.generatePresignedUrl(
@@ -78,12 +87,16 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     const validatedResponse = CreatePostResponseSchema.parse(response);
 
-    return successResponse(validatedResponse);
+    return successResponse(201, validatedResponse);
   } catch (error) {
     console.error('Error creating post:', error);
 
     if (error instanceof z.ZodError) {
       return errorResponse(400, 'Invalid request data', error.errors);
+    }
+
+    if (error instanceof Error && error.message === 'S3 bucket not configured') {
+      return errorResponse(500, 'Storage service not configured');
     }
 
     return errorResponse(500, 'Internal server error');

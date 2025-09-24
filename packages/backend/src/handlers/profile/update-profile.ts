@@ -1,4 +1,4 @@
-import type { APIGatewayProxyHandler } from 'aws-lambda';
+import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { ProfileService } from '@social-media-app/dal';
@@ -7,7 +7,7 @@ import {
   UpdateProfileResponseSchema,
   type UpdateProfileResponse
 } from '@social-media-app/shared';
-import { errorResponse, successResponse, verifyAccessToken } from '../../utils/index.js';
+import { errorResponse, successResponse, verifyAccessToken, getJWTConfigFromEnv } from '../../utils/index.js';
 import { z } from 'zod';
 
 const dynamoClient = new DynamoDBClient({});
@@ -24,7 +24,9 @@ const profileService = new ProfileService(
 /**
  * Handler to update authenticated user's profile
  */
-export const handler: APIGatewayProxyHandler = async (event) => {
+export const handler = async (
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> => {
   try {
     // Verify authentication
     const authHeader = event.headers.authorization || event.headers.Authorization;
@@ -33,7 +35,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     }
 
     const token = authHeader.substring(7);
-    const decoded = await verifyAccessToken(token);
+    const jwtConfig = getJWTConfigFromEnv();
+    const decoded = await verifyAccessToken(token, jwtConfig.secret);
 
     if (!decoded || !decoded.userId) {
       return errorResponse(401, 'Invalid token');
@@ -57,7 +60,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     const validatedResponse = UpdateProfileResponseSchema.parse(response);
 
-    return successResponse(validatedResponse);
+    return successResponse(200, validatedResponse);
   } catch (error) {
     console.error('Error updating profile:', error);
 

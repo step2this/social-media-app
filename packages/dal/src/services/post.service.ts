@@ -215,13 +215,10 @@ export class PostService {
       KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
       ExpressionAttributeValues: {
         ':pk': `USER#${userId}`,
-        ':skPrefix': 'POST#'
+        ':skPrefix': 'POST#',
+        ':postId': postId
       },
-      FilterExpression: 'id = :postId',
-      ExpressionAttributeNames: {
-        '#isPublic': 'isPublic',
-        '#createdAt': 'createdAt'
-      }
+      FilterExpression: 'id = :postId'
     }));
 
     if (!queryResult.Items || queryResult.Items.length === 0) {

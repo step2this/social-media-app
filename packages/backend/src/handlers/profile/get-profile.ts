@@ -1,4 +1,4 @@
-import type { APIGatewayProxyHandler } from 'aws-lambda';
+import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { ProfileService } from '@social-media-app/dal';
@@ -23,7 +23,9 @@ const profileService = new ProfileService(
 /**
  * Handler to get a public profile by handle
  */
-export const handler: APIGatewayProxyHandler = async (event) => {
+export const handler = async (
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> => {
   try {
     // Validate path parameters
     const handle = event.pathParameters?.handle;
@@ -46,7 +48,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     const validatedResponse = PublicProfileResponseSchema.parse(response);
 
-    return successResponse(validatedResponse);
+    return successResponse(200, validatedResponse);
   } catch (error) {
     console.error('Error getting profile:', error);
 
