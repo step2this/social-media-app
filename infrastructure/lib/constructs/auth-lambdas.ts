@@ -30,7 +30,8 @@ export class AuthLambdas extends Construct {
       NODE_ENV: props.environment,
       LOG_LEVEL: props.environment === 'prod' ? 'warn' : 'debug',
       TABLE_NAME: props.table.tableName,
-      JWT_SECRET: 'temporary-secret-replace-with-secrets-manager', // TODO: Use AWS Secrets Manager
+      JWT_SECRET: process.env.JWT_SECRET || 'development-secret-change-in-production',
+      JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'development-refresh-secret-change-in-production',
       JWT_EXPIRES_IN: '900', // 15 minutes in seconds
       REFRESH_TOKEN_EXPIRES_IN: '2592000' // 30 days in seconds
     };

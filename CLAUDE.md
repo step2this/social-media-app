@@ -36,6 +36,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Use Zod schemas for runtime validation
 - Include context for debugging in error messages
 - Use Zod for all validation e.g. input/output
+- Use barrel exports
 
 > **There must be one and only one definition for all wire protocols, persistence schemas, interfaces, and APIs. These definitions must be shared between client and server.**
 

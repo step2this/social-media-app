@@ -21,12 +21,17 @@
     "typecheck": "pnpm -r typecheck",
     "dev": "pnpm -r --parallel dev",
     "clean": "pnpm -r clean",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "deploy:backend": "./deploy-backend.sh",
+    "deploy:backend:prod": "CDK_ENV=prod ./deploy-backend.sh",
+    "test:deployment": "./test-deployment.sh",
+    "rollback:backend": "./rollback-backend.sh"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
+    "esbuild": "^0.19.12",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-functional": "^6.0.0",

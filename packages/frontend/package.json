@@ -5,6 +5,8 @@
   "description": "Frontend for social media app",
   "scripts": {
     "dev": "vite",
+    "dev:aws": "rm -f .env.local && vite --port 3001",
+    "dev:local": "cp .env.local.example .env.local 2>/dev/null || echo 'VITE_API_URL=http://localhost:3001\nVITE_ENABLE_MSW=true' > .env.local && vite --port 3001",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",

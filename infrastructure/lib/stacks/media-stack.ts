@@ -98,11 +98,13 @@ export class MediaStack extends Stack {
         {
           httpStatus: 404,
           responseHttpStatus: 404,
+          responsePagePath: '/404.html',
           ttl: Duration.minutes(5)
         },
         {
           httpStatus: 403,
           responseHttpStatus: 403,
+          responsePagePath: '/403.html',
           ttl: Duration.minutes(5)
         }
       ],
