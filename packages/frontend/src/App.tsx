@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/auth/ProtectedRoute.js';
 import { AuthModal } from './components/auth/AuthModal.js';
 import { useAuth } from './hooks/useAuth.js';
@@ -10,12 +10,19 @@ import { AppLayout } from './components/layout/AppLayout';
 import { ContentLayout } from './components/layout/AppLayout';
 import './App.css';
 
-function App() {
+function AppContent() {
   const { isAuthenticated } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const navigate = useNavigate();
+
+  const handleAuthSuccess = () => {
+    setShowAuthModal(false);
+    // Always navigate to profile page after successful registration/login
+    navigate('/profile');
+  };
 
   return (
-    <Router>
+    <>
       {isAuthenticated ? (
         <AppLayout>
           <Routes>
@@ -126,10 +133,18 @@ function App() {
           <AuthModal
             isOpen={showAuthModal}
             onClose={() => setShowAuthModal(false)}
-            onSuccess={() => setShowAuthModal(false)}
+            onSuccess={handleAuthSuccess}
           />
         </div>
       )}
+    </>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }
