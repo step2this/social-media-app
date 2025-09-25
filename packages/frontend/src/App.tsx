@@ -8,6 +8,7 @@ import { MyProfilePage } from './components/profile/MyProfilePage';
 import { AppLayout } from './components/layout/AppLayout';
 import { ContentLayout } from './components/layout/AppLayout';
 import { ServiceProvider, useServices } from './services/ServiceProvider';
+import { useAuthStore } from './stores/authStore.js';
 import './App.css';
 
 /**
@@ -17,6 +18,9 @@ import './App.css';
 function AppContent() {
   // Access services through dependency injection
   const { authService, navigationService, modalService, notificationService } = useServices();
+
+  // Use reactive auth state for component re-renders (solves stale closure issue)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   // Local state for modal visibility (this could be moved to modalService completely)
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -61,8 +65,8 @@ function AppContent() {
     modalService.closeAuthModal();
   }, [modalService]);
 
-  // Render based on authentication state
-  if (authService.isAuthenticated) {
+  // Render based on reactive authentication state
+  if (isAuthenticated) {
     return (
       <AppLayout>
         <Routes>
