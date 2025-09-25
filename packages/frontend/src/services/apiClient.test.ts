@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { apiClient } from './apiClient';
 
+// Expected API base URL for tests - should match the apiClient's default
+const EXPECTED_API_BASE_URL = 'http://localhost:3001';
+
 describe('apiClient HTTP Methods with Token Authentication', () => {
   const createMockStorage = (hasToken = true) => ({
     getItem: vi.fn().mockReturnValue(
@@ -60,7 +63,7 @@ describe('apiClient HTTP Methods with Token Authentication', () => {
       await apiClient.get('/test-endpoint');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:3001/test-endpoint',
+        `${EXPECTED_API_BASE_URL}/test-endpoint`,
         expect.objectContaining({
           method: 'GET',
           headers: expect.objectContaining({
@@ -81,7 +84,7 @@ describe('apiClient HTTP Methods with Token Authentication', () => {
       await apiClient.post('/test-endpoint', { data: 'test' });
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:3001/test-endpoint',
+        `${EXPECTED_API_BASE_URL}/test-endpoint`,
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ data: 'test' }),
@@ -103,7 +106,7 @@ describe('apiClient HTTP Methods with Token Authentication', () => {
       await apiClient.get('/public-endpoint', false);
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:3001/public-endpoint',
+        `${EXPECTED_API_BASE_URL}/public-endpoint`,
         expect.objectContaining({
           method: 'GET',
           headers: expect.not.objectContaining({
@@ -124,7 +127,7 @@ describe('apiClient HTTP Methods with Token Authentication', () => {
       await apiClient.put('/test-endpoint', { field: 'value' });
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:3001/test-endpoint',
+        `${EXPECTED_API_BASE_URL}/test-endpoint`,
         expect.objectContaining({
           method: 'PUT',
           body: JSON.stringify({ field: 'value' }),
@@ -146,7 +149,7 @@ describe('apiClient HTTP Methods with Token Authentication', () => {
       await apiClient.delete('/test-endpoint');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:3001/test-endpoint',
+        `${EXPECTED_API_BASE_URL}/test-endpoint`,
         expect.objectContaining({
           method: 'DELETE',
           headers: expect.objectContaining({
@@ -167,7 +170,7 @@ describe('apiClient HTTP Methods with Token Authentication', () => {
       await apiClient.get('/test-endpoint');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:3001/test-endpoint',
+        `${EXPECTED_API_BASE_URL}/test-endpoint`,
         expect.objectContaining({
           method: 'GET',
           headers: expect.not.objectContaining({
@@ -196,7 +199,7 @@ describe('apiClient HTTP Methods with Token Authentication', () => {
       await apiClient.post('/test-endpoint');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:3001/test-endpoint',
+        `${EXPECTED_API_BASE_URL}/test-endpoint`,
         expect.objectContaining({
           method: 'POST',
           body: undefined

@@ -183,7 +183,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                   <strong>Development tip:</strong> You can clear mock data by running:
                 </p>
                 <code>
-                  fetch('http://localhost:3001/dev/reset-mock-data', {'{ method: \'DELETE\' }'})
+                  fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/dev/reset-mock-data`, {'{ method: \'DELETE\' }'})
                 </code>
                 <p>in your browser console, or refresh the page to start fresh.</p>
               </div>

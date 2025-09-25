@@ -2,6 +2,9 @@ import { http, HttpResponse } from 'msw';
 import { HelloRequestSchema, HelloResponseSchema, type HelloRequest, type HelloResponse } from '@social-media-app/shared';
 import { authHandlers } from './authHandlers.js';
 
+// Use the same API base URL as the apiClient
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 /**
  * Mock API handlers for development mode
  */
@@ -9,7 +12,7 @@ export const handlers = [
   // Authentication handlers
   ...authHandlers,
   // Hello endpoint handler
-  http.post('http://localhost:3001/hello', async ({ request }) => {
+  http.post(`${API_BASE_URL}/hello`, async ({ request }) => {
     try {
       // Parse request body
       const body = await request.json() as HelloRequest;
@@ -59,7 +62,7 @@ export const handlers = [
   }),
 
   // Health check endpoint
-  http.get('http://localhost:3001/health', () => {
+  http.get(`${API_BASE_URL}/health`, () => {
     return HttpResponse.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -68,7 +71,7 @@ export const handlers = [
   }),
 
   // Catch-all for unhandled endpoints
-  http.all('http://localhost:3001/*', ({ request }) => {
+  http.all(`${API_BASE_URL}/*`, ({ request }) => {
     console.warn(`Unhandled ${request.method} request to ${request.url}`);
     return HttpResponse.json(
       {

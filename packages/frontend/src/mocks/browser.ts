@@ -20,7 +20,8 @@ export const startMocking = async () => {
         }
       });
       console.info('🚀 Mock API server started');
-      console.info('📡 API calls to http://localhost:3001 will be mocked');
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      console.info(`📡 API calls to ${API_BASE_URL} will be mocked`);
     } catch (error) {
       console.error('Failed to start MSW:', error);
     }

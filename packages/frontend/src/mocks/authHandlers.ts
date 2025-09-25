@@ -24,6 +24,9 @@ import {
   type AuthTokens
 } from '@social-media-app/shared';
 
+// Use the same API base URL as the apiClient
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 // Mock user database - In-memory storage for development
 const mockUsers = new Map<string, {
   id: string;
@@ -110,7 +113,7 @@ const addDelay = (min = 200, max = 800) =>
  */
 export const authHandlers = [
   // Development helper endpoint to reset mock data
-  http.delete('http://localhost:3001/dev/reset-mock-data', async () => {
+  http.delete(`${API_BASE_URL}/dev/reset-mock-data`, async () => {
     mockUsers.clear();
     mockTokens.clear();
     await addDelay(50, 100);
@@ -134,7 +137,7 @@ export const authHandlers = [
   }),
 
   // Development helper endpoint to list existing mock users
-  http.get('http://localhost:3001/dev/users', async () => {
+  http.get(`${API_BASE_URL}/dev/users`, async () => {
     const users = Array.from(mockUsers.values()).map(user => ({
       id: user.id,
       email: user.email,
@@ -160,7 +163,7 @@ export const authHandlers = [
     );
   }),
   // Register endpoint
-  http.post('http://localhost:3001/auth/register', async ({ request }) => {
+  http.post(`${API_BASE_URL}/auth/register`, async ({ request }) => {
     try {
       const body = await request.json() as RegisterRequest;
       const validatedRequest = RegisterRequestSchema.parse(body);
@@ -250,7 +253,7 @@ export const authHandlers = [
   }),
 
   // Login endpoint
-  http.post('http://localhost:3001/auth/login', async ({ request }) => {
+  http.post(`${API_BASE_URL}/auth/login`, async ({ request }) => {
     try {
       const body = await request.json() as LoginRequest;
       const validatedRequest = LoginRequestSchema.parse(body);
@@ -313,7 +316,7 @@ export const authHandlers = [
   }),
 
   // Logout endpoint
-  http.post('http://localhost:3001/auth/logout', async ({ request }) => {
+  http.post(`${API_BASE_URL}/auth/logout`, async ({ request }) => {
     try {
       const body = await request.json() as { refreshToken: string };
       const validatedRequest = LogoutRequestSchema.parse(body);
@@ -350,7 +353,7 @@ export const authHandlers = [
   }),
 
   // Refresh token endpoint
-  http.post('http://localhost:3001/auth/refresh', async ({ request }) => {
+  http.post(`${API_BASE_URL}/auth/refresh`, async ({ request }) => {
     try {
       const body = await request.json() as RefreshTokenRequest;
       const validatedRequest = RefreshTokenRequestSchema.parse(body);
@@ -411,7 +414,7 @@ export const authHandlers = [
   }),
 
   // Get profile endpoint
-  http.get('http://localhost:3001/auth/profile', async ({ request }) => {
+  http.get(`${API_BASE_URL}/auth/profile`, async ({ request }) => {
     try {
       const authHeader = request.headers.get('Authorization');
       const user = getUserFromToken(authHeader);
@@ -465,7 +468,7 @@ export const authHandlers = [
   }),
 
   // Update profile endpoint
-  http.put('http://localhost:3001/auth/profile', async ({ request }) => {
+  http.put(`${API_BASE_URL}/auth/profile`, async ({ request }) => {
     try {
       const authHeader = request.headers.get('Authorization');
       const user = getUserFromToken(authHeader);

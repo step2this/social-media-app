@@ -141,3 +141,13 @@ import { verifyToken } from '../../utils/jwt.js';
 - ✅ **Maintainable**: Changes don't cascade unnecessarily
 - ✅ **Testable**: Each package can be tested independently
 - ✅ **Scalable**: Easy to add new packages without breaking others
+
+## Clean Testing Workflow (Monorepo Cache-Busting)
+
+**When debugging shared package changes (schemas, types, etc.), always use this workflow to avoid cache issues:**
+
+1. **Rebuild shared package**: `cd packages/shared && pnpm build`
+2. **Clear Vite cache & restart**: `cd packages/frontend && rm -rf node_modules/.vite && pnpm dev`
+3. **Alternative**: Use `pnpm dev --force` to force-clear Vite dependency cache
+
+**Why**: Vite caches shared packages aggressively. Schema/type changes won't propagate without explicit cache clearing, leading to hours of debugging phantom issues.
