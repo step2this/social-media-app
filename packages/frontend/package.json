@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "test": "vitest run",
-    "test:unit": "vitest run --dir src/components/__tests__ --dir src/hooks/__tests__ --dir src/stores/__tests__",
+    "test:unit": "vitest run src",
     "test:integration": "vitest run --dir src/__tests__/integration",
     "test:auth": "vitest run --testNamePattern=\"auth|Auth|registration|Registration\"",
     "test:navigation": "vitest run --testNamePattern=\"navigation|redirect|Navigation|Redirect\"",

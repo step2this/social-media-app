@@ -112,7 +112,8 @@ export const RegisterResponseSchema = z.object({
     emailVerified: true,
     createdAt: true
   }),
-  message: z.string()
+  message: z.string(),
+  tokens: AuthTokensSchema.optional() // Optional tokens for auto-login after registration
 });
 
 export const LoginResponseSchema = z.object({

@@ -238,7 +238,12 @@ describe('AuthService', () => {
           emailVerified: false,
           createdAt: '2024-01-01T00:00:00.000Z'
         },
-        message: 'User registered successfully. Please check your email for verification.'
+        message: 'User registered successfully. Welcome!',
+        tokens: {
+          accessToken: 'mock-access-token',
+          refreshToken: 'mock-refresh-token',
+          expiresIn: 900
+        }
       });
 
       // Verify user was stored in DynamoDB

@@ -35,7 +35,17 @@ export const useAuth = () => {
       const response = await apiClient.auth.register(userData);
       console.log('✅ useAuth: Registration API call successful:', response);
 
-      // Registration doesn't automatically log in - user needs to verify email
+      // If tokens are returned, automatically log the user in
+      if (response.tokens) {
+        console.log('🔑 useAuth: Tokens received, logging user in automatically');
+        // Create a more complete user object for the store
+        const userWithDetails = {
+          ...response.user,
+          updatedAt: response.user.createdAt, // Use createdAt as initial updatedAt if not provided
+        };
+        setLoginState(userWithDetails, response.tokens);
+      }
+
       setLoading(false);
       return response;
     } catch (err) {
@@ -49,7 +59,7 @@ export const useAuth = () => {
       setLoading(false);
       throw err;
     }
-  }, [setLoading, setError]);
+  }, [setLoading, setError, setLoginState]);
 
   /**
    * Login user

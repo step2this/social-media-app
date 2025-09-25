@@ -201,8 +201,11 @@ export const authHandlers = [
 
       mockUsers.set(userId, newUser);
 
+      // Generate tokens for auto-login after registration
+      const tokens = generateMockTokens(userId);
+
       const response: RegisterResponse = {
-        message: 'Registration successful. You can now sign in.',
+        message: 'Registration successful. Welcome!',
         user: {
           id: newUser.id,
           email: newUser.email,
@@ -210,7 +213,8 @@ export const authHandlers = [
           fullName: newUser.fullName,
           emailVerified: newUser.emailVerified,
           createdAt: newUser.createdAt
-        }
+        },
+        tokens // Include tokens for auto-login
       };
 
       const validatedResponse = RegisterResponseSchema.parse(response);

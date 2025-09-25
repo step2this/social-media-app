@@ -152,6 +152,41 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
       ConditionExpression: 'attribute_not_exists(PK)'
     }));
 
+    // Generate tokens for auto-login after registration
+    const accessToken = await deps.jwtProvider.generateAccessToken({
+      userId: userId,
+      email: request.email
+    });
+
+    const refreshTokenValue = deps.jwtProvider.generateRefreshToken();
+    const refreshTokenId = deps.uuidProvider();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
+
+    // Store refresh token
+    const refreshTokenEntity: RefreshTokenEntity = {
+      PK: `USER#${userId}`,
+      SK: `REFRESH_TOKEN#${refreshTokenId}`,
+      GSI1PK: `REFRESH_TOKEN#${refreshTokenValue}`,
+      GSI1SK: `USER#${userId}`,
+      tokenId: refreshTokenId,
+      hashedToken: refreshTokenValue,
+      userId: userId,
+      expiresAt,
+      createdAt: now,
+      entityType: 'REFRESH_TOKEN'
+    };
+
+    await deps.dynamoClient.send(new PutCommand({
+      TableName: deps.tableName,
+      Item: refreshTokenEntity
+    }));
+
+    const tokens: AuthTokens = {
+      accessToken,
+      refreshToken: refreshTokenValue,
+      expiresIn: 900 // 15 minutes
+    };
+
     return {
       user: {
         id: userId,
@@ -161,7 +196,8 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
         emailVerified: false,
         createdAt: now
       },
-      message: 'User registered successfully. Please check your email for verification.'
+      message: 'User registered successfully. Welcome!',
+      tokens // Include tokens for auto-login
     };
   };
 
