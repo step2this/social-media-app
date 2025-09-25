@@ -18,7 +18,7 @@ export const profileService = {
    */
   async getProfileByHandle(handle: string): Promise<PublicProfile> {
     const response = await apiClient.get<PublicProfileResponse>(`/profile/${handle}`);
-    return response.data.profile;
+    return response.profile;
   },
 
   /**
@@ -26,7 +26,7 @@ export const profileService = {
    */
   async getCurrentProfile(): Promise<Profile> {
     const response = await apiClient.get<{ profile: Profile }>('/profile/me');
-    return response.data.profile;
+    return response.profile;
   },
 
   /**
@@ -34,7 +34,7 @@ export const profileService = {
    */
   async updateProfile(data: UpdateProfileWithHandleRequest): Promise<Profile> {
     const response = await apiClient.put<UpdateProfileResponse>('/profile', data);
-    return response.data.profile;
+    return response.profile;
   },
 
   /**
@@ -42,7 +42,7 @@ export const profileService = {
    */
   async getUploadUrl(data: GetPresignedUrlRequest): Promise<GetPresignedUrlResponse> {
     const response = await apiClient.post<GetPresignedUrlResponse>('/profile/upload-url', data);
-    return response.data;
+    return response;
   },
 
   /**

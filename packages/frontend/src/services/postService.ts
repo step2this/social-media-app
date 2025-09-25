@@ -1,7 +1,6 @@
 import { apiClient } from './apiClient';
 import type {
   Post,
-  PostGridItem,
   CreatePostRequest,
   UpdatePostRequest,
   PostResponse,
@@ -23,7 +22,7 @@ export const postService = {
     const response = await apiClient.post<CreatePostResponse>('/posts', data);
 
     // Upload the image to S3
-    await fetch(response.data.uploadUrl, {
+    await fetch(response.uploadUrl, {
       method: 'PUT',
       body: imageFile,
       headers: {
@@ -31,7 +30,7 @@ export const postService = {
       }
     });
 
-    return response.data.post;
+    return response.post;
   },
 
   /**
@@ -51,7 +50,7 @@ export const postService = {
     const response = await apiClient.get<PostGridResponse>(
       `/profile/${handle}/posts?${params.toString()}`
     );
-    return response.data;
+    return response;
   },
 
   /**
@@ -67,7 +66,7 @@ export const postService = {
     const response = await apiClient.get<PostsListResponse>(
       `/posts/my?${params.toString()}`
     );
-    return response.data;
+    return response;
   },
 
   /**
@@ -75,7 +74,7 @@ export const postService = {
    */
   async getPost(postId: string): Promise<Post> {
     const response = await apiClient.get<PostResponse>(`/posts/${postId}`);
-    return response.data.post;
+    return response.post;
   },
 
   /**
@@ -83,7 +82,7 @@ export const postService = {
    */
   async updatePost(postId: string, data: UpdatePostRequest): Promise<Post> {
     const response = await apiClient.put<PostResponse>(`/posts/${postId}`, data);
-    return response.data.post;
+    return response.post;
   },
 
   /**
@@ -91,7 +90,7 @@ export const postService = {
    */
   async deletePost(postId: string): Promise<boolean> {
     const response = await apiClient.delete<DeletePostResponse>(`/posts/${postId}`);
-    return response.data.success;
+    return response.success;
   },
 
   /**

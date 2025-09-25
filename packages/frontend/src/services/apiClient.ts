@@ -350,6 +350,38 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
     } : undefined,
 
     /**
+     * Generic HTTP methods with automatic token injection
+     */
+    get: async <T>(endpoint: string, includeAuth: boolean = true): Promise<T> => {
+      return sendRequest<T>(endpoint, { method: 'GET' }, defaultRetryConfig, includeAuth);
+    },
+
+    post: async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
+      return sendRequest<T>(endpoint, {
+        method: 'POST',
+        body: data ? JSON.stringify(data) : undefined
+      }, defaultRetryConfig, includeAuth);
+    },
+
+    put: async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
+      return sendRequest<T>(endpoint, {
+        method: 'PUT',
+        body: data ? JSON.stringify(data) : undefined
+      }, defaultRetryConfig, includeAuth);
+    },
+
+    patch: async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
+      return sendRequest<T>(endpoint, {
+        method: 'PATCH',
+        body: data ? JSON.stringify(data) : undefined
+      }, defaultRetryConfig, includeAuth);
+    },
+
+    delete: async <T>(endpoint: string, includeAuth: boolean = true): Promise<T> => {
+      return sendRequest<T>(endpoint, { method: 'DELETE' }, defaultRetryConfig, includeAuth);
+    },
+
+    /**
      * Authentication API methods
      */
     auth: {
