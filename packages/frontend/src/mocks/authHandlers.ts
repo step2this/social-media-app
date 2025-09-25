@@ -10,6 +10,7 @@ import {
   GetProfileResponseSchema,
   UpdateUserProfileResponseSchema,
   UpdateUserProfileRequestSchema,
+  AuthTokensSchema,
   type RegisterRequest,
   type RegisterResponse,
   type LoginRequest,
@@ -218,6 +219,7 @@ export const authHandlers = [
       };
 
       const validatedResponse = RegisterResponseSchema.parse(response);
+
       await addDelay();
 
       return HttpResponse.json(validatedResponse, {
