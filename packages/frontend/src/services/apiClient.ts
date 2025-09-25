@@ -360,7 +360,17 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
             method: 'POST',
             body: JSON.stringify(validatedRequest)
           });
-          return RegisterResponseSchema.parse(response);
+          const validatedResponse = RegisterResponseSchema.parse(response);
+
+          // Store tokens after successful registration (auto-login)
+          if (validatedResponse.tokens) {
+            tokenStorage.setTokens(
+              validatedResponse.tokens.accessToken,
+              validatedResponse.tokens.refreshToken
+            );
+          }
+
+          return validatedResponse;
         } catch (error) {
           if (error?.name === 'ZodError') {
             throw new ValidationError('Request validation failed', error.errors);
