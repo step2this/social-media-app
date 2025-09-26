@@ -77,12 +77,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const showPasswordError = confirmPassword && !passwordsMatch;
 
   return (
-    <div className="auth-form">
-      <h2>Create Account</h2>
+    <div className="tama-form">
+      <h2 className="modal-title">🥚 Create Your Pet Profile!</h2>
+      <p className="tama-text" style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
+        Join TamaFriends and start raising your virtual pets
+      </p>
 
-      <form onSubmit={handleSubmit} className="auth-form__form">
-        <div className="form-group">
-          <label htmlFor="fullName" className="form-label">
+      <form onSubmit={handleSubmit}>
+        <div className="tama-form-field">
+          <label htmlFor="fullName" className="tama-form-label">
             Full Name (Optional)
           </label>
           <input
@@ -91,14 +94,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             type="text"
             value={formData.fullName}
             onChange={handleChange}
-            className="form-input"
+            className="tama-input"
             placeholder="Enter your full name"
             autoComplete="name"
           />
         </div>
 
-        <div className="form-group">
-          <label htmlFor="username" className="form-label">
+        <div className="tama-form-field">
+          <label htmlFor="username" className="tama-form-label">
             Username
           </label>
           <input
@@ -108,16 +111,16 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             value={formData.username}
             onChange={handleChange}
             required
-            className="form-input"
-            placeholder="Choose a username"
+            className="tama-input"
+            placeholder="Choose your pet keeper name"
             autoComplete="username"
             pattern="[a-zA-Z0-9_]{3,30}"
             title="Username must be 3-30 characters and contain only letters, numbers, and underscores"
           />
         </div>
 
-        <div className="form-group">
-          <label htmlFor="email" className="form-label">
+        <div className="tama-form-field">
+          <label htmlFor="email" className="tama-form-label">
             Email
           </label>
           <input
@@ -127,14 +130,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             value={formData.email}
             onChange={handleChange}
             required
-            className="form-input"
+            className="tama-input"
             placeholder="Enter your email"
             autoComplete="email"
           />
         </div>
 
-        <div className="form-group">
-          <label htmlFor="password" className="form-label">
+        <div className="tama-form-field">
+          <label htmlFor="password" className="tama-form-label">
             Password
           </label>
           <input
@@ -144,18 +147,18 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             value={formData.password}
             onChange={handleChange}
             required
-            className="form-input"
-            placeholder="Create a password"
+            className="tama-input"
+            placeholder="Create a secure password"
             autoComplete="new-password"
             minLength={8}
           />
-          <small className="form-help">
+          <small className="tama-text" style={{ fontSize: 'var(--text-xs)', color: 'var(--tama-gray-600)' }}>
             Password must be at least 8 characters with uppercase, lowercase, number, and special character.
           </small>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="confirmPassword" className="form-label">
+        <div className="tama-form-field">
+          <label htmlFor="confirmPassword" className="tama-form-label">
             Confirm Password
           </label>
           <input
@@ -165,24 +168,25 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             value={confirmPassword}
             onChange={handleConfirmPasswordChange}
             required
-            className={`form-input ${showPasswordError ? 'form-input--error' : ''}`}
+            className="tama-input"
+            style={{ borderColor: showPasswordError ? 'var(--error)' : '' }}
             placeholder="Confirm your password"
             autoComplete="new-password"
           />
           {showPasswordError && (
-            <small className="form-error">Passwords do not match</small>
+            <div className="tama-form-error">Passwords do not match</div>
           )}
         </div>
 
         {error && (
-          <div className="error-message" role="alert">
+          <div className="tama-form-error" role="alert">
             {error}
             {(error.includes('email already exists') || error.includes('username already exists')) && (
-              <div className="error-help">
+              <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
                 <p>
                   <strong>Development tip:</strong> You can clear mock data by running:
                 </p>
-                <code>
+                <code style={{ display: 'block', padding: 'var(--space-2)', background: 'var(--tama-gray-100)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}>
                   fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/dev/reset-mock-data`, {'{ method: \'DELETE\' }'})
                 </code>
                 <p>in your browser console, or refresh the page to start fresh.</p>
@@ -191,24 +195,27 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={isLoading || !passwordsMatch}
-          className="btn btn-primary"
-        >
-          {isLoading ? 'Creating account...' : 'Create Account'}
-        </button>
+        <div className="tama-form-actions">
+          <button
+            type="submit"
+            disabled={isLoading || !passwordsMatch}
+            className="tama-btn tama-btn--primary"
+          >
+            {isLoading ? '🐣 Creating account...' : '🎉 Start Pet Journey'}
+          </button>
+        </div>
       </form>
 
-      <div className="auth-form__footer">
-        <p>
+      <div style={{ textAlign: 'center', marginTop: 'var(--space-6)' }}>
+        <p className="tama-text">
           Already have an account?{' '}
           <button
             type="button"
             onClick={onSwitchToLogin}
-            className="link-button"
+            className="tama-link"
+            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            Sign in
+            Sign in to your pets
           </button>
         </p>
       </div>

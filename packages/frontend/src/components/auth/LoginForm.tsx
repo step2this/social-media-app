@@ -39,12 +39,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   };
 
   return (
-    <div className="auth-form">
-      <h2>Sign In</h2>
+    <div className="tama-form">
+      <h2 className="modal-title">🐾 Welcome Back!</h2>
+      <p className="tama-text" style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
+        Sign in to continue caring for your virtual pets
+      </p>
 
-      <form onSubmit={handleSubmit} className="auth-form__form">
-        <div className="form-group">
-          <label htmlFor="email" className="form-label">
+      <form onSubmit={handleSubmit}>
+        <div className="tama-form-field">
+          <label htmlFor="email" className="tama-form-label">
             Email
           </label>
           <input
@@ -54,14 +57,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             value={formData.email}
             onChange={handleChange}
             required
-            className="form-input"
+            className="tama-input"
             placeholder="Enter your email"
             autoComplete="email"
           />
         </div>
 
-        <div className="form-group">
-          <label htmlFor="password" className="form-label">
+        <div className="tama-form-field">
+          <label htmlFor="password" className="tama-form-label">
             Password
           </label>
           <input
@@ -71,36 +74,39 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             value={formData.password}
             onChange={handleChange}
             required
-            className="form-input"
+            className="tama-input"
             placeholder="Enter your password"
             autoComplete="current-password"
           />
         </div>
 
         {error && (
-          <div className="error-message" role="alert">
+          <div className="tama-form-error" role="alert">
             {error}
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="btn btn-primary"
-        >
-          {isLoading ? 'Signing in...' : 'Sign In'}
-        </button>
+        <div className="tama-form-actions">
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="tama-btn tama-btn--primary"
+          >
+            {isLoading ? '🐣 Signing in...' : '🌟 Sign In'}
+          </button>
+        </div>
       </form>
 
-      <div className="auth-form__footer">
-        <p>
+      <div style={{ textAlign: 'center', marginTop: 'var(--space-6)' }}>
+        <p className="tama-text">
           Don't have an account?{' '}
           <button
             type="button"
             onClick={onSwitchToRegister}
-            className="link-button"
+            className="tama-link"
+            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            Sign up
+            Create your pet profile
           </button>
         </p>
       </div>

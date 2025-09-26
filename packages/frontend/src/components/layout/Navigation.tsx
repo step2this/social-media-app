@@ -38,7 +38,7 @@ const GuestNavigation: React.FC<{ className: string }> = ({ className }) => (
   <header className={`navigation navigation--guest ${className}`}>
     <div className="navigation__container">
       <Link to="/" className="navigation__brand">
-        <span className="navigation__logo neon-text">SlopeShare</span>
+        <span className="navigation__logo tama-heading">TamaFriends</span>
       </Link>
       <nav className="navigation__auth">
         <Link to="/auth/login" className="btn btn-retro">
@@ -57,7 +57,7 @@ const SearchBar: React.FC = () => (
   <div className="navigation__search hidden-mobile">
     <input
       type="text"
-      placeholder="Search users, posts..."
+      placeholder="Search friends, pets..."
       className="search-input"
     />
     <ExploreIcon />
@@ -169,7 +169,7 @@ export const Navigation: React.FC<NavigationProps> = ({ className = '' }) => {
       <header className={`navigation navigation--authenticated ${className}`}>
         <div className="navigation__container">
           <Link to="/" className="navigation__brand">
-            <span className="navigation__logo gradient-text">SlopeShare</span>
+            <span className="navigation__logo tama-heading">TamaFriends</span>
           </Link>
 
           <SearchBar />

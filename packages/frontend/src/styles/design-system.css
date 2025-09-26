@@ -1,43 +1,54 @@
 /*
-  Design System: 80s Snowboarding Aesthetic
-  Inspired by neon windbreakers, fluorescent colors, and retro ski wear
+  Design System: TamaFriends - Virtual Pet Social Network
+  Fusion of Mochi's clean pixel-art aesthetic + nostalgic Tamagotchi vibes
 */
 
 :root {
-  /* Color Palette - Late 80s Snowboarding Outerwear */
+  /* Color Palette - Mochi-inspired Monochromatic Base */
 
-  /* Primary Colors - Electric/Neon */
-  --electric-blue: #00d4ff;
-  --neon-pink: #ff00dc;
-  --lime-green: #39ff14;
-  --hot-magenta: #ff006e;
-  --cyan-blue: #00ffff;
+  /* Core UI Colors - Clean & Minimal */
+  --tama-black: #000000;
+  --tama-white: #ffffff;
+  --tama-gray-50: #fafafa;
+  --tama-gray-100: #f5f5f5;
+  --tama-gray-200: #e5e5e5;
+  --tama-gray-300: #d4d4d4;
+  --tama-gray-400: #a3a3a3;
+  --tama-gray-500: #737373;
+  --tama-gray-600: #525252;
+  --tama-gray-700: #404040;
+  --tama-gray-800: #262626;
+  --tama-gray-900: #171717;
 
-  /* Secondary Colors - Classic 80s */
-  --sunset-orange: #ff6b35;
-  --purple-haze: #8a2be2;
-  --teal-accent: #20b2aa;
-  --coral-pink: #ff7f7f;
-  --yellow-neon: #ffff00;
+  /* Tamagotchi-Inspired Accent Colors (Strategic Use Only) */
+  --tama-pink: #ff69b4;        /* Love/friendship actions */
+  --tama-blue: #5aacfa;        /* Mochi blue - primary interactive */
+  --tama-mint: #50e3c2;        /* Health/happiness states */
+  --tama-yellow: #f5d76e;      /* Attention/alerts */
+  --tama-orange: #ff8a65;      /* Play/activity */
+  --tama-purple: #9b59b6;      /* Special/premium features */
 
-  /* Base Colors */
-  --deep-navy: #0a0e27;
-  --charcoal: #1a1a2e;
-  --medium-gray: #16213e;
-  --light-gray: #e94560;
-  --off-white: #f8f9fa;
-  --pure-white: #ffffff;
+  /* System State Colors */
+  --success: #22c55e;
+  --warning: #eab308;
+  --error: #ef4444;
+  --info: var(--tama-blue);
 
-  /* Gradient Colors */
-  --gradient-primary: linear-gradient(135deg, var(--electric-blue) 0%, var(--neon-pink) 50%, var(--lime-green) 100%);
-  --gradient-secondary: linear-gradient(45deg, var(--sunset-orange) 0%, var(--purple-haze) 100%);
-  --gradient-accent: linear-gradient(90deg, var(--cyan-blue) 0%, var(--hot-magenta) 100%);
-  --gradient-dark: linear-gradient(180deg, var(--deep-navy) 0%, var(--charcoal) 100%);
+  /* LCD/Screen Aesthetic (Tamagotchi Homage) */
+  --lcd-bg: #2d3748;           /* Dark LCD screen background */
+  --lcd-light: #e2e8f0;        /* Light LCD screen background */
+  --lcd-green: #68d391;        /* Classic monochrome green */
+  --lcd-text: #1a202c;
 
-  /* Typography */
-  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --font-display: 'Space Grotesk', var(--font-primary);
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  /* Minimal Gradients - Used Sparingly */
+  --gradient-subtle: linear-gradient(135deg, var(--tama-gray-50) 0%, var(--tama-gray-100) 100%);
+  --gradient-dark: linear-gradient(135deg, var(--tama-gray-800) 0%, var(--tama-gray-900) 100%);
+
+  /* Typography - Mochi-Inspired Font System */
+  --font-pixel: 'JetBrains Mono', 'Fira Code', 'Monaco', monospace;      /* Headers/display - pixel feel */
+  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;              /* UI elements - clean & readable */
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;            /* Body text - optimized for reading */
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;               /* Code/technical content */
 
   /* Font Weights */
   --weight-light: 300;
@@ -72,26 +83,30 @@
   --space-20: 5rem;     /* 80px */
   --space-24: 6rem;     /* 96px */
 
-  /* Border Radius */
-  --radius-sm: 0.25rem;   /* 4px */
-  --radius-md: 0.5rem;    /* 8px */
-  --radius-lg: 0.75rem;   /* 12px */
-  --radius-xl: 1rem;      /* 16px */
-  --radius-2xl: 1.5rem;   /* 24px */
-  --radius-3xl: 2rem;     /* 32px */
-  --radius-full: 50%;
+  /* Border Radius - Pixel-Art Inspired (Minimal) */
+  --radius-none: 0;
+  --radius-sm: 2px;       /* Very minimal rounding */
+  --radius-md: 4px;       /* Subtle pixel-friendly rounding */
+  --radius-lg: 6px;       /* Moderate rounding */
+  --radius-xl: 8px;       /* For special elements */
+  --radius-full: 50%;     /* Circular elements only */
 
-  /* Shadows - 80s Neon Effect */
-  --shadow-neon-sm: 0 0 10px var(--electric-blue);
-  --shadow-neon-md: 0 0 20px var(--neon-pink), 0 0 40px var(--neon-pink);
-  --shadow-neon-lg: 0 0 30px var(--lime-green), 0 0 60px var(--lime-green);
-  --shadow-glow: 0 0 15px rgba(0, 212, 255, 0.6);
+  /* Pixel Border System - Mochi Inspired */
+  --pixel-border: 2px solid var(--tama-black);
+  --pixel-border-thick: 3px solid var(--tama-black);
+  --pixel-border-accent: 2px solid var(--tama-blue);
 
-  /* Standard Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  /* Pixel Shadow Effects - Clean 3D Depth */
+  --pixel-shadow-sm: 2px 2px 0px var(--tama-gray-300);
+  --pixel-shadow-md: 4px 4px 0px var(--tama-gray-300);
+  --pixel-shadow-lg: 6px 6px 0px var(--tama-gray-300);
+  --pixel-shadow-colored: 4px 4px 0px var(--tama-blue);
+  --pixel-shadow-hover: 3px 3px 0px var(--tama-gray-400);
+
+  /* Subtle Traditional Shadows (For Depth, Not Focus) */
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 4px 8px rgba(0, 0, 0, 0.08);
+  --shadow-modal: 0 20px 40px rgba(0, 0, 0, 0.15);
 
   /* Animation */
   --transition-fast: 0.15s ease-out;
@@ -114,6 +129,152 @@
   --breakpoint-lg: 1024px;
   --breakpoint-xl: 1280px;
   --breakpoint-2xl: 1536px;
+}
+
+/* ===== TAMAFRIENDS COMPONENT SYSTEM ===== */
+
+/* Base pixel-border component class */
+.tama-pixel {
+  border: var(--pixel-border);
+  box-shadow: var(--pixel-shadow-md);
+  background: var(--tama-white);
+  transition: all var(--transition-fast);
+}
+
+.tama-pixel:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--pixel-shadow-hover);
+}
+
+/* Button component system */
+.tama-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  border: var(--pixel-border);
+  border-radius: var(--radius-sm);
+  background: var(--tama-white);
+  color: var(--tama-black);
+  box-shadow: var(--pixel-shadow-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tama-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--pixel-shadow-md);
+}
+
+.tama-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: var(--pixel-shadow-sm);
+}
+
+.tama-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Button variants */
+.tama-btn--primary {
+  background: var(--tama-blue);
+  border-color: var(--tama-blue);
+  color: var(--tama-white);
+  box-shadow: var(--pixel-shadow-colored);
+}
+
+.tama-btn--secondary {
+  background: var(--tama-gray-100);
+  border-color: var(--tama-gray-400);
+  color: var(--tama-gray-800);
+}
+
+/* Card component system */
+.tama-card {
+  background: var(--tama-white);
+  border: var(--pixel-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--pixel-shadow-md);
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.tama-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--pixel-shadow-lg);
+}
+
+.tama-card--interactive {
+  cursor: pointer;
+}
+
+/* Input component system */
+.tama-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  background: var(--tama-white);
+  border: var(--pixel-border);
+  border-radius: var(--radius-sm);
+  color: var(--tama-black);
+  transition: all var(--transition-fast);
+}
+
+.tama-input:focus {
+  outline: none;
+  border-color: var(--tama-blue);
+  box-shadow: var(--pixel-shadow-colored);
+}
+
+.tama-input::placeholder {
+  color: var(--tama-gray-500);
+}
+
+/* Typography classes */
+.tama-heading {
+  font-family: var(--font-pixel);
+  font-weight: var(--weight-bold);
+  color: var(--tama-black);
+  letter-spacing: -0.02em;
+}
+
+.tama-text {
+  font-family: var(--font-body);
+  color: var(--tama-gray-700);
+  line-height: 1.5;
+}
+
+/* Pet-themed utility classes */
+.tama-pet-happy { color: var(--tama-mint); }
+.tama-pet-love { color: var(--tama-pink); }
+.tama-pet-play { color: var(--tama-orange); }
+.tama-pet-special { color: var(--tama-purple); }
+.tama-pet-alert { color: var(--tama-yellow); }
+
+/* Layout utilities */
+.tama-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+.tama-grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.tama-flex {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 /* Dark Mode Overrides */
@@ -252,10 +413,124 @@
   transform: translateY(0);
 }
 
+/* Modal Components - TamaFriends Style */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal-backdrop);
+  padding: var(--space-4);
+}
+
+.modal-content {
+  background: var(--tama-white);
+  border: var(--pixel-border-thick);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--pixel-shadow-lg);
+  max-width: 400px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  background: none;
+  border: none;
+  font-family: var(--font-pixel);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--tama-gray-600);
+  cursor: pointer;
+  z-index: 1;
+  width: var(--space-8);
+  height: var(--space-8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.modal-close:hover {
+  color: var(--tama-black);
+  transform: scale(1.1);
+}
+
+.modal-title {
+  font-family: var(--font-pixel);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--tama-black);
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+/* Form Components - TamaFriends Style */
+.tama-form {
+  padding: var(--space-8);
+}
+
+.tama-form-field {
+  margin-bottom: var(--space-6);
+}
+
+.tama-form-label {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--tama-black);
+  margin-bottom: var(--space-2);
+}
+
+.tama-form-error {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--error);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--error);
+  border-radius: var(--radius-sm);
+}
+
+.tama-form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+}
+
+.tama-link {
+  color: var(--tama-blue);
+  text-decoration: none;
+  font-weight: var(--weight-medium);
+  transition: all var(--transition-fast);
+}
+
+.tama-link:hover {
+  color: var(--tama-black);
+  text-decoration: underline;
+}
+
 /* Responsive Design Utilities */
 @media (max-width: 640px) {
   .hidden-mobile { display: none; }
   .show-mobile { display: block; }
+
+  .modal-content {
+    margin: var(--space-4);
+    max-height: calc(100vh - 2rem);
+  }
 }
 
 @media (min-width: 641px) {

@@ -96,8 +96,8 @@ function AppContent() {
             <ProtectedRoute requireAuth={true}>
               <ContentLayout>
                 <div className="placeholder-page">
-                  <h2 className="neon-text">Explore</h2>
-                  <p>Discover new content and users</p>
+                  <h2 className="tama-heading">Explore</h2>
+                  <p>Discover new pets and friends</p>
                 </div>
               </ContentLayout>
             </ProtectedRoute>
@@ -107,8 +107,8 @@ function AppContent() {
             <ProtectedRoute requireAuth={true}>
               <ContentLayout>
                 <div className="placeholder-page">
-                  <h2 className="neon-text">Create Post</h2>
-                  <p>Share your adventures</p>
+                  <h2 className="tama-heading">Create Post</h2>
+                  <p>Share your pet's adventures</p>
                 </div>
               </ContentLayout>
             </ProtectedRoute>
@@ -118,8 +118,8 @@ function AppContent() {
             <ProtectedRoute requireAuth={true}>
               <ContentLayout>
                 <div className="placeholder-page">
-                  <h2 className="neon-text">Messages</h2>
-                  <p>Connect with other users</p>
+                  <h2 className="tama-heading">Messages</h2>
+                  <p>Connect with other pet owners</p>
                 </div>
               </ContentLayout>
             </ProtectedRoute>
@@ -129,8 +129,8 @@ function AppContent() {
             <ProtectedRoute requireAuth={true}>
               <ContentLayout>
                 <div className="placeholder-page">
-                  <h2 className="neon-text">Settings</h2>
-                  <p>Customize your experience</p>
+                  <h2 className="tama-heading">Settings</h2>
+                  <p>Customize your pet care experience</p>
                 </div>
               </ContentLayout>
             </ProtectedRoute>
@@ -147,8 +147,8 @@ function AppContent() {
     <div className="guest-layout">
       <div className="guest-layout__hero">
         <div className="hero-content">
-          <h1 className="hero-title gradient-text">SlopeShare</h1>
-          <p className="hero-subtitle">Share your mountain adventures with the world</p>
+          <h1 className="hero-title">TamaFriends</h1>
+          <p className="hero-subtitle">Share your virtual pet adventures with friends</p>
           <button
             onClick={handleOpenAuthModal}
             className="btn-retro hero-cta"
@@ -160,11 +160,11 @@ function AppContent() {
           <div className="retro-card hero-card">
             <div className="hero-card__glow"></div>
             <div className="hero-card__content">
-              <div className="neon-text">80s VIBES</div>
+              <div className="tama-heading">PET CARE</div>
               <div className="hero-features">
-                <div>📸 Share Photos</div>
-                <div>🎿 Connect with Riders</div>
-                <div>🏔️ Discover Slopes</div>
+                <div>🥚 Hatch & Raise Pets</div>
+                <div>👥 Connect with Friends</div>
+                <div>📱 Share Adventures</div>
               </div>
             </div>
           </div>
