@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigation } from './Navigation';
+import { LeftSidebar } from './LeftSidebar';
+import { RightPanel } from './RightPanel';
+import { MobileNavigation } from './MobileNavigation';
 import './AppLayout.css';
 
 interface AppLayoutProps {
@@ -7,16 +10,69 @@ interface AppLayoutProps {
   className?: string;
 }
 
-export const AppLayout: React.FC<AppLayoutProps> = ({ children, className = '' }) => (
-  <div className={`app-layout ${className}`}>
-    <Navigation />
-    <main className="app-layout__main">
-      <div className="app-layout__container">
-        {children}
+/**
+ * Hook to detect responsive breakpoints for layout changes
+ */
+const useResponsiveLayout = () => {
+  const [breakpoint, setBreakpoint] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
+
+  useEffect(() => {
+    const checkBreakpoint = () => {
+      if (window.matchMedia('(max-width: 767px)').matches) {
+        setBreakpoint('mobile');
+      } else if (window.matchMedia('(min-width: 768px) and (max-width: 1023px)').matches) {
+        setBreakpoint('tablet');
+      } else {
+        setBreakpoint('desktop');
+      }
+    };
+
+    checkBreakpoint();
+    window.addEventListener('resize', checkBreakpoint);
+    return () => window.removeEventListener('resize', checkBreakpoint);
+  }, []);
+
+  return breakpoint;
+};
+
+/**
+ * Wireframe-compliant three-column layout
+ * - Desktop: 280px sidebar + flexible main + 320px right panel
+ * - Tablet: 80px collapsed sidebar + flexible main (no right panel)
+ * - Mobile: Single column + bottom navigation
+ */
+export const AppLayout: React.FC<AppLayoutProps> = ({ children, className = '' }) => {
+  const breakpoint = useResponsiveLayout();
+
+  if (breakpoint === 'mobile') {
+    return (
+      <div className={`app-layout app-layout--mobile ${className}`}>
+        <Navigation />
+        <main className="app-layout__main app-layout__main--mobile">
+          <div className="app-layout__container app-layout__container--mobile">
+            {children}
+          </div>
+        </main>
+        <MobileNavigation />
       </div>
-    </main>
-  </div>
-);
+    );
+  }
+
+  return (
+    <div className={`app-layout app-layout--wireframe app-layout--${breakpoint} ${className}`}>
+      <Navigation />
+      <div className="app-layout__wireframe-container">
+        <LeftSidebar collapsed={breakpoint === 'tablet'} />
+        <main className="app-layout__main app-layout__main--wireframe">
+          <div className="app-layout__container app-layout__container--wireframe">
+            {children}
+          </div>
+        </main>
+        {breakpoint === 'desktop' && <RightPanel />}
+      </div>
+    </div>
+  );
+};
 
 // Instagram-inspired content layouts
 interface ContentLayoutProps {
