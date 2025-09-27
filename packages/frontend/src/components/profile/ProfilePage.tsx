@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom';
 import type { PublicProfile, PostGridItem } from '@social-media-app/shared';
 import { ProfileHeader } from './ProfileHeader';
 import { PostGrid } from './PostGrid';
+import { LoadingSpinner, ErrorState } from '../common/LoadingStates';
+import { ProfileLayout } from '../layout/AppLayout';
 import { profileService } from '../../services/profileService';
 import { postService } from '../../services/postService';
 
@@ -66,33 +68,36 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleRetry = () => {
+    if (handle) {
+      loadProfile(handle);
+      loadPosts(handle);
+    }
+  };
+
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-lg">Loading profile...</div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading profile..." />;
   }
 
   if (error || !profile) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-lg text-red-500">{error || 'Profile not found'}</div>
-      </div>
+      <ErrorState
+        message={error || 'Profile not found'}
+        onRetry={handleRetry}
+      />
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <ProfileHeader profile={profile} />
-      <div className="mt-8 border-t pt-8">
-        <PostGrid
-          posts={posts}
-          loading={postsLoading}
-          hasMore={hasMore}
-          onLoadMore={handleLoadMore}
-        />
-      </div>
-    </div>
+    <ProfileLayout
+      header={<ProfileHeader profile={profile} />}
+    >
+      <PostGrid
+        posts={posts}
+        loading={postsLoading}
+        hasMore={hasMore}
+        onLoadMore={handleLoadMore}
+      />
+    </ProfileLayout>
   );
 };
