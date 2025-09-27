@@ -36,41 +36,41 @@ export function HelloWorld() {
   }, [name, setResponse, setLoading, setError]);
 
   return (
-    <div className="hello-world">
-      <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
-        <h2 className="tama-heading" style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--space-4)' }}>
+    <div className="wireframe-content">
+      <div className="hello-world-header">
+        <h2 className="tama-heading tama-heading--automotive">
           🐾 Pet Connection Test
         </h2>
-        <p className="tama-text">
+        <p className="tama-text tama-text--automotive">
           Test your connection to the TamaFriends server and see if your pets can communicate!
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="hello-form">
+      <form onSubmit={handleSubmit} className="hello-form hello-form--automotive">
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Enter your pet's name"
-          className="hello-input"
+          className="tama-input tama-input--automotive"
         />
-        <button type="submit" disabled={loading} className="hello-button">
+        <button type="submit" disabled={loading} className="tama-btn tama-btn--automotive tama-btn--racing-red">
           {loading ? '🐣 Connecting...' : '🌟 Send Pet Message'}
         </button>
       </form>
 
       {error && (
-        <div className="error-message">
+        <div className="tama-alert tama-alert--error">
           🚨 Connection Error: {error}
         </div>
       )}
 
       {response && (
-        <div className="hello-response">
-          <h2>🎉 {response.message}</h2>
-          <p>📡 Server time: {new Date(response.serverTime).toLocaleString()}</p>
-          <div style={{ marginTop: 'var(--space-4)' }}>
-            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--tama-gray-600)' }}>
+        <div className="hello-response hello-response--automotive">
+          <h2 className="tama-heading tama-heading--success">🎉 {response.message}</h2>
+          <p className="tama-text tama-text--secondary">📡 Server time: {new Date(response.serverTime).toLocaleString()}</p>
+          <div className="connection-success">
+            <span className="tama-text tama-text--muted">
               Your pets are successfully connected to TamaFriends! 🐕‍🦺
             </span>
           </div>
