@@ -194,6 +194,30 @@
 
 /* ===== TAMAFRIENDS COMPONENT SYSTEM ===== */
 
+/* Base Component Patterns - DRY Foundation */
+
+/* Automotive Typography Pattern */
+.tama-typography-automotive {
+  font-family: var(--font-pixel);
+  color: var(--tama-text-primary);
+  letter-spacing: 0.05em;
+}
+
+.tama-text-racing-red {
+  color: var(--tama-racing-red);
+}
+
+/* Automotive Interactive Pattern */
+.tama-interactive-automotive {
+  transition: var(--transition-fast);
+  cursor: pointer;
+}
+
+.tama-interactive-automotive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-automotive);
+}
+
 /* Base pixel-border component class */
 .tama-pixel {
   border: var(--pixel-border);
@@ -645,30 +669,7 @@
 }
 
 /* Component Base Styles */
-.btn-retro {
-  background: var(--gradient-primary);
-  background-size: 300% 300%;
-  border: none;
-  color: var(--deep-navy);
-  font-weight: var(--weight-bold);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-neon-sm);
-  transition: all var(--transition-normal);
-  position: relative;
-  overflow: hidden;
-}
-
-.btn-retro:hover {
-  animation: gradient-shift 0.5s ease;
-  box-shadow: var(--shadow-neon-md);
-  transform: translateY(-2px);
-}
-
-.btn-retro:active {
-  transform: translateY(0);
-}
+/* Legacy btn-retro removed - use tama-btn--automotive instead */
 
 /* HomePage Components - TamaFriends Automotive Style */
 .hello-world-header {
