@@ -14,7 +14,7 @@
   text-align: center;
 }
 
-/* Neon Spinner */
+/* Automotive Spinner */
 .neon-spinner {
   position: relative;
   width: 80px;
@@ -31,16 +31,16 @@
 }
 
 .spinner-ring:nth-child(1) {
-  border-top: 3px solid var(--electric-blue);
+  border-top: 3px solid var(--tama-electric-blue);
   animation-duration: 1.5s;
-  box-shadow: 0 0 20px var(--electric-blue);
+  box-shadow: 0 0 20px var(--tama-electric-blue);
 }
 
 .spinner-ring:nth-child(2) {
-  border-right: 3px solid var(--neon-pink);
+  border-right: 3px solid var(--tama-racing-red);
   animation-duration: 2s;
   animation-direction: reverse;
-  box-shadow: 0 0 20px var(--neon-pink);
+  box-shadow: 0 0 20px var(--tama-racing-red);
   width: 70px;
   height: 70px;
   top: 5px;
@@ -48,9 +48,9 @@
 }
 
 .spinner-ring:nth-child(3) {
-  border-bottom: 3px solid var(--lime-green);
+  border-bottom: 3px solid var(--tama-sorrento-green);
   animation-duration: 2.5s;
-  box-shadow: 0 0 20px var(--lime-green);
+  box-shadow: 0 0 20px var(--tama-sorrento-green);
   width: 50px;
   height: 50px;
   top: 15px;
@@ -58,12 +58,13 @@
 }
 
 .loading-message {
-  font-family: var(--font-display);
+  font-family: var(--font-pixel);
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  animation: neon-pulse 2s ease-in-out infinite alternate;
+  color: var(--tama-text-primary);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Error Container */
@@ -76,43 +77,52 @@
   gap: var(--space-6);
   padding: var(--space-8);
   text-align: center;
-  background: rgba(255, 127, 127, 0.05);
+  background: rgba(220, 20, 60, 0.05);
   border-radius: var(--radius-xl);
-  border: 2px solid rgba(255, 127, 127, 0.2);
-  box-shadow: 0 0 30px rgba(255, 127, 127, 0.1);
+  border: 2px solid rgba(220, 20, 60, 0.2);
+  box-shadow: var(--shadow-automotive);
 }
 
 .error-icon {
   font-size: 4rem;
-  filter: drop-shadow(0 0 10px rgba(255, 127, 127, 0.5));
-  animation: retro-bounce 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(220, 20, 60, 0.5));
+  animation: automotive-pulse 2s ease-in-out infinite;
 }
 
 .error-message {
   font-size: var(--text-lg);
   font-weight: var(--weight-medium);
-  color: var(--coral-pink);
+  color: var(--tama-racing-red);
   max-width: 400px;
   line-height: 1.6;
+  font-family: var(--font-pixel);
 }
 
 .error-retry-btn {
   margin-top: var(--space-4);
   padding: var(--space-4) var(--space-8);
-  background: var(--gradient-secondary);
-  background-size: 300% 300%;
-  animation: gradient-shift 3s ease infinite;
 }
 
 .error-retry-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 25px rgba(255, 107, 53, 0.5);
+  box-shadow: var(--shadow-automotive);
 }
 
 /* Animations */
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+@keyframes automotive-pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 10px rgba(220, 20, 60, 0.5));
+  }
+  50% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 15px rgba(220, 20, 60, 0.8));
+  }
 }
 
 /* Responsive Design */

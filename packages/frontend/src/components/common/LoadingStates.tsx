@@ -46,7 +46,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       {onRetry && (
         <button
           onClick={onRetry}
-          className="btn btn-retro error-retry-btn"
+          className="tama-btn tama-btn--automotive tama-btn--racing-red error-retry-btn"
         >
           Try Again
         </button>
