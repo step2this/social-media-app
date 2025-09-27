@@ -5,6 +5,7 @@ import { AuthModal } from './components/auth/AuthModal.js';
 import { HelloWorld } from './components/HelloWorld';
 import { ProfilePage } from './components/profile/ProfilePage';
 import { MyProfilePage } from './components/profile/MyProfilePage';
+import { PlaceholderPage } from './components/common/PlaceholderPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { ContentLayout } from './components/layout/AppLayout';
 import { ServiceProvider, useServices } from './services/ServiceProvider';
@@ -94,45 +95,45 @@ function AppContent() {
 
           <Route path="/explore" element={
             <ProtectedRoute requireAuth={true}>
-              <ContentLayout>
-                <div className="placeholder-page">
-                  <h2 className="tama-heading">Explore</h2>
-                  <p>Discover new pets and friends</p>
-                </div>
-              </ContentLayout>
+              <PlaceholderPage
+                icon="🔍"
+                title="Explore"
+                description="Discover new pets and friends in the TamaFriends community"
+                features={["🐾 Browse Popular Pets", "🌟 Trending Adventures", "👥 Meet New Friends"]}
+              />
             </ProtectedRoute>
           } />
 
           <Route path="/create" element={
             <ProtectedRoute requireAuth={true}>
-              <ContentLayout>
-                <div className="placeholder-page">
-                  <h2 className="tama-heading">Create Post</h2>
-                  <p>Share your pet's adventures</p>
-                </div>
-              </ContentLayout>
+              <PlaceholderPage
+                icon="✨"
+                title="Create Post"
+                description="Share your pet's adventures with the world"
+                features={["📸 Upload Photos", "📝 Tell Your Story", "🎯 Add Pet Stats"]}
+              />
             </ProtectedRoute>
           } />
 
           <Route path="/messages" element={
             <ProtectedRoute requireAuth={true}>
-              <ContentLayout>
-                <div className="placeholder-page">
-                  <h2 className="tama-heading">Messages</h2>
-                  <p>Connect with other pet owners</p>
-                </div>
-              </ContentLayout>
+              <PlaceholderPage
+                icon="💬"
+                title="Messages"
+                description="Connect with other pet owners and share care tips"
+                features={["📨 Direct Messages", "👥 Group Chats", "🎮 Pet Playdates"]}
+              />
             </ProtectedRoute>
           } />
 
           <Route path="/settings" element={
             <ProtectedRoute requireAuth={true}>
-              <ContentLayout>
-                <div className="placeholder-page">
-                  <h2 className="tama-heading">Settings</h2>
-                  <p>Customize your pet care experience</p>
-                </div>
-              </ContentLayout>
+              <PlaceholderPage
+                icon="⚙️"
+                title="Settings"
+                description="Customize your pet care experience"
+                features={["🔔 Notifications", "🎨 Themes", "🔒 Privacy"]}
+              />
             </ProtectedRoute>
           } />
 
