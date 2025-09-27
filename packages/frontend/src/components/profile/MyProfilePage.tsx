@@ -23,6 +23,23 @@ export const MyProfilePage: React.FC = () => {
   const [editError, setEditError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
+  // Handle avatar upload
+  const handleAvatarClick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        console.log('🐾 Avatar upload selected:', file.name);
+        // TODO: Implement avatar upload API call
+        // For now, just show a placeholder message
+        alert(`🎉 Avatar upload coming soon! Selected: ${file.name}`);
+      }
+    };
+    input.click();
+  };
+
   // Load profile data
   const loadProfile = async () => {
     try {
@@ -134,34 +151,35 @@ export const MyProfilePage: React.FC = () => {
     <ProfileLayout
       header={
         <div className="profile-header">
-          <h1 className="profile-title neon-text">My Profile</h1>
-          <p className="profile-subtitle">Manage your mountain presence</p>
+          <h1 className="profile-title tama-heading">🐾 My Pet Profile</h1>
+          <p className="profile-subtitle">Manage your virtual pet adventures</p>
         </div>
       }
     >
-      <Card variant="retro" padding="lg">
+      <div className="tama-card">
         <ProfileDisplay
           profile={profile}
           showEditButton={true}
           onEditClick={handleEditClick}
+          onAvatarClick={handleAvatarClick}
         />
-      </Card>
+      </div>
 
       {/* Edit Profile Modal */}
       {editModalOpen && (
-        <div className="modal-overlay">
-          <Card variant="neon" padding="lg" className="edit-modal" role="dialog">
-            <h3 className="modal-title gradient-text">Edit Profile</h3>
+        <div className="modal-overlay modal-overlay--automotive">
+          <div className="modal-content modal-content--automotive" role="dialog">
+            <h3 className="tama-heading tama-heading--automotive">🌟 Edit Pet Profile</h3>
 
             {editError && (
-              <div className="error-message">
+              <div className="tama-alert tama-alert--error">
                 {editError}
               </div>
             )}
 
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="fullName" className="form-label">
+            <div className="form-section">
+              <div className="form-group">
+                <label htmlFor="fullName" className="tama-form-label tama-form-label--automotive">
                   Full Name
                 </label>
                 <input
@@ -169,16 +187,16 @@ export const MyProfilePage: React.FC = () => {
                   type="text"
                   value={editFormData.fullName}
                   onChange={(e) => handleInputChange('fullName', e.target.value)}
-                  className="form-input"
+                  className="tama-input tama-input--automotive"
                   placeholder="Enter your full name"
                 />
                 {validationErrors.fullName && (
-                  <p className="mt-1 text-sm text-red-600">{validationErrors.fullName}</p>
+                  <p className="tama-form-error">{validationErrors.fullName}</p>
                 )}
               </div>
 
-              <div>
-                <label htmlFor="bio" className="form-label">
+              <div className="form-group">
+                <label htmlFor="bio" className="tama-form-label tama-form-label--automotive">
                   Bio
                 </label>
                 <textarea
@@ -186,30 +204,30 @@ export const MyProfilePage: React.FC = () => {
                   rows={4}
                   value={editFormData.bio}
                   onChange={(e) => handleInputChange('bio', e.target.value)}
-                  className="form-input"
-                  placeholder="Tell others about your mountain adventures..."
+                  className="tama-input tama-input--automotive tama-textarea"
+                  placeholder="Tell others about your pet adventures..."
                 />
                 {validationErrors.bio && (
-                  <p className="mt-1 text-sm text-red-600">{validationErrors.bio}</p>
+                  <p className="tama-form-error">{validationErrors.bio}</p>
                 )}
               </div>
             </div>
 
-            <div className="modal-actions">
+            <div className="modal-actions modal-actions--automotive">
               <button
                 onClick={handleSaveProfile}
-                className="btn btn-retro"
+                className="tama-btn tama-btn--automotive tama-btn--racing-red"
               >
                 Save Changes
               </button>
               <button
                 onClick={() => setEditModalOpen(false)}
-                className="btn btn-secondary"
+                className="tama-btn tama-btn--automotive tama-btn--secondary"
               >
                 Cancel
               </button>
             </div>
-          </Card>
+          </div>
         </div>
       )}
     </ProfileLayout>
