@@ -145,8 +145,8 @@
 }
 
 .card:hover {
-  border-color: var(--electric-blue);
-  box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+  border-color: var(--tama-electric-blue);
+  box-shadow: 0 0 20px rgba(90, 172, 250, 0.2);
 }
 
 .card--retro {

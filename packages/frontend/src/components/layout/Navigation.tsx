@@ -41,7 +41,7 @@ const GuestNavigation: React.FC<{ className: string }> = ({ className }) => (
         <span className="navigation__logo tama-heading">TamaFriends</span>
       </Link>
       <nav className="navigation__auth">
-        <Link to="/auth/login" className="btn btn-retro">
+        <Link to="/auth/login" className="tama-btn tama-btn--automotive">
           Sign In
         </Link>
       </nav>

@@ -151,7 +151,7 @@ function AppContent() {
           <p className="hero-subtitle">Share your virtual pet adventures with friends</p>
           <button
             onClick={handleOpenAuthModal}
-            className="btn-retro hero-cta"
+            className="tama-btn tama-btn--automotive tama-btn--racing-red hero-cta"
           >
             Get Started
           </button>
