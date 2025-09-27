@@ -28,11 +28,51 @@
   --tama-orange: #ff8a65;      /* Play/activity */
   --tama-purple: #9b59b6;      /* Special/premium features */
 
+  /* French Automotive Heritage Colors (1980s Racing & Design) */
+  --tama-racing-red: #dc143c;     /* Peugeot Cherry Red - primary motorsport */
+  --tama-electric-blue: #5aacfa;  /* Miami Blue - Peugeot performance (aliased to tama-blue) */
+  --tama-rally-yellow: #efdf00;   /* Renault Corporate Yellow - high visibility */
+  --tama-sorrento-green: #2d5a3d; /* Peugeot dark pearlescent - premium luxury */
+  --tama-navy-blue: #1e3a8a;     /* Peugeot motorsport livery - deep corporate */
+
+  /* Sophisticated Metallic Palette */
+  --tama-pearl-white: #f8f8ff;    /* Premium pearl finish */
+  --tama-champagne-metallic: #f7e7ce; /* Accessible luxury tone */
+  --tama-silver-grey: #c0c0c0;    /* Modern metallic neutral */
+  --tama-arctic-white: #f8f8ff;   /* Clean optimistic base */
+
+  /* Citroën Avant-Garde Collection */
+  --tama-rouge-delage: #dc143c;   /* Delage Red (Charleston series) */
+  --tama-jaune-helios: #efdf00;   /* Hélios Yellow - poetic French naming */
+  --tama-bleu-regate: #4682b4;    /* Regatta Blue - sophisticated nautical */
+  --tama-cuivre-tammela: #b87333; /* Tammela Copper - artisanal metallic */
+  --tama-night-grey: #374151;     /* Cormorant Grey - sophisticated dark */
+
+  /* Renault Performance Heritage */
+  --tama-bleu-olympe: #5aacfa;    /* Olympic Blue - sporting excellence */
+  --tama-rouge-grenade: #dc143c;  /* Grenade Red - warmer than Italian racing red */
+  --tama-aztec-gold: #ffd700;     /* Continental sophistication */
+
+  /* Memphis Movement Integration */
+  --tama-neon-pink: #ff10f0;      /* Bold geometric contrasts */
+  --tama-bright-lime: #39ff14;    /* Electric accent */
+  --tama-vivid-orange: #ff6600;   /* Memphis energy */
+  --tama-electric-purple: #9d00ff; /* Avant-garde statement */
+
   /* System State Colors */
   --success: #22c55e;
   --warning: #eab308;
   --error: #ef4444;
   --info: var(--tama-blue);
+
+  /* Legacy Color Variables - TamaFriends Compatible */
+  --deep-navy: var(--tama-white);        /* Make backgrounds white instead of dark */
+  --charcoal: var(--tama-gray-50);       /* Light gray background */
+  --medium-gray: var(--tama-gray-300);   /* Border color */
+  --off-white: var(--tama-gray-700);     /* Dark text on light backgrounds */
+  --electric-blue: var(--tama-blue);
+  --coral-pink: var(--error);
+  --lime-green: var(--success);
 
   /* LCD/Screen Aesthetic (Tamagotchi Homage) */
   --lcd-bg: #2d3748;           /* Dark LCD screen background */
@@ -43,12 +83,29 @@
   /* Minimal Gradients - Used Sparingly */
   --gradient-subtle: linear-gradient(135deg, var(--tama-gray-50) 0%, var(--tama-gray-100) 100%);
   --gradient-dark: linear-gradient(135deg, var(--tama-gray-800) 0%, var(--tama-gray-900) 100%);
+  --gradient-primary: linear-gradient(135deg, var(--tama-blue) 0%, var(--tama-mint) 100%);
+  --gradient-accent: linear-gradient(135deg, var(--tama-pink) 0%, var(--tama-orange) 100%);
 
-  /* Typography - Mochi-Inspired Font System */
+  /* French Automotive Gradients & Metallic Effects */
+  --tama-metallic-gradient: conic-gradient(from 45deg, var(--tama-pearl-white), var(--tama-champagne-metallic), var(--tama-pearl-white));
+  --tama-racing-gradient: linear-gradient(135deg, var(--tama-racing-red) 0%, var(--tama-rouge-grenade) 100%);
+  --tama-performance-gradient: linear-gradient(135deg, var(--tama-electric-blue) 0%, var(--tama-bleu-olympe) 100%);
+  --tama-premium-gradient: linear-gradient(135deg, var(--tama-sorrento-green) 0%, var(--tama-champagne-metallic) 100%);
+  --tama-motorsport-gradient: linear-gradient(90deg, var(--tama-rally-yellow) 0%, var(--tama-navy-blue) 50%, var(--tama-racing-red) 100%);
+
+  /* Pearlescent & Depth Effects */
+  --tama-depth-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
+  --tama-metallic-shadow: 0 4px 16px rgba(199, 199, 199, 0.4), 0 1px 4px rgba(0,0,0,0.1);
+  --tama-racing-shadow: 0 4px 16px rgba(220, 20, 60, 0.3), 0 1px 4px rgba(0,0,0,0.2);
+  --tama-performance-shadow: 0 4px 16px rgba(90, 172, 250, 0.3), 0 1px 4px rgba(0,0,0,0.1);
+
+  /* Typography - TamaFriends Font System */
   --font-pixel: 'JetBrains Mono', 'Fira Code', 'Monaco', monospace;      /* Headers/display - pixel feel */
   --font-ui: 'Inter', system-ui, -apple-system, sans-serif;              /* UI elements - clean & readable */
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;            /* Body text - optimized for reading */
   --font-mono: 'JetBrains Mono', 'Courier New', monospace;               /* Code/technical content */
+  --font-display: 'Inter', system-ui, -apple-system, sans-serif;         /* Legacy compatibility */
+  --font-primary: 'Inter', system-ui, -apple-system, sans-serif;         /* Legacy compatibility */
 
   /* Font Weights */
   --weight-light: 300;
@@ -107,6 +164,10 @@
   --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.1);
   --shadow-card: 0 4px 8px rgba(0, 0, 0, 0.08);
   --shadow-modal: 0 20px 40px rgba(0, 0, 0, 0.15);
+  --shadow-glow: 0 4px 8px rgba(90, 172, 250, 0.3);
+  --shadow-neon-sm: 0 2px 4px rgba(90, 172, 250, 0.2);
+  --shadow-neon-md: 0 4px 12px rgba(90, 172, 250, 0.3);
+  --shadow-neon-lg: 0 8px 24px rgba(90, 172, 250, 0.4);
 
   /* Animation */
   --transition-fast: 0.15s ease-out;
@@ -196,6 +257,54 @@
   color: var(--tama-gray-800);
 }
 
+/* French Automotive Button Variants */
+.tama-btn--automotive {
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.tama-btn--automotive::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left var(--transition-slow);
+}
+
+.tama-btn--automotive:hover::before {
+  left: 100%;
+}
+
+.tama-btn--racing-red {
+  background: var(--tama-racing-gradient);
+  border-color: var(--tama-racing-red);
+  color: var(--tama-white);
+  box-shadow: var(--tama-racing-shadow);
+}
+
+.tama-btn--racing-red:hover {
+  box-shadow: var(--tama-racing-shadow), 0 8px 24px rgba(220, 20, 60, 0.4);
+  transform: translate(-1px, -1px);
+}
+
+.tama-btn--performance-blue {
+  background: var(--tama-performance-gradient);
+  border-color: var(--tama-electric-blue);
+  color: var(--tama-white);
+  box-shadow: var(--tama-performance-shadow);
+}
+
+.tama-btn--premium-metallic {
+  background: var(--tama-metallic-gradient);
+  border-color: var(--tama-champagne-metallic);
+  color: var(--tama-gray-800);
+  box-shadow: var(--tama-metallic-shadow);
+}
+
 /* Card component system */
 .tama-card {
   background: var(--tama-white);
@@ -258,6 +367,154 @@
 .tama-pet-play { color: var(--tama-orange); }
 .tama-pet-special { color: var(--tama-purple); }
 .tama-pet-alert { color: var(--tama-yellow); }
+
+/* LCD-Style Statistics Display (Wireframe Specification) */
+.stat-item--lcd {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-3);
+  background: var(--lcd-bg);
+  border: var(--pixel-border);
+  border-radius: var(--radius-sm);
+  position: relative;
+}
+
+.stat-number--lcd {
+  font-family: var(--font-pixel);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--lcd-green);
+  text-shadow: 0 0 8px var(--lcd-green);
+  letter-spacing: 0.1em;
+  margin-bottom: var(--space-1);
+}
+
+.stats-container--metallic {
+  background: var(--tama-metallic-gradient);
+  border: var(--pixel-border-thick);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--tama-metallic-shadow);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+/* Wireframe Profile Component Styles */
+.profile-display--wireframe {
+  display: grid;
+  grid-template-areas:
+    "avatar info actions"
+    "avatar info actions";
+  grid-template-columns: 200px 1fr auto;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  background: var(--tama-white);
+  border: var(--pixel-border-thick);
+  border-radius: var(--radius-lg);
+  position: relative;
+}
+
+.profile-display--ascii-borders::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    linear-gradient(90deg, var(--tama-gray-300) 1px, transparent 1px),
+    linear-gradient(var(--tama-gray-300) 1px, transparent 1px);
+  background-size: 20px 20px;
+  opacity: 0.1;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.profile-avatar-section--wireframe {
+  grid-area: avatar;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.profile-info-section--wireframe {
+  grid-area: info;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.profile-actions-section--wireframe {
+  grid-area: actions;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.avatar-container--wireframe {
+  width: 200px;
+  height: 200px;
+  border: var(--pixel-border-thick);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  position: relative;
+}
+
+.profile-username--wireframe {
+  font-family: var(--font-pixel);
+  font-size: var(--text-2xl);
+  color: var(--tama-racing-red);
+  margin-bottom: var(--space-2);
+}
+
+.profile-fullname--wireframe {
+  font-size: var(--text-lg);
+  color: var(--tama-gray-700);
+  margin-bottom: var(--space-4);
+}
+
+.profile-stats--wireframe {
+  margin: var(--space-4) 0;
+}
+
+.profile-bio--wireframe {
+  padding: var(--space-4);
+  background: var(--tama-gray-50);
+  border: var(--pixel-border);
+  border-radius: var(--radius-md);
+  font-style: italic;
+}
+
+.profile-meta--wireframe {
+  font-size: var(--text-sm);
+  color: var(--tama-gray-500);
+  margin-top: var(--space-4);
+}
+
+/* Responsive wireframe adjustments */
+.profile-display--mobile {
+  grid-template-areas:
+    "avatar"
+    "info"
+    "actions";
+  grid-template-columns: 1fr;
+  text-align: center;
+}
+
+.profile-display--mobile .avatar-container--wireframe {
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
+}
+
+.profile-display--desktop {
+  /* Enhanced spacing for desktop */
+  gap: var(--space-8);
+  padding: var(--space-8);
+}
 
 /* Layout utilities */
 .tama-container {
