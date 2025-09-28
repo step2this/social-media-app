@@ -38,7 +38,7 @@ export function validateResponse<T>(
     return {
       isValid: false,
       errors: [{
-        code: 'unknown_error',
+        code: 'custom' as const,
         path: [],
         message: error instanceof Error ? error.message : 'Unknown validation error'
       }]

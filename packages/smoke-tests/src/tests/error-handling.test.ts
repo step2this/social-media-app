@@ -259,7 +259,7 @@ describe('Error Handling Verification', () => {
       ];
 
       schemas.forEach((schema, index) => {
-        const result = validateResponse(invalidInputs[index], schema);
+        const result = validateResponse(invalidInputs[index], schema as any);
 
         expect(result.isValid).toBe(false);
         expect(result.errors).toBeDefined();

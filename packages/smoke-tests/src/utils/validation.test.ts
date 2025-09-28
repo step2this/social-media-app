@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateResponse, validateRequest, type ValidationResult } from './validation.js';
+import { validateResponse, validateRequest } from './validation.js';
 import { z } from 'zod';
 
 describe('Request/Response Validation', () => {
@@ -193,9 +193,9 @@ describe('Request/Response Validation', () => {
 
       if (result.isValid) {
         // TypeScript should know these fields exist and have correct types
-        expect(typeof result.data.success).toBe('boolean');
-        expect(typeof result.data.token).toBe('string');
-        expect(typeof result.data.user?.email).toBe('string');
+        expect(typeof result.data!.success).toBe('boolean');
+        expect(typeof result.data!.token).toBe('string');
+        expect(typeof result.data!.user?.email).toBe('string');
       }
     });
   });
