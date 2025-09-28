@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { AuthService } from './AuthService';
 import { useAuthStore } from '../../stores/authStore';
 import type { AuthHookResult } from './AuthService';
-import type { UserProfile, AuthTokens } from '@social-media-app/shared';
+import type { User, AuthTokens } from '@social-media-app/shared';
 
 describe('AuthService Store Subscription Pattern', () => {
   let authService: AuthService;
@@ -38,7 +38,7 @@ describe('AuthService Store Subscription Pattern', () => {
       expect(authService.user).toBeNull();
 
       // Update store directly (simulating successful registration)
-      const mockUser: UserProfile = {
+      const mockUser: User = {
         id: 'test-user-id',
         email: 'test@example.com',
         username: 'testuser',
@@ -90,7 +90,7 @@ describe('AuthService Store Subscription Pattern', () => {
       const unsubscribe = authService.subscribe(callback);
 
       // Change auth state
-      const mockUser: UserProfile = {
+      const mockUser: User = {
         id: 'test-user-id',
         email: 'test@example.com',
         username: 'testuser',
@@ -136,7 +136,7 @@ describe('AuthService Store Subscription Pattern', () => {
   describe('Persistence Integration', () => {
     it('should work with Zustand persistence', () => {
       // Set up authenticated state
-      const mockUser: UserProfile = {
+      const mockUser: User = {
         id: 'persisted-user',
         email: 'persisted@example.com',
         username: 'persisteduser',
@@ -172,7 +172,7 @@ describe('AuthService Store Subscription Pattern', () => {
       expect(capturedStates[0]).toBe(false);
 
       // Update state
-      const mockUser: UserProfile = {
+      const mockUser: User = {
         id: 'test-user-id',
         email: 'test@example.com',
         username: 'testuser',

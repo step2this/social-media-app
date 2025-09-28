@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { UserProfile, AuthTokens } from '@social-media-app/shared';
+import type { User, AuthTokens } from '@social-media-app/shared';
 
 export interface AuthState {
-  user: UserProfile | null;
+  user: User | null;
   tokens: AuthTokens | null;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -11,11 +11,11 @@ export interface AuthState {
 }
 
 export interface AuthActions {
-  setUser: (user: UserProfile | null) => void;
+  setUser: (user: User | null) => void;
   setTokens: (tokens: AuthTokens | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  login: (user: UserProfile, tokens: AuthTokens) => void;
+  login: (user: User, tokens: AuthTokens) => void;
   logout: () => void;
   clearError: () => void;
   reset: () => void;

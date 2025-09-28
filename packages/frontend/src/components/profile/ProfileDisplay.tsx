@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import type { PublicProfile, UserProfile } from '@social-media-app/shared';
+import type { PublicProfile, User } from '@social-media-app/shared';
 import { StoryRing } from '../layout/AppLayout';
 import './ProfileDisplay.css';
 
 interface ProfileDisplayProps {
-  profile: PublicProfile | UserProfile;
+  profile: PublicProfile | User;
   showEditButton?: boolean;
   onEditClick?: () => void;
   onAvatarClick?: () => void;

@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 import { useAuthStore } from '../stores/authStore';
 import * as apiClient from '../services/apiClient';
 import { ApiError } from '../services/apiClient';
-import type { RegisterResponse, LoginResponse, UserProfile, AuthTokens } from '@social-media-app/shared';
+import type { RegisterResponse, LoginResponse, User, AuthTokens } from '@social-media-app/shared';
 
 // Mock the apiClient
 vi.mock('../services/apiClient', () => ({
@@ -54,7 +54,7 @@ describe('useAuth Hook - Registration Flow Integration', () => {
 
   describe('Registration with Auto-Login', () => {
     it('should handle successful registration with auto-login when tokens are returned', async () => {
-      const mockUser: UserProfile = {
+      const mockUser: User = {
         id: 'new-user-id',
         email: 'newuser@example.com',
         username: 'newuser',
@@ -107,7 +107,7 @@ describe('useAuth Hook - Registration Flow Integration', () => {
     });
 
     it('should handle registration without auto-login when no tokens returned', async () => {
-      const mockUser: UserProfile = {
+      const mockUser: User = {
         id: 'new-user-id',
         email: 'newuser@example.com',
         username: 'newuser',
@@ -175,7 +175,7 @@ describe('useAuth Hook - Registration Flow Integration', () => {
 
   describe('Store Persistence After Registration', () => {
     it('should persist authentication state after successful registration with tokens', async () => {
-      const mockUser: UserProfile = {
+      const mockUser: User = {
         id: 'persistent-user',
         email: 'persistent@example.com',
         username: 'persistentuser',
@@ -227,7 +227,7 @@ describe('useAuth Hook - Registration Flow Integration', () => {
 
   describe('Login Flow Comparison', () => {
     it('should have consistent behavior between login and registration with tokens', async () => {
-      const mockUser: UserProfile = {
+      const mockUser: User = {
         id: 'user-id',
         email: 'user@example.com',
         username: 'testuser',

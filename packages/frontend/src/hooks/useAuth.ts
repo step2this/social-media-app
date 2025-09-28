@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useAuthStore } from '../stores/authStore.js';
 import { apiClient, ApiError, NetworkError, ValidationError } from '../services/apiClient.js';
-import type { RegisterRequest, LoginRequest, UpdateUserProfileRequest } from '@social-media-app/shared';
+import type { RegisterRequest, LoginRequest, UpdateUserRequest } from '@social-media-app/shared';
 
 /**
  * Authentication hook that provides auth operations with store integration
@@ -170,7 +170,7 @@ export const useAuth = () => {
   /**
    * Update user profile
    */
-  const updateProfile = useCallback(async (profileData: UpdateUserProfileRequest) => {
+  const updateProfile = useCallback(async (profileData: UpdateUserRequest) => {
     if (!isAuthenticated) {
       throw new Error('User not authenticated');
     }

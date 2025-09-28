@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { UserProfile } from '@social-media-app/shared';
+import type { User } from '@social-media-app/shared';
 import { useAuth } from '../../hooks/useAuth';
 import { apiClient } from '../../services/apiClient';
 import { ProfileDisplay } from './ProfileDisplay';
@@ -12,7 +12,7 @@ import './MyProfilePage.css';
  */
 export const MyProfilePage: React.FC = () => {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useAuthStore } from './authStore.js';
-import type { UserProfile, AuthTokens } from '@social-media-app/shared';
+import type { User, AuthTokens } from '@social-media-app/shared';
 
 describe('Auth Store', () => {
   beforeEach(() => {
@@ -36,7 +36,7 @@ describe('Auth Store', () => {
   });
 
   it('should handle login correctly', () => {
-    const mockUser: UserProfile = {
+    const mockUser: User = {
       id: 'user-1',
       email: 'test@example.com',
       username: 'testuser',
@@ -64,7 +64,7 @@ describe('Auth Store', () => {
 
   it('should handle logout correctly', () => {
     // First login
-    const mockUser: UserProfile = {
+    const mockUser: User = {
       id: 'user-1',
       email: 'test@example.com',
       username: 'testuser',
@@ -94,7 +94,7 @@ describe('Auth Store', () => {
   });
 
   it('should update user data', () => {
-    const initialUser: UserProfile = {
+    const initialUser: User = {
       id: 'user-1',
       email: 'test@example.com',
       username: 'testuser',
@@ -111,7 +111,7 @@ describe('Auth Store', () => {
 
     useAuthStore.getState().login(initialUser, mockTokens);
 
-    const updatedUser: UserProfile = {
+    const updatedUser: User = {
       ...initialUser,
       fullName: 'Updated Name',
       updatedAt: '2024-01-01T00:30:00.000Z'
@@ -125,7 +125,7 @@ describe('Auth Store', () => {
   });
 
   it('should update tokens', () => {
-    const mockUser: UserProfile = {
+    const mockUser: User = {
       id: 'user-1',
       email: 'test@example.com',
       username: 'testuser',

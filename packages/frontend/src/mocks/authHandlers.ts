@@ -8,8 +8,8 @@ import {
   RefreshTokenRequestSchema,
   RefreshTokenResponseSchema,
   GetProfileResponseSchema,
-  UpdateUserProfileResponseSchema,
-  UpdateUserProfileRequestSchema,
+  UpdateUserResponseSchema,
+  UpdateUserRequestSchema,
   AuthTokensSchema,
   type RegisterRequest,
   type RegisterResponse,
@@ -17,10 +17,10 @@ import {
   type LoginResponse,
   type RefreshTokenRequest,
   type RefreshTokenResponse,
-  type UserProfile,
+  type User,
   type GetProfileResponse,
-  type UpdateUserProfileRequest,
-  type UpdateUserProfileResponse,
+  type UpdateUserRequest,
+  type UpdateUserResponse,
   type AuthTokens
 } from '@social-media-app/shared';
 
@@ -481,8 +481,8 @@ export const authHandlers = [
         );
       }
 
-      const body = await request.json() as UpdateUserProfileRequest;
-      const validatedRequest = UpdateUserProfileRequestSchema.parse(body);
+      const body = await request.json() as UpdateUserRequest;
+      const validatedRequest = UpdateUserRequestSchema.parse(body);
 
       const fullUser = mockUsers.get(user.id);
       if (!fullUser) {
