@@ -78,14 +78,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
   return (
     <div className="tama-form">
-      <h2 className="modal-title">🥚 Create Your Pet Profile!</h2>
-      <p className="tama-text" style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
+      <h2 className="tama-heading tama-heading--automotive">🥚 Create Your Pet Profile!</h2>
+      <p className="tama-text tama-text-automotive" style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
         Join TamaFriends and start raising your virtual pets
       </p>
 
       <form onSubmit={handleSubmit}>
-        <div className="tama-form-field">
-          <label htmlFor="fullName" className="tama-form-label">
+        <div className="form-group">
+          <label htmlFor="fullName" className="tama-form-label tama-form-label--automotive">
             Full Name (Optional)
           </label>
           <input
@@ -94,14 +94,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             type="text"
             value={formData.fullName}
             onChange={handleChange}
-            className="tama-input"
+            className="tama-input tama-input--automotive"
             placeholder="Enter your full name"
             autoComplete="name"
           />
         </div>
 
-        <div className="tama-form-field">
-          <label htmlFor="username" className="tama-form-label">
+        <div className="form-group">
+          <label htmlFor="username" className="tama-form-label tama-form-label--automotive">
             Username
           </label>
           <input
@@ -111,7 +111,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             value={formData.username}
             onChange={handleChange}
             required
-            className="tama-input"
+            className="tama-input tama-input--automotive"
             placeholder="Choose your pet keeper name"
             autoComplete="username"
             pattern="[a-zA-Z0-9_]{3,30}"
@@ -119,8 +119,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           />
         </div>
 
-        <div className="tama-form-field">
-          <label htmlFor="email" className="tama-form-label">
+        <div className="form-group">
+          <label htmlFor="email" className="tama-form-label tama-form-label--automotive">
             Email
           </label>
           <input
@@ -130,14 +130,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             value={formData.email}
             onChange={handleChange}
             required
-            className="tama-input"
+            className="tama-input tama-input--automotive"
             placeholder="Enter your email"
             autoComplete="email"
           />
         </div>
 
-        <div className="tama-form-field">
-          <label htmlFor="password" className="tama-form-label">
+        <div className="form-group">
+          <label htmlFor="password" className="tama-form-label tama-form-label--automotive">
             Password
           </label>
           <input
@@ -147,7 +147,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             value={formData.password}
             onChange={handleChange}
             required
-            className="tama-input"
+            className="tama-input tama-input--automotive"
             placeholder="Create a secure password"
             autoComplete="new-password"
             minLength={8}
@@ -157,8 +157,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           </small>
         </div>
 
-        <div className="tama-form-field">
-          <label htmlFor="confirmPassword" className="tama-form-label">
+        <div className="form-group">
+          <label htmlFor="confirmPassword" className="tama-form-label tama-form-label--automotive">
             Confirm Password
           </label>
           <input
@@ -168,7 +168,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             value={confirmPassword}
             onChange={handleConfirmPasswordChange}
             required
-            className="tama-input"
+            className="tama-input tama-input--automotive"
             style={{ borderColor: showPasswordError ? 'var(--error)' : '' }}
             placeholder="Confirm your password"
             autoComplete="new-password"
@@ -179,7 +179,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         </div>
 
         {error && (
-          <div className="tama-form-error" role="alert">
+          <div className="tama-alert tama-alert--error" role="alert">
             {error}
             {(error.includes('email already exists') || error.includes('username already exists')) && (
               <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
@@ -195,11 +195,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           </div>
         )}
 
-        <div className="tama-form-actions">
+        <div className="modal-actions modal-actions--automotive">
           <button
             type="submit"
             disabled={isLoading || !passwordsMatch}
-            className="tama-btn tama-btn--primary"
+            className="tama-btn tama-btn--automotive tama-btn--racing-red"
           >
             {isLoading ? '🐣 Creating account...' : '🎉 Start Pet Journey'}
           </button>

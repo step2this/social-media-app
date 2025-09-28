@@ -1,26 +1,26 @@
 import { z } from 'zod';
 import {
   OptionalFullNameField,
-  BioField,
-  OptionalURLField,
-  UUIDField,
   TokenField,
   PasswordTokenField,
   RefreshTokenField,
   VerificationTokenField,
-  ResetTokenField,
-  TimestampField
+  ResetTokenField
 } from './base.schema.js';
 
-/**
- * Common validation schemas for authentication
- */
-export const EmailSchema = z.string()
-  .trim()
-  .toLowerCase()
-  .email('Invalid email format')
-  .max(255, 'Email must not exceed 255 characters');
+// Import user schemas from centralized location
+import {
+  EmailSchema,
+  UsernameSchema,
+  UserSchema,
+  type User,
+  type UpdateUserRequest,
+  type UpdateUserResponse
+} from './user.schema.js';
 
+/**
+ * Authentication-specific validation schemas
+ */
 export const PasswordSchema = z.string()
   .min(8, 'Password must be at least 8 characters')
   .max(128, 'Password must not exceed 128 characters')
@@ -29,12 +29,8 @@ export const PasswordSchema = z.string()
   .regex(/[0-9]/, 'Password must contain at least one number')
   .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character');
 
-export const UsernameSchema = z.string()
-  .trim()
-  .toLowerCase()
-  .min(3, 'Username must be at least 3 characters')
-  .max(30, 'Username must not exceed 30 characters')
-  .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores');
+// Re-export user schemas for convenience
+export { EmailSchema, UsernameSchema };
 
 /**
  * Request schemas
@@ -76,11 +72,8 @@ export const VerifyEmailRequestSchema = z.object({
   token: VerificationTokenField
 });
 
-export const UpdateUserProfileRequestSchema = z.object({
-  fullName: OptionalFullNameField,
-  bio: BioField,
-  avatarUrl: OptionalURLField
-});
+// Use centralized user request schema - no need for auth-specific duplicate
+// export const UpdateUserProfileRequestSchema = UpdateUserRequestSchema;
 
 /**
  * Response schemas
@@ -91,20 +84,11 @@ export const AuthTokensSchema = z.object({
   expiresIn: z.number().positive()
 });
 
-export const UserProfileSchema = z.object({
-  id: UUIDField,
-  email: EmailSchema,
-  username: UsernameSchema,
-  fullName: OptionalFullNameField,
-  bio: BioField,
-  avatarUrl: OptionalURLField,
-  emailVerified: z.boolean(),
-  createdAt: TimestampField,
-  updatedAt: TimestampField
-});
+// Use centralized user schema - no need for auth-specific duplicate
+// export const UserProfileSchema = UserSchema;
 
 export const RegisterResponseSchema = z.object({
-  user: UserProfileSchema.pick({
+  user: UserSchema.pick({
     id: true,
     email: true,
     username: true,
@@ -117,7 +101,7 @@ export const RegisterResponseSchema = z.object({
 });
 
 export const LoginResponseSchema = z.object({
-  user: UserProfileSchema.omit({
+  user: UserSchema.omit({
     createdAt: true,
     updatedAt: true
   }),
@@ -148,12 +132,11 @@ export const VerifyEmailResponseSchema = z.object({
 });
 
 export const GetProfileResponseSchema = z.object({
-  user: UserProfileSchema
+  user: UserSchema
 });
 
-export const UpdateUserProfileResponseSchema = z.object({
-  user: UserProfileSchema
-});
+// Use centralized user response schema - no need for auth-specific duplicate
+// export const UpdateUserProfileResponseSchema = UpdateUserResponseSchema;
 
 /**
  * Type exports
@@ -172,8 +155,9 @@ export type PasswordResetConfirm = z.infer<typeof PasswordResetConfirmSchema>;
 export type PasswordResetConfirmResponse = z.infer<typeof PasswordResetConfirmResponseSchema>;
 export type VerifyEmailRequest = z.infer<typeof VerifyEmailRequestSchema>;
 export type VerifyEmailResponse = z.infer<typeof VerifyEmailResponseSchema>;
-export type UpdateUserProfileRequest = z.infer<typeof UpdateUserProfileRequestSchema>;
-export type UpdateUserProfileResponse = z.infer<typeof UpdateUserProfileResponseSchema>;
+// Use centralized user types - re-export for convenience
+export type UpdateUserProfileRequest = UpdateUserRequest;
+export type UpdateUserProfileResponse = UpdateUserResponse;
 export type GetProfileResponse = z.infer<typeof GetProfileResponseSchema>;
-export type UserProfile = z.infer<typeof UserProfileSchema>;
+export type UserProfile = User;
 export type AuthTokens = z.infer<typeof AuthTokensSchema>;

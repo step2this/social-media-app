@@ -40,14 +40,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
   return (
     <div className="tama-form">
-      <h2 className="modal-title">🐾 Welcome Back!</h2>
-      <p className="tama-text" style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
+      <h2 className="tama-heading tama-heading--automotive">🐾 Welcome Back!</h2>
+      <p className="tama-text tama-text-automotive" style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
         Sign in to continue caring for your virtual pets
       </p>
 
       <form onSubmit={handleSubmit}>
-        <div className="tama-form-field">
-          <label htmlFor="email" className="tama-form-label">
+        <div className="form-group">
+          <label htmlFor="email" className="tama-form-label tama-form-label--automotive">
             Email
           </label>
           <input
@@ -57,14 +57,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             value={formData.email}
             onChange={handleChange}
             required
-            className="tama-input"
+            className="tama-input tama-input--automotive"
             placeholder="Enter your email"
             autoComplete="email"
           />
         </div>
 
-        <div className="tama-form-field">
-          <label htmlFor="password" className="tama-form-label">
+        <div className="form-group">
+          <label htmlFor="password" className="tama-form-label tama-form-label--automotive">
             Password
           </label>
           <input
@@ -74,23 +74,23 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             value={formData.password}
             onChange={handleChange}
             required
-            className="tama-input"
+            className="tama-input tama-input--automotive"
             placeholder="Enter your password"
             autoComplete="current-password"
           />
         </div>
 
         {error && (
-          <div className="tama-form-error" role="alert">
+          <div className="tama-alert tama-alert--error" role="alert">
             {error}
           </div>
         )}
 
-        <div className="tama-form-actions">
+        <div className="modal-actions modal-actions--automotive">
           <button
             type="submit"
             disabled={isLoading}
-            className="tama-btn tama-btn--primary"
+            className="tama-btn tama-btn--automotive tama-btn--racing-red"
           >
             {isLoading ? '🐣 Signing in...' : '🌟 Sign In'}
           </button>

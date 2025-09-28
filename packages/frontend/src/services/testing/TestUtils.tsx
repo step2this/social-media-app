@@ -57,7 +57,14 @@ export const renderWithServices = (
     // Conditionally wrap with router
     if (includeRouter) {
       return (
-        <MemoryRouter initialEntries={[initialRoute, ...routes]} initialIndex={0}>
+        <MemoryRouter
+          initialEntries={[initialRoute, ...routes]}
+          initialIndex={0}
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true
+          }}
+        >
           {content}
         </MemoryRouter>
       );

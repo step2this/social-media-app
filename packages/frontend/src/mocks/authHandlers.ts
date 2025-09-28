@@ -44,7 +44,7 @@ const mockTokens = new Map<string, {
   userId: string;
   accessToken: string;
   refreshToken: string;
-  expiresAt: string;
+  expiresAt: number; // Store as timestamp for internal calculations
 }>();
 
 // Helper function to generate a valid UUID v4 format
@@ -62,7 +62,7 @@ const generateMockTokens = (userId: string): AuthTokens => {
   const accessToken = `mock_access_${userId}_${Date.now()}`;
   const refreshToken = `mock_refresh_${userId}_${Date.now()}`;
   const expiresIn = 3600; // 1 hour in seconds
-  const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString(); // For internal tracking
+  const expiresAt = Date.now() + expiresIn * 1000; // Store as timestamp for calculations
 
   mockTokens.set(accessToken, {
     userId,
@@ -87,7 +87,7 @@ const getUserFromToken = (authHeader: string | null): { id: string; email: strin
   const token = authHeader.substring(7);
   const tokenData = mockTokens.get(token);
 
-  if (!tokenData || new Date(tokenData.expiresAt) < new Date()) {
+  if (!tokenData || tokenData.expiresAt < Date.now()) {
     return null;
   }
 

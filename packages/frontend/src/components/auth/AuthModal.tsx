@@ -48,8 +48,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay modal-overlay--automotive" onClick={onClose}>
+      <div className="modal-content modal-content--automotive" onClick={(e) => e.stopPropagation()}>
         <button
           className="modal-close"
           onClick={onClose}

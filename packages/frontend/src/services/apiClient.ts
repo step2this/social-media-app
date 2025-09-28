@@ -9,8 +9,8 @@ import {
   RefreshTokenResponseSchema,
   LogoutRequestSchema,
   LogoutResponseSchema,
-  UpdateUserProfileRequestSchema,
-  UpdateUserProfileResponseSchema,
+  UpdateUserRequestSchema,
+  UpdateUserResponseSchema,
   GetProfileResponseSchema,
   type HelloRequest,
   type HelloResponse,
@@ -22,8 +22,8 @@ import {
   type RefreshTokenResponse,
   type LogoutRequest,
   type LogoutResponse,
-  type UpdateUserProfileRequest,
-  type UpdateUserProfileResponse,
+  type UpdateUserRequest,
+  type UpdateUserResponse,
   type GetProfileResponse
 } from '@social-media-app/shared';
 
@@ -492,15 +492,15 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
         return GetProfileResponseSchema.parse(response);
       },
 
-      updateProfile: async (request: UpdateUserProfileRequest): Promise<UpdateUserProfileResponse> => {
+      updateProfile: async (request: UpdateUserRequest): Promise<UpdateUserResponse> => {
         try {
-          const validatedRequest = UpdateUserProfileRequestSchema.parse(request);
-          const response = await sendRequest<UpdateUserProfileResponse>('/auth/profile', {
+          const validatedRequest = UpdateUserRequestSchema.parse(request);
+          const response = await sendRequest<UpdateUserResponse>('/auth/profile', {
             method: 'PUT',
             body: JSON.stringify(validatedRequest)
           }, defaultRetryConfig, true); // Include auth header
 
-          return UpdateUserProfileResponseSchema.parse(response);
+          return UpdateUserResponseSchema.parse(response);
         } catch (error) {
           if (error?.name === 'ZodError') {
             throw new ValidationError('Request validation failed', error.errors);

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { UserProfileSchema } from './auth.schema.js';
+import { UserSchema } from './user.schema.js';
 import {
   HandleField,
   OptionalFullNameField,
@@ -18,7 +18,7 @@ export const HandleSchema = HandleField;
 /**
  * Enhanced profile schema with handle and profile picture
  */
-export const ProfileSchema = UserProfileSchema.extend({
+export const ProfileSchema = UserSchema.extend({
   handle: HandleSchema,
   profilePictureUrl: OptionalURLField,
   profilePictureThumbnailUrl: OptionalURLField,

@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Media Wireframe Design System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #f0f4f8;
+            color: #2d3748;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        /* Wireframe Styling - Blueprint aesthetic */
+        .wireframe-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 40px 0 20px;
+            padding: 10px;
+            background: #e2e8f0;
+            border-left: 4px solid #4299e1;
+        }
+
+        .subsection-title {
+            font-size: 18px;
+            margin: 20px 0 10px;
+            color: #4a5568;
+            font-weight: bold;
+        }
+
+        /* Grid System Documentation */
+        .grid-demo {
+            display: grid;
+            gap: 20px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f7fafc;
+            border: 2px dashed #cbd5e0;
+        }
+
+        .grid-12 {
+            grid-template-columns: repeat(12, 1fr);
+        }
+
+        .grid-sidebar {
+            grid-template-columns: 280px 1fr 320px;
+        }
+
+        .grid-item {
+            background: white;
+            border: 2px solid #4299e1;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #2b6cb0;
+            position: relative;
+        }
+
+        .grid-item::before {
+            content: attr(data-component);
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            background: white;
+            padding: 0 5px;
+            font-size: 10px;
+            color: #e53e3e;
+            font-weight: bold;
+        }
+
+        /* Component Wireframes */
+        .wireframe {
+            border: 2px solid #a0aec0;
+            padding: 20px;
+            margin: 20px 0;
+            background: white;
+            position: relative;
+        }
+
+        .wireframe-label {
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: white;
+            padding: 0 10px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #e53e3e;
+        }
+
+        .annotation {
+            background: #fffacd;
+            border: 1px solid #f6e05e;
+            padding: 8px;
+            margin: 10px 0;
+            font-size: 12px;
+            color: #744210;
+        }
+
+        .annotation::before {
+            content: "📌 ";
+        }
+
+        /* Navigation Wireframe */
+        .nav-wireframe {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border: 2px solid #4299e1;
+            background: #ebf8ff;
+        }
+
+        .nav-logo {
+            width: 150px;
+            height: 40px;
+            background: repeating-linear-gradient(
+                45deg,
+                #bee3f8,
+                #bee3f8 10px,
+                #90cdf4 10px,
+                #90cdf4 20px
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-item-wire {
+            padding: 10px 20px;
+            border: 2px solid #4299e1;
+            background: white;
+        }
+
+        /* Profile Wireframe */
+        .profile-header-wire {
+            display: grid;
+            grid-template-columns: 200px 1fr 200px;
+            gap: 40px;
+            padding: 40px;
+            background: #f7fafc;
+            border: 2px dashed #cbd5e0;
+        }
+
+        .avatar-wire {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: repeating-radial-gradient(
+                circle,
+                #e0e7ff,
+                #e0e7ff 10px,
+                #c7d2fe 10px,
+                #c7d2fe 20px
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stats-wire {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+            background: #f0f4f8;
+            border: 2px solid #cbd5e0;
+        }
+
+        .stat-item-wire {
+            text-align: center;
+            padding: 10px;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4299e1;
+        }
+
+        /* Post Grid Wireframe */
+        .post-grid-wire {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 20px;
+            background: #f7fafc;
+            border: 2px dashed #cbd5e0;
+        }
+
+        .post-item-wire {
+            aspect-ratio: 1;
+            background: repeating-linear-gradient(
+                -45deg,
+                #e0e7ff,
+                #e0e7ff 10px,
+                #c7d2fe 10px,
+                #c7d2fe 20px
+            );
+            border: 2px solid #6366f1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #4c1d95;
+        }
+
+        /* Feed Layout */
+        .feed-layout-wire {
+            display: grid;
+            grid-template-columns: 280px 600px 320px;
+            gap: 40px;
+            padding: 20px;
+            background: #f0f4f8;
+        }
+
+        .sidebar-wire {
+            padding: 20px;
+            background: white;
+            border: 2px solid #cbd5e0;
+        }
+
+        .main-feed-wire {
+            padding: 20px;
+            background: white;
+            border: 2px solid #4299e1;
+        }
+
+        .right-panel-wire {
+            padding: 20px;
+            background: white;
+            border: 2px solid #cbd5e0;
+        }
+
+        /* Post Card Wireframe */
+        .post-card-wire {
+            border: 2px solid #4299e1;
+            background: white;
+            margin: 20px 0;
+        }
+
+        .post-header-wire {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border-bottom: 2px dashed #cbd5e0;
+        }
+
+        .small-avatar-wire {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #e0e7ff;
+            border: 2px solid #6366f1;
+        }
+
+        .post-image-wire {
+            width: 100%;
+            height: 400px;
+            background: repeating-linear-gradient(
+                45deg,
+                #f0f4f8,
+                #f0f4f8 20px,
+                #e2e8f0 20px,
+                #e2e8f0 40px
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #718096;
+        }
+
+        .post-actions-wire {
+            display: flex;
+            gap: 30px;
+            padding: 15px;
+            border-top: 2px dashed #cbd5e0;
+        }
+
+        .action-button-wire {
+            padding: 8px 16px;
+            border: 2px solid #cbd5e0;
+            background: white;
+        }
+
+        /* Component Specs */
+        .specs-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .specs-table th,
+        .specs-table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #cbd5e0;
+        }
+
+        .specs-table th {
+            background: #edf2f7;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .specs-table td {
+            background: white;
+        }
+
+        .code-spec {
+            background: #2d3748;
+            color: #68d391;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        /* Responsive Breakpoints Display */
+        .breakpoint-demo {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f7fafc;
+            border: 2px dashed #cbd5e0;
+        }
+
+        .breakpoint-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-left: 4px solid #4299e1;
+        }
+
+        /* Interactive States */
+        .state-examples {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .state-box {
+            flex: 1;
+            padding: 20px;
+            border: 2px solid #cbd5e0;
+            text-align: center;
+        }
+
+        .state-box.hover {
+            background: #ebf8ff;
+            border-color: #4299e1;
+        }
+
+        .state-box.active {
+            background: #bee3f8;
+            border-color: #2b6cb0;
+        }
+
+        .state-box.disabled {
+            background: #f7fafc;
+            color: #a0aec0;
+            border-style: dashed;
+        }
+    </style>
+</head>
+<body>
+    <div class="wireframe-container">
+        <h1 style="font-size: 32px; margin-bottom: 10px;">📐 Social Media Platform - Wireframe Design System</h1>
+        <p style="color: #718096; margin-bottom: 30px;">
+            Component architecture and layout blueprints for Claude Code implementation with retro 80s styling
+        </p>
+
+        <!-- Grid System -->
+        <div class="section-title">1. GRID SYSTEM & LAYOUT ARCHITECTURE</div>
+        
+        <div class="annotation">
+            Primary layout uses a 12-column grid system with responsive breakpoints. 
+            Claude Code should implement this using CSS Grid or Flexbox with your retro styling overlay.
+        </div>
+
+        <div class="subsection-title">12-Column Base Grid</div>
+        <div class="grid-demo grid-12">
+            <div class="grid-item" data-component="col-1">1</div>
+            <div class="grid-item" data-component="col-2">2</div>
+            <div class="grid-item" data-component="col-3">3</div>
+            <div class="grid-item" data-component="col-4">4</div>
+            <div class="grid-item" data-component="col-5">5</div>
+            <div class="grid-item" data-component="col-6">6</div>
+            <div class="grid-item" data-component="col-7">7</div>
+            <div class="grid-item" data-component="col-8">8</div>
+            <div class="grid-item" data-component="col-9">9</div>
+            <div class="grid-item" data-component="col-10">10</div>
+            <div class="grid-item" data-component="col-11">11</div>
+            <div class="grid-item" data-component="col-12">12</div>
+        </div>
+
+        <div class="subsection-title">Main Application Layout (Desktop)</div>
+        <div class="grid-demo grid-sidebar">
+            <div class="grid-item" data-component="LeftSidebar" style="grid-row: span 2;">
+                <strong>LEFT SIDEBAR</strong><br>
+                280px fixed<br>
+                Navigation Menu<br>
+                User Actions<br>
+                Quick Links
+            </div>
+            <div class="grid-item" data-component="MainContent" style="grid-row: span 2;">
+                <strong>MAIN CONTENT</strong><br>
+                Flexible width<br>
+                Feed / Profile / Posts<br>
+                Primary interaction area
+            </div>
+            <div class="grid-item" data-component="RightPanel" style="grid-row: span 2;">
+                <strong>RIGHT PANEL</strong><br>
+                320px fixed<br>
+                Suggestions<br>
+                Trending<br>
+                Activity
+            </div>
+        </div>
+
+        <!-- Navigation Component -->
+        <div class="section-title">2. NAVIGATION ARCHITECTURE</div>
+        
+        <div class="wireframe">
+            <div class="wireframe-label">TopNavigation Component</div>
+            <div class="nav-wireframe">
+                <div class="nav-logo">LOGO</div>
+                <div class="nav-menu">
+                    <div class="nav-item-wire">Home</div>
+                    <div class="nav-item-wire">Explore</div>
+                    <div class="nav-item-wire">Create</div>
+                    <div class="nav-item-wire">Messages</div>
+                    <div class="nav-item-wire">Profile</div>
+                </div>
+                <div class="nav-menu">
+                    <div class="nav-item-wire">🔔 Notif</div>
+                    <div class="nav-item-wire">User Menu</div>
+                </div>
+            </div>
+        </div>
+
+        <table class="specs-table">
+            <thead>
+                <tr>
+                    <th>Component</th>
+                    <th>React Component Name</th>
+                    <th>Props/State</th>
+                    <th>Retro Styling Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Navigation Bar</td>
+                    <td><span class="code-spec">TopNavigation</span></td>
+                    <td>currentRoute, user, notifications</td>
+                    <td>Apply neon borders, ASCII art dividers</td>
+                </tr>
+                <tr>
+                    <td>Logo</td>
+                    <td><span class="code-spec">BrandLogo</span></td>
+                    <td>animated (boolean)</td>
+                    <td>ASCII art logo, neon glow effect</td>
+                </tr>
+                <tr>
+                    <td>Nav Items</td>
+                    <td><span class="code-spec">NavMenuItem</span></td>
+                    <td>active, label, icon, route</td>
+                    <td>Retro hover states, pixel transitions</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Profile Layout -->
+        <div class="section-title">3. PROFILE PAGE ARCHITECTURE</div>
+        
+        <div class="wireframe">
+            <div class="wireframe-label">ProfilePage Component</div>
+            <div class="profile-header-wire">
+                <div class="avatar-wire">
+                    <strong>AVATAR</strong><br>
+                    200x200px
+                </div>
+                <div>
+                    <h2 style="font-size: 28px; margin-bottom: 10px;">@username</h2>
+                    <p style="color: #718096; margin-bottom: 20px;">Full Name</p>
+                    <p style="margin-bottom: 20px;">Bio text goes here. This is where users describe themselves.</p>
+                    <div style="display: flex; gap: 20px;">
+                        <button style="padding: 10px 30px; border: 2px solid #4299e1; background: white;">Edit Profile</button>
+                        <button style="padding: 10px 30px; border: 2px solid #cbd5e0; background: white;">Settings</button>
+                    </div>
+                </div>
+                <div>
+                    <div style="padding: 20px; background: #f7fafc; border: 2px dashed #cbd5e0;">
+                        <strong>ACTIONS</strong><br>
+                        • Share Profile<br>
+                        • View Archive<br>
+                        • QR Code<br>
+                        • More Options
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-wire">
+            <div class="stat-item-wire">
+                <div class="stat-number">42</div>
+                <div>Posts</div>
+            </div>
+            <div class="stat-item-wire">
+                <div class="stat-number">1.2k</div>
+                <div>Followers</div>
+            </div>
+            <div class="stat-item-wire">
+                <div class="stat-number">523</div>
+                <div>Following</div>
+            </div>
+        </div>
+
+        <div class="annotation">
+            Profile stats should update in real-time. Consider adding ASCII art borders or 
+            retro LCD-style number displays for the statistics.
+        </div>
+
+        <!-- Post Grid -->
+        <div class="subsection-title">Profile Post Grid</div>
+        <div class="post-grid-wire">
+            <div class="post-item-wire">POST 1<br>Square Ratio</div>
+            <div class="post-item-wire">POST 2<br>Square Ratio</div>
+            <div class="post-item-wire">POST 3<br>Square Ratio</div>
+            <div class="post-item-wire">POST 4<br>Square Ratio</div>
+            <div class="post-item-wire">POST 5<br>Square Ratio</div>
+            <div class="post-item-wire">POST 6<br>Square Ratio</div>
+        </div>
+
+        <!-- Feed Layout -->
+        <div class="section-title">4. FEED & TIMELINE ARCHITECTURE</div>
+        
+        <div class="feed-layout-wire">
+            <div class="sidebar-wire">
+                <strong>SIDEBAR NAVIGATION</strong>
+                <div style="margin-top: 20px;">
+                    <div style="padding: 10px; margin: 5px 0; border: 1px solid #e2e8f0;">🏠 Home</div>
+                    <div style="padding: 10px; margin: 5px 0; border: 1px solid #e2e8f0;">🔍 Search</div>
+                    <div style="padding: 10px; margin: 5px 0; border: 1px solid #e2e8f0;">🔔 Notifications</div>
+                    <div style="padding: 10px; margin: 5px 0; border: 1px solid #e2e8f0;">✉️ Messages</div>
+                    <div style="padding: 10px; margin: 5px 0; border: 1px solid #e2e8f0;">🔖 Bookmarks</div>
+                    <div style="padding: 10px; margin: 5px 0; border: 1px solid #e2e8f0;">👤 Profile</div>
+                    <div style="padding: 10px; margin: 5px 0; border: 1px solid #e2e8f0; background: #4299e1; color: white;">
+                        + Create Post
+                    </div>
+                </div>
+            </div>
+            
+            <div class="main-feed-wire">
+                <strong>MAIN FEED</strong>
+                
+                <!-- Post Card -->
+                <div class="post-card-wire">
+                    <div class="post-header-wire">
+                        <div class="small-avatar-wire"></div>
+                        <div>
+                            <strong>username</strong><br>
+                            <span style="color: #718096; font-size: 12px;">2 hours ago</span>
+                        </div>
+                    </div>
+                    <div class="post-image-wire">
+                        IMAGE CONTENT
+                    </div>
+                    <div class="post-actions-wire">
+                        <div class="action-button-wire">❤️ Like</div>
+                        <div class="action-button-wire">💬 Comment</div>
+                        <div class="action-button-wire">🔄 Share</div>
+                        <div class="action-button-wire">🔖 Save</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="right-panel-wire">
+                <strong>SUGGESTIONS</strong>
+                <div style="margin-top: 20px;">
+                    <div style="padding: 15px; margin: 10px 0; border: 1px solid #e2e8f0;">
+                        <strong>Who to follow</strong>
+                        <div style="margin-top: 10px; font-size: 14px;">
+                            • User suggestion 1<br>
+                            • User suggestion 2<br>
+                            • User suggestion 3
+                        </div>
+                    </div>
+                    <div style="padding: 15px; margin: 10px 0; border: 1px solid #e2e8f0;">
+                        <strong>Trending</strong>
+                        <div style="margin-top: 10px; font-size: 14px;">
+                            #trend1<br>
+                            #trend2<br>
+                            #trend3
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Component States -->
+        <div class="section-title">5. INTERACTION STATES & BEHAVIORS</div>
+        
+        <div class="state-examples">
+            <div class="state-box">
+                <strong>Default</strong><br>
+                Normal state
+            </div>
+            <div class="state-box hover">
+                <strong>Hover</strong><br>
+                Mouse over
+            </div>
+            <div class="state-box active">
+                <strong>Active/Focus</strong><br>
+                Selected
+            </div>
+            <div class="state-box disabled">
+                <strong>Disabled</strong><br>
+                Unavailable
+            </div>
+        </div>
+
+        <!-- Responsive Breakpoints -->
+        <div class="section-title">6. RESPONSIVE BREAKPOINTS</div>
+        
+        <div class="breakpoint-demo">
+            <div class="breakpoint-item">
+                <strong>Mobile:</strong> 320px - 767px<br>
+                <span class="code-spec">@media (max-width: 767px)</span><br>
+                Single column, stacked navigation, hidden sidebars
+            </div>
+            <div class="breakpoint-item">
+                <strong>Tablet:</strong> 768px - 1023px<br>
+                <span class="code-spec">@media (min-width: 768px) and (max-width: 1023px)</span><br>
+                Two columns, collapsible sidebar, flexible main content
+            </div>
+            <div class="breakpoint-item">
+                <strong>Desktop:</strong> 1024px - 1439px<br>
+                <span class="code-spec">@media (min-width: 1024px)</span><br>
+                Full three-column layout, all panels visible
+            </div>
+            <div class="breakpoint-item">
+                <strong>Wide Desktop:</strong> 1440px+<br>
+                <span class="code-spec">@media (min-width: 1440px)</span><br>
+                Centered max-width container, increased spacing
+            </div>
+        </div>
+
+        <!-- Implementation Notes -->
+        <div class="section-title">7. IMPLEMENTATION NOTES FOR CLAUDE CODE</div>
+        
+        <div class="annotation">
+            <strong>Component Hierarchy:</strong> Each wireframe section represents a React component. 
+            Use the component names specified in the tables when creating files.
+        </div>
+
+        <div class="annotation">
+            <strong>Styling Application:</strong> Apply your 80s retro aesthetic as a theme layer on top of 
+            this structure. Consider: neon borders, ASCII art decorations, pixel fonts, CRT screen effects, 
+            glitch animations, and synthwave color gradients.
+        </div>
+
+        <div class="annotation">
+            <strong>Data Flow:</strong> Components should receive data via props from your existing 
+            backend (posts, profiles, auth state). Use your established Zustand stores for state management.
+        </div>
+
+        <table class="specs-table">
+            <thead>
+                <tr>
+                    <th>Component Category</th>
+                    <th>Retro Styling Suggestions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Buttons</td>
+                    <td>Pixel borders, neon glow on hover, ASCII art icons, retro sound effects</td>
+                </tr>
+                <tr>
+                    <td>Cards/Panels</td>
+                    <td>CRT scanlines, phosphor glow, terminal-style borders using box-drawing characters</td>
+                </tr>
+                <tr>
+                    <td>Typography</td>
+                    <td>Monospace fonts, green/amber terminal colors, blinking cursors, ASCII headers</td>
+                </tr>
+                <tr>
+                    <td>Forms/Inputs</td>
+                    <td>Terminal prompts, command-line aesthetics, matrix rain backgrounds</td>
+                </tr>
+                <tr>
+                    <td>Animations</td>
+                    <td>Glitch effects, scan line movements, pixel transitions, typing animations</td>
+                </tr>
+                <tr>
+                    <td>Colors</td>
+                    <td>Neon pink (#FF10F0), electric blue (#00FFFF), laser green (#39FF14), purple (#9D00FF)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Color Variables for Retro Theme -->
+        <div class="section-title">8. RETRO THEME VARIABLES</div>
+        
+        <div style="padding: 20px; background: #1a202c; color: #68d391; font-family: 'Courier New', monospace; border-radius: 4px; margin: 20px 0;">
+            <pre>/* CSS Variables for 80s Retro Theme */
+:root {
+  /* Neon Colors */
+  --neon-pink: #FF10F0;
+  --neon-blue: #00FFFF;
+  --neon-green: #39FF14;
+  --neon-purple: #9D00FF;
+  --neon-yellow: #FFFF00;
+  --neon-orange: #FF6600;
+  
+  /* Background Colors */
+  --bg-dark: #0a0a0a;
+  --bg-terminal: #000000;
+  --bg-crt: #001a00;
+  
+  /* Text Colors */
+  --text-primary: #39FF14;
+  --text-secondary: #00FFFF;
+  --text-warning: #FFFF00;
+  --text-error: #FF10F0;
+  
+  /* Effects */
+  --glow-strength: 0 0 20px;
+  --scanline-opacity: 0.1;
+  --pixel-size: 2px;
+}</pre>
+        </div>
+
+        <div class="annotation">
+            <strong>Final Note:</strong> This wireframe system provides the structural foundation. 
+            When you provide the two reference websites for color palette and aesthetic, Claude Code 
+            can map those visual styles onto this architecture while maintaining the component structure 
+            and responsive behavior defined here.
+        </div>
+
+    </div>
+</body>
+</html>

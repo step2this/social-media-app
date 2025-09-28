@@ -49,7 +49,7 @@ describe('Auth Store', () => {
     const mockTokens: AuthTokens = {
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
-      expiresAt: '2024-01-01T01:00:00.000Z'
+      expiresIn: 3600
     };
 
     useAuthStore.getState().login(mockUser, mockTokens);
@@ -76,7 +76,7 @@ describe('Auth Store', () => {
     const mockTokens: AuthTokens = {
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
-      expiresAt: '2024-01-01T01:00:00.000Z'
+      expiresIn: 3600
     };
 
     useAuthStore.getState().login(mockUser, mockTokens);
@@ -106,7 +106,7 @@ describe('Auth Store', () => {
     const mockTokens: AuthTokens = {
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
-      expiresAt: '2024-01-01T01:00:00.000Z'
+      expiresIn: 3600
     };
 
     useAuthStore.getState().login(initialUser, mockTokens);
@@ -137,7 +137,7 @@ describe('Auth Store', () => {
     const initialTokens: AuthTokens = {
       accessToken: 'old-access-token',
       refreshToken: 'old-refresh-token',
-      expiresAt: '2024-01-01T01:00:00.000Z'
+      expiresIn: 3600
     };
 
     useAuthStore.getState().login(mockUser, initialTokens);
@@ -145,7 +145,7 @@ describe('Auth Store', () => {
     const newTokens: AuthTokens = {
       accessToken: 'new-access-token',
       refreshToken: 'new-refresh-token',
-      expiresAt: '2024-01-01T02:00:00.000Z'
+      expiresIn: 7200
     };
 
     useAuthStore.getState().setTokens(newTokens);

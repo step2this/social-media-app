@@ -71,7 +71,7 @@ describe('MyProfilePage Component', () => {
 
       // Wait for profile to load
       await waitFor(() => {
-        expect(screen.getByText('My Profile')).toBeInTheDocument();
+        expect(screen.getByText('🐾 My Pet Profile')).toBeInTheDocument();
       });
 
       expect(screen.getByText('@testuser')).toBeInTheDocument();
@@ -88,7 +88,7 @@ describe('MyProfilePage Component', () => {
       renderWithRouter(<MyProfilePage />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Edit Profile' })).toBeInTheDocument();
+        expect(screen.getByTestId('profile-edit-button')).toBeInTheDocument();
       });
     });
 
@@ -138,10 +138,10 @@ describe('MyProfilePage Component', () => {
       renderWithRouter(<MyProfilePage />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Edit Profile' })).toBeInTheDocument();
+        expect(screen.getByTestId('profile-edit-button')).toBeInTheDocument();
       });
 
-      const editButton = screen.getByRole('button', { name: 'Edit Profile' });
+      const editButton = screen.getByTestId('profile-edit-button');
       await user.click(editButton);
 
       // Modal should be open with form fields
@@ -161,10 +161,10 @@ describe('MyProfilePage Component', () => {
       renderWithRouter(<MyProfilePage />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Edit Profile' })).toBeInTheDocument();
+        expect(screen.getByTestId('profile-edit-button')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByRole('button', { name: 'Edit Profile' }));
+      await user.click(screen.getByTestId('profile-edit-button'));
 
       await waitFor(() => {
         const fullNameInput = screen.getByLabelText('Full Name') as HTMLInputElement;
@@ -184,10 +184,10 @@ describe('MyProfilePage Component', () => {
       renderWithRouter(<MyProfilePage />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Edit Profile' })).toBeInTheDocument();
+        expect(screen.getByTestId('profile-edit-button')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByRole('button', { name: 'Edit Profile' }));
+      await user.click(screen.getByTestId('profile-edit-button'));
 
       await waitFor(() => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -219,10 +219,10 @@ describe('MyProfilePage Component', () => {
       renderWithRouter(<MyProfilePage />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Edit Profile' })).toBeInTheDocument();
+        expect(screen.getByTestId('profile-edit-button')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByRole('button', { name: 'Edit Profile' }));
+      await user.click(screen.getByTestId('profile-edit-button'));
 
       await waitFor(() => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -266,10 +266,10 @@ describe('MyProfilePage Component', () => {
       renderWithRouter(<MyProfilePage />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Edit Profile' })).toBeInTheDocument();
+        expect(screen.getByTestId('profile-edit-button')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByRole('button', { name: 'Edit Profile' }));
+      await user.click(screen.getByTestId('profile-edit-button'));
 
       await waitFor(() => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -304,10 +304,10 @@ describe('MyProfilePage Component', () => {
       renderWithRouter(<MyProfilePage />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Edit Profile' })).toBeInTheDocument();
+        expect(screen.getByTestId('profile-edit-button')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByRole('button', { name: 'Edit Profile' }));
+      await user.click(screen.getByTestId('profile-edit-button'));
 
       await waitFor(() => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -366,7 +366,7 @@ describe('MyProfilePage Component', () => {
       await user.click(retryButton);
 
       await waitFor(() => {
-        expect(screen.getByText('My Profile')).toBeInTheDocument();
+        expect(screen.getByText('🐾 My Pet Profile')).toBeInTheDocument();
         expect(screen.getByText('@testuser')).toBeInTheDocument();
       });
 

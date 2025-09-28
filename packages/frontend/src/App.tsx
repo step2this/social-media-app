@@ -2,12 +2,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/auth/ProtectedRoute.js';
 import { AuthModal } from './components/auth/AuthModal.js';
-import { HelloWorld } from './components/HelloWorld';
 import { ProfilePage } from './components/profile/ProfilePage';
 import { MyProfilePage } from './components/profile/MyProfilePage';
 import { PlaceholderPage } from './components/common/PlaceholderPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { ContentLayout } from './components/layout/AppLayout';
+import { DesignSystemTest } from './components/design-system/DesignSystemTest.js';
 import { ServiceProvider, useServices } from './services/ServiceProvider';
 import { useAuthStore } from './stores/authStore.js';
 import './App.css';
@@ -78,7 +78,12 @@ function AppContent() {
           <Route path="/" element={
             <ProtectedRoute requireAuth={true}>
               <ContentLayout>
-                <HelloWorld />
+                <PlaceholderPage
+                  icon="🏠"
+                  title="Home Feed"
+                  description="See what your friends' pets are up to"
+                  features={["📱 Recent Pet Updates", "🎮 Friend Activities", "🌟 Trending Adventures"]}
+                />
               </ContentLayout>
             </ProtectedRoute>
           } />
@@ -134,6 +139,12 @@ function AppContent() {
                 description="Customize your pet care experience"
                 features={["🔔 Notifications", "🎨 Themes", "🔒 Privacy"]}
               />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/design-test" element={
+            <ProtectedRoute requireAuth={true}>
+              <DesignSystemTest />
             </ProtectedRoute>
           } />
 
@@ -202,7 +213,12 @@ function AppContent() {
  */
 function App() {
   return (
-    <Router>
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true
+      }}
+    >
       <ServiceProvider>
         <AppContent />
       </ServiceProvider>

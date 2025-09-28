@@ -6,11 +6,11 @@ import type {
   RegisterResponse,
   LoginRequest,
   LoginResponse,
-  UserProfile,
+  User,
   AuthTokens,
   RefreshTokenRequest,
   RefreshTokenResponse,
-  UpdateUserProfileRequest
+  UpdateUserRequest
 } from '@social-media-app/shared';
 import { randomBytes, pbkdf2Sync, timingSafeEqual } from 'crypto';
 
@@ -264,7 +264,7 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
       Item: refreshTokenEntity
     }));
 
-    const userProfile: UserProfile = {
+    const userProfile: User = {
       id: user.id,
       email: user.email,
       username: user.username,
@@ -377,7 +377,7 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
   /**
    * Get user profile by ID
    */
-  const getUserById = async (userId: string): Promise<UserProfile | null> => {
+  const getUserById = async (userId: string): Promise<User | null> => {
     const result = await deps.dynamoClient.send(new GetCommand({
       TableName: deps.tableName,
       Key: {
@@ -438,7 +438,7 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
   /**
    * Update user profile (minimal implementation for TDD)
    */
-  const updateUserProfile = async (userId: string, updates: UpdateUserProfileRequest): Promise<UserProfile> => {
+  const updateUser = async (userId: string, updates: UpdateUserRequest): Promise<User> => {
     // Get current user first
     const currentUser = await getUserById(userId);
     if (!currentUser) {
@@ -500,7 +500,7 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
     refreshToken,
     getUserById,
     logout,
-    updateUserProfile
+    updateUser
   };
 };
 

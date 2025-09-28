@@ -225,18 +225,7 @@
   box-shadow: var(--pixel-shadow-hover);
 }
 
-.btn-retro {
-  background: var(--tama-pink);
-  border-color: var(--tama-pink);
-  color: var(--tama-white);
-  box-shadow: 4px 4px 0px var(--tama-pink);
-  filter: brightness(1.1);
-}
-
-.btn-retro:hover:not(:disabled) {
-  transform: translate(-1px, -1px);
-  box-shadow: 6px 6px 0px var(--tama-pink);
-}
+/* btn-retro removed - use tama-btn--automotive instead */
 
 /* TamaFriends specific component styles */
 .hello-world {

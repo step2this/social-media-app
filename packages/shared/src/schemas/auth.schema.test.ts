@@ -6,9 +6,9 @@ import {
   RegisterRequestSchema,
   LoginRequestSchema,
   RefreshTokenRequestSchema,
-  UserProfileSchema,
   AuthTokensSchema
 } from './auth.schema';
+import { UserSchema } from './user.schema';
 
 describe('Authentication Schemas', () => {
   describe('EmailSchema', () => {
@@ -193,9 +193,9 @@ describe('Authentication Schemas', () => {
     });
   });
 
-  describe('UserProfileSchema', () => {
+  describe('UserSchema', () => {
     it('should validate complete user profile', () => {
-      const result = UserProfileSchema.safeParse({
+      const result = UserSchema.safeParse({
         id: '123e4567-e89b-12d3-a456-426614174000',
         email: 'user@example.com',
         username: 'john_doe',
@@ -210,7 +210,7 @@ describe('Authentication Schemas', () => {
     });
 
     it('should validate profile without optional fields', () => {
-      const result = UserProfileSchema.safeParse({
+      const result = UserSchema.safeParse({
         id: '123e4567-e89b-12d3-a456-426614174000',
         email: 'user@example.com',
         username: 'john_doe',
@@ -222,7 +222,7 @@ describe('Authentication Schemas', () => {
     });
 
     it('should reject profile with invalid UUID', () => {
-      const result = UserProfileSchema.safeParse({
+      const result = UserSchema.safeParse({
         id: 'not-a-uuid',
         email: 'user@example.com',
         username: 'john_doe',
