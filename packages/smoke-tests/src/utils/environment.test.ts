@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { detectEnvironment, type TestEnvironment } from './environment.js';
+import { detectEnvironment } from './environment.js';
 
 describe('Environment Detection', () => {
   let originalEnv: NodeJS.ProcessEnv;
