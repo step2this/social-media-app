@@ -43,11 +43,11 @@ export const handlers = [
       });
 
     } catch (error) {
-      if (error?.name === 'ZodError') {
+      if ((error as any)?.name === 'ZodError') {
         return HttpResponse.json(
           {
             error: 'Validation failed',
-            details: error.errors
+            details: (error as any).errors
           },
           { status: 400 }
         );

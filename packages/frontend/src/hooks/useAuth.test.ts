@@ -3,7 +3,6 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAuth } from './useAuth';
 import { useAuthStore } from '../stores/authStore';
 import * as apiClient from '../services/apiClient';
-import { ApiError } from '../services/apiClient';
 import type { RegisterResponse, LoginResponse, User, AuthTokens } from '@social-media-app/shared';
 
 // Mock the apiClient
@@ -164,7 +163,7 @@ describe('useAuth Hook - Registration Flow Integration', () => {
 
       // Should have thrown the error
       expect(thrownError).not.toBeNull();
-      expect(thrownError?.message).toBe(errorMessage);
+      expect((thrownError as unknown as Error)?.message).toBe(errorMessage);
 
       // Should have error state set by the hook
       expect(result.current.error).toBe('Registration failed. Please try again.');

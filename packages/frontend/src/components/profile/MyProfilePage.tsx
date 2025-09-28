@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { apiClient } from '../../services/apiClient';
 import { ProfileDisplay } from './ProfileDisplay';
 import { LoadingSpinner, ErrorState } from '../common/LoadingStates';
-import { ProfileLayout, Card } from '../layout/AppLayout';
+import { ProfileLayout } from '../layout/AppLayout';
 import './MyProfilePage.css';
 
 /**

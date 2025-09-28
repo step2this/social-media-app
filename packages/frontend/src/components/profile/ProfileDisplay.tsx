@@ -107,9 +107,9 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({
               role={onAvatarClick ? 'button' : undefined}
               aria-label={onAvatarClick ? 'Upload profile picture' : undefined}
             >
-              {profile.profilePictureThumbnailUrl ? (
+              {((profile as any).avatarUrl || (profile as any).profilePictureThumbnailUrl) ? (
                 <img
-                  src={profile.profilePictureThumbnailUrl}
+                  src={(profile as any).avatarUrl || (profile as any).profilePictureThumbnailUrl}
                   alt="Profile picture"
                   className="avatar-image"
                 />

@@ -55,7 +55,7 @@ describe('apiClient HTTP Methods with Token Authentication', () => {
     it('should automatically include auth token in GET requests by default', async () => {
       mockLocalStorage(true);
 
-      global.fetch.mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ data: 'test' })
       });
@@ -76,7 +76,7 @@ describe('apiClient HTTP Methods with Token Authentication', () => {
     it('should automatically include auth token in POST requests by default', async () => {
       mockLocalStorage(true);
 
-      global.fetch.mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true })
       });
@@ -98,7 +98,7 @@ describe('apiClient HTTP Methods with Token Authentication', () => {
     it('should not include auth token when includeAuth is false', async () => {
       mockLocalStorage(true);
 
-      global.fetch.mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ data: 'test' })
       });
@@ -119,7 +119,7 @@ describe('apiClient HTTP Methods with Token Authentication', () => {
     it('should work with PUT requests', async () => {
       mockLocalStorage(true);
 
-      global.fetch.mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ updated: true })
       });
@@ -141,7 +141,7 @@ describe('apiClient HTTP Methods with Token Authentication', () => {
     it('should work with DELETE requests', async () => {
       mockLocalStorage(true);
 
-      global.fetch.mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ deleted: true })
       });
@@ -162,7 +162,7 @@ describe('apiClient HTTP Methods with Token Authentication', () => {
     it('should handle requests without token when none is available', async () => {
       mockLocalStorage(false);
 
-      global.fetch.mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ data: 'test' })
       });
@@ -191,7 +191,7 @@ describe('apiClient HTTP Methods with Token Authentication', () => {
     });
 
     it('should handle POST requests without data', async () => {
-      global.fetch.mockResolvedValueOnce({
+      (global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true })
       });

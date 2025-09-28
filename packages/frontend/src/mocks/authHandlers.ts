@@ -8,16 +8,14 @@ import {
   RefreshTokenRequestSchema,
   RefreshTokenResponseSchema,
   GetProfileResponseSchema,
-  UpdateUserResponseSchema,
   UpdateUserRequestSchema,
-  AuthTokensSchema,
+  UpdateUserResponseSchema,
   type RegisterRequest,
   type RegisterResponse,
   type LoginRequest,
   type LoginResponse,
   type RefreshTokenRequest,
   type RefreshTokenResponse,
-  type User,
   type GetProfileResponse,
   type UpdateUserRequest,
   type UpdateUserResponse,
@@ -234,11 +232,11 @@ export const authHandlers = [
       });
 
     } catch (error) {
-      if (error?.name === 'ZodError') {
+      if ((error as any)?.name === 'ZodError') {
         return HttpResponse.json(
           {
             error: 'Validation failed',
-            details: error.errors
+            details: (error as any).errors
           },
           { status: 400 }
         );
@@ -281,7 +279,7 @@ export const authHandlers = [
           emailVerified: user.emailVerified,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt
-        },
+        } as any,
         tokens
       };
 
@@ -297,11 +295,11 @@ export const authHandlers = [
       });
 
     } catch (error) {
-      if (error?.name === 'ZodError') {
+      if ((error as any)?.name === 'ZodError') {
         return HttpResponse.json(
           {
             error: 'Validation failed',
-            details: error.errors
+            details: (error as any).errors
           },
           { status: 400 }
         );
@@ -395,11 +393,11 @@ export const authHandlers = [
       });
 
     } catch (error) {
-      if (error?.name === 'ZodError') {
+      if ((error as any)?.name === 'ZodError') {
         return HttpResponse.json(
           {
             error: 'Validation failed',
-            details: error.errors
+            details: (error as any).errors
           },
           { status: 400 }
         );
@@ -493,9 +491,9 @@ export const authHandlers = [
       }
 
       // Check for username conflicts
-      if (validatedRequest.username && validatedRequest.username !== fullUser.username) {
+      if ((validatedRequest as any).username && (validatedRequest as any).username !== fullUser.username) {
         const existingUser = Array.from(mockUsers.values()).find(u =>
-          u.username === validatedRequest.username && u.id !== user.id
+          u.username === (validatedRequest as any).username && u.id !== user.id
         );
 
         if (existingUser) {
@@ -510,14 +508,14 @@ export const authHandlers = [
       // Update user
       const updatedUser = {
         ...fullUser,
-        username: validatedRequest.username || fullUser.username,
+        username: (validatedRequest as any).username || fullUser.username,
         fullName: validatedRequest.fullName !== undefined ? validatedRequest.fullName : fullUser.fullName,
         updatedAt: new Date().toISOString()
       };
 
       mockUsers.set(user.id, updatedUser);
 
-      const response: UpdateProfileResponse = {
+      const response: UpdateUserResponse = {
         user: {
           id: updatedUser.id,
           email: updatedUser.email,
@@ -529,7 +527,7 @@ export const authHandlers = [
         }
       };
 
-      const validatedResponse = UpdateProfileResponseSchema.parse(response);
+      const validatedResponse = UpdateUserResponseSchema.parse(response);
       await addDelay(200, 400);
 
       return HttpResponse.json(validatedResponse, {
@@ -541,11 +539,11 @@ export const authHandlers = [
       });
 
     } catch (error) {
-      if (error?.name === 'ZodError') {
+      if ((error as any)?.name === 'ZodError') {
         return HttpResponse.json(
           {
             error: 'Validation failed',
-            details: error.errors
+            details: (error as any).errors
           },
           { status: 400 }
         );

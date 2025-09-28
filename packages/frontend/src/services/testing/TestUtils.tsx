@@ -88,7 +88,7 @@ export const renderWithServices = (
 /**
  * Convenience functions for common test scenarios
  */
-export const TestRenders = {
+export const TestRenders: any = {
   /**
    * Render component for guest (unauthenticated) user
    */

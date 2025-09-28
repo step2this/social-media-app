@@ -72,7 +72,13 @@ export const useAuth = () => {
       const response = await apiClient.auth.login(credentials);
 
       // Update auth store with user data and tokens
-      setLoginState(response.user, response.tokens);
+      // Ensure user object has all required properties
+      const userWithDetails = {
+        ...response.user,
+        createdAt: (response.user as any).createdAt,
+        updatedAt: (response.user as any).updatedAt || (response.user as any).createdAt, // Fallback if updatedAt missing
+      };
+      setLoginState(userWithDetails, response.tokens);
       setLoading(false);
 
       return response;

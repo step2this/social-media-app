@@ -48,12 +48,17 @@ describe('MyProfilePage Component', () => {
     vi.clearAllMocks();
     mockUseAuth.mockReturnValue({
       user: mockUser,
+      tokens: { accessToken: 'test-token', refreshToken: 'test-refresh', expiresIn: 3600 },
       isAuthenticated: true,
       isLoading: false,
       error: null,
       login: vi.fn(),
       logout: vi.fn(),
       register: vi.fn(),
+      refreshToken: vi.fn(),
+      getProfile: vi.fn(),
+      updateProfile: vi.fn(),
+      checkSession: vi.fn(),
       clearError: vi.fn()
     });
   });
@@ -378,12 +383,17 @@ describe('MyProfilePage Component', () => {
     it('should redirect to login when user is not authenticated', () => {
       mockUseAuth.mockReturnValue({
         user: null,
+        tokens: null,
         isAuthenticated: false,
         isLoading: false,
         error: null,
         login: vi.fn(),
         logout: vi.fn(),
         register: vi.fn(),
+        refreshToken: vi.fn(),
+        getProfile: vi.fn(),
+        updateProfile: vi.fn(),
+        checkSession: vi.fn(),
         clearError: vi.fn()
       });
 
@@ -395,12 +405,17 @@ describe('MyProfilePage Component', () => {
     it('should show loading when auth is in progress', () => {
       mockUseAuth.mockReturnValue({
         user: null,
+        tokens: null,
         isAuthenticated: false,
         isLoading: true,
         error: null,
         login: vi.fn(),
         logout: vi.fn(),
         register: vi.fn(),
+        refreshToken: vi.fn(),
+        getProfile: vi.fn(),
+        updateProfile: vi.fn(),
+        checkSession: vi.fn(),
         clearError: vi.fn()
       });
 

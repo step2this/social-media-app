@@ -264,9 +264,9 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
         lastError = error;
 
         // Handle network errors and CORS issues
-        if (error instanceof TypeError || error.name === 'AbortError') {
+        if (error instanceof TypeError || (error as any).name === 'AbortError') {
           // Check if this is a CORS error
-          if (error.message.includes('CORS') || error.message.includes('fetch')) {
+          if ((error as any).message.includes('CORS') || (error as any).message.includes('fetch')) {
             const corsError = new CorsError(
               `Failed to connect to API. This might be a CORS issue. Check that VITE_API_URL (${API_BASE_URL}) is correct and accessible.`,
               window.location.origin,
@@ -275,7 +275,7 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
             lastError = corsError;
           } else {
             const networkError = new NetworkError(
-              error.name === 'AbortError'
+              (error as any).name === 'AbortError'
                 ? 'Request timeout'
                 : 'Network connection failed',
               error
@@ -316,8 +316,8 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
         return HelloResponseSchema.parse(response);
       } catch (error) {
         // Convert Zod validation errors to our custom ValidationError
-        if (error?.name === 'ZodError') {
-          throw new ValidationError('Request validation failed', error.errors);
+        if ((error as any)?.name === 'ZodError') {
+          throw new ValidationError('Request validation failed', (error as any).errors);
         }
         throw error;
       }
@@ -404,8 +404,8 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
 
           return validatedResponse;
         } catch (error) {
-          if (error?.name === 'ZodError') {
-            throw new ValidationError('Request validation failed', error.errors);
+          if ((error as any)?.name === 'ZodError') {
+            throw new ValidationError('Request validation failed', (error as any).errors);
           }
           throw error;
         }
@@ -428,8 +428,8 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
 
           return validatedResponse;
         } catch (error) {
-          if (error?.name === 'ZodError') {
-            throw new ValidationError('Request validation failed', error.errors);
+          if ((error as any)?.name === 'ZodError') {
+            throw new ValidationError('Request validation failed', (error as any).errors);
           }
           throw error;
         }
@@ -452,8 +452,8 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
 
           return validatedResponse;
         } catch (error) {
-          if (error?.name === 'ZodError') {
-            throw new ValidationError('Request validation failed', error.errors);
+          if ((error as any)?.name === 'ZodError') {
+            throw new ValidationError('Request validation failed', (error as any).errors);
           }
           throw error;
         }
@@ -477,8 +477,8 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
           // Clear tokens even if logout fails
           tokenStorage.clearTokens();
 
-          if (error?.name === 'ZodError') {
-            throw new ValidationError('Request validation failed', error.errors);
+          if ((error as any)?.name === 'ZodError') {
+            throw new ValidationError('Request validation failed', (error as any).errors);
           }
           throw error;
         }
@@ -502,8 +502,8 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
 
           return UpdateUserResponseSchema.parse(response);
         } catch (error) {
-          if (error?.name === 'ZodError') {
-            throw new ValidationError('Request validation failed', error.errors);
+          if ((error as any)?.name === 'ZodError') {
+            throw new ValidationError('Request validation failed', (error as any).errors);
           }
           throw error;
         }

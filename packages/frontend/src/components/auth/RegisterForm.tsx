@@ -46,10 +46,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       // Error is handled by the hook and stored in the error state
       console.error('❌ RegisterForm: Registration failed:', error);
       console.error('Error details:', {
-        name: error?.name,
-        message: error?.message,
-        status: error?.status,
-        code: error?.code
+        name: (error as any)?.name,
+        message: (error as any)?.message,
+        status: (error as any)?.status,
+        code: (error as any)?.code
       });
     }
   };

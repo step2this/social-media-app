@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/auth/ProtectedRoute.js';
 import { AuthModal } from './components/auth/AuthModal.js';
@@ -18,7 +18,7 @@ import './App.css';
  */
 function AppContent() {
   // Access services through dependency injection
-  const { authService, navigationService, modalService, notificationService } = useServices();
+  const { navigationService, modalService, notificationService } = useServices();
 
   // Use reactive auth state for component re-renders (solves stale closure issue)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
