@@ -43,8 +43,11 @@ jobs:
       - name: Build packages
         run: pnpm run build
 
-      - name: Run tests
-        run: pnpm run test
+      - name: Run unit tests
+        run: pnpm run test:unit
+
+      - name: Run smoke tests
+        run: pnpm --filter @social-media-app/smoke-tests test
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -60,6 +63,22 @@ jobs:
         run: |
           cd infrastructure
           cdk deploy --all --require-approval never --context environment=dev
+
+      - name: Get API Gateway URL
+        id: get-api-url
+        run: |
+          cd infrastructure
+          API_URL=$(aws cloudformation describe-stacks --stack-name SocialMediaApp-dev-Api --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayUrl`].OutputValue' --output text)
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+
+      - name: Run deployment validation tests
+        env:
+          API_URL: ${{ steps.get-api-url.outputs.api_url }}
+        run: |
+          # Wait for API to be ready
+          sleep 30
+          # Run smoke tests against deployed environment
+          SMOKE_TEST_URL=$API_URL pnpm --filter @social-media-app/smoke-tests test
 
   deploy-staging:
     name: Deploy to Staging
@@ -106,6 +125,20 @@ jobs:
         run: |
           cd infrastructure
           cdk deploy --all --require-approval never --context environment=staging
+
+      - name: Get staging API Gateway URL
+        id: get-staging-api-url
+        run: |
+          cd infrastructure
+          API_URL=$(aws cloudformation describe-stacks --stack-name SocialMediaApp-staging-Api --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayUrl`].OutputValue' --output text)
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+
+      - name: Run staging validation tests
+        env:
+          API_URL: ${{ steps.get-staging-api-url.outputs.api_url }}
+        run: |
+          sleep 30
+          SMOKE_TEST_URL=$API_URL pnpm --filter @social-media-app/smoke-tests test
 
   deploy-production:
     name: Deploy to Production
@@ -154,3 +187,26 @@ jobs:
         run: |
           cd infrastructure
           cdk deploy --all --context environment=production
+
+      - name: Get production API Gateway URL
+        id: get-prod-api-url
+        run: |
+          cd infrastructure
+          API_URL=$(aws cloudformation describe-stacks --stack-name SocialMediaApp-production-Api --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayUrl`].OutputValue' --output text)
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+
+      - name: Run production validation tests
+        env:
+          API_URL: ${{ steps.get-prod-api-url.outputs.api_url }}
+        run: |
+          sleep 60  # Extra time for production warmup
+          SMOKE_TEST_URL=$API_URL pnpm --filter @social-media-app/smoke-tests test
+
+      - name: Send deployment notification
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Production deployment successful: ${{ steps.get-prod-api-url.outputs.api_url }}"
+          else
+            echo "❌ Production deployment failed"
+          fi

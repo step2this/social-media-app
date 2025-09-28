@@ -1,0 +1,271 @@
+name: Health Check and Monitoring
+
+on:
+  schedule:
+    # Run every 15 minutes during business hours (9 AM - 6 PM UTC)
+    - cron: '*/15 9-18 * * 1-5'
+    # Run every hour outside business hours
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to check'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+
+jobs:
+  health-check:
+    name: API Health Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: ${{ github.event.inputs.environment && fromJson(format('["{0}"]', github.event.inputs.environment)) || fromJson('["dev", "staging", "production"]') }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @social-media-app/smoke-tests install
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Get API Gateway URL
+        id: get-api-url
+        run: |
+          API_URL=$(aws cloudformation describe-stacks --stack-name SocialMediaApp-${{ matrix.environment }}-Api --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayUrl`].OutputValue' --output text 2>/dev/null || echo "")
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+
+          if [ -z "$API_URL" ]; then
+            echo "❌ Could not get API URL for environment: ${{ matrix.environment }}"
+            exit 1
+          fi
+
+          echo "✅ API URL found: $API_URL"
+
+      - name: Run health check tests
+        id: health-check
+        env:
+          API_URL: ${{ steps.get-api-url.outputs.api_url }}
+        run: |
+          echo "🔍 Running health checks for ${{ matrix.environment }} environment..."
+
+          # Set environment for smoke tests
+          export SMOKE_TEST_URL=$API_URL
+          export SMOKE_TEST_ENV=${{ matrix.environment }}
+
+          # Run connectivity and basic health tests
+          pnpm --filter @social-media-app/smoke-tests test src/tests/connectivity.test.ts
+          pnpm --filter @social-media-app/smoke-tests test src/tests/api-endpoints.test.ts
+
+          echo "health_status=healthy" >> $GITHUB_OUTPUT
+
+      - name: Check CloudWatch metrics
+        id: metrics-check
+        run: |
+          echo "📊 Checking CloudWatch metrics for ${{ matrix.environment }}..."
+
+          # Check Lambda error rates (last 15 minutes)
+          ERROR_RATE=$(aws cloudwatch get-metric-statistics \
+            --namespace AWS/Lambda \
+            --metric-name Errors \
+            --dimensions Name=FunctionName,Value=SocialMediaApp-${{ matrix.environment }}-* \
+            --start-time $(date -u -d '15 minutes ago' +%Y-%m-%dT%H:%M:%S) \
+            --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
+            --period 900 \
+            --statistics Sum \
+            --query 'Datapoints[0].Sum' \
+            --output text 2>/dev/null || echo "0")
+
+          # Check API Gateway 5xx errors
+          API_ERRORS=$(aws cloudwatch get-metric-statistics \
+            --namespace AWS/ApiGateway \
+            --metric-name 5XXError \
+            --dimensions Name=ApiName,Value=SocialMediaApp-${{ matrix.environment }} \
+            --start-time $(date -u -d '15 minutes ago' +%Y-%m-%dT%H:%M:%S) \
+            --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
+            --period 900 \
+            --statistics Sum \
+            --query 'Datapoints[0].Sum' \
+            --output text 2>/dev/null || echo "0")
+
+          echo "Lambda errors (last 15min): ${ERROR_RATE:-0}"
+          echo "API 5xx errors (last 15min): ${API_ERRORS:-0}"
+
+          # Set alert thresholds
+          if [ "${ERROR_RATE:-0}" != "None" ] && [ "${ERROR_RATE:-0}" -gt 5 ]; then
+            echo "⚠️  High Lambda error rate detected: ${ERROR_RATE}"
+            echo "alert_lambda=true" >> $GITHUB_OUTPUT
+          fi
+
+          if [ "${API_ERRORS:-0}" != "None" ] && [ "${API_ERRORS:-0}" -gt 10 ]; then
+            echo "⚠️  High API error rate detected: ${API_ERRORS}"
+            echo "alert_api=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Test critical user journeys
+        if: matrix.environment == 'production'
+        env:
+          API_URL: ${{ steps.get-api-url.outputs.api_url }}
+        run: |
+          echo "🧪 Running critical user journey tests for production..."
+
+          export SMOKE_TEST_URL=$API_URL
+          export SMOKE_TEST_ENV=production
+
+          # Run auth workflow tests
+          pnpm --filter @social-media-app/smoke-tests test src/tests/auth-workflow.test.ts || echo "⚠️  Auth workflow test failed"
+
+      - name: Generate health report
+        if: always()
+        run: |
+          echo "📋 Health Check Report - ${{ matrix.environment }}"
+          echo "=================================="
+          echo "Environment: ${{ matrix.environment }}"
+          echo "API URL: ${{ steps.get-api-url.outputs.api_url }}"
+          echo "Health Status: ${{ steps.health-check.outputs.health_status || 'failed' }}"
+          echo "Timestamp: $(date -u)"
+
+          if [ "${{ steps.health-check.outcome }}" != "success" ]; then
+            echo "❌ Health check failed"
+          else
+            echo "✅ Health check passed"
+          fi
+
+          if [ "${{ steps.metrics-check.outputs.alert_lambda }}" == "true" ]; then
+            echo "⚠️  Lambda error rate alert"
+          fi
+
+          if [ "${{ steps.metrics-check.outputs.alert_api }}" == "true" ]; then
+            echo "⚠️  API error rate alert"
+          fi
+
+      - name: Create issue on failure
+        if: failure() && matrix.environment == 'production'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🚨 Production Health Check Failed - ${new Date().toISOString()}`;
+            const body = `
+            # Production Health Check Failure
+
+            **Environment:** production
+            **Time:** ${new Date().toISOString()}
+            **API URL:** ${{ steps.get-api-url.outputs.api_url }}
+
+            ## Failure Details
+            - Health Check Status: ${{ steps.health-check.outcome }}
+            - Lambda Alerts: ${{ steps.metrics-check.outputs.alert_lambda == 'true' && 'High error rate detected' || 'Normal' }}
+            - API Alerts: ${{ steps.metrics-check.outputs.alert_api == 'true' && 'High error rate detected' || 'Normal' }}
+
+            ## Action Required
+            Please investigate the production environment immediately.
+
+            **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            `;
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['bug', 'production', 'urgent']
+            });
+
+  performance-check:
+    name: Performance Monitoring
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment == 'production' || github.event_name == 'schedule'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Check API response times
+        run: |
+          echo "📈 Checking API performance metrics..."
+
+          # Check API Gateway latency
+          AVG_LATENCY=$(aws cloudwatch get-metric-statistics \
+            --namespace AWS/ApiGateway \
+            --metric-name Latency \
+            --dimensions Name=ApiName,Value=SocialMediaApp-production \
+            --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
+            --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
+            --period 3600 \
+            --statistics Average \
+            --query 'Datapoints[0].Average' \
+            --output text 2>/dev/null || echo "0")
+
+          echo "Average API latency (last hour): ${AVG_LATENCY:-0}ms"
+
+          # Check Lambda duration
+          LAMBDA_DURATION=$(aws cloudwatch get-metric-statistics \
+            --namespace AWS/Lambda \
+            --metric-name Duration \
+            --dimensions Name=FunctionName,Value=SocialMediaApp-production-* \
+            --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
+            --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
+            --period 3600 \
+            --statistics Average \
+            --query 'Datapoints[0].Average' \
+            --output text 2>/dev/null || echo "0")
+
+          echo "Average Lambda duration (last hour): ${LAMBDA_DURATION:-0}ms"
+
+          # Performance thresholds
+          if [ "${AVG_LATENCY:-0}" != "None" ] && (( $(echo "${AVG_LATENCY:-0} > 2000" | bc -l) )); then
+            echo "⚠️  High API latency detected: ${AVG_LATENCY}ms"
+          fi
+
+      - name: Check database performance
+        run: |
+          echo "💾 Checking DynamoDB performance..."
+
+          # Check DynamoDB throttling
+          THROTTLES=$(aws cloudwatch get-metric-statistics \
+            --namespace AWS/DynamoDB \
+            --metric-name UserErrors \
+            --dimensions Name=TableName,Value=SocialMediaApp-production-Table \
+            --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
+            --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
+            --period 3600 \
+            --statistics Sum \
+            --query 'Datapoints[0].Sum' \
+            --output text 2>/dev/null || echo "0")
+
+          echo "DynamoDB throttles (last hour): ${THROTTLES:-0}"
+
+          if [ "${THROTTLES:-0}" != "None" ] && [ "${THROTTLES:-0}" -gt 0 ]; then
+            echo "⚠️  DynamoDB throttling detected: ${THROTTLES}"
+          fi

@@ -1,0 +1,139 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+      stack_names:
+        description: 'Comma-separated stack names to rollback (optional, defaults to all)'
+        required: false
+        default: ''
+
+jobs:
+  rollback:
+    name: Rollback to Previous Version
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Install CDK
+        run: npm install -g aws-cdk
+
+      - name: List current stacks
+        run: |
+          aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE \
+            --query 'StackSummaries[?contains(StackName, `SocialMediaApp-${{ github.event.inputs.environment }}`)].{Name:StackName,Status:StackStatus,Created:CreationTime}' \
+            --output table
+
+      - name: Confirm rollback
+        run: |
+          echo "⚠️  ROLLBACK OPERATION"
+          echo "Environment: ${{ github.event.inputs.environment }}"
+          echo "Stacks: ${{ github.event.inputs.stack_names || 'ALL' }}"
+          echo "This will rollback to the previous deployment state."
+          echo "Please ensure this is intentional before proceeding."
+
+      - name: Rollback infrastructure
+        run: |
+          cd infrastructure
+
+          if [ -n "${{ github.event.inputs.stack_names }}" ]; then
+            # Rollback specific stacks
+            IFS=',' read -ra STACKS <<< "${{ github.event.inputs.stack_names }}"
+            for stack in "${STACKS[@]}"; do
+              echo "Rolling back stack: $stack"
+              aws cloudformation cancel-update-stack --stack-name "$stack" || true
+              aws cloudformation continue-update-rollback --stack-name "$stack" || true
+            done
+          else
+            # Rollback all stacks
+            echo "Rolling back all stacks for environment: ${{ github.event.inputs.environment }}"
+
+            # Get all stack names for environment
+            STACKS=$(aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE \
+              --query 'StackSummaries[?contains(StackName, `SocialMediaApp-${{ github.event.inputs.environment }}`)].StackName' \
+              --output text)
+
+            for stack in $STACKS; do
+              echo "Rolling back stack: $stack"
+              aws cloudformation cancel-update-stack --stack-name "$stack" || true
+              aws cloudformation continue-update-rollback --stack-name "$stack" || true
+            done
+          fi
+
+      - name: Wait for rollback completion
+        run: |
+          cd infrastructure
+          echo "Waiting for rollback to complete..."
+
+          STACKS=$(aws cloudformation list-stacks --stack-status-filter UPDATE_ROLLBACK_IN_PROGRESS \
+            --query 'StackSummaries[?contains(StackName, `SocialMediaApp-${{ github.event.inputs.environment }}`)].StackName' \
+            --output text)
+
+          for stack in $STACKS; do
+            echo "Waiting for $stack rollback..."
+            aws cloudformation wait stack-update-complete --stack-name "$stack" || true
+          done
+
+      - name: Verify rollback
+        run: |
+          echo "Verifying rollback status..."
+          aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE UPDATE_ROLLBACK_COMPLETE \
+            --query 'StackSummaries[?contains(StackName, `SocialMediaApp-${{ github.event.inputs.environment }}`)].{Name:StackName,Status:StackStatus}' \
+            --output table
+
+      - name: Run post-rollback validation
+        if: github.event.inputs.environment != 'production'
+        run: |
+          # Get API URL after rollback
+          API_URL=$(aws cloudformation describe-stacks --stack-name SocialMediaApp-${{ github.event.inputs.environment }}-Api --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayUrl`].OutputValue' --output text 2>/dev/null || echo "")
+
+          if [ -n "$API_URL" ]; then
+            echo "Running validation against rolled-back environment: $API_URL"
+            sleep 30
+            SMOKE_TEST_URL=$API_URL pnpm --filter @social-media-app/smoke-tests test || echo "⚠️  Validation failed - manual verification required"
+          else
+            echo "⚠️  Could not determine API URL - manual verification required"
+          fi
+
+      - name: Rollback notification
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Rollback completed successfully for environment: ${{ github.event.inputs.environment }}"
+          else
+            echo "❌ Rollback failed for environment: ${{ github.event.inputs.environment }}"
+            echo "Manual intervention may be required"
+          fi

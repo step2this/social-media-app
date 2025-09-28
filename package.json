@@ -25,7 +25,11 @@
     "deploy:backend": "./deploy-backend.sh",
     "deploy:backend:prod": "CDK_ENV=prod ./deploy-backend.sh",
     "test:deployment": "./test-deployment.sh",
-    "rollback:backend": "./rollback-backend.sh"
+    "rollback:backend": "./rollback-backend.sh",
+    "status": "./scripts/deployment-status.sh",
+    "status:dev": "./scripts/deployment-status.sh dev",
+    "status:staging": "./scripts/deployment-status.sh staging",
+    "status:production": "./scripts/deployment-status.sh production"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
