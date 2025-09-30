@@ -39,7 +39,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
     console.log('🚀 RegisterForm: Calling register function...');
     try {
-      const result = await register(formData);
+      // Convert empty fullName to undefined for proper optional field validation
+      const requestData: RegisterRequest = {
+        ...formData,
+        fullName: formData.fullName?.trim() || undefined
+      };
+      const result = await register(requestData);
       console.log('✅ RegisterForm: Registration successful!', result);
       onSuccess?.();
     } catch (error) {
