@@ -21,6 +21,8 @@
     "typecheck": "pnpm -r typecheck",
     "dev": "pnpm -r --parallel dev",
     "clean": "pnpm -r clean",
+    "dev:stop": "pkill -f 'node.*3000|node.*3001|node.*3002' || echo 'No dev servers running'",
+    "dev:cleanup": "./scripts/cleanup-dev.sh",
     "prepare": "husky install",
     "deploy:backend": "./deploy-backend.sh",
     "deploy:backend:prod": "CDK_ENV=prod ./deploy-backend.sh",
