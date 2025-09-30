@@ -29,7 +29,12 @@
     "status": "./scripts/deployment-status.sh",
     "status:dev": "./scripts/deployment-status.sh dev",
     "status:staging": "./scripts/deployment-status.sh staging",
-    "status:production": "./scripts/deployment-status.sh production"
+    "status:production": "./scripts/deployment-status.sh production",
+    "local:start": "docker-compose -f docker-compose.local.yml up -d",
+    "local:stop": "docker-compose -f docker-compose.local.yml down",
+    "local:status": "docker-compose -f docker-compose.local.yml ps && curl -s http://localhost:4566/_localstack/health | jq .",
+    "local:logs": "docker-compose -f docker-compose.local.yml logs -f",
+    "local:restart": "pnpm local:stop && pnpm local:start"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

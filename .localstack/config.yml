@@ -1,0 +1,37 @@
+# LocalStack Configuration for TamaFriends Development
+# This file contains LocalStack-specific settings
+
+# Basic configuration
+version: "2"
+
+# Enable development features
+environment:
+  DEBUG: 0
+  PERSISTENCE: 1
+  LAMBDA_STAY_OPEN_MODE: 1
+  SKIP_INFRA_DOWNLOADS: 1
+
+# Service configuration
+services:
+  lambda:
+    # Lambda-specific settings
+    executor: docker
+    stay_open_mode: true
+
+  dynamodb:
+    # DynamoDB-specific settings
+    share_db: true
+    optimize_db: true
+
+  s3:
+    # S3-specific settings
+    skip_signature_validation: true
+
+  apigateway:
+    # API Gateway settings
+    enforce_iam: false
+
+# Development optimizations
+startup:
+  # Services to preload
+  services: "lambda,dynamodb,s3,apigateway,iam,sts,logs"

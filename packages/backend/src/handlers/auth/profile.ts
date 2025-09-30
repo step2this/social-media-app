@@ -95,7 +95,7 @@ export const updateHandler = async (
     }
 
     // Update the user profile using the auth service
-    const updatedUser = await authService.updateUserProfile(decodedToken.userId, validatedRequest);
+    const updatedUser = await authService.updateUser(decodedToken.userId, validatedRequest);
 
     return successResponse(200, { user: updatedUser });
 

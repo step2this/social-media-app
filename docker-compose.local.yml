@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  localstack:
+    container_name: tamafriends-localstack
+    image: localstack/localstack:3.7.2
+    ports:
+      - "4566:4566"            # LocalStack Gateway
+      - "4510-4559:4510-4559"  # External services port range
+      - "53:53"                # DNS config (optional)
+    environment:
+      # LocalStack configuration
+      - DEBUG=${DEBUG:-0}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - LAMBDA_EXECUTOR=${LAMBDA_EXECUTOR:-docker}
+      - LAMBDA_REMOTE_DOCKER=false
+      - LOCALSTACK_HOST=localhost.localstack.cloud:4566
+
+      # Services to start (only what we need)
+      - SERVICES=lambda,dynamodb,s3,apigateway,iam,sts,logs
+
+      # Persistence
+      - PERSISTENCE=${PERSISTENCE:-1}
+      - DATA_DIR=${DATA_DIR:-/tmp/localstack/data}
+
+      # Development optimizations
+      - SKIP_INFRA_DOWNLOADS=1
+      - LAMBDA_STAY_OPEN_MODE=1
+      - LAMBDA_IGNORE_ARCHITECTURE=1
+
+      # TamaFriends specific configuration
+      - DYNAMODB_SHARE_DB=1
+      - S3_SKIP_SIGNATURE_VALIDATION=1
+
+      # Enable extensions and debugging
+      - EXTENSION_AUTO_LOAD=1
+      - LS_LOG=trace
+
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./.localstack:/etc/localstack/init/ready.d"
+
+    networks:
+      - tamafriends-local
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+networks:
+  tamafriends-local:
+    driver: bridge
+    name: tamafriends-local
+
+volumes:
+  localstack-data:
+    driver: local
