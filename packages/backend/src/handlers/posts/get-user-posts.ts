@@ -5,7 +5,13 @@ import {
   type GetUserPostsRequest
 } from '@social-media-app/shared';
 import { errorResponse, successResponse } from '../../utils/index.js';
-import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
+import {
+  createDynamoDBClient,
+  createS3Client,
+  getTableName,
+  getS3BucketName,
+  getCloudFrontDomain
+} from '../../utils/aws-config.js';
 import { z } from 'zod';
 
 /**
@@ -42,13 +48,17 @@ export const handler = async (
 
     // Initialize dependencies
     const dynamoClient = createDynamoDBClient();
+    const s3Client = createS3Client();
     const tableName = getTableName();
+    const s3BucketName = getS3BucketName();
+    const cloudFrontDomain = getCloudFrontDomain();
 
     const profileService = new ProfileService(
       dynamoClient,
       tableName,
-      process.env.MEDIA_BUCKET_NAME,
-      process.env.CLOUDFRONT_DOMAIN
+      s3BucketName,
+      cloudFrontDomain,
+      s3Client
     );
 
     const postService = new PostService(dynamoClient, tableName, profileService);

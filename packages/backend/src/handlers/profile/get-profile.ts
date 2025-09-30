@@ -1,23 +1,31 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { ProfileService } from '@social-media-app/dal';
 import {
   PublicProfileResponseSchema,
   type PublicProfileResponse
 } from '@social-media-app/shared';
 import { errorResponse, successResponse } from '../../utils/index.js';
+import {
+  createDynamoDBClient,
+  createS3Client,
+  getTableName,
+  getS3BucketName,
+  getCloudFrontDomain
+} from '../../utils/aws-config.js';
 import { z } from 'zod';
 
-const dynamoClient = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(dynamoClient);
-const tableName = process.env.TABLE_NAME || 'social-media-app';
+const dynamoClient = createDynamoDBClient();
+const s3Client = createS3Client();
+const tableName = getTableName();
+const s3BucketName = getS3BucketName();
+const cloudFrontDomain = getCloudFrontDomain();
 
 const profileService = new ProfileService(
-  docClient,
+  dynamoClient,
   tableName,
-  process.env.MEDIA_BUCKET_NAME,
-  process.env.CLOUDFRONT_DOMAIN
+  s3BucketName,
+  cloudFrontDomain,
+  s3Client
 );
 
 /**
