@@ -58,12 +58,31 @@ export class ProfileService {
     private readonly dynamoClient: DynamoDBDocumentClient,
     tableName: string,
     s3BucketName?: string,
-    cloudFrontDomain?: string
+    cloudFrontDomain?: string,
+    s3Client?: S3Client
   ) {
     this.tableName = tableName;
     this.s3BucketName = s3BucketName || process.env.MEDIA_BUCKET_NAME || '';
     this.cloudFrontDomain = cloudFrontDomain || process.env.CLOUDFRONT_DOMAIN;
-    this.s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+    // Create S3 client with environment-aware configuration if not provided
+    if (s3Client) {
+      this.s3Client = s3Client;
+    } else {
+      // Use same environment detection logic as backend
+      const isLocalStack = process.env.NODE_ENV === 'development' &&
+                          process.env.USE_LOCALSTACK === 'true';
+
+      const s3Config: any = {
+        region: process.env.AWS_REGION || 'us-east-1'
+      };
+
+      if (isLocalStack) {
+        s3Config.endpoint = process.env.LOCALSTACK_ENDPOINT || 'http://localhost:4566';
+        s3Config.forcePathStyle = true;
+      }
+
+      this.s3Client = new S3Client(s3Config);
+    }
   }
 
   /**
