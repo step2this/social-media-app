@@ -341,7 +341,7 @@ The TamaFriends application now includes a comprehensive CI/CD pipeline with Git
 
 #### 1. Deploy Workflow (`.github/workflows/deploy.yml`)
 - **Triggers**:
-  - Automatic: Push to `main` branch (deploys to dev)
+  - Automatic: Push to `master` branch (deploys to dev)
   - Manual: Workflow dispatch (staging/production)
 - **Features**:
   - Build and test all packages
@@ -372,7 +372,7 @@ The TamaFriends application now includes a comprehensive CI/CD pipeline with Git
 ### Environment Management
 
 #### Development
-- **Deployment**: Automatic on main branch push
+- **Deployment**: Automatic on master branch push
 - **Resources**: Minimal allocation
 - **Monitoring**: Basic health checks
 - **Access**: Public for testing

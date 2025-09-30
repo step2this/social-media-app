@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
     inputs:
       environment:
@@ -19,7 +19,7 @@ jobs:
   deploy-dev:
     name: Deploy to Development
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'dev'
+    if: github.ref == 'refs/heads/master' || github.event.inputs.environment == 'dev'
     environment: development
 
     steps:
