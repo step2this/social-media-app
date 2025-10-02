@@ -38,12 +38,8 @@ function AppContent() {
     return unsubscribe;
   }, [modalService]);
 
-  // Declarative navigation: redirect to profile when user becomes authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigationService.navigateToProfile();
-    }
-  }, [isAuthenticated, navigationService]);
+  // Removed automatic redirect - was causing navigation issues
+  // Navigation to profile now happens only in handleAuthSuccess
 
   /**
    * Handle successful authentication (registration or login)
@@ -53,9 +49,12 @@ function AppContent() {
     // Close the modal through the service
     modalService.closeAuthModal();
 
-    // Show success notification (navigation will happen automatically via useEffect)
+    // Show success notification and navigate to profile
     notificationService.showSuccess('Welcome! Redirecting to your profile...');
-  }, [modalService, notificationService]);
+
+    // Navigate to profile only on actual authentication success
+    navigationService.navigateToProfile();
+  }, [modalService, notificationService, navigationService]);
 
   /**
    * Handle opening the auth modal

@@ -90,6 +90,13 @@ const createMockDynamoClient = () => {
         throw new Error('ConditionalCheckFailedException');
       }
     }
+    if (ConditionExpression === 'if_not_exists(postsCount, :zero) > :zero') {
+      const postsCount = item.postsCount as number || 0;
+      const zero = ExpressionAttributeValues?.[':zero'] as number || 0;
+      if (postsCount <= zero) {
+        throw new Error('ConditionalCheckFailedException');
+      }
+    }
 
     const updatedItem = { ...item };
 
@@ -119,7 +126,15 @@ const createMockDynamoClient = () => {
       const currentCount = (updatedItem.postsCount as number) || 0;
       updatedItem.postsCount = currentCount + (ExpressionAttributeValues?.[':inc'] as number || 0);
     }
+    if (UpdateExpression?.includes('postsCount = if_not_exists(postsCount, :zero) + :inc')) {
+      const currentCount = (updatedItem.postsCount as number) || 0;
+      updatedItem.postsCount = currentCount + (ExpressionAttributeValues?.[':inc'] as number || 0);
+    }
     if (UpdateExpression?.includes('postsCount = postsCount - :dec')) {
+      const currentCount = (updatedItem.postsCount as number) || 0;
+      updatedItem.postsCount = Math.max(0, currentCount - (ExpressionAttributeValues?.[':dec'] as number || 0));
+    }
+    if (UpdateExpression?.includes('postsCount = if_not_exists(postsCount, :zero) - :dec')) {
       const currentCount = (updatedItem.postsCount as number) || 0;
       updatedItem.postsCount = Math.max(0, currentCount - (ExpressionAttributeValues?.[':dec'] as number || 0));
     }
@@ -620,11 +635,22 @@ describe('ProfileService', () => {
       mockDynamoClient._setItem(`USER#${userId}#PROFILE`, profileEntity);
     });
 
-    it('should increment posts count', async () => {
+    it('should increment posts count when field exists', async () => {
       await profileService.incrementPostsCount(userId);
 
       const updatedItem = mockDynamoClient._getItems().get(`USER#${userId}#PROFILE`);
       expect(updatedItem?.postsCount).toBe(6);
+    });
+
+    it('should initialize and increment posts count when field does not exist', async () => {
+      // Create profile without postsCount field
+      const { postsCount, ...profileWithoutPostsCount } = profileEntity;
+      mockDynamoClient._setItem(`USER#${userId}#PROFILE`, profileWithoutPostsCount);
+
+      await profileService.incrementPostsCount(userId);
+
+      const updatedItem = mockDynamoClient._getItems().get(`USER#${userId}#PROFILE`);
+      expect(updatedItem?.postsCount).toBe(1);
     });
   });
 
@@ -653,17 +679,26 @@ describe('ProfileService', () => {
       mockDynamoClient._setItem(`USER#${userId}#PROFILE`, profileEntity);
     });
 
-    it('should decrement posts count', async () => {
+    it('should decrement posts count when field exists', async () => {
       await profileService.decrementPostsCount(userId);
 
       const updatedItem = mockDynamoClient._getItems().get(`USER#${userId}#PROFILE`);
       expect(updatedItem?.postsCount).toBe(4);
     });
 
-    it('should not decrement below zero', async () => {
+    it('should not decrement below zero when field exists', async () => {
       // Set posts count to 0
       const zeroPostsEntity = { ...profileEntity, postsCount: 0 };
       mockDynamoClient._setItem(`USER#${userId}#PROFILE`, zeroPostsEntity);
+
+      await expect(profileService.decrementPostsCount(userId))
+        .rejects.toThrow('ConditionalCheckFailedException');
+    });
+
+    it('should not decrement when field does not exist', async () => {
+      // Create profile without postsCount field
+      const { postsCount, ...profileWithoutPostsCount } = profileEntity;
+      mockDynamoClient._setItem(`USER#${userId}#PROFILE`, profileWithoutPostsCount);
 
       await expect(profileService.decrementPostsCount(userId))
         .rejects.toThrow('ConditionalCheckFailedException');

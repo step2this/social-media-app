@@ -295,9 +295,10 @@ export class ProfileService {
         PK: `USER#${userId}`,
         SK: 'PROFILE'
       },
-      UpdateExpression: 'SET postsCount = postsCount + :inc',
+      UpdateExpression: 'SET postsCount = if_not_exists(postsCount, :zero) + :inc',
       ExpressionAttributeValues: {
-        ':inc': 1
+        ':inc': 1,
+        ':zero': 0
       }
     }));
   }
@@ -312,12 +313,12 @@ export class ProfileService {
         PK: `USER#${userId}`,
         SK: 'PROFILE'
       },
-      UpdateExpression: 'SET postsCount = postsCount - :dec',
+      UpdateExpression: 'SET postsCount = if_not_exists(postsCount, :zero) - :dec',
       ExpressionAttributeValues: {
         ':dec': 1,
         ':zero': 0
       },
-      ConditionExpression: 'postsCount > :zero'
+      ConditionExpression: 'if_not_exists(postsCount, :zero) > :zero'
     }));
   }
 
