@@ -5,6 +5,7 @@ import { AuthModal } from './components/auth/AuthModal.js';
 import { ProfilePage } from './components/profile/ProfilePage';
 import { MyProfilePage } from './components/profile/MyProfilePage';
 import { PlaceholderPage } from './components/common/PlaceholderPage';
+import { CreatePostPage } from './components/posts/index.js';
 import { AppLayout } from './components/layout/AppLayout';
 import { ContentLayout } from './components/layout/AppLayout';
 import { DesignSystemTest } from './components/design-system/DesignSystemTest.js';
@@ -111,12 +112,7 @@ function AppContent() {
 
           <Route path="/create" element={
             <ProtectedRoute requireAuth={true}>
-              <PlaceholderPage
-                icon="✨"
-                title="Create Post"
-                description="Share your pet's adventures with the world"
-                features={["📸 Upload Photos", "📝 Tell Your Story", "🎯 Add Pet Stats"]}
-              />
+              <CreatePostPage />
             </ProtectedRoute>
           } />
 
