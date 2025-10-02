@@ -5,7 +5,7 @@ import {
   CreatePostResponseSchema,
   type CreatePostResponse
 } from '@social-media-app/shared';
-import { errorResponse, successResponse, verifyAccessToken, getJWTConfigFromEnv } from '../../utils/index.js';
+import { errorResponse, enhancedErrorResponse, successResponse, verifyAccessToken, getJWTConfigFromEnv } from '../../utils/index.js';
 import {
   createDynamoDBClient,
   createS3Client,
@@ -74,7 +74,7 @@ export const handler = async (
     const imageUploadData = await profileService.generatePresignedUrl(
       decoded.userId,
       {
-        fileType: 'image/jpeg', // Default, client should specify actual type
+        fileType: validatedRequest.fileType,
         purpose: 'post-image'
       }
     );
@@ -101,14 +101,39 @@ export const handler = async (
   } catch (error) {
     console.error('Error creating post:', error);
 
+    // Prepare context information for diagnostics
+    const errorContext = {
+      userId: event.headers.authorization ? 'authenticated' : 'not authenticated',
+      hasBody: !!event.body,
+      bodyLength: event.body?.length || 0,
+      userAgent: event.headers['user-agent'] || 'unknown',
+      requestId: event.requestContext?.requestId || 'unknown'
+    };
+
     if (error instanceof z.ZodError) {
-      return errorResponse(400, 'Invalid request data', error.errors);
+      return enhancedErrorResponse(
+        400,
+        'Invalid request data',
+        error,
+        { ...errorContext, validationErrors: error.errors }
+      );
     }
 
     if (error instanceof Error && error.message === 'S3 bucket not configured') {
-      return errorResponse(500, 'Storage service not configured');
+      return enhancedErrorResponse(
+        500,
+        'Storage service not configured',
+        error,
+        errorContext
+      );
     }
 
-    return errorResponse(500, 'Internal server error');
+    // For any other error, provide enhanced diagnostics
+    return enhancedErrorResponse(
+      500,
+      'Internal server error',
+      error,
+      errorContext
+    );
   }
 };

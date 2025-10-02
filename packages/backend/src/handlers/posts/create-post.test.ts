@@ -140,7 +140,8 @@ describe('Create Post Handler', () => {
       {
         caption: 'Test caption',
         tags: ['test'],
-        isPublic: true
+        isPublic: true,
+        fileType: 'image/jpeg'
       },
       'Bearer valid-token'
     );
@@ -168,7 +169,8 @@ describe('Create Post Handler', () => {
       {
         caption: 'Test caption',
         tags: ['test'],
-        isPublic: true
+        isPublic: true,
+        fileType: 'image/jpeg'
       },
       mockUploadData.publicUrl,
       mockUploadData.thumbnailUrl
@@ -176,7 +178,7 @@ describe('Create Post Handler', () => {
   });
 
   it('should return 401 when no authorization header', async () => {
-    const event = createMockEvent({ caption: 'Test' });
+    const event = createMockEvent({ caption: 'Test', fileType: 'image/jpeg' });
 
     const result = await handler(event);
 
@@ -187,7 +189,7 @@ describe('Create Post Handler', () => {
   });
 
   it('should return 401 when invalid authorization header format', async () => {
-    const event = createMockEvent({ caption: 'Test' }, 'InvalidToken');
+    const event = createMockEvent({ caption: 'Test', fileType: 'image/jpeg' }, 'InvalidToken');
 
     const result = await handler(event);
 
@@ -200,7 +202,7 @@ describe('Create Post Handler', () => {
   it('should return 401 when token verification fails', async () => {
     mockVerifyAccessToken.mockResolvedValue(null);
 
-    const event = createMockEvent({ caption: 'Test' }, 'Bearer invalid-token');
+    const event = createMockEvent({ caption: 'Test', fileType: 'image/jpeg' }, 'Bearer invalid-token');
 
     const result = await handler(event);
 
@@ -219,7 +221,7 @@ describe('Create Post Handler', () => {
     mockVerifyAccessToken.mockResolvedValue(mockUser);
     mockProfileService.getProfileById.mockResolvedValue(null);
 
-    const event = createMockEvent({ caption: 'Test' }, 'Bearer valid-token');
+    const event = createMockEvent({ caption: 'Test', fileType: 'image/jpeg' }, 'Bearer valid-token');
 
     const result = await handler(event);
 
@@ -256,7 +258,7 @@ describe('Create Post Handler', () => {
 
   it('should handle malformed JSON body', async () => {
     const event: APIGatewayProxyEventV2 = {
-      ...createMockEvent({}, 'Bearer valid-token'),
+      ...createMockEvent({ fileType: 'image/jpeg' }, 'Bearer valid-token'),
       body: '{ invalid json'
     };
 
@@ -284,7 +286,7 @@ describe('Create Post Handler', () => {
     mockProfileService.getProfileById.mockResolvedValue(mockProfile);
     mockProfileService.generatePresignedUrl.mockRejectedValue(new Error('S3 bucket not configured'));
 
-    const event = createMockEvent({ caption: 'Test' }, 'Bearer valid-token');
+    const event = createMockEvent({ caption: 'Test', fileType: 'image/jpeg' }, 'Bearer valid-token');
 
     const result = await handler(event);
 
@@ -303,7 +305,7 @@ describe('Create Post Handler', () => {
     mockVerifyAccessToken.mockResolvedValue(mockUser);
     mockProfileService.getProfileById.mockRejectedValue(new Error('Database connection failed'));
 
-    const event = createMockEvent({ caption: 'Test' }, 'Bearer valid-token');
+    const event = createMockEvent({ caption: 'Test', fileType: 'image/jpeg' }, 'Bearer valid-token');
 
     // Mock console.error to capture error logs
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -357,7 +359,7 @@ describe('Create Post Handler', () => {
     mockProfileService.generatePresignedUrl.mockResolvedValue(mockUploadData);
     mockPostService.createPost.mockResolvedValue(mockPost);
 
-    const event = createMockEvent({}, 'Bearer valid-token');
+    const event = createMockEvent({ fileType: 'image/jpeg' }, 'Bearer valid-token');
 
     const result = await handler(event);
 

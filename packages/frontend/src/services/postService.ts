@@ -19,7 +19,11 @@ export const postService = {
    */
   async createPost(data: CreatePostRequest, imageFile: File): Promise<Post> {
     // First create the post to get upload URLs
-    const response = await apiClient.post<CreatePostResponse>('/posts', data);
+    const requestWithFileType = {
+      ...data,
+      fileType: imageFile.type as any
+    };
+    const response = await apiClient.post<CreatePostResponse>('/posts', requestWithFileType);
 
     // Upload the image to S3
     await fetch(response.uploadUrl, {

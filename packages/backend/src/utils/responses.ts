@@ -20,12 +20,71 @@ export const successResponse = (statusCode: number, data: unknown): APIGatewayPr
 });
 
 /**
- * Create error response
+ * Check if we're in development mode
+ */
+const isDevelopment = (): boolean => {
+  return process.env.NODE_ENV === 'development' || !process.env.AWS_LAMBDA_FUNCTION_NAME;
+};
+
+/**
+ * Create error response with enhanced diagnostics in development
  */
 export const errorResponse = (statusCode: number, message: string, details?: unknown): APIGatewayProxyResultV2 => {
   const responseBody = details
     ? { error: message, details }
     : { error: message };
+
+  return {
+    statusCode,
+    headers: CORS_HEADERS,
+    body: JSON.stringify(responseBody)
+  };
+};
+
+/**
+ * Create enhanced error response with more diagnostic information
+ * Includes stack traces and error context in development, minimal info in production
+ */
+export const enhancedErrorResponse = (
+  statusCode: number,
+  message: string,
+  error?: Error | unknown,
+  context?: Record<string, unknown>
+): APIGatewayProxyResultV2 => {
+  const isDev = isDevelopment();
+
+  let responseBody: Record<string, unknown> = {
+    error: message,
+    timestamp: new Date().toISOString()
+  };
+
+  // In development, include detailed error information
+  if (isDev && error) {
+    if (error instanceof Error) {
+      responseBody.details = {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        cause: error.cause
+      };
+    } else {
+      responseBody.details = error;
+    }
+
+    // Add context information in development
+    if (context) {
+      responseBody.context = context;
+    }
+  } else if (error instanceof Error) {
+    // In production, only include safe error information
+    responseBody.details = {
+      type: error.name,
+      message: error.message
+    };
+  }
+
+  // Add error ID for tracking
+  responseBody.errorId = `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   return {
     statusCode,

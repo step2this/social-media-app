@@ -7,6 +7,7 @@ import {
   OptionalTagsArrayField,
   CountField,
   TimestampField,
+  ImageFileTypeField,
   PaginationRequestSchema,
   PaginationResponseSchema,
   SuccessResponseSchema
@@ -36,7 +37,8 @@ export const PostSchema = z.object({
 export const CreatePostRequestSchema = z.object({
   caption: OptionalCaptionField,
   tags: OptionalTagsArrayField,
-  isPublic: z.boolean().optional()
+  isPublic: z.boolean().optional(),
+  fileType: ImageFileTypeField
 });
 
 export const UpdatePostRequestSchema = z.object({
