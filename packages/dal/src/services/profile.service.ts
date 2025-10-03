@@ -267,10 +267,27 @@ export class ProfileService {
       ContentType: request.fileType
     };
 
+    // For LocalStack compatibility, disable automatic checksum calculation
+    const isLocalStack = process.env.NODE_ENV === 'development' &&
+                        process.env.USE_LOCALSTACK === 'true';
+
+    const putObjectCommand = new PutObjectCommand(command);
+
+    // Configure signing options to exclude checksum headers for LocalStack
+    const signingOptions: any = { expiresIn: 3600 };
+
+    if (isLocalStack) {
+      // Exclude checksum headers from signing for LocalStack compatibility
+      signingOptions.unsignableHeaders = new Set([
+        'x-amz-checksum-crc32',
+        'x-amz-sdk-checksum-algorithm'
+      ]);
+    }
+
     const uploadUrl = await getSignedUrl(
       this.s3Client,
-      new PutObjectCommand(command),
-      { expiresIn: 3600 } // 1 hour
+      putObjectCommand,
+      signingOptions
     );
 
     const baseUrl = this.cloudFrontDomain
