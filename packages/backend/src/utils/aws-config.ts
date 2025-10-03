@@ -71,6 +71,16 @@ export const createDynamoDBClient = (): DynamoDBDocumentClient => {
  */
 export const createS3Client = (): S3Client => {
   const config = getAWSConfig();
+
+  // For LocalStack compatibility, disable automatic checksum calculation
+  if (isLocalStackEnvironment()) {
+    return new S3Client({
+      ...config,
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED'
+    });
+  }
+
   return new S3Client(config);
 };
 

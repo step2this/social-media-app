@@ -79,6 +79,9 @@ export class ProfileService {
       if (isLocalStack) {
         s3Config.endpoint = process.env.LOCALSTACK_ENDPOINT || 'http://localhost:4566';
         s3Config.forcePathStyle = true;
+        // For LocalStack compatibility, disable automatic checksum calculation
+        s3Config.requestChecksumCalculation = 'WHEN_REQUIRED';
+        s3Config.responseChecksumValidation = 'WHEN_REQUIRED';
       }
 
       this.s3Client = new S3Client(s3Config);
@@ -267,27 +270,12 @@ export class ProfileService {
       ContentType: request.fileType
     };
 
-    // For LocalStack compatibility, disable automatic checksum calculation
-    const isLocalStack = process.env.NODE_ENV === 'development' &&
-                        process.env.USE_LOCALSTACK === 'true';
-
     const putObjectCommand = new PutObjectCommand(command);
-
-    // Configure signing options to exclude checksum headers for LocalStack
-    const signingOptions: any = { expiresIn: 3600 };
-
-    if (isLocalStack) {
-      // Exclude checksum headers from signing for LocalStack compatibility
-      signingOptions.unsignableHeaders = new Set([
-        'x-amz-checksum-crc32',
-        'x-amz-sdk-checksum-algorithm'
-      ]);
-    }
 
     const uploadUrl = await getSignedUrl(
       this.s3Client,
       putObjectCommand,
-      signingOptions
+      { expiresIn: 3600 }
     );
 
     const baseUrl = this.cloudFrontDomain
