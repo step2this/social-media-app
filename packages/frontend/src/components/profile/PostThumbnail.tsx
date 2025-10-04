@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { PostGridItem } from '@social-media-app/shared';
 
 interface PostThumbnailProps {
@@ -9,11 +10,19 @@ interface PostThumbnailProps {
  * Individual post thumbnail for grid display
  */
 export const PostThumbnail: React.FC<PostThumbnailProps> = ({ post }) => {
+  const navigate = useNavigate();
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
+  const handleClick = () => {
+    navigate(`/post/${post.id}`);
+  };
+
   return (
-    <div className="relative aspect-square bg-gray-100 overflow-hidden group cursor-pointer">
+    <div
+      className="relative aspect-square bg-gray-100 overflow-hidden group cursor-pointer"
+      onClick={handleClick}
+    >
       {!imageLoaded && !imageError && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="animate-pulse bg-gray-200 w-full h-full"></div>

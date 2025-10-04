@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
+    "dev:local": "pnpm build && PORT=3001 node server.js",
     "start": "node server.js",
     "start:dev": "pnpm build && node server.js",
     "clean": "rm -rf dist",

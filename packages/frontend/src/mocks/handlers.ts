@@ -1,6 +1,8 @@
 import { http, HttpResponse } from 'msw';
 import { HelloRequestSchema, HelloResponseSchema, type HelloRequest, type HelloResponse } from '@social-media-app/shared';
 import { authHandlers } from './authHandlers.js';
+import { postHandlers } from './postHandlers.js';
+import { profileHandlers } from './profileHandlers.js';
 
 // Use the same API base URL as the apiClient
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -11,6 +13,12 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 export const handlers = [
   // Authentication handlers
   ...authHandlers,
+
+  // Profile handlers
+  ...profileHandlers,
+
+  // Post handlers
+  ...postHandlers,
   // Hello endpoint handler
   http.post(`${API_BASE_URL}/hello`, async ({ request }) => {
     try {

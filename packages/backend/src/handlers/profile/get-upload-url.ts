@@ -14,19 +14,6 @@ import {
 } from '../../utils/aws-config.js';
 import { z } from 'zod';
 
-const dynamoClient = createDynamoDBClient();
-const s3Client = createS3Client();
-const tableName = getTableName();
-const s3BucketName = getS3BucketName();
-const cloudFrontDomain = getCloudFrontDomain();
-
-const profileService = new ProfileService(
-  dynamoClient,
-  tableName,
-  s3BucketName,
-  cloudFrontDomain,
-  s3Client
-);
 
 /**
  * Handler to get presigned URL for file upload
@@ -35,6 +22,21 @@ export const handler = async (
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> => {
   try {
+    // Initialize AWS services and configuration at runtime
+    const dynamoClient = createDynamoDBClient();
+    const s3Client = createS3Client();
+    const tableName = getTableName();
+    const s3BucketName = getS3BucketName();
+    const cloudFrontDomain = getCloudFrontDomain();
+
+    const profileService = new ProfileService(
+      dynamoClient,
+      tableName,
+      s3BucketName,
+      cloudFrontDomain,
+      s3Client
+    );
+
     // Verify authentication
     const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader?.startsWith('Bearer ')) {

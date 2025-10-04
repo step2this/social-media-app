@@ -1,8 +1,8 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
-import { CreatePostRequestSchema, type CreatePostRequest } from '@social-media-app/shared';
-import { useAuthStore } from '../../stores/authStore.js';
+import { CreatePostRequestSchema, type CreatePostRequest, ImageFileTypeField } from '@social-media-app/shared';
+// import { useAuthStore } from '../../stores/authStore.js';
 import { postService } from '../../services/postService.js';
 import './CreatePostPage.css';
 
@@ -21,7 +21,7 @@ interface FormErrors {
 
 export const CreatePostPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  // const { user } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
@@ -90,9 +90,10 @@ export const CreatePostPage: React.FC = () => {
 
   // Handle file selection
   const handleFileSelect = useCallback((file: File) => {
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setErrors(prev => ({ ...prev, image: 'Please select a valid image file' }));
+    // Validate file type using shared schema
+    const fileTypeValidation = ImageFileTypeField.safeParse(file.type);
+    if (!fileTypeValidation.success) {
+      setErrors(prev => ({ ...prev, image: 'Please select a valid image file (JPEG, PNG, GIF, or WebP)' }));
       return;
     }
 
@@ -194,9 +195,17 @@ export const CreatePostPage: React.FC = () => {
     setErrors({});
 
     try {
+      // Validate file type again (defensive programming)
+      const fileTypeValidation = ImageFileTypeField.safeParse(selectedFile.type);
+      if (!fileTypeValidation.success) {
+        setErrors({ general: 'Invalid file type selected' });
+        return;
+      }
+
       // Prepare request data
       const tags = parseTags(formData.tags);
       const requestData: CreatePostRequest = {
+        fileType: fileTypeValidation.data, // Type-safe after validation
         caption: formData.caption.trim() || undefined,
         tags: tags.length > 0 ? tags : undefined,
         isPublic: formData.isPublic
@@ -206,10 +215,10 @@ export const CreatePostPage: React.FC = () => {
       const validatedData = CreatePostRequestSchema.parse(requestData);
 
       // Create post
-      await postService.createPost(validatedData, selectedFile);
+      const createdPost = await postService.createPost(validatedData, selectedFile);
 
-      // Navigate to profile on success
-      navigate('/profile');
+      // Navigate to the new post detail page on success
+      navigate(`/post/${createdPost.id}`);
     } catch (error) {
       console.error('Error creating post:', error);
 

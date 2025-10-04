@@ -66,6 +66,7 @@ describe('Post Schemas', () => {
   describe('CreatePostRequestSchema', () => {
     it('should validate valid create request', () => {
       const validRequest = {
+        fileType: 'image/jpeg' as const,
         caption: 'My new post',
         tags: ['photo', 'sunset'],
         isPublic: true
@@ -75,14 +76,15 @@ describe('Post Schemas', () => {
       expect(result).toMatchObject(validRequest);
     });
 
-    it('should accept empty request', () => {
-      const emptyRequest = {};
-      const result = CreatePostRequestSchema.parse(emptyRequest);
-      expect(result).toEqual({});
+    it('should accept request with only fileType', () => {
+      const minimalRequest = { fileType: 'image/png' as const };
+      const result = CreatePostRequestSchema.parse(minimalRequest);
+      expect(result).toEqual({ fileType: 'image/png' });
     });
 
     it('should reject caption that is too long', () => {
       const request = {
+        fileType: 'image/jpeg' as const,
         caption: 'a'.repeat(2201)
       };
       expect(() => CreatePostRequestSchema.parse(request)).toThrow();
@@ -90,6 +92,7 @@ describe('Post Schemas', () => {
 
     it('should reject too many tags', () => {
       const request = {
+        fileType: 'image/gif' as const,
         tags: Array(31).fill('tag')
       };
       expect(() => CreatePostRequestSchema.parse(request)).toThrow();
@@ -97,6 +100,7 @@ describe('Post Schemas', () => {
 
     it('should reject tags that are too long', () => {
       const request = {
+        fileType: 'image/webp' as const,
         tags: ['a'.repeat(51)]
       };
       expect(() => CreatePostRequestSchema.parse(request)).toThrow();
@@ -104,10 +108,12 @@ describe('Post Schemas', () => {
 
     it('should trim caption and tags', () => {
       const request = {
+        fileType: 'image/png' as const,
         caption: '  My post  ',
         tags: ['  photo  ', '  nature  ']
       };
       const result = CreatePostRequestSchema.parse(request);
+      expect(result.fileType).toBe('image/png');
       expect(result.caption).toBe('My post');
       expect(result.tags).toEqual(['photo', 'nature']);
     });

@@ -5,7 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { CreatePostPage } from './CreatePostPage.js';
 import { useAuthStore } from '../../stores/authStore.js';
 import * as postService from '../../services/postService.js';
-import type { Post, CreatePostRequest } from '@social-media-app/shared';
+import type { Post } from '@social-media-app/shared';
 
 // Mock the postService
 vi.mock('../../services/postService.js', () => ({

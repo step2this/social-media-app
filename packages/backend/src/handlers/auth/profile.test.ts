@@ -37,7 +37,7 @@ describe('Profile Handler', () => {
     refreshToken: vi.fn(),
     getUserById: vi.fn(),
     logout: vi.fn(),
-    updateUserProfile: vi.fn() // This method doesn't exist yet - we need to implement it
+    updateUser: vi.fn() // Method name should match the actual handler
   };
 
   const createMockEvent = (
@@ -188,7 +188,7 @@ describe('Profile Handler', () => {
       };
 
       // This test will fail because updateUserProfile doesn't exist yet
-      mockAuthService.updateUserProfile.mockResolvedValue(updatedUser);
+      mockAuthService.updateUser.mockResolvedValue(updatedUser);
 
       const event = createMockEvent('PUT', updateData, {
         Authorization: 'Bearer valid-token'
@@ -198,7 +198,7 @@ describe('Profile Handler', () => {
 
       expect(result.statusCode).toBe(200);
       expect(JSON.parse(result.body!)).toEqual({ user: updatedUser });
-      expect(mockAuthService.updateUserProfile).toHaveBeenCalledWith('user-123', updateData);
+      expect(mockAuthService.updateUser).toHaveBeenCalledWith('user-123', updateData);
     });
 
     it('should validate profile update data', async () => {
@@ -238,7 +238,7 @@ describe('Profile Handler', () => {
         updatedAt: '2024-01-01T12:00:00Z'
       };
 
-      mockAuthService.updateUserProfile.mockResolvedValue(updatedUser);
+      mockAuthService.updateUser.mockResolvedValue(updatedUser);
 
       const event = createMockEvent('PUT', {
         ...updateData,

@@ -9,6 +9,7 @@ import type {
   PostGridResponse,
   DeletePostResponse
 } from '@social-media-app/shared';
+import { ImageFileTypeField } from '@social-media-app/shared';
 
 /**
  * Post service for frontend API calls
@@ -18,10 +19,16 @@ export const postService = {
    * Create a new post
    */
   async createPost(data: CreatePostRequest, imageFile: File): Promise<Post> {
+    // Validate file type
+    const fileTypeValidation = ImageFileTypeField.safeParse(imageFile.type);
+    if (!fileTypeValidation.success) {
+      throw new Error(`Unsupported file type: ${imageFile.type}. Please use JPEG, PNG, GIF, or WebP.`);
+    }
+
     // First create the post to get upload URLs
     const requestWithFileType = {
       ...data,
-      fileType: imageFile.type as any
+      fileType: fileTypeValidation.data
     };
     const response = await apiClient.post<CreatePostResponse>('/posts', requestWithFileType);
 
@@ -77,7 +84,7 @@ export const postService = {
    * Get a single post by ID
    */
   async getPost(postId: string): Promise<Post> {
-    const response = await apiClient.get<PostResponse>(`/posts/${postId}`);
+    const response = await apiClient.get<PostResponse>(`/post/${postId}`);
     return response.post;
   },
 
@@ -101,10 +108,16 @@ export const postService = {
    * Upload image for post
    */
   async uploadPostImage(file: File): Promise<{ imageUrl: string; thumbnailUrl: string }> {
+    // Validate file type
+    const fileTypeValidation = ImageFileTypeField.safeParse(file.type);
+    if (!fileTypeValidation.success) {
+      throw new Error(`Unsupported file type: ${file.type}. Please use JPEG, PNG, GIF, or WebP.`);
+    }
+
     // Get presigned URL from profile service
     const { profileService } = await import('./profileService');
     const uploadData = await profileService.getUploadUrl({
-      fileType: file.type as any,
+      fileType: fileTypeValidation.data,
       purpose: 'post-image'
     });
 

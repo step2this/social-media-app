@@ -8,6 +8,7 @@ import type {
   PublicProfileResponse,
   UpdateProfileResponse
 } from '@social-media-app/shared';
+import { ImageFileTypeField } from '@social-media-app/shared';
 
 /**
  * Profile service for frontend API calls
@@ -62,9 +63,15 @@ export const profileService = {
    * Upload profile picture
    */
   async uploadProfilePicture(file: File): Promise<{ publicUrl: string; thumbnailUrl?: string }> {
+    // Validate file type
+    const fileTypeValidation = ImageFileTypeField.safeParse(file.type);
+    if (!fileTypeValidation.success) {
+      throw new Error(`Unsupported file type: ${file.type}. Please use JPEG, PNG, GIF, or WebP.`);
+    }
+
     // Get presigned URL
     const uploadData = await this.getUploadUrl({
-      fileType: file.type as any,
+      fileType: fileTypeValidation.data,
       purpose: 'profile-picture'
     });
 

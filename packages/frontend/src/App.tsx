@@ -6,6 +6,7 @@ import { ProfilePage } from './components/profile/ProfilePage';
 import { MyProfilePage } from './components/profile/MyProfilePage';
 import { PlaceholderPage } from './components/common/PlaceholderPage';
 import { CreatePostPage } from './components/posts/index.js';
+import { PostDetailPage } from './components/posts/PostDetailPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { ContentLayout } from './components/layout/AppLayout';
 import { DesignSystemTest } from './components/design-system/DesignSystemTest.js';
@@ -112,6 +113,12 @@ function AppContent() {
           <Route path="/create" element={
             <ProtectedRoute requireAuth={true}>
               <CreatePostPage />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/post/:postId" element={
+            <ProtectedRoute requireAuth={true}>
+              <PostDetailPage />
             </ProtectedRoute>
           } />
 
