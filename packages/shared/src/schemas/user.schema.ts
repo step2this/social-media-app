@@ -27,13 +27,11 @@ export const UsernameSchema = z.string()
   .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores');
 
 /**
- * Base user data schema - shared fields between requests and responses
- * Contains the mutable user data that can be updated
+ * Base user data schema - core identity fields only
+ * Contains only authentication and identity-related data
  */
 export const BaseUserDataSchema = z.object({
-  fullName: OptionalFullNameField,
-  bio: BioField,
-  avatarUrl: OptionalURLField
+  // Identity fields only - profile data moved to ProfileSchema
 });
 
 /**
@@ -67,13 +65,11 @@ export const GetUserResponseSchema = z.object({
 
 /**
  * Public user schema - for displaying user info without sensitive data
+ * Only core identity fields (profile data available via ProfileSchema)
  */
 export const PublicUserSchema = UserSchema.pick({
   id: true,
   username: true,
-  fullName: true,
-  bio: true,
-  avatarUrl: true,
   createdAt: true
 });
 
