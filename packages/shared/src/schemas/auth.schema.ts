@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import {
-  OptionalFullNameField,
   TokenField,
   PasswordTokenField,
   RefreshTokenField,
@@ -38,8 +37,7 @@ export { EmailSchema, UsernameSchema };
 export const RegisterRequestSchema = z.object({
   email: EmailSchema,
   password: PasswordSchema,
-  username: UsernameSchema,
-  fullName: OptionalFullNameField
+  username: UsernameSchema
 });
 
 export const LoginRequestSchema = z.object({
@@ -92,7 +90,6 @@ export const RegisterResponseSchema = z.object({
     id: true,
     email: true,
     username: true,
-    fullName: true,
     emailVerified: true,
     createdAt: true
   }),
@@ -131,9 +128,9 @@ export const VerifyEmailResponseSchema = z.object({
   message: z.string()
 });
 
-export const GetProfileResponseSchema = z.object({
-  user: UserSchema
-});
+// Profile endpoint responses need Profile data, not just User data
+// This should use ProfileResponseSchema from profile.schema.ts
+// GetProfileResponseSchema is deprecated - use ProfileResponseSchema instead
 
 // Use centralized user response schema - no need for auth-specific duplicate
 // export const UpdateUserProfileResponseSchema = UpdateUserResponseSchema;
@@ -158,6 +155,6 @@ export type VerifyEmailResponse = z.infer<typeof VerifyEmailResponseSchema>;
 // Use centralized user types - re-export for convenience
 export type UpdateUserProfileRequest = UpdateUserRequest;
 export type UpdateUserProfileResponse = UpdateUserResponse;
-export type GetProfileResponse = z.infer<typeof GetProfileResponseSchema>;
+// export type GetProfileResponse = z.infer<typeof GetProfileResponseSchema>; // Deprecated - use ProfileResponse from profile.schema.ts
 export type UserProfile = User;
 export type AuthTokens = z.infer<typeof AuthTokensSchema>;

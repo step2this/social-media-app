@@ -1,10 +1,7 @@
 import { z } from 'zod';
 import {
   UUIDField,
-  TimestampField,
-  OptionalFullNameField,
-  BioField,
-  OptionalURLField
+  TimestampField
 } from './base.schema.js';
 
 /**
