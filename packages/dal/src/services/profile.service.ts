@@ -69,7 +69,7 @@ export class ProfileService {
       this.s3Client = s3Client;
     } else {
       // Use same environment detection logic as backend
-      const isLocalStack = process.env.NODE_ENV === 'development' &&
+      const isLocalStack = (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') &&
                           process.env.USE_LOCALSTACK === 'true';
 
       const s3Config: any = {
@@ -278,9 +278,7 @@ export class ProfileService {
       { expiresIn: 3600 }
     );
 
-    const baseUrl = this.cloudFrontDomain
-      ? `https://${this.cloudFrontDomain}`
-      : `https://${this.s3BucketName}.s3.amazonaws.com`;
+    const baseUrl = this.getBaseUrl();
 
     return {
       uploadUrl,
@@ -325,6 +323,33 @@ export class ProfileService {
       },
       ConditionExpression: 'if_not_exists(postsCount, :zero) > :zero'
     }));
+  }
+
+  /**
+   * Get base URL for file storage based on environment configuration
+   * Priority: CloudFront > LocalStack > AWS S3
+   */
+  private getBaseUrl(): string {
+    // First priority: CloudFront domain (production/staging)
+    if (this.cloudFrontDomain) {
+      return `https://${this.cloudFrontDomain}`;
+    }
+
+    // Second priority: LocalStack (local development)
+    const useLocalStack = (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') &&
+                         process.env.USE_LOCALSTACK === 'true';
+    const localStackEndpoint = process.env.LOCALSTACK_ENDPOINT;
+
+    if (useLocalStack && localStackEndpoint && this.s3BucketName) {
+      return `${localStackEndpoint}/${this.s3BucketName}`;
+    }
+
+    // Third priority: AWS S3 (fallback)
+    if (this.s3BucketName) {
+      return `https://${this.s3BucketName}.s3.amazonaws.com`;
+    }
+
+    throw new Error('S3 bucket not configured');
   }
 
   /**

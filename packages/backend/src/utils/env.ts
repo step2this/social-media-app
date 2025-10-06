@@ -9,7 +9,7 @@
  */
 export const loadEnvironment = (): void => {
   // Only load .env files in development mode
-  if (process.env.NODE_ENV === 'development' || !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test' || !process.env.AWS_LAMBDA_FUNCTION_NAME) {
     try {
       // Dynamic import to avoid bundling dotenv in production
       import('dotenv').then(({ config }) => {
@@ -29,7 +29,7 @@ export const loadEnvironment = (): void => {
  */
 export const loadEnvironmentSync = (): void => {
   // Only load .env files in development mode
-  if (process.env.NODE_ENV === 'development' || !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test' || !process.env.AWS_LAMBDA_FUNCTION_NAME) {
     try {
       // Use require for synchronous loading in development
       const dotenv = require('dotenv');

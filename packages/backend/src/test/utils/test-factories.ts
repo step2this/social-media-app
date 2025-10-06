@@ -6,7 +6,6 @@
 import { vi } from 'vitest';
 import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import type { Post } from '@social-media-app/shared';
-import { randomUUID } from 'crypto';
 
 /**
  * Creates a mock Lambda event for testing handlers

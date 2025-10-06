@@ -543,6 +543,8 @@ describe('ProfileService', () => {
     beforeEach(() => {
       // Reset environment
       delete process.env.AWS_REGION;
+      delete process.env.USE_LOCALSTACK;
+      delete process.env.LOCALSTACK_ENDPOINT;
     });
 
     it('should generate presigned URL for profile picture', async () => {
@@ -607,6 +609,94 @@ describe('ProfileService', () => {
 
       await expect(profileServiceNoBucket.generatePresignedUrl(userId, request))
         .rejects.toThrow('S3 bucket not configured');
+    });
+
+    it('should generate LocalStack URLs when USE_LOCALSTACK=true', async () => {
+      // Set LocalStack environment variables
+      process.env.USE_LOCALSTACK = 'true';
+      process.env.LOCALSTACK_ENDPOINT = 'http://localhost:4566';
+
+      // Create ProfileService without CloudFront domain for LocalStack testing
+      const localStackProfileService = new ProfileService(
+        mockDynamoClient as unknown as DynamoDBDocumentClient,
+        tableName,
+        s3BucketName
+      );
+
+      const userId = 'user123';
+      const request: GetPresignedUrlRequest = {
+        fileType: 'image/jpeg',
+        purpose: 'post-image'
+      };
+
+      const result = await localStackProfileService.generatePresignedUrl(userId, request);
+
+      expect(result.publicUrl).toMatch(/^http:\/\/localhost:4566\/test-bucket\/users\/user123\/posts\/.+\.jpeg$/);
+      expect(result.thumbnailUrl).toMatch(/^http:\/\/localhost:4566\/test-bucket\/users\/user123\/posts\/.+_thumb\.jpeg$/);
+    });
+
+    it('should generate LocalStack URLs with custom endpoint', async () => {
+      // Set LocalStack environment with custom endpoint
+      process.env.USE_LOCALSTACK = 'true';
+      process.env.LOCALSTACK_ENDPOINT = 'http://localstack.example.com:4567';
+
+      // Create ProfileService without CloudFront domain for LocalStack testing
+      const localStackProfileService = new ProfileService(
+        mockDynamoClient as unknown as DynamoDBDocumentClient,
+        tableName,
+        s3BucketName
+      );
+
+      const userId = 'user123';
+      const request: GetPresignedUrlRequest = {
+        fileType: 'image/png',
+        purpose: 'profile-picture'
+      };
+
+      const result = await localStackProfileService.generatePresignedUrl(userId, request);
+
+      expect(result.publicUrl).toMatch(/^http:\/\/localstack\.example\.com:4567\/test-bucket\/users\/user123\/profile\/.+\.png$/);
+      expect(result.thumbnailUrl).toMatch(/^http:\/\/localstack\.example\.com:4567\/test-bucket\/users\/user123\/profile\/.+_thumb\.png$/);
+    });
+
+    it('should prefer CloudFront over LocalStack when both are configured', async () => {
+      // Set both CloudFront and LocalStack environment variables
+      process.env.USE_LOCALSTACK = 'true';
+      process.env.LOCALSTACK_ENDPOINT = 'http://localhost:4566';
+
+      const userId = 'user123';
+      const request: GetPresignedUrlRequest = {
+        fileType: 'image/jpeg',
+        purpose: 'profile-picture'
+      };
+
+      const result = await profileService.generatePresignedUrl(userId, request);
+
+      // Should still use CloudFront domain since it's configured in the service
+      expect(result.publicUrl).toMatch(/^https:\/\/cdn\.example\.com\/users\/user123\/profile\/.+\.jpeg$/);
+      expect(result.thumbnailUrl).toMatch(/^https:\/\/cdn\.example\.com\/users\/user123\/profile\/.+_thumb\.jpeg$/);
+    });
+
+    it('should fall back to AWS S3 URLs when LocalStack is disabled', async () => {
+      // Explicitly disable LocalStack
+      process.env.USE_LOCALSTACK = 'false';
+      process.env.LOCALSTACK_ENDPOINT = 'http://localhost:4566';
+
+      const profileServiceWithoutCF = new ProfileService(
+        mockDynamoClient as unknown as DynamoDBDocumentClient,
+        tableName,
+        s3BucketName
+      );
+
+      const userId = 'user123';
+      const request: GetPresignedUrlRequest = {
+        fileType: 'image/jpeg',
+        purpose: 'profile-picture'
+      };
+
+      const result = await profileServiceWithoutCF.generatePresignedUrl(userId, request);
+
+      expect(result.publicUrl).toMatch(/^https:\/\/test-bucket\.s3\.amazonaws\.com\/users\/user123\/profile\/.+\.jpeg$/);
     });
   });
 
