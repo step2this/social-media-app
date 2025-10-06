@@ -16,9 +16,11 @@ import {
 export const HandleSchema = HandleField;
 
 /**
- * Enhanced profile schema with handle and profile picture
+ * Profile data schema - presentation and social media fields
  */
-export const ProfileSchema = UserSchema.extend({
+export const ProfileDataSchema = z.object({
+  fullName: OptionalFullNameField,
+  bio: BioField,
   handle: HandleSchema,
   profilePictureUrl: OptionalURLField,
   profilePictureThumbnailUrl: OptionalURLField,
@@ -26,6 +28,12 @@ export const ProfileSchema = UserSchema.extend({
   followersCount: CountField,
   followingCount: CountField
 });
+
+/**
+ * Enhanced profile schema using composition (not inheritance)
+ * Combines core User identity with Profile presentation data
+ */
+export const ProfileSchema = UserSchema.merge(ProfileDataSchema);
 
 /**
  * Request schemas
@@ -77,6 +85,7 @@ export const PublicProfileResponseSchema = z.object({
 /**
  * Type exports
  */
+export type ProfileData = z.infer<typeof ProfileDataSchema>;
 export type Profile = z.infer<typeof ProfileSchema>;
 export type PublicProfile = z.infer<typeof PublicProfileSchema>;
 export type UpdateProfileWithHandleRequest = z.infer<typeof UpdateProfileWithHandleRequestSchema>;
