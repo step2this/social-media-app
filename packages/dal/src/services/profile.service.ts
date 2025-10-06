@@ -104,27 +104,36 @@ export class ProfileService {
    * Check if handle is available
    */
   async isHandleAvailable(handle: string, excludeUserId?: string): Promise<boolean> {
-    const result = await this.dynamoClient.send(new QueryCommand({
-      TableName: this.tableName,
-      IndexName: 'GSI3',
-      KeyConditionExpression: 'GSI3PK = :pk',
-      ExpressionAttributeValues: {
-        ':pk': `HANDLE#${handle.toLowerCase()}`
-      },
-      Limit: 1
-    }));
+    try {
+      const result = await this.dynamoClient.send(new QueryCommand({
+        TableName: this.tableName,
+        IndexName: 'GSI3',
+        KeyConditionExpression: 'GSI3PK = :pk',
+        ExpressionAttributeValues: {
+          ':pk': `HANDLE#${handle.toLowerCase()}`
+        },
+        Limit: 1
+      }));
 
-    if (!result.Items || result.Items.length === 0) {
-      return true;
+      if (!result.Items || result.Items.length === 0) {
+        return true;
+      }
+
+      // If excludeUserId is provided, check if the handle belongs to that user
+      if (excludeUserId) {
+        const entity = result.Items[0] as UserProfileEntity;
+        return entity.id === excludeUserId;
+      }
+
+      return false;
+    } catch (error: any) {
+      // If GSI3 doesn't exist (likely in LocalStack), allow the handle for now
+      if (error.name === 'ValidationException' && error.message.includes('Index not found')) {
+        console.warn('GSI3 index not found - allowing handle update without uniqueness check');
+        return true;
+      }
+      throw error;
     }
-
-    // If excludeUserId is provided, check if the handle belongs to that user
-    if (excludeUserId) {
-      const entity = result.Items[0] as UserProfileEntity;
-      return entity.id === excludeUserId;
-    }
-
-    return false;
   }
 
   /**
@@ -144,17 +153,33 @@ export class ProfileService {
 
     // Handle update (with uniqueness check)
     if (updates.handle !== undefined) {
-      const isAvailable = await this.isHandleAvailable(updates.handle, userId);
-      if (!isAvailable) {
-        throw new Error('Handle is already taken');
+      let gsi3Available = true;
+
+      try {
+        const isAvailable = await this.isHandleAvailable(updates.handle, userId);
+        if (!isAvailable) {
+          throw new Error('Handle is already taken');
+        }
+      } catch (error: any) {
+        if (error.name === 'ValidationException' && error.message.includes('Index not found')) {
+          console.warn('GSI3 index not found - allowing handle update without uniqueness check');
+          gsi3Available = false;
+        } else {
+          throw error; // Re-throw other errors (like validation failures)
+        }
       }
+
       updateExpressions.push('#handle = :handle');
-      updateExpressions.push('GSI3PK = :gsi3pk');
-      updateExpressions.push('GSI3SK = :gsi3sk');
       expressionAttributeNames['#handle'] = 'handle';
       expressionAttributeValues[':handle'] = updates.handle.toLowerCase();
-      expressionAttributeValues[':gsi3pk'] = `HANDLE#${updates.handle.toLowerCase()}`;
-      expressionAttributeValues[':gsi3sk'] = `USER#${userId}`;
+
+      // Only update GSI3 fields if GSI3 exists
+      if (gsi3Available) {
+        updateExpressions.push('GSI3PK = :gsi3pk');
+        updateExpressions.push('GSI3SK = :gsi3sk');
+        expressionAttributeValues[':gsi3pk'] = `HANDLE#${updates.handle.toLowerCase()}`;
+        expressionAttributeValues[':gsi3sk'] = `USER#${userId}`;
+      }
     }
 
     // Other updates

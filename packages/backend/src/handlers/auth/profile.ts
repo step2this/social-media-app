@@ -1,8 +1,8 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { UpdateProfileWithHandleRequestSchema, z } from '@social-media-app/shared';
-import { createDefaultAuthService } from '@social-media-app/dal';
+import { ProfileService } from '@social-media-app/dal';
 import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
-import { createJWTProvider, getJWTConfigFromEnv, extractTokenFromHeader, verifyAccessToken } from '../../utils/jwt.js';
+import { getJWTConfigFromEnv, extractTokenFromHeader, verifyAccessToken } from '../../utils/jwt.js';
 import { successResponse, validationErrorResponse, unauthorizedResponse, notFoundResponse, internalServerErrorResponse } from '../../utils/responses.js';
 
 /**
@@ -30,19 +30,18 @@ export const getHandler = async (
     // Initialize dependencies
     const dynamoClient = createDynamoDBClient();
     const tableName = getTableName();
-    const jwtProvider = createJWTProvider(jwtConfig);
 
-    // Create auth service
-    const authService = createDefaultAuthService(dynamoClient, tableName, jwtProvider);
+    // Create profile service to get complete profile data
+    const profileService = new ProfileService(dynamoClient, tableName);
 
-    // Get user profile
-    const user = await authService.getUserById(decodedToken.userId);
+    // Get full profile (User + Profile data)
+    const profile = await profileService.getProfileById(decodedToken.userId);
 
-    if (!user) {
-      return notFoundResponse('User not found');
+    if (!profile) {
+      return notFoundResponse('Profile not found');
     }
 
-    return successResponse(200, { user });
+    return successResponse(200, { profile });
 
   } catch (error) {
     console.error('Get profile error:', error instanceof Error ? error.message : String(error), {
@@ -82,22 +81,14 @@ export const updateHandler = async (
     // Initialize dependencies
     const dynamoClient = createDynamoDBClient();
     const tableName = getTableName();
-    const jwtProvider = createJWTProvider(jwtConfig);
 
-    // Create auth service
-    const authService = createDefaultAuthService(dynamoClient, tableName, jwtProvider);
+    // Create profile service to handle profile updates
+    const profileService = new ProfileService(dynamoClient, tableName);
 
-    // Get current user to update
-    const currentUser = await authService.getUserById(decodedToken.userId);
+    // Update the profile using the profile service
+    const updatedProfile = await profileService.updateProfile(decodedToken.userId, validatedRequest);
 
-    if (!currentUser) {
-      return notFoundResponse('User not found');
-    }
-
-    // Update the user profile using the auth service
-    const updatedUser = await authService.updateUser(decodedToken.userId, validatedRequest);
-
-    return successResponse(200, { user: updatedUser });
+    return successResponse(200, { profile: updatedProfile });
 
   } catch (error) {
     // Handle validation errors

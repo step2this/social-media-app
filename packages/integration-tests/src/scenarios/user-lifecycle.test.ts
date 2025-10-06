@@ -15,7 +15,7 @@ import { randomUUID } from 'crypto';
 import {
   RegisterResponseSchema,
   LoginResponseSchema,
-  GetProfileResponseSchema,
+  ProfileResponseSchema,
   UpdateProfileResponseSchema,
   type RegisterResponse,
   type LoginResponse,
@@ -128,15 +128,15 @@ describe('User Lifecycle Integration', () => {
       testLogger.debug('Step 3: Verifying automatic profile creation');
 
       const profileResponse = await httpClient.get<{ profile: Profile }>('/auth/profile');
-      const profileData = await parseResponse(profileResponse, GetProfileResponseSchema);
+      const profileData = await parseResponse(profileResponse, ProfileResponseSchema);
 
       // Verify initial profile
-      expect(profileData.user.id).toBe(userId);
-      expect(profileData.user.email).toBe(testEmail);
-      expect(profileData.user.username).toBe(testUsername);
-      expect(profileData.user.emailVerified).toBe(false);
-      expect(profileData.user.createdAt).toBeDefined();
-      expect(profileData.user.updatedAt).toBeDefined();
+      expect(profileData.profile.id).toBe(userId);
+      expect(profileData.profile.email).toBe(testEmail);
+      expect(profileData.profile.username).toBe(testUsername);
+      expect(profileData.profile.emailVerified).toBe(false);
+      expect(profileData.profile.createdAt).toBeDefined();
+      expect(profileData.profile.updatedAt).toBeDefined();
 
       testLogger.info('✅ Automatic profile creation verified');
 
@@ -149,13 +149,13 @@ describe('User Lifecycle Integration', () => {
       };
 
       const updateResponse = await httpClient.put<{ profile: Profile }>('/auth/profile', profileUpdateRequest);
-      const updateData = await parseResponse(updateResponse, GetProfileResponseSchema);
+      const updateData = await parseResponse(updateResponse, ProfileResponseSchema);
 
       // Verify profile updates
-      expect(updateData.user.fullName).toBe('Integration Test User');
-      expect(updateData.user.bio).toBe('This is a test user created during integration testing.');
-      expect(updateData.user.username).toBe(testUsername); // Should remain unchanged
-      expect(updateData.user.email).toBe(testEmail); // Should remain unchanged
+      expect(updateData.profile.fullName).toBe('Integration Test User');
+      expect(updateData.profile.bio).toBe('This is a test user created during integration testing.');
+      expect(updateData.profile.username).toBe(testUsername); // Should remain unchanged
+      expect(updateData.profile.email).toBe(testEmail); // Should remain unchanged
 
       testLogger.info('✅ Profile update successful');
 
@@ -212,7 +212,7 @@ describe('User Lifecycle Integration', () => {
       const authenticatedProfileResponse = await httpClient.get('/auth/profile');
       expect(authenticatedProfileResponse.status).toBe(200);
 
-      const authenticatedProfile = authenticatedProfileResponse.data.user;
+      const authenticatedProfile = authenticatedProfileResponse.data.profile;
       expect(authenticatedProfile.id).toBe(userId);
       expect(authenticatedProfile.fullName).toBe('Integration Test User');
 
