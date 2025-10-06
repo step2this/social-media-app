@@ -222,8 +222,7 @@ describe('AuthService', () => {
     const validRegisterRequest: RegisterRequest = {
       email: 'test@example.com',
       password: 'TestPassword123!',
-      username: 'testuser',
-      fullName: 'Test User'
+      username: 'testuser'
     };
 
     it('should successfully register a new user', async () => {
@@ -234,7 +233,6 @@ describe('AuthService', () => {
           id: 'test-uuid-123',
           email: 'test@example.com',
           username: 'testuser',
-          fullName: 'Test User',
           emailVerified: false,
           createdAt: '2024-01-01T00:00:00.000Z'
         },
@@ -292,8 +290,7 @@ describe('AuthService', () => {
     const registerRequest: RegisterRequest = {
       email: 'test@example.com',
       password: 'TestPassword123!',
-      username: 'testuser',
-      fullName: 'Test User'
+      username: 'testuser'
     };
 
     beforeEach(async () => {
@@ -419,8 +416,7 @@ describe('AuthService', () => {
       await authService.register({
         email: 'test@example.com',
         password: 'TestPassword123!',
-        username: 'testuser',
-        fullName: 'Test User'
+        username: 'testuser'
       });
     });
 
@@ -429,7 +425,6 @@ describe('AuthService', () => {
 
       expect(result?.email).toBe('test@example.com');
       expect(result?.username).toBe('testuser');
-      expect(result?.fullName).toBe('Test User');
     });
 
     it('should return null for non-existent user ID', async () => {

@@ -9,13 +9,16 @@ import type {
   User,
   AuthTokens,
   RefreshTokenRequest,
-  RefreshTokenResponse,
-  UpdateUserRequest
+  RefreshTokenResponse
+} from '@social-media-app/shared';
+import type {
+  UpdateProfileWithHandleRequest
 } from '@social-media-app/shared';
 import { randomBytes, pbkdf2Sync, timingSafeEqual } from 'crypto';
 
 /**
  * User entity for DynamoDB single-table design
+ * Combines User identity fields with Profile presentation fields for storage
  */
 export interface UserEntity {
   PK: string; // USER#<userId>
@@ -24,20 +27,28 @@ export interface UserEntity {
   GSI1SK: string; // USER#<userId>
   GSI2PK: string; // USERNAME#<username>
   GSI2SK: string; // USER#<userId>
+  // User identity fields
   id: string;
   email: string;
   username: string;
+  emailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+  // Auth-specific fields
   passwordHash: string;
   salt: string;
-  fullName?: string;
-  bio?: string;
-  avatarUrl?: string;
-  emailVerified: boolean;
   emailVerificationToken?: string;
   passwordResetToken?: string;
   passwordResetExpiry?: string;
-  createdAt: string;
-  updatedAt: string;
+  // Profile presentation fields
+  fullName?: string;
+  bio?: string;
+  handle?: string;
+  profilePictureUrl?: string;
+  profilePictureThumbnailUrl?: string;
+  postsCount: number;
+  followersCount: number;
+  followingCount: number;
   entityType: 'USER';
 }
 
@@ -102,16 +113,26 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
       GSI1SK: `USER#${userId}`,
       GSI2PK: `USERNAME#${request.username}`,
       GSI2SK: `USER#${userId}`,
+      // User identity fields
       id: userId,
       email: request.email,
       username: request.username,
-      passwordHash,
-      salt,
-      fullName: request.fullName,
       emailVerified: false,
-      emailVerificationToken,
       createdAt: now,
       updatedAt: now,
+      // Auth-specific fields
+      passwordHash,
+      salt,
+      emailVerificationToken,
+      // Profile fields with defaults
+      fullName: undefined,
+      bio: undefined,
+      handle: undefined,
+      profilePictureUrl: undefined,
+      profilePictureThumbnailUrl: undefined,
+      postsCount: 0,
+      followersCount: 0,
+      followingCount: 0,
       entityType: 'USER'
     };
 
@@ -192,7 +213,6 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
         id: userId,
         email: request.email,
         username: request.username,
-        fullName: request.fullName,
         emailVerified: false,
         createdAt: now
       },
@@ -268,9 +288,6 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
       id: user.id,
       email: user.email,
       username: user.username,
-      fullName: user.fullName,
-      bio: user.bio,
-      avatarUrl: user.avatarUrl,
       emailVerified: user.emailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
@@ -283,7 +300,12 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
     };
 
     return {
-      user: userProfile,
+      user: {
+        id: userProfile.id,
+        email: userProfile.email,
+        username: userProfile.username,
+        emailVerified: userProfile.emailVerified
+      },
       tokens
     };
   };
@@ -395,9 +417,6 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
       id: user.id,
       email: user.email,
       username: user.username,
-      fullName: user.fullName,
-      bio: user.bio,
-      avatarUrl: user.avatarUrl,
       emailVerified: user.emailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
@@ -438,7 +457,7 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
   /**
    * Update user profile (minimal implementation for TDD)
    */
-  const updateUser = async (userId: string, updates: UpdateUserRequest): Promise<User> => {
+  const updateUser = async (userId: string, updates: UpdateProfileWithHandleRequest): Promise<User> => {
     // Get current user first
     const currentUser = await getUserById(userId);
     if (!currentUser) {
@@ -464,10 +483,10 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
       expressionAttributeValues[':bio'] = updates.bio;
     }
 
-    if (updates.avatarUrl !== undefined) {
-      updateExpression.push('#avatarUrl = :avatarUrl');
-      expressionAttributeNames['#avatarUrl'] = 'avatarUrl';
-      expressionAttributeValues[':avatarUrl'] = updates.avatarUrl;
+    if (updates.handle !== undefined) {
+      updateExpression.push('#handle = :handle');
+      expressionAttributeNames['#handle'] = 'handle';
+      expressionAttributeValues[':handle'] = updates.handle;
     }
 
     // Always update the updatedAt field
@@ -486,10 +505,9 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
       ExpressionAttributeValues: expressionAttributeValues
     }));
 
-    // Return updated user
+    // Return updated user with only User identity fields
     return {
       ...currentUser,
-      ...updates,
       updatedAt: now
     };
   };

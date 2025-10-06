@@ -80,7 +80,7 @@ export function mapEntityToProfile(entity: UserProfileEntity) {
     emailVerified: entity.emailVerified,
     createdAt: entity.createdAt,
     updatedAt: entity.updatedAt,
-    handle: entity.handle,
+    handle: entity.handle || entity.username,
     fullName: entity.fullName,
     bio: entity.bio,
     profilePictureUrl: entity.profilePictureUrl,
@@ -98,7 +98,7 @@ export function mapEntityToPublicProfile(entity: UserProfileEntity) {
   return {
     id: entity.id,
     username: entity.username,
-    handle: entity.handle,
+    handle: entity.handle || entity.username,
     fullName: entity.fullName,
     bio: entity.bio,
     profilePictureUrl: entity.profilePictureUrl,

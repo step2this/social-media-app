@@ -50,6 +50,19 @@ export class DatabaseStack extends Stack {
             },
             projectionType: dynamodb.ProjectionType.ALL
         });
+        // Add Global Secondary Index for handle lookups
+        this.table.addGlobalSecondaryIndex({
+            indexName: 'GSI3',
+            partitionKey: {
+                name: 'GSI3PK',
+                type: dynamodb.AttributeType.STRING
+            },
+            sortKey: {
+                name: 'GSI3SK',
+                type: dynamodb.AttributeType.STRING
+            },
+            projectionType: dynamodb.ProjectionType.ALL
+        });
         this.tableName = this.table.tableName;
         // Output the table name
         new CfnOutput(this, 'TableName', {

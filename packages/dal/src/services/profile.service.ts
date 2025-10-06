@@ -14,36 +14,11 @@ import type {
   GetPresignedUrlResponse
 } from '@social-media-app/shared';
 import { randomUUID } from 'crypto';
-
-/**
- * Profile entity extension for DynamoDB
- */
-export interface ProfileEntity {
-  PK: string; // USER#<userId>
-  SK: string; // PROFILE
-  GSI1PK: string; // EMAIL#<email>
-  GSI1SK: string; // USER#<userId>
-  GSI2PK: string; // USERNAME#<username>
-  GSI2SK: string; // USER#<userId>
-  GSI3PK?: string; // HANDLE#<handle>
-  GSI3SK?: string; // USER#<userId>
-  id: string;
-  email: string;
-  username: string;
-  handle?: string;
-  fullName?: string;
-  bio?: string;
-  avatarUrl?: string;
-  profilePictureUrl?: string;
-  profilePictureThumbnailUrl?: string;
-  postsCount: number;
-  followersCount: number;
-  followingCount: number;
-  emailVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
-  entityType: 'USER';
-}
+import {
+  type UserProfileEntity,
+  mapEntityToProfile,
+  mapEntityToPublicProfile
+} from '../entities/user-profile.entity.js';
 
 /**
  * Profile service for managing user profiles
@@ -100,7 +75,7 @@ export class ProfileService {
       }
     }));
 
-    return result.Item ? this.mapEntityToProfile(result.Item as ProfileEntity) : null;
+    return result.Item ? mapEntityToProfile(result.Item as UserProfileEntity) : null;
   }
 
   /**
@@ -121,8 +96,8 @@ export class ProfileService {
       return null;
     }
 
-    const entity = result.Items[0] as ProfileEntity;
-    return this.mapEntityToPublicProfile(entity);
+    const entity = result.Items[0] as UserProfileEntity;
+    return mapEntityToPublicProfile(entity);
   }
 
   /**
@@ -145,7 +120,7 @@ export class ProfileService {
 
     // If excludeUserId is provided, check if the handle belongs to that user
     if (excludeUserId) {
-      const entity = result.Items[0] as ProfileEntity;
+      const entity = result.Items[0] as UserProfileEntity;
       return entity.id === excludeUserId;
     }
 
@@ -207,7 +182,7 @@ export class ProfileService {
       ReturnValues: 'ALL_NEW'
     }));
 
-    return this.mapEntityToProfile(result.Attributes as ProfileEntity);
+    return mapEntityToProfile(result.Attributes as UserProfileEntity);
   }
 
   /**
@@ -236,7 +211,7 @@ export class ProfileService {
       ReturnValues: 'ALL_NEW'
     }));
 
-    return this.mapEntityToProfile(result.Attributes as ProfileEntity);
+    return mapEntityToProfile(result.Attributes as UserProfileEntity);
   }
 
   /**
@@ -352,45 +327,4 @@ export class ProfileService {
     throw new Error('S3 bucket not configured');
   }
 
-  /**
-   * Map entity to Profile
-   */
-  private mapEntityToProfile(entity: ProfileEntity): Profile {
-    return {
-      id: entity.id,
-      email: entity.email,
-      username: entity.username,
-      handle: entity.handle || entity.username,
-      fullName: entity.fullName,
-      bio: entity.bio,
-      avatarUrl: entity.avatarUrl,
-      profilePictureUrl: entity.profilePictureUrl,
-      profilePictureThumbnailUrl: entity.profilePictureThumbnailUrl,
-      postsCount: entity.postsCount || 0,
-      followersCount: entity.followersCount || 0,
-      followingCount: entity.followingCount || 0,
-      emailVerified: entity.emailVerified,
-      createdAt: entity.createdAt,
-      updatedAt: entity.updatedAt
-    };
-  }
-
-  /**
-   * Map entity to PublicProfile
-   */
-  private mapEntityToPublicProfile(entity: ProfileEntity): PublicProfile {
-    return {
-      id: entity.id,
-      username: entity.username,
-      handle: entity.handle || entity.username,
-      fullName: entity.fullName,
-      bio: entity.bio,
-      profilePictureUrl: entity.profilePictureUrl,
-      profilePictureThumbnailUrl: entity.profilePictureThumbnailUrl,
-      postsCount: entity.postsCount || 0,
-      followersCount: entity.followersCount || 0,
-      followingCount: entity.followingCount || 0,
-      createdAt: entity.createdAt
-    };
-  }
 }
