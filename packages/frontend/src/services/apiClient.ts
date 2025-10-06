@@ -11,7 +11,7 @@ import {
   LogoutResponseSchema,
   UpdateUserRequestSchema,
   UpdateUserResponseSchema,
-  GetProfileResponseSchema,
+  ProfileResponseSchema,
   type HelloRequest,
   type HelloResponse,
   type RegisterRequest,
@@ -24,7 +24,7 @@ import {
   type LogoutResponse,
   type UpdateUserRequest,
   type UpdateUserResponse,
-  type GetProfileResponse
+  type ProfileResponse
 } from '@social-media-app/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -484,12 +484,12 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
         }
       },
 
-      getProfile: async (): Promise<GetProfileResponse> => {
-        const response = await sendRequest<GetProfileResponse>('/auth/profile', {
+      getProfile: async (): Promise<ProfileResponse> => {
+        const response = await sendRequest<ProfileResponse>('/auth/profile', {
           method: 'GET'
         }, defaultRetryConfig, true); // Include auth header
 
-        return GetProfileResponseSchema.parse(response);
+        return ProfileResponseSchema.parse(response);
       },
 
       updateProfile: async (request: UpdateUserRequest): Promise<UpdateUserResponse> => {

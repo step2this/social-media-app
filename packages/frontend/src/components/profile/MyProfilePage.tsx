@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import type { User } from '@social-media-app/shared';
+import type { Profile } from '@social-media-app/shared';
 import { useAuth } from '../../hooks/useAuth';
-import { apiClient } from '../../services/apiClient';
+import { profileService } from '../../services/profileService';
 import { ProfileDisplay } from './ProfileDisplay';
 import { LoadingSpinner, ErrorState } from '../common/LoadingStates';
 import { ProfileLayout } from '../layout/AppLayout';
@@ -12,7 +12,7 @@ import './MyProfilePage.css';
  */
 export const MyProfilePage: React.FC = () => {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const [profile, setProfile] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -45,8 +45,8 @@ export const MyProfilePage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await apiClient.auth.getProfile();
-      setProfile(response.user);
+      const profile = await profileService.getCurrentProfile();
+      setProfile(profile);
     } catch (err) {
       setError('Failed to load profile');
     } finally {
@@ -94,12 +94,12 @@ export const MyProfilePage: React.FC = () => {
 
     try {
       setEditError(null);
-      const response = await apiClient.auth.updateProfile({
+      const updatedProfile = await profileService.updateProfile({
         fullName: editFormData.fullName,
         bio: editFormData.bio
       });
 
-      setProfile(response.user);
+      setProfile(updatedProfile);
       setEditModalOpen(false);
     } catch (err) {
       setEditError('Failed to update profile. Please try again.');

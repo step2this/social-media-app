@@ -83,8 +83,7 @@ describe('Register Handler', () => {
     const registerRequest = {
       email: 'test@example.com',
       password: 'TestPassword123!',
-      username: 'testuser',
-      fullName: 'Test User'
+      username: 'testuser'
     };
 
     const expectedResponse = {
@@ -92,7 +91,6 @@ describe('Register Handler', () => {
         id: 'user-123',
         email: 'test@example.com',
         username: 'testuser',
-        fullName: 'Test User',
         emailVerified: false,
         createdAt: '2024-01-01T00:00:00.000Z'
       },
@@ -129,8 +127,7 @@ describe('Register Handler', () => {
     const registerRequest = {
       email: 'existing@example.com',
       password: 'TestPassword123!',
-      username: 'testuser',
-      fullName: 'Test User'
+      username: 'testuser'
     };
 
     mockAuthService.register.mockRejectedValue(new Error('Email already registered'));
@@ -147,8 +144,7 @@ describe('Register Handler', () => {
     const registerRequest = {
       email: 'test@example.com',
       password: 'TestPassword123!',
-      username: 'existing',
-      fullName: 'Test User'
+      username: 'existing'
     };
 
     mockAuthService.register.mockRejectedValue(new Error('Username already taken'));
@@ -165,8 +161,7 @@ describe('Register Handler', () => {
     const registerRequest = {
       email: 'test@example.com',
       password: 'TestPassword123!',
-      username: 'testuser',
-      fullName: 'Test User'
+      username: 'testuser'
     };
 
     mockAuthService.register.mockRejectedValue(new Error('Database connection failed'));

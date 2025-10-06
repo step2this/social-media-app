@@ -40,7 +40,6 @@ describe('Auth Store', () => {
       id: 'user-1',
       email: 'test@example.com',
       username: 'testuser',
-      fullName: 'Test User',
       emailVerified: true,
       createdAt: '2024-01-01T00:00:00.000Z',
       updatedAt: '2024-01-01T00:00:00.000Z'
@@ -113,7 +112,6 @@ describe('Auth Store', () => {
 
     const updatedUser: User = {
       ...initialUser,
-      fullName: 'Updated Name',
       updatedAt: '2024-01-01T00:30:00.000Z'
     };
 
@@ -121,7 +119,7 @@ describe('Auth Store', () => {
 
     const store = useAuthStore.getState();
     expect(store.user).toEqual(updatedUser);
-    expect(store.user?.fullName).toBe('Updated Name');
+    expect(store.user?.username).toBe('testuser');
   });
 
   it('should update tokens', () => {

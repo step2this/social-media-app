@@ -2,8 +2,6 @@ import { http, HttpResponse } from 'msw';
 import {
   GetPresignedUrlRequestSchema,
   GetPresignedUrlResponseSchema,
-  PublicProfileResponseSchema,
-  UpdateProfileResponseSchema,
   type GetPresignedUrlRequest,
   type GetPresignedUrlResponse,
   type PublicProfile,
@@ -20,6 +18,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const mockProfiles: Record<string, PublicProfile> = {
   'testuser': {
     id: 'user-123',
+    username: 'testuser',
     handle: 'testuser',
     fullName: 'Test User',
     bio: 'Just testing the app!',
@@ -35,7 +34,7 @@ const mockProfiles: Record<string, PublicProfile> = {
 const mockCurrentProfile: Profile = {
   ...mockProfiles.testuser,
   email: 'test@example.com',
-  isPublic: true,
+  emailVerified: true,
   updatedAt: '2024-01-01T00:00:00.000Z'
 };
 
@@ -52,14 +51,15 @@ export const profileHandlers = [
       const body = await request.json() as GetPresignedUrlRequest;
 
       // Validate request
-      const validatedRequest = GetPresignedUrlRequestSchema.parse(body);
+      GetPresignedUrlRequestSchema.parse(body);
 
       // Generate mock presigned URLs
       const fileId = `file-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       const response: GetPresignedUrlResponse = {
         uploadUrl: `https://mock-s3-upload.example.com/upload/${fileId}`,
         publicUrl: `https://mock-cdn.example.com/media/${fileId}`,
-        thumbnailUrl: `https://mock-cdn.example.com/media/${fileId}-thumb`
+        thumbnailUrl: `https://mock-cdn.example.com/media/${fileId}-thumb`,
+        expiresIn: 3600 // 1 hour
       };
 
       // Validate response
@@ -174,7 +174,8 @@ export const profileHandlers = [
       }
 
       const response: UpdateProfileResponse = {
-        profile: updatedProfile
+        profile: updatedProfile,
+        message: 'Profile updated successfully'
       };
 
       console.log('✅ MSW: Profile updated');
@@ -221,7 +222,7 @@ export const profileHandlers = [
   }),
 
   // Mock S3 upload endpoint (for the actual file upload)
-  http.put('https://mock-s3-upload.example.com/upload/*', async ({ request, params }) => {
+  http.put('https://mock-s3-upload.example.com/upload/*', async () => {
     try {
       console.log('🗄️ MSW: Mock S3 upload...');
 

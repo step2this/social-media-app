@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import type { PublicProfile, User } from '@social-media-app/shared';
+import type { PublicProfile, Profile } from '@social-media-app/shared';
 import { StoryRing } from '../layout/AppLayout';
 import './ProfileDisplay.css';
 
 interface ProfileDisplayProps {
-  profile: PublicProfile | User;
+  profile: PublicProfile | Profile;
   showEditButton?: boolean;
   onEditClick?: () => void;
   onAvatarClick?: () => void;
@@ -88,7 +88,7 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({
       data-testid="profile-display"
       data-border-style="automotive-ascii"
       role="region"
-      aria-label={`User profile for @${'handle' in profile ? profile.handle : profile.username}`}
+      aria-label={`User profile for @${profile.handle || profile.username}`}
     >
       {/* Avatar Section (200x200px as per wireframe) */}
       <div
@@ -141,7 +141,7 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({
               data-testid="profile-username"
               data-contrast-compliant="true"
             >
-              @{'handle' in profile ? profile.handle : profile.username}
+              @{profile.handle || profile.username}
             </h2>
             {profile.fullName && (
               <p

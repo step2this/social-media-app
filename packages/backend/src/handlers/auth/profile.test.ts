@@ -90,8 +90,7 @@ describe('Profile Handler', () => {
         id: 'user-123',
         email: 'test@example.com',
         username: 'testuser',
-        fullName: 'Test User',
-        bio: 'Test bio',
+        emailVerified: false,
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z'
       };
@@ -162,8 +161,7 @@ describe('Profile Handler', () => {
       id: 'user-123',
       email: 'test@example.com',
       username: 'testuser',
-      fullName: 'Test User',
-      bio: 'Old bio',
+      emailVerified: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z'
     };
@@ -178,7 +176,7 @@ describe('Profile Handler', () => {
       const updateData = {
         fullName: 'Updated Name',
         bio: 'Updated bio',
-        avatarUrl: 'https://example.com/avatar.jpg'
+        handle: 'updatedhandle'
       };
 
       const updatedUser = {
@@ -203,9 +201,9 @@ describe('Profile Handler', () => {
 
     it('should validate profile update data', async () => {
       const invalidData = {
-        fullName: '', // Invalid - empty string
-        bio: 'a'.repeat(501), // Invalid - too long
-        avatarUrl: 'not-a-url' // Invalid - not a valid URL
+        fullName: '', // Invalid - empty string (required when provided)
+        bio: 'a'.repeat(501), // Invalid - too long (max 500 characters)
+        handle: 'ab' // Invalid - too short (minimum 3 characters)
       };
 
       const event = createMockEvent('PUT', invalidData, {
@@ -220,30 +218,22 @@ describe('Profile Handler', () => {
       expect(response.details).toBeDefined();
     });
 
-    it('should handle profile picture update', async () => {
+    it('should handle basic profile update with required fields', async () => {
       const updateData = {
         fullName: 'Test User',
-        bio: 'Test bio'
-      };
-
-      const profilePictureData = {
-        profilePictureUrl: 'https://s3.example.com/profile.jpg',
-        profilePictureThumbnailUrl: 'https://s3.example.com/profile-thumb.jpg'
+        bio: 'Test bio',
+        handle: 'testhandle'
       };
 
       const updatedUser = {
         ...mockUser,
         ...updateData,
-        ...profilePictureData,
         updatedAt: '2024-01-01T12:00:00Z'
       };
 
       mockAuthService.updateUser.mockResolvedValue(updatedUser);
 
-      const event = createMockEvent('PUT', {
-        ...updateData,
-        ...profilePictureData
-      }, {
+      const event = createMockEvent('PUT', updateData, {
         Authorization: 'Bearer valid-token'
       });
 
@@ -251,14 +241,15 @@ describe('Profile Handler', () => {
 
       expect(result.statusCode).toBe(200);
       const response = JSON.parse(result.body!);
-      expect(response.user.profilePictureUrl).toBe(profilePictureData.profilePictureUrl);
-      expect(response.user.profilePictureThumbnailUrl).toBe(profilePictureData.profilePictureThumbnailUrl);
+      expect(response.user.fullName).toBe(updateData.fullName);
+      expect(response.user.bio).toBe(updateData.bio);
+      expect(response.user.handle).toBe(updateData.handle);
     });
 
     it('should return 401 when no token provided for update', async () => {
       mockExtractTokenFromHeader.mockReturnValue(null);
 
-      const event = createMockEvent('PUT', { fullName: 'New Name' });
+      const event = createMockEvent('PUT', { fullName: 'New Name', bio: 'New bio', handle: 'newhandle' });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(401);
@@ -270,7 +261,7 @@ describe('Profile Handler', () => {
     it('should return 404 when updating non-existent user', async () => {
       mockAuthService.getUserById.mockResolvedValue(null);
 
-      const event = createMockEvent('PUT', { fullName: 'New Name' }, {
+      const event = createMockEvent('PUT', { fullName: 'New Name', bio: 'New bio', handle: 'newhandle' }, {
         Authorization: 'Bearer valid-token'
       });
 

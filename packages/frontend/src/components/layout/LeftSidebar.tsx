@@ -79,21 +79,13 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         <div className="user-mini-profile">
           <Link to="/profile" className="mini-profile-link">
             <div className="mini-profile-avatar">
-              {user.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt="Your profile"
-                  className="mini-avatar-image"
-                />
-              ) : (
-                <div className="mini-avatar-placeholder">
-                  <span className="mini-avatar-icon">👤</span>
-                </div>
-              )}
+              <div className="mini-avatar-placeholder">
+                <span className="mini-avatar-icon">👤</span>
+              </div>
             </div>
             <div className="mini-profile-info">
               <div className="mini-profile-name">
-                {user.fullName || `@${user.username}`}
+                @{user.username}
               </div>
               <div className="mini-profile-handle">
                 @{user.username}

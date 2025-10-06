@@ -2,11 +2,7 @@ import { http, HttpResponse } from 'msw';
 import {
   CreatePostRequestSchema,
   CreatePostResponseSchema,
-  PostResponseSchema,
   UpdatePostRequestSchema,
-  DeletePostResponseSchema,
-  PostsListResponseSchema,
-  PostGridResponseSchema,
   type CreatePostRequest,
   type CreatePostResponse,
   type Post,
@@ -132,7 +128,7 @@ export const postHandlers = [
 
       const paginatedPosts = userPosts.slice(startIndex, startIndex + limit);
       const hasNext = startIndex + limit < userPosts.length;
-      const nextCursor = hasNext ? paginatedPosts[paginatedPosts.length - 1]?.id : null;
+      const nextCursor = hasNext ? paginatedPosts[paginatedPosts.length - 1]?.id : undefined;
 
       // Convert to grid items
       const gridPosts = paginatedPosts.map(post => ({
@@ -147,7 +143,7 @@ export const postHandlers = [
       const response: PostGridResponse = {
         posts: gridPosts,
         totalCount: userPosts.length,
-        hasNext,
+        hasMore: hasNext,
         nextCursor
       };
 
@@ -180,11 +176,11 @@ export const postHandlers = [
 
       const paginatedPosts = mockPosts.slice(startIndex, startIndex + limit);
       const hasNext = startIndex + limit < mockPosts.length;
-      const nextCursor = hasNext ? paginatedPosts[paginatedPosts.length - 1]?.id : null;
+      const nextCursor = hasNext ? paginatedPosts[paginatedPosts.length - 1]?.id : undefined;
 
       const response: PostsListResponse = {
         posts: paginatedPosts,
-        hasNext,
+        hasMore: hasNext,
         nextCursor
       };
 
@@ -284,7 +280,8 @@ export const postHandlers = [
       mockPosts.splice(postIndex, 1);
 
       const response: DeletePostResponse = {
-        success: true
+        success: true,
+        message: 'Post deleted successfully'
       };
 
       return HttpResponse.json(response);

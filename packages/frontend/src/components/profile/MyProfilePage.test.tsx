@@ -4,23 +4,16 @@ import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { MyProfilePage } from './MyProfilePage';
 import { useAuth } from '../../hooks/useAuth';
-import { apiClient } from '../../services/apiClient';
+import { profileService } from '../../services/profileService';
 
 // Mock dependencies
 vi.mock('../../hooks/useAuth');
-vi.mock('../../services/apiClient', async (importOriginal) => {
-  const actual = await importOriginal() as any;
-  return {
-    ...actual,
-    apiClient: {
-      ...actual.apiClient,
-      auth: {
-        getProfile: vi.fn(),
-        updateProfile: vi.fn()
-      }
-    }
-  };
-});
+vi.mock('../../services/profileService', () => ({
+  profileService: {
+    getCurrentProfile: vi.fn(),
+    updateProfile: vi.fn()
+  }
+}));
 
 const mockUseAuth = useAuth as MockedFunction<typeof useAuth>;
 
@@ -33,21 +26,34 @@ const renderWithRouter = (component: React.ReactElement) => {
 };
 
 describe('MyProfilePage Component', () => {
-  const mockUser = {
+  const mockProfile = {
     id: 'user-123',
     email: 'test@example.com',
     username: 'testuser',
-    fullName: 'Test User',
-    bio: 'Test bio',
     emailVerified: true,
     createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
+    updatedAt: '2024-01-01T00:00:00Z',
+    handle: 'testuser',
+    fullName: 'Test User',
+    bio: 'Test bio',
+    profilePictureUrl: undefined,
+    profilePictureThumbnailUrl: undefined,
+    postsCount: 5,
+    followersCount: 10,
+    followingCount: 3
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseAuth.mockReturnValue({
-      user: mockUser,
+      user: {
+        id: mockProfile.id,
+        email: mockProfile.email,
+        username: mockProfile.username,
+        emailVerified: mockProfile.emailVerified,
+        createdAt: mockProfile.createdAt,
+        updatedAt: mockProfile.updatedAt
+      },
       tokens: { accessToken: 'test-token', refreshToken: 'test-refresh', expiresIn: 3600 },
       isAuthenticated: true,
       isLoading: false,
@@ -65,9 +71,7 @@ describe('MyProfilePage Component', () => {
 
   describe('Component Rendering', () => {
     it('should render user profile information', async () => {
-      vi.mocked(apiClient.auth.getProfile).mockResolvedValue({
-        user: mockUser
-      });
+      vi.mocked(profileService.getCurrentProfile).mockResolvedValue(mockProfile);
 
       renderWithRouter(<MyProfilePage />);
 
@@ -82,13 +86,11 @@ describe('MyProfilePage Component', () => {
       expect(screen.getByText('@testuser')).toBeInTheDocument();
       expect(screen.getByText('Test User')).toBeInTheDocument();
       expect(screen.getByText('Test bio')).toBeInTheDocument();
-      expect(apiClient.auth.getProfile).toHaveBeenCalled();
+      expect(profileService.getCurrentProfile).toHaveBeenCalled();
     });
 
     it('should show edit button for own profile', async () => {
-      vi.mocked(apiClient.auth.getProfile).mockResolvedValue({
-        user: mockUser
-      });
+      vi.mocked(profileService.getCurrentProfile).mockResolvedValue(mockProfile);
 
       renderWithRouter(<MyProfilePage />);
 
@@ -98,10 +100,8 @@ describe('MyProfilePage Component', () => {
     });
 
     it('should display default avatar when no profile picture', async () => {
-      const userWithoutAvatar = { ...mockUser, profilePictureUrl: undefined };
-      vi.mocked(apiClient.auth.getProfile).mockResolvedValue({
-        user: userWithoutAvatar
-      });
+      const profileWithoutAvatar = { ...mockProfile, profilePictureUrl: undefined };
+      vi.mocked(profileService.getCurrentProfile).mockResolvedValue(profileWithoutAvatar);
 
       renderWithRouter(<MyProfilePage />);
 
@@ -114,14 +114,12 @@ describe('MyProfilePage Component', () => {
     });
 
     it('should display profile picture when available', async () => {
-      const userWithAvatar = {
-        ...mockUser,
+      const profileWithAvatar = {
+        ...mockProfile,
         profilePictureUrl: 'https://example.com/avatar.jpg',
         profilePictureThumbnailUrl: 'https://example.com/avatar-thumb.jpg'
       };
-      vi.mocked(apiClient.auth.getProfile).mockResolvedValue({
-        user: userWithAvatar
-      });
+      vi.mocked(profileService.getCurrentProfile).mockResolvedValue(profileWithAvatar);
 
       renderWithRouter(<MyProfilePage />);
 
@@ -135,9 +133,7 @@ describe('MyProfilePage Component', () => {
 
   describe('Edit Profile Modal', () => {
     it('should open edit modal when edit button is clicked', async () => {
-      vi.mocked(apiClient.auth.getProfile).mockResolvedValue({
-        user: mockUser
-      });
+      vi.mocked(profileService.getCurrentProfile).mockResolvedValue(mockProfile);
 
       const user = userEvent.setup();
       renderWithRouter(<MyProfilePage />);
@@ -158,9 +154,7 @@ describe('MyProfilePage Component', () => {
     });
 
     it('should pre-fill form with current user data', async () => {
-      vi.mocked(apiClient.auth.getProfile).mockResolvedValue({
-        user: mockUser
-      });
+      vi.mocked(profileService.getCurrentProfile).mockResolvedValue(mockProfile);
 
       const user = userEvent.setup();
       renderWithRouter(<MyProfilePage />);
@@ -181,9 +175,7 @@ describe('MyProfilePage Component', () => {
     });
 
     it('should close modal when cancel is clicked', async () => {
-      vi.mocked(apiClient.auth.getProfile).mockResolvedValue({
-        user: mockUser
-      });
+      vi.mocked(profileService.getCurrentProfile).mockResolvedValue(mockProfile);
 
       const user = userEvent.setup();
       renderWithRouter(<MyProfilePage />);
@@ -207,17 +199,11 @@ describe('MyProfilePage Component', () => {
     });
 
     it('should update profile when form is submitted', async () => {
-      const updatedUser = {
-        ...mockUser,
+      vi.mocked(profileService.getCurrentProfile).mockResolvedValue(mockProfile);
+      vi.mocked(profileService.updateProfile).mockResolvedValue({
+        ...mockProfile,
         fullName: 'Updated Name',
         bio: 'Updated bio'
-      };
-
-      vi.mocked(apiClient.auth.getProfile).mockResolvedValue({
-        user: mockUser
-      });
-      vi.mocked(apiClient.auth.updateProfile).mockResolvedValue({
-        user: updatedUser
       });
 
       const user = userEvent.setup();
@@ -248,7 +234,7 @@ describe('MyProfilePage Component', () => {
 
       // Should call API and close modal
       await waitFor(() => {
-        expect(apiClient.auth.updateProfile).toHaveBeenCalledWith({
+        expect(profileService.updateProfile).toHaveBeenCalledWith({
           fullName: 'Updated Name',
           bio: 'Updated bio'
         });
@@ -263,9 +249,7 @@ describe('MyProfilePage Component', () => {
     });
 
     it('should show validation errors for invalid form data', async () => {
-      vi.mocked(apiClient.auth.getProfile).mockResolvedValue({
-        user: mockUser
-      });
+      vi.mocked(profileService.getCurrentProfile).mockResolvedValue(mockProfile);
 
       const user = userEvent.setup();
       renderWithRouter(<MyProfilePage />);
@@ -294,14 +278,12 @@ describe('MyProfilePage Component', () => {
 
       // Should not close modal or call API
       expect(screen.getByRole('dialog')).toBeInTheDocument();
-      expect(apiClient.auth.updateProfile).not.toHaveBeenCalled();
+      expect(profileService.updateProfile).not.toHaveBeenCalled();
     });
 
     it('should handle API errors gracefully', async () => {
-      vi.mocked(apiClient.auth.getProfile).mockResolvedValue({
-        user: mockUser
-      });
-      vi.mocked(apiClient.auth.updateProfile).mockRejectedValue(
+      vi.mocked(profileService.getCurrentProfile).mockResolvedValue(mockProfile);
+      vi.mocked(profileService.updateProfile).mockRejectedValue(
         new Error('Server error')
       );
 
@@ -333,7 +315,7 @@ describe('MyProfilePage Component', () => {
 
   describe('Loading and Error States', () => {
     it('should show loading state while fetching profile', () => {
-      vi.mocked(apiClient.auth.getProfile).mockImplementation(
+      vi.mocked(profileService.getCurrentProfile).mockImplementation(
         () => new Promise(() => {}) // Never resolves
       );
 
@@ -343,7 +325,7 @@ describe('MyProfilePage Component', () => {
     });
 
     it('should show error state when profile fetch fails', async () => {
-      vi.mocked(apiClient.auth.getProfile).mockRejectedValue(
+      vi.mocked(profileService.getCurrentProfile).mockRejectedValue(
         new Error('Failed to load profile')
       );
 
@@ -356,9 +338,9 @@ describe('MyProfilePage Component', () => {
     });
 
     it('should retry loading profile when retry button is clicked', async () => {
-      vi.mocked(apiClient.auth.getProfile)
+      vi.mocked(profileService.getCurrentProfile)
         .mockRejectedValueOnce(new Error('Failed to load profile'))
-        .mockResolvedValueOnce({ user: mockUser });
+        .mockResolvedValueOnce(mockProfile);
 
       const user = userEvent.setup();
       renderWithRouter(<MyProfilePage />);
@@ -375,7 +357,7 @@ describe('MyProfilePage Component', () => {
         expect(screen.getByText('@testuser')).toBeInTheDocument();
       });
 
-      expect(apiClient.auth.getProfile).toHaveBeenCalledTimes(2);
+      expect(profileService.getCurrentProfile).toHaveBeenCalledTimes(2);
     });
   });
 

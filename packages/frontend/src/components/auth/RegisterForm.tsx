@@ -15,8 +15,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const [formData, setFormData] = useState<RegisterRequest>({
     email: '',
     password: '',
-    username: '',
-    fullName: ''
+    username: ''
   });
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -26,7 +25,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     console.log('📝 RegisterForm: Form submitted with data:', {
       email: formData.email,
       username: formData.username,
-      fullName: formData.fullName,
       hasPassword: !!formData.password,
       passwordLength: formData.password.length
     });
@@ -39,12 +37,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
     console.log('🚀 RegisterForm: Calling register function...');
     try {
-      // Convert empty fullName to undefined for proper optional field validation
-      const requestData: RegisterRequest = {
-        ...formData,
-        fullName: formData.fullName?.trim() || undefined
-      };
-      const result = await register(requestData);
+      const result = await register(formData);
       console.log('✅ RegisterForm: Registration successful!', result);
       onSuccess?.();
     } catch (error) {
@@ -89,21 +82,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       </p>
 
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="fullName" className="tama-form-label tama-form-label--automotive">
-            Full Name (Optional)
-          </label>
-          <input
-            id="fullName"
-            name="fullName"
-            type="text"
-            value={formData.fullName}
-            onChange={handleChange}
-            className="tama-input tama-input--automotive"
-            placeholder="Enter your full name"
-            autoComplete="name"
-          />
-        </div>
 
         <div className="form-group">
           <label htmlFor="username" className="tama-form-label tama-form-label--automotive">

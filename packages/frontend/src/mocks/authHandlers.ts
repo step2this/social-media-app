@@ -7,7 +7,7 @@ import {
   LogoutRequestSchema,
   RefreshTokenRequestSchema,
   RefreshTokenResponseSchema,
-  GetProfileResponseSchema,
+  ProfileResponseSchema,
   UpdateUserRequestSchema,
   UpdateUserResponseSchema,
   type RegisterRequest,
@@ -16,7 +16,7 @@ import {
   type LoginResponse,
   type RefreshTokenRequest,
   type RefreshTokenResponse,
-  type GetProfileResponse,
+  type ProfileResponse,
   type UpdateUserRequest,
   type UpdateUserResponse,
   type AuthTokens
@@ -30,7 +30,6 @@ const mockUsers = new Map<string, {
   id: string;
   email: string;
   username: string;
-  fullName?: string;
   passwordHash: string; // In real app, this would be properly hashed
   emailVerified: boolean;
   createdAt: string;
@@ -77,7 +76,7 @@ const generateMockTokens = (userId: string): AuthTokens => {
 };
 
 // Helper function to get user from token
-const getUserFromToken = (authHeader: string | null): { id: string; email: string; username: string; fullName?: string } | null => {
+const getUserFromToken = (authHeader: string | null): { id: string; email: string; username: string } | null => {
   if (!authHeader?.startsWith('Bearer ')) {
     return null;
   }
@@ -97,8 +96,7 @@ const getUserFromToken = (authHeader: string | null): { id: string; email: strin
   return {
     id: user.id,
     email: user.email,
-    username: user.username,
-    fullName: user.fullName
+    username: user.username
   };
 };
 
@@ -140,7 +138,6 @@ export const authHandlers = [
       id: user.id,
       email: user.email,
       username: user.username,
-      fullName: user.fullName,
       createdAt: user.createdAt
     }));
 
@@ -194,7 +191,6 @@ export const authHandlers = [
         id: userId,
         email: validatedRequest.email,
         username: validatedRequest.username,
-        fullName: validatedRequest.fullName,
         passwordHash: `hashed_${validatedRequest.password}`, // Mock password hash
         emailVerified: true, // Auto-verify for development
         createdAt: now,
@@ -212,7 +208,6 @@ export const authHandlers = [
           id: newUser.id,
           email: newUser.email,
           username: newUser.username,
-          fullName: newUser.fullName,
           emailVerified: newUser.emailVerified,
           createdAt: newUser.createdAt
         },
@@ -275,11 +270,8 @@ export const authHandlers = [
           id: user.id,
           email: user.email,
           username: user.username,
-          fullName: user.fullName,
-          emailVerified: user.emailVerified,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt
-        } as any,
+          emailVerified: user.emailVerified
+        },
         tokens
       };
 
@@ -433,19 +425,26 @@ export const authHandlers = [
         );
       }
 
-      const response: GetProfileResponse = {
-        user: {
+      const response: ProfileResponse = {
+        profile: {
           id: fullUser.id,
           email: fullUser.email,
           username: fullUser.username,
-          fullName: fullUser.fullName,
           emailVerified: fullUser.emailVerified,
           createdAt: fullUser.createdAt,
-          updatedAt: fullUser.updatedAt
+          updatedAt: fullUser.updatedAt,
+          handle: fullUser.username, // Use username as handle for mock
+          fullName: `Mock User ${fullUser.username}`,
+          bio: `This is a mock bio for ${fullUser.username}`,
+          profilePictureUrl: undefined,
+          profilePictureThumbnailUrl: undefined,
+          postsCount: 0,
+          followersCount: 0,
+          followingCount: 0
         }
       };
 
-      const validatedResponse = GetProfileResponseSchema.parse(response);
+      const validatedResponse = ProfileResponseSchema.parse(response);
       await addDelay(100, 300);
 
       return HttpResponse.json(validatedResponse, {
@@ -509,7 +508,6 @@ export const authHandlers = [
       const updatedUser = {
         ...fullUser,
         username: (validatedRequest as any).username || fullUser.username,
-        fullName: validatedRequest.fullName !== undefined ? validatedRequest.fullName : fullUser.fullName,
         updatedAt: new Date().toISOString()
       };
 
@@ -520,7 +518,6 @@ export const authHandlers = [
           id: updatedUser.id,
           email: updatedUser.email,
           username: updatedUser.username,
-          fullName: updatedUser.fullName,
           emailVerified: updatedUser.emailVerified,
           createdAt: updatedUser.createdAt,
           updatedAt: updatedUser.updatedAt

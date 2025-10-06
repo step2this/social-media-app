@@ -157,11 +157,21 @@ export const useAuth = () => {
     try {
       const response = await apiClient.auth.getProfile();
 
+      // Extract user data from profile response
+      const userData = {
+        id: response.profile.id,
+        email: response.profile.email,
+        username: response.profile.username,
+        emailVerified: response.profile.emailVerified,
+        createdAt: response.profile.createdAt,
+        updatedAt: response.profile.updatedAt
+      };
+
       // Update user data in store
-      setUser(response.user);
+      setUser(userData);
       setLoading(false);
 
-      return response.user;
+      return userData;
     } catch (err) {
       const errorMessage = err instanceof ApiError || err instanceof NetworkError
         ? err.message

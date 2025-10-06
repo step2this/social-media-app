@@ -1,5 +1,5 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { UpdateUserRequestSchema, z } from '@social-media-app/shared';
+import { UpdateProfileWithHandleRequestSchema, z } from '@social-media-app/shared';
 import { createDefaultAuthService } from '@social-media-app/dal';
 import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
 import { createJWTProvider, getJWTConfigFromEnv, extractTokenFromHeader, verifyAccessToken } from '../../utils/jwt.js';
@@ -77,7 +77,7 @@ export const updateHandler = async (
 
     // Parse and validate request body
     const body = event.body ? JSON.parse(event.body) : {};
-    const validatedRequest = UpdateUserRequestSchema.parse(body);
+    const validatedRequest = UpdateProfileWithHandleRequestSchema.parse(body);
 
     // Initialize dependencies
     const dynamoClient = createDynamoDBClient();
