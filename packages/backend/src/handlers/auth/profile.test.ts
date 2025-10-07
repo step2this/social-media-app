@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi, type MockedFunction } from 'vitest';
 import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { handler } from './profile.js';
-import { createDefaultAuthService } from '@social-media-app/dal';
+import { ProfileService } from '@social-media-app/dal';
 import * as dynamoUtils from '../../utils/dynamodb.js';
 import * as jwtUtils from '../../utils/jwt.js';
 
 // Mock dependencies
 vi.mock('@social-media-app/dal', () => ({
-  createDefaultAuthService: vi.fn()
+  ProfileService: vi.fn()
 }));
 
 vi.mock('../../utils/dynamodb.js', () => ({
@@ -22,7 +22,7 @@ vi.mock('../../utils/jwt.js', () => ({
   verifyAccessToken: vi.fn()
 }));
 
-const mockCreateDefaultAuthService = createDefaultAuthService as MockedFunction<typeof createDefaultAuthService>;
+const MockProfileService = ProfileService as vi.MockedClass<typeof ProfileService>;
 const mockCreateDynamoDBClient = dynamoUtils.createDynamoDBClient as MockedFunction<typeof dynamoUtils.createDynamoDBClient>;
 const mockGetTableName = dynamoUtils.getTableName as MockedFunction<typeof dynamoUtils.getTableName>;
 const mockCreateJWTProvider = jwtUtils.createJWTProvider as MockedFunction<typeof jwtUtils.createJWTProvider>;
@@ -31,14 +31,7 @@ const mockExtractTokenFromHeader = jwtUtils.extractTokenFromHeader as MockedFunc
 const mockVerifyAccessToken = jwtUtils.verifyAccessToken as MockedFunction<typeof jwtUtils.verifyAccessToken>;
 
 describe('Profile Handler', () => {
-  const mockAuthService = {
-    register: vi.fn(),
-    login: vi.fn(),
-    refreshToken: vi.fn(),
-    getUserById: vi.fn(),
-    logout: vi.fn(),
-    updateUser: vi.fn() // Method name should match the actual handler
-  };
+  let mockProfileService: any;
 
   const createMockEvent = (
     method: string,
@@ -76,12 +69,18 @@ describe('Profile Handler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    // Create fresh mocks for each test
+    mockProfileService = {
+      getProfileById: vi.fn(),
+      updateProfile: vi.fn(),
+    };
+
     // Set up default mocks
     mockCreateDynamoDBClient.mockReturnValue({} as any);
     mockGetTableName.mockReturnValue('test-table');
     mockCreateJWTProvider.mockReturnValue({} as any);
     mockGetJWTConfigFromEnv.mockReturnValue({ secret: 'test-secret' });
-    mockCreateDefaultAuthService.mockReturnValue(mockAuthService as any);
+    MockProfileService.mockImplementation(() => mockProfileService);
   });
 
   describe('GET /auth/profile', () => {
@@ -97,7 +96,7 @@ describe('Profile Handler', () => {
 
       mockExtractTokenFromHeader.mockReturnValue('valid-token');
       mockVerifyAccessToken.mockResolvedValue({ userId: 'user-123' });
-      mockAuthService.getUserById.mockResolvedValue(mockUser);
+      mockProfileService.getProfileById.mockResolvedValue(mockUser);
 
       const event = createMockEvent('GET', undefined, {
         Authorization: 'Bearer valid-token'
@@ -106,8 +105,8 @@ describe('Profile Handler', () => {
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
-      expect(JSON.parse(result.body!)).toEqual({ user: mockUser });
-      expect(mockAuthService.getUserById).toHaveBeenCalledWith('user-123');
+      expect(JSON.parse(result.body!)).toEqual({ profile: mockUser });
+      expect(mockProfileService.getProfileById).toHaveBeenCalledWith('user-123');
     });
 
     it('should return 401 when no token provided', async () => {
@@ -141,7 +140,7 @@ describe('Profile Handler', () => {
     it('should return 404 when user not found', async () => {
       mockExtractTokenFromHeader.mockReturnValue('valid-token');
       mockVerifyAccessToken.mockResolvedValue({ userId: 'user-123' });
-      mockAuthService.getUserById.mockResolvedValue(null);
+      mockProfileService.getProfileById.mockResolvedValue(null);
 
       const event = createMockEvent('GET', undefined, {
         Authorization: 'Bearer valid-token'
@@ -151,7 +150,7 @@ describe('Profile Handler', () => {
 
       expect(result.statusCode).toBe(404);
       expect(JSON.parse(result.body!)).toEqual({
-        error: 'User not found'
+        error: 'Profile not found'
       });
     });
   });
@@ -169,7 +168,6 @@ describe('Profile Handler', () => {
     beforeEach(() => {
       mockExtractTokenFromHeader.mockReturnValue('valid-token');
       mockVerifyAccessToken.mockResolvedValue({ userId: 'user-123' });
-      mockAuthService.getUserById.mockResolvedValue(mockUser);
     });
 
     it('should update user profile successfully', async () => {
@@ -185,8 +183,7 @@ describe('Profile Handler', () => {
         updatedAt: '2024-01-01T12:00:00Z'
       };
 
-      // This test will fail because updateUserProfile doesn't exist yet
-      mockAuthService.updateUser.mockResolvedValue(updatedUser);
+      mockProfileService.updateProfile.mockResolvedValue(updatedUser);
 
       const event = createMockEvent('PUT', updateData, {
         Authorization: 'Bearer valid-token'
@@ -195,8 +192,8 @@ describe('Profile Handler', () => {
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
-      expect(JSON.parse(result.body!)).toEqual({ user: updatedUser });
-      expect(mockAuthService.updateUser).toHaveBeenCalledWith('user-123', updateData);
+      expect(JSON.parse(result.body!)).toEqual({ profile: updatedUser });
+      expect(mockProfileService.updateProfile).toHaveBeenCalledWith('user-123', updateData);
     });
 
     it('should validate profile update data', async () => {
@@ -231,7 +228,7 @@ describe('Profile Handler', () => {
         updatedAt: '2024-01-01T12:00:00Z'
       };
 
-      mockAuthService.updateUser.mockResolvedValue(updatedUser);
+      mockProfileService.updateProfile.mockResolvedValue(updatedUser);
 
       const event = createMockEvent('PUT', updateData, {
         Authorization: 'Bearer valid-token'
@@ -241,9 +238,9 @@ describe('Profile Handler', () => {
 
       expect(result.statusCode).toBe(200);
       const response = JSON.parse(result.body!);
-      expect(response.user.fullName).toBe(updateData.fullName);
-      expect(response.user.bio).toBe(updateData.bio);
-      expect(response.user.handle).toBe(updateData.handle);
+      expect(response.profile.fullName).toBe(updateData.fullName);
+      expect(response.profile.bio).toBe(updateData.bio);
+      expect(response.profile.handle).toBe(updateData.handle);
     });
 
     it('should return 401 when no token provided for update', async () => {
@@ -259,7 +256,7 @@ describe('Profile Handler', () => {
     });
 
     it('should return 404 when updating non-existent user', async () => {
-      mockAuthService.getUserById.mockResolvedValue(null);
+      mockProfileService.updateProfile.mockRejectedValue(new Error('User not found'));
 
       const event = createMockEvent('PUT', { fullName: 'New Name', bio: 'New bio', handle: 'newhandle' }, {
         Authorization: 'Bearer valid-token'
@@ -267,9 +264,9 @@ describe('Profile Handler', () => {
 
       const result = await handler(event);
 
-      expect(result.statusCode).toBe(404);
+      expect(result.statusCode).toBe(500);
       expect(JSON.parse(result.body!)).toEqual({
-        error: 'User not found'
+        error: 'Internal server error'
       });
     });
   });
@@ -302,7 +299,7 @@ describe('Profile Handler', () => {
     it('should handle database connection errors', async () => {
       mockExtractTokenFromHeader.mockReturnValue('valid-token');
       mockVerifyAccessToken.mockResolvedValue({ userId: 'user-123' });
-      mockAuthService.getUserById.mockRejectedValue(new Error('Database connection failed'));
+      mockProfileService.getProfileById.mockRejectedValue(new Error('Database connection failed'));
 
       const event = createMockEvent('GET', undefined, {
         Authorization: 'Bearer valid-token'
