@@ -11,7 +11,64 @@
   font-family: var(--font-ui);
 }
 
-/* Wireframe Three-Column Layout */
+/* Instagram-style Layout with Fixed Sidebar */
+.app-layout--instagram {
+  background: var(--tama-gray-50);
+  position: relative;
+}
+
+/* Fixed positioned left sidebar that sticks to screen edge */
+.app-layout__left-sidebar--fixed {
+  position: fixed;
+  top: 0; /* Start from very top since no top nav */
+  left: 0;
+  height: 100vh; /* Full viewport height */
+  z-index: var(--z-sidebar, 100);
+  transition: all var(--transition-normal);
+}
+
+/* Main content with dynamic left margin based on sidebar state */
+.app-layout__main--instagram {
+  background: var(--tama-white);
+  border: var(--pixel-border-thin);
+  border-radius: var(--radius-lg);
+  padding: var(--space-compact-8);
+  min-height: 100vh; /* Full viewport height since no top nav */
+  overflow: hidden;
+  transition: margin-left var(--transition-normal);
+}
+
+/* Margin adjustments based on sidebar state */
+.app-layout__main--expanded {
+  margin-left: 280px; /* Full sidebar width */
+}
+
+.app-layout__main--collapsed {
+  margin-left: 80px; /* Collapsed sidebar width */
+}
+
+.app-layout__main--hidden {
+  margin-left: 0; /* Mobile - no sidebar */
+}
+
+.app-layout__container--instagram {
+  max-width: none;
+  padding: 0;
+  margin: 0 auto;
+}
+
+/* Right panel positioning for Instagram layout */
+.app-layout--instagram .right-panel {
+  position: fixed;
+  top: 0; /* Start from very top since no top nav */
+  right: 0;
+  height: 100vh; /* Full viewport height */
+  width: 320px;
+  z-index: var(--z-panel, 90);
+  overflow-y: auto;
+}
+
+/* Legacy Wireframe Layout (keeping for compatibility) */
 .app-layout--wireframe {
   background: var(--tama-gray-50);
 }
@@ -63,7 +120,6 @@
 /* Legacy Layout for Existing Components */
 .app-layout__main {
   flex: 1;
-  padding-top: var(--space-8);
   padding-bottom: var(--space-8);
 }
 
@@ -113,9 +169,9 @@
 
 .feed-layout__sidebar {
   position: sticky;
-  top: calc(80px + var(--space-8));
+  top: var(--space-8);
   height: fit-content;
-  max-height: calc(100vh - 80px - var(--space-16));
+  max-height: calc(100vh - var(--space-16));
   overflow-y: auto;
 }
 
@@ -273,7 +329,6 @@
   }
 
   .app-layout__main {
-    padding-top: var(--space-6);
     padding-bottom: var(--space-6);
   }
 
@@ -667,7 +722,47 @@
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
 }
 
-/* Responsive Design */
+/* Instagram Layout Responsive Design */
+/* Desktop: ≥1400px - Full sidebar + main + right panel */
+@media (min-width: 1400px) {
+  .app-layout--instagram .app-layout__main--instagram {
+    margin-right: 320px; /* Right panel width */
+    max-width: calc(100vw - 600px); /* 280px sidebar + 320px right panel */
+  }
+}
+
+/* Large Tablet: 1024px-1399px - Icon sidebar + main + right panel */
+@media (min-width: 1024px) and (max-width: 1399px) {
+  .app-layout--instagram .app-layout__main--instagram {
+    margin-right: 320px; /* Right panel width */
+    max-width: calc(100vw - 400px); /* 80px sidebar + 320px right panel */
+  }
+}
+
+/* Medium Tablet: 768px-1023px - Icon sidebar + main (no right panel) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .app-layout--instagram .right-panel {
+    display: none; /* Hide right panel on medium tablets */
+  }
+
+  .app-layout--instagram .app-layout__main--instagram {
+    margin-right: 0;
+    max-width: calc(100vw - 80px); /* Only 80px sidebar */
+  }
+}
+
+/* Mobile: ≤767px - Bottom nav only (handled by existing mobile layout) */
+@media (max-width: 767px) {
+  .app-layout__left-sidebar--fixed {
+    display: none; /* Hide fixed sidebar on mobile */
+  }
+
+  .app-layout--instagram .right-panel {
+    display: none; /* Hide right panel on mobile */
+  }
+}
+
+/* Legacy Responsive Design (keeping for compatibility) */
 @media (max-width: 1024px) {
   .app-layout__wireframe-container {
     padding: 0 var(--space-4);

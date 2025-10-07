@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Navigation } from './Navigation';
 import { LeftSidebar } from './LeftSidebar';
 import { RightPanel } from './RightPanel';
 import { MobileNavigation } from './MobileNavigation';
@@ -11,19 +10,30 @@ interface AppLayoutProps {
 }
 
 /**
- * Hook to detect responsive breakpoints for layout changes
+ * Hook to detect responsive breakpoints for Instagram-style layout
+ * - mobile: ≤767px (bottom nav only)
+ * - medium-tablet: 768px-1023px (icon-only sidebar)
+ * - large-tablet: 1024px-1399px (icon-only sidebar with right panel)
+ * - desktop: ≥1400px (full sidebar with right panel)
  */
 const useResponsiveLayout = () => {
-  const [breakpoint, setBreakpoint] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
+  const [breakpoint, setBreakpoint] = useState<'mobile' | 'medium-tablet' | 'large-tablet' | 'desktop'>('desktop');
+  const [sidebarState, setSidebarState] = useState<'hidden' | 'collapsed' | 'expanded'>('expanded');
 
   useEffect(() => {
     const checkBreakpoint = () => {
       if (window.matchMedia('(max-width: 767px)').matches) {
         setBreakpoint('mobile');
+        setSidebarState('hidden');
       } else if (window.matchMedia('(min-width: 768px) and (max-width: 1023px)').matches) {
-        setBreakpoint('tablet');
+        setBreakpoint('medium-tablet');
+        setSidebarState('collapsed');
+      } else if (window.matchMedia('(min-width: 1024px) and (max-width: 1399px)').matches) {
+        setBreakpoint('large-tablet');
+        setSidebarState('collapsed');
       } else {
         setBreakpoint('desktop');
+        setSidebarState('expanded');
       }
     };
 
@@ -32,22 +42,22 @@ const useResponsiveLayout = () => {
     return () => window.removeEventListener('resize', checkBreakpoint);
   }, []);
 
-  return breakpoint;
+  return { breakpoint, sidebarState };
 };
 
 /**
- * Wireframe-compliant three-column layout
- * - Desktop: 280px sidebar + flexible main + 320px right panel
- * - Tablet: 80px collapsed sidebar + flexible main (no right panel)
- * - Mobile: Single column + bottom navigation
+ * Instagram-style layout with fixed positioned sidebar
+ * - Mobile: ≤767px - Single column + bottom navigation
+ * - Medium Tablet: 768-1023px - Icon-only fixed sidebar + main content
+ * - Large Tablet: 1024-1399px - Icon-only fixed sidebar + main content + right panel
+ * - Desktop: ≥1400px - Full fixed sidebar + main content + right panel
  */
 export const AppLayout: React.FC<AppLayoutProps> = ({ children, className = '' }) => {
-  const breakpoint = useResponsiveLayout();
+  const { breakpoint, sidebarState } = useResponsiveLayout();
 
   if (breakpoint === 'mobile') {
     return (
       <div className={`app-layout app-layout--mobile ${className}`}>
-        <Navigation />
         <main className="app-layout__main app-layout__main--mobile">
           <div className="app-layout__container app-layout__container--mobile">
             {children}
@@ -59,17 +69,20 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, className = '' }
   }
 
   return (
-    <div className={`app-layout app-layout--wireframe app-layout--${breakpoint} ${className}`}>
-      <Navigation />
-      <div className="app-layout__wireframe-container">
-        <LeftSidebar collapsed={breakpoint === 'tablet'} />
-        <main className="app-layout__main app-layout__main--wireframe">
-          <div className="app-layout__container app-layout__container--wireframe">
-            {children}
-          </div>
-        </main>
-        {breakpoint === 'desktop' && <RightPanel />}
-      </div>
+    <div className={`app-layout app-layout--instagram app-layout--${breakpoint} ${className}`}>
+      {/* Fixed positioned left sidebar that sticks to screen edge */}
+      <LeftSidebar
+        collapsed={sidebarState === 'collapsed'}
+        className="app-layout__left-sidebar--fixed"
+      />
+      {/* Main content with dynamic left margin based on sidebar state */}
+      <main className={`app-layout__main app-layout__main--instagram app-layout__main--${sidebarState}`}>
+        <div className="app-layout__container app-layout__container--instagram">
+          {children}
+        </div>
+      </main>
+      {/* Right panel only shows on large-tablet and desktop */}
+      {(breakpoint === 'large-tablet' || breakpoint === 'desktop') && <RightPanel />}
     </div>
   );
 };
