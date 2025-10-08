@@ -35,11 +35,6 @@ export const ProfileHoverCard = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Don't render if not visible or no userId
-  if (!isVisible || !userId) {
-    return null;
-  }
-
   const isCurrentUser = user?.id === userId;
 
   // Fetch profile data when visible and userId changes
@@ -76,6 +71,11 @@ export const ProfileHoverCard = ({
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isVisible, onClose]);
+
+  // Don't render if not visible or no userId
+  if (!isVisible || !userId) {
+    return null;
+  }
 
   const handleLinkClick = () => {
     if (onClose) {
