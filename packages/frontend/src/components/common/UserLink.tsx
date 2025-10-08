@@ -169,6 +169,7 @@ export const UserLink = ({
       {!disableHover && (
         <ProfileHoverCard
           userId={userId}
+          userHandle={profileHandle}
           isVisible={showHoverCard}
           position={hoverCardPosition}
           onMouseEnter={handleHoverCardMouseEnter}

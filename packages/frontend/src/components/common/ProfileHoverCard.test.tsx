@@ -8,6 +8,7 @@ import * as profileService from '../../services/profileService.js';
 // Mock the profile service
 vi.mock('../../services/profileService.js', () => ({
   profileService: {
+    getProfileByHandle: vi.fn(),
     getPublicProfile: vi.fn()
   }
 }));
@@ -68,13 +69,13 @@ const mockProfile = {
 describe('ProfileHoverCard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(profileService.profileService.getPublicProfile).mockResolvedValue(mockProfile);
+    vi.mocked(profileService.profileService.getProfileByHandle).mockResolvedValue(mockProfile);
   });
 
   describe('Visibility and Positioning', () => {
     it('should not render when isVisible is false', () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={false} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={false} position={{ x: 0, y: 0 }} />
       );
 
       const card = screen.queryByTestId('profile-hover-card');
@@ -83,7 +84,7 @@ describe('ProfileHoverCard', () => {
 
     it('should render when isVisible is true', async () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 100, y: 100 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 100, y: 100 }} />
       );
 
       await waitFor(() => {
@@ -93,7 +94,7 @@ describe('ProfileHoverCard', () => {
 
     it('should position card at specified coordinates', async () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 150, y: 200 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 150, y: 200 }} />
       );
 
       await waitFor(() => {
@@ -106,6 +107,7 @@ describe('ProfileHoverCard', () => {
       renderWithRouter(
         <ProfileHoverCard
           userId="user-123"
+          userHandle="testuser"
           isVisible={true}
           position={{ x: 100, y: 100 }}
           offset={{ x: 10, y: 20 }}
@@ -122,21 +124,21 @@ describe('ProfileHoverCard', () => {
   describe('Data Loading', () => {
     it('should fetch profile data on mount when visible', async () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
-        expect(profileService.profileService.getPublicProfile).toHaveBeenCalledWith('user-123');
+        expect(profileService.profileService.getProfileByHandle).toHaveBeenCalledWith('testuser');
       });
     });
 
     it('should show loading state while fetching', () => {
-      vi.mocked(profileService.profileService.getPublicProfile).mockImplementation(
+      vi.mocked(profileService.profileService.getProfileByHandle).mockImplementation(
         () => new Promise(() => {}) // Never resolves
       );
 
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       expect(screen.getByTestId('profile-hover-card-loading')).toBeInTheDocument();
@@ -144,7 +146,7 @@ describe('ProfileHoverCard', () => {
 
     it('should display profile data after loading', async () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -155,12 +157,12 @@ describe('ProfileHoverCard', () => {
     });
 
     it('should handle fetch errors gracefully', async () => {
-      vi.mocked(profileService.profileService.getPublicProfile).mockRejectedValue(
+      vi.mocked(profileService.profileService.getProfileByHandle).mockRejectedValue(
         new Error('Failed to load profile')
       );
 
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -172,7 +174,7 @@ describe('ProfileHoverCard', () => {
   describe('Profile Display', () => {
     it('should display avatar', async () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -184,7 +186,7 @@ describe('ProfileHoverCard', () => {
 
     it('should display full name and username', async () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -195,7 +197,7 @@ describe('ProfileHoverCard', () => {
 
     it('should display bio', async () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -205,7 +207,7 @@ describe('ProfileHoverCard', () => {
 
     it('should display stats (posts, followers, following)', async () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -217,13 +219,13 @@ describe('ProfileHoverCard', () => {
 
     it('should truncate long bio', async () => {
       const longBio = 'a'.repeat(200);
-      vi.mocked(profileService.profileService.getPublicProfile).mockResolvedValue({
+      vi.mocked(profileService.profileService.getProfileByHandle).mockResolvedValue({
         ...mockProfile,
         bio: longBio
       });
 
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -237,7 +239,7 @@ describe('ProfileHoverCard', () => {
   describe('Follow Button Integration', () => {
     it('should display FollowButton', async () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -247,7 +249,7 @@ describe('ProfileHoverCard', () => {
 
     it('should pass userId to FollowButton', async () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -257,13 +259,13 @@ describe('ProfileHoverCard', () => {
     });
 
     it('should not show FollowButton for current user', async () => {
-      vi.mocked(profileService.profileService.getPublicProfile).mockResolvedValue({
+      vi.mocked(profileService.profileService.getProfileByHandle).mockResolvedValue({
         ...mockProfile,
         id: 'current-user'
       });
 
       renderWithRouter(
-        <ProfileHoverCard userId="current-user" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="current-user" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -277,7 +279,7 @@ describe('ProfileHoverCard', () => {
   describe('Design System Styling', () => {
     it('should have TamaFriends design system classes', async () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -288,7 +290,7 @@ describe('ProfileHoverCard', () => {
 
     it('should have shadow and border styling', async () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -299,14 +301,14 @@ describe('ProfileHoverCard', () => {
 
     it('should use Material Icon for avatar placeholder', async () => {
       // Mock profile without avatar images to trigger placeholder
-      vi.mocked(profileService.profileService.getPublicProfile).mockResolvedValue({
+      vi.mocked(profileService.profileService.getProfileByHandle).mockResolvedValue({
         ...mockProfile,
         profilePictureUrl: undefined,
         profilePictureThumbnailUrl: undefined
       } as any);
 
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -326,6 +328,7 @@ describe('ProfileHoverCard', () => {
       renderWithRouter(
         <ProfileHoverCard
           userId="user-123"
+          userHandle="testuser"
           isVisible={true}
           position={{ x: 0, y: 0 }}
           onMouseEnter={handleMouseEnter}
@@ -349,6 +352,7 @@ describe('ProfileHoverCard', () => {
       renderWithRouter(
         <ProfileHoverCard
           userId="user-123"
+          userHandle="testuser"
           isVisible={true}
           position={{ x: 0, y: 0 }}
           onMouseLeave={handleMouseLeave}
@@ -370,7 +374,7 @@ describe('ProfileHoverCard', () => {
   describe('Link to Profile', () => {
     it('should link to full profile page', async () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -386,6 +390,7 @@ describe('ProfileHoverCard', () => {
       renderWithRouter(
         <ProfileHoverCard
           userId="user-123"
+          userHandle="testuser"
           isVisible={true}
           position={{ x: 0, y: 0 }}
           onClose={handleClose}
@@ -406,7 +411,7 @@ describe('ProfileHoverCard', () => {
   describe('Accessibility', () => {
     it('should have proper ARIA role', async () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -417,7 +422,7 @@ describe('ProfileHoverCard', () => {
 
     it('should have proper ARIA label', async () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -432,6 +437,7 @@ describe('ProfileHoverCard', () => {
       renderWithRouter(
         <ProfileHoverCard
           userId="user-123"
+          userHandle="testuser"
           isVisible={true}
           position={{ x: 0, y: 0 }}
           onClose={handleClose}
@@ -452,7 +458,7 @@ describe('ProfileHoverCard', () => {
 
   describe('Edge Cases', () => {
     it('should handle missing profile data gracefully', async () => {
-      vi.mocked(profileService.profileService.getPublicProfile).mockResolvedValue({
+      vi.mocked(profileService.profileService.getProfileByHandle).mockResolvedValue({
         id: 'user-123',
         handle: 'testuser',
         username: 'testuser',
@@ -463,7 +469,7 @@ describe('ProfileHoverCard', () => {
       } as any);
 
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {
@@ -474,33 +480,33 @@ describe('ProfileHoverCard', () => {
       expect(screen.queryByTestId('profile-bio')).not.toBeInTheDocument();
     });
 
-    it('should handle empty userId', () => {
+    it('should handle empty userHandle', () => {
       renderWithRouter(
-        <ProfileHoverCard userId="" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       expect(screen.queryByTestId('profile-hover-card')).not.toBeInTheDocument();
     });
 
-    it('should not fetch when userId changes while invisible', () => {
+    it('should not fetch when userHandle changes while invisible', () => {
       const { rerender } = renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={false} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={false} position={{ x: 0, y: 0 }} />
       );
 
       rerender(
         <MemoryRouter>
-          <ProfileHoverCard userId="user-456" isVisible={false} position={{ x: 0, y: 0 }} />
+          <ProfileHoverCard userId="user-456" userHandle="otheruser" isVisible={false} position={{ x: 0, y: 0 }} />
         </MemoryRouter>
       );
 
-      expect(profileService.profileService.getPublicProfile).not.toHaveBeenCalled();
+      expect(profileService.profileService.getProfileByHandle).not.toHaveBeenCalled();
     });
   });
 
   describe('Z-Index and Layering', () => {
     it('should have high z-index class for proper layering', async () => {
       renderWithRouter(
-        <ProfileHoverCard userId="user-123" isVisible={true} position={{ x: 0, y: 0 }} />
+        <ProfileHoverCard userId="user-123" userHandle="testuser" isVisible={true} position={{ x: 0, y: 0 }} />
       );
 
       await waitFor(() => {

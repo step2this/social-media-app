@@ -9,6 +9,7 @@ import './ProfileHoverCard.css';
 
 interface ProfileHoverCardProps {
   userId: string;
+  userHandle: string; // username or handle for fetching profile
   isVisible: boolean;
   position: { x: number; y: number };
   offset?: { x: number; y: number };
@@ -23,6 +24,7 @@ interface ProfileHoverCardProps {
  */
 export const ProfileHoverCard = ({
   userId,
+  userHandle,
   isVisible,
   position,
   offset = { x: 0, y: 0 },
@@ -37,16 +39,16 @@ export const ProfileHoverCard = ({
 
   const isCurrentUser = user?.id === userId;
 
-  // Fetch profile data when visible and userId changes
+  // Fetch profile data when visible and userHandle changes
   useEffect(() => {
-    if (!isVisible || !userId) return;
+    if (!isVisible || !userHandle) return;
 
     const fetchProfile = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        const data = await profileService.getPublicProfile(userId);
+        const data = await profileService.getProfileByHandle(userHandle);
         setProfile(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load profile');
@@ -56,7 +58,7 @@ export const ProfileHoverCard = ({
     };
 
     fetchProfile();
-  }, [isVisible, userId]);
+  }, [isVisible, userHandle]);
 
   // Handle ESC key to close
   useEffect(() => {
@@ -72,8 +74,8 @@ export const ProfileHoverCard = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isVisible, onClose]);
 
-  // Don't render if not visible or no userId
-  if (!isVisible || !userId) {
+  // Don't render if not visible or no userHandle
+  if (!isVisible || !userHandle) {
     return null;
   }
 
