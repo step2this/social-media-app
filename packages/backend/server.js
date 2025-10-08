@@ -256,7 +256,7 @@ async function startServer() {
     console.log(`  POST /profile/upload-url`);
     console.log(`  POST /posts`);
     console.log(`  PUT  /posts/:postId`);
-    console.log(`  GET  /posts/:userId`);
+    console.log(`  GET  /posts/:handle`);
     console.log(`  DELETE /posts/:postId`);
     console.log(`  GET  /post/:postId`);
     console.log(`  POST /likes`);
