@@ -1,0 +1,197 @@
+/* ProfileHoverCard Component Styles */
+
+.profile-hover-card {
+  position: fixed;
+  width: 320px;
+  background: var(--tama-white);
+  border: var(--pixel-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  z-index: var(--z-popover, 1060);
+  font-family: var(--font-ui);
+  pointer-events: auto;
+}
+
+.profile-hover-card--shadow {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), var(--pixel-shadow-lg);
+}
+
+/* Header Section */
+.profile-hover-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.profile-hover-card__avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--tama-electric-blue);
+  flex-shrink: 0;
+}
+
+.profile-hover-card__avatar--placeholder {
+  background: var(--tama-gray-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tama-gray-600);
+}
+
+.profile-hover-card__avatar--placeholder .material-icon {
+  font-size: 32px;
+}
+
+.profile-hover-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-hover-card__name {
+  font-family: var(--font-pixel);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--tama-gray-900);
+  margin-bottom: var(--space-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-hover-card__handle {
+  font-size: var(--text-sm);
+  color: var(--tama-gray-600);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Stats Section */
+.profile-hover-card__stats {
+  display: flex;
+  justify-content: space-around;
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--tama-gray-200);
+  border-bottom: 1px solid var(--tama-gray-200);
+  margin-bottom: var(--space-3);
+}
+
+.profile-hover-card__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.profile-hover-card__stat-value {
+  font-family: var(--font-pixel);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--tama-gray-900);
+}
+
+.profile-hover-card__stat-label {
+  font-size: var(--text-xs);
+  color: var(--tama-gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Bio Section */
+.profile-hover-card__bio {
+  font-size: var(--text-sm);
+  color: var(--tama-gray-700);
+  line-height: 1.5;
+  margin-bottom: var(--space-4);
+  word-wrap: break-word;
+}
+
+/* Actions Section */
+.profile-hover-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.profile-hover-card__view-profile {
+  display: block;
+  text-align: center;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--tama-burgundy);
+  text-decoration: none;
+  border: 1px solid var(--tama-burgundy);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.profile-hover-card__view-profile:hover {
+  background: var(--tama-burgundy);
+  color: var(--tama-white);
+  transform: translateY(-1px);
+  box-shadow: var(--pixel-shadow-sm);
+}
+
+/* Loading State */
+.profile-hover-card__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6) var(--space-4);
+  gap: var(--space-3);
+}
+
+.profile-hover-card__loading .spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--tama-gray-200);
+  border-top-color: var(--tama-burgundy);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.profile-hover-card__loading p {
+  font-size: var(--text-sm);
+  color: var(--tama-gray-600);
+}
+
+/* Error State */
+.profile-hover-card__error {
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.profile-hover-card__error p {
+  font-size: var(--text-sm);
+  color: var(--tama-burgundy);
+}
+
+/* Animation */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .profile-hover-card {
+    width: 280px;
+  }
+
+  .profile-hover-card__avatar {
+    width: 48px;
+    height: 48px;
+  }
+
+  .profile-hover-card__name {
+    font-size: var(--text-base);
+  }
+
+  .profile-hover-card__stat-value {
+    font-size: var(--text-base);
+  }
+}

@@ -23,6 +23,14 @@ export const profileService = {
   },
 
   /**
+   * Get public profile by userId (for now, assumes userId is handle)
+   * TODO: Add dedicated endpoint for fetching by userId
+   */
+  async getPublicProfile(userIdOrHandle: string): Promise<PublicProfile> {
+    return this.getProfileByHandle(userIdOrHandle);
+  },
+
+  /**
    * Get current user's profile
    */
   async getCurrentProfile(): Promise<Profile> {
