@@ -93,12 +93,43 @@ export const UserLink = ({
   const handleMouseEnter = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (disableHover) return;
 
-    // Calculate position for hover card
+    // Calculate smart position for hover card
     const rect = e.currentTarget.getBoundingClientRect();
-    setHoverCardPosition({
-      x: rect.left,
-      y: rect.bottom + 10 // 10px below the link
-    });
+    const cardWidth = 320; // ProfileHoverCard width from CSS
+    const cardHeight = 400; // Approximate card height
+    const spacing = 10; // Gap between trigger and card
+
+    // Get viewport dimensions
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Calculate available space in each direction
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const spaceRight = viewportWidth - rect.left;
+    const spaceLeft = rect.left;
+
+    let x = rect.left;
+    let y = rect.bottom + spacing;
+
+    // Vertical positioning: prefer below, but flip to above if not enough space
+    if (spaceBelow < cardHeight && spaceAbove > spaceBelow) {
+      // Position above
+      y = rect.top - cardHeight - spacing;
+    }
+
+    // Horizontal positioning: keep within viewport
+    if (x + cardWidth > viewportWidth) {
+      // Align to right edge of viewport with padding
+      x = viewportWidth - cardWidth - 20;
+    }
+
+    // Ensure card doesn't go off left edge
+    if (x < 20) {
+      x = 20;
+    }
+
+    setHoverCardPosition({ x, y });
 
     // Show hover card after 500ms delay
     hoverTimeoutRef.current = setTimeout(() => {
