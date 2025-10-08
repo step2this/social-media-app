@@ -65,6 +65,26 @@ export const postService = {
   },
 
   /**
+   * Get posts by user ID
+   */
+  async getUserPostsByUserId(
+    userId: string,
+    limit: number = 24,
+    cursor?: string
+  ): Promise<PostGridResponse> {
+    const params = new URLSearchParams();
+    params.append('limit', limit.toString());
+    if (cursor) {
+      params.append('cursor', cursor);
+    }
+
+    const response = await apiClient.get<PostGridResponse>(
+      `/posts/${userId}?${params.toString()}`
+    );
+    return response;
+  },
+
+  /**
    * Get current user's posts
    */
   async getMyPosts(limit: number = 24, cursor?: string): Promise<PostsListResponse> {
