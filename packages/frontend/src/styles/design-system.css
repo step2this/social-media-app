@@ -100,12 +100,12 @@
   --tama-performance-shadow: 0 4px 16px rgba(90, 172, 250, 0.3), 0 1px 4px rgba(0,0,0,0.1);
 
   /* Typography - TamaFriends Font System */
-  --font-pixel: 'JetBrains Mono', 'Fira Code', 'Monaco', monospace;      /* Headers/display - pixel feel */
-  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;              /* UI elements - clean & readable */
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;            /* Body text - optimized for reading */
+  --font-pixel: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;      /* Headers/display - clean Helvetica */
+  --font-ui: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;         /* UI elements - clean & readable */
+  --font-body: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;       /* Body text - optimized for reading */
   --font-mono: 'JetBrains Mono', 'Courier New', monospace;               /* Code/technical content */
-  --font-display: 'Inter', system-ui, -apple-system, sans-serif;         /* Legacy compatibility */
-  --font-primary: 'Inter', system-ui, -apple-system, sans-serif;         /* Legacy compatibility */
+  --font-display: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;    /* Legacy compatibility */
+  --font-primary: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;    /* Legacy compatibility */
 
   /* Font Weights */
   --weight-light: 300;
@@ -115,16 +115,16 @@
   --weight-bold: 700;
   --weight-black: 900;
 
-  /* Font Sizes - Fluid Typography */
-  --text-xs: clamp(0.75rem, 0.71rem + 0.2vw, 0.875rem);
-  --text-sm: clamp(0.875rem, 0.82rem + 0.28vw, 1rem);
-  --text-base: clamp(1rem, 0.93rem + 0.36vw, 1.125rem);
-  --text-lg: clamp(1.125rem, 1.04rem + 0.43vw, 1.25rem);
-  --text-xl: clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem);
-  --text-2xl: clamp(1.5rem, 1.36rem + 0.71vw, 1.875rem);
-  --text-3xl: clamp(1.875rem, 1.68rem + 0.98vw, 2.25rem);
-  --text-4xl: clamp(2.25rem, 1.96rem + 1.43vw, 3rem);
-  --text-5xl: clamp(3rem, 2.57rem + 2.14vw, 4rem);
+  /* Font Sizes - 14pt Typography System */
+  --text-xs: 0.75rem;     /* 12pt */
+  --text-sm: 0.8125rem;   /* 13pt */
+  --text-base: 0.875rem;  /* 14pt - primary size */
+  --text-lg: 1rem;        /* 16pt */
+  --text-xl: 1.125rem;    /* 18pt */
+  --text-2xl: 1.25rem;    /* 20pt */
+  --text-3xl: 1.5rem;     /* 24pt */
+  --text-4xl: 1.875rem;   /* 30pt */
+  --text-5xl: 2.25rem;    /* 36pt */
 
   /* === OPTIMIZED TYPOGRAPHY (50% smaller headlines for efficiency) === */
   --text-compact-xs: clamp(0.625rem, 0.59rem + 0.18vw, 0.75rem);     /* xs * 0.83 */
@@ -178,14 +178,14 @@
   --radius-full: 50%;     /* Circular elements only */
 
   /* Pixel Border System - Mochi Inspired */
-  --pixel-border: 2px solid var(--tama-black);
-  --pixel-border-thick: 3px solid var(--tama-black);
-  --pixel-border-accent: 2px solid var(--tama-blue);
+  --pixel-border: none;
+  --pixel-border-thick: none;
+  --pixel-border-accent: none;
 
   /* === OPTIMIZED BORDERS (Thinner for cleaner aesthetic) === */
-  --pixel-border-thin: 1px solid var(--tama-black);
-  --pixel-border-thin-accent: 1px solid var(--tama-blue);
-  --pixel-border-thin-gray: 1px solid var(--tama-gray-300);
+  --pixel-border-thin: none;
+  --pixel-border-thin-accent: none;
+  --pixel-border-thin-gray: none;
 
   /* Pixel Shadow Effects - Clean 3D Depth */
   --pixel-shadow-sm: 2px 2px 0px var(--tama-gray-300);
@@ -403,6 +403,143 @@
 
 .tama-input::placeholder {
   color: var(--tama-gray-500);
+}
+
+/* Left Sidebar 3D Shadow Effect */
+.left-sidebar {
+  box-shadow: var(--pixel-shadow-lg);
+}
+
+/* Account Dropdown Styles - Integrated Navigation */
+.nav-link.account-trigger {
+  justify-content: space-between;
+}
+
+.nav-icon--arrow {
+  margin-left: auto;
+  font-size: var(--text-sm);
+}
+
+/* Account Dropdown Styles - Standalone Component */
+.account-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.account-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--tama-white);
+  border: none;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--tama-black);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  gap: var(--space-2);
+}
+
+.account-trigger:hover {
+  background: var(--tama-gray-50);
+  transform: translateY(-1px);
+  box-shadow: var(--pixel-shadow-hover);
+}
+
+.account-label {
+  flex: 1;
+  text-align: left;
+  margin-left: var(--space-2);
+}
+
+.account-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  margin-bottom: var(--space-2);
+  background: var(--tama-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--pixel-shadow-lg);
+  overflow: hidden;
+  z-index: 1000;
+}
+
+.account-menu-header {
+  display: flex;
+  align-items: center;
+  padding: var(--space-4);
+  gap: var(--space-3);
+  background: var(--tama-gray-50);
+  border-bottom: 1px solid var(--tama-gray-200);
+}
+
+.account-avatar .material-icon {
+  color: var(--tama-blue);
+}
+
+.account-info {
+  flex: 1;
+}
+
+.account-name {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--tama-black);
+}
+
+.account-email {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--tama-gray-600);
+}
+
+.account-menu-divider {
+  height: 1px;
+  background: var(--tama-gray-200);
+  margin: 0 var(--space-2);
+}
+
+.account-menu-items {
+  padding: var(--space-2) 0;
+}
+
+.account-menu-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: none;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  color: var(--tama-black);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  gap: var(--space-3);
+}
+
+.account-menu-item:hover {
+  background: var(--tama-gray-100);
+}
+
+.account-menu-item--logout {
+  color: var(--error);
+}
+
+.account-menu-item--logout:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.sidebar-account {
+  margin-top: auto;
+  padding: var(--space-4);
 }
 
 /* Typography classes */

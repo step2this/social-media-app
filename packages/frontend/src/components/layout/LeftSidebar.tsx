@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { MaterialIcon } from '../common/MaterialIcon';
 
 interface LeftSidebarProps {
   collapsed?: boolean;
@@ -18,14 +19,31 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   className = ''
 }) => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, logout, isAuthenticated, isHydrated } = useAuth();
+  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Debug logging for account button visibility
+  useEffect(() => {
+    console.log('LeftSidebar debug:', {
+      user: !!user,
+      isAuthenticated,
+      isHydrated,
+      userEmail: user?.email
+    });
+  }, [user, isAuthenticated, isHydrated]);
+
+  // Debug logging for dropdown state changes
+  useEffect(() => {
+    console.log('Account dropdown state changed to:', isAccountDropdownOpen);
+  }, [isAccountDropdownOpen]);
 
   const navigationItems = [
-    { path: '/', label: 'Home', icon: '🏠' },
-    { path: '/explore', label: 'Explore', icon: '🔍' },
-    { path: '/create', label: 'Create', icon: '➕' },
-    { path: '/messages', label: 'Messages', icon: '💬' },
-    { path: '/profile', label: 'Profile', icon: '👤' },
+    { path: '/', label: 'Home', icon: 'home', activeIcon: 'home' },
+    { path: '/explore', label: 'Explore', icon: 'explore', activeIcon: 'explore' },
+    { path: '/create', label: 'Create', icon: 'add_circle_outline', activeIcon: 'add_circle' },
+    { path: '/messages', label: 'Messages', icon: 'chat_bubble_outline', activeIcon: 'chat_bubble' },
+    { path: '/profile', label: 'Profile', icon: 'person_outline', activeIcon: 'person' },
   ];
 
   const isActive = (path: string) => {
@@ -33,6 +51,22 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
       return location.pathname === '/';
     }
     return location.pathname.startsWith(path);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsAccountDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    setIsAccountDropdownOpen(false);
   };
 
   return (
@@ -49,51 +83,97 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                 }`}
                 aria-current={isActive(item.path) ? 'page' : undefined}
               >
-                <span className="nav-icon" aria-hidden="true">
-                  {item.icon}
-                </span>
+                <MaterialIcon
+                  name={isActive(item.path) ? item.activeIcon : item.icon}
+                  variant={isActive(item.path) ? 'filled' : 'outlined'}
+                  className="nav-icon"
+                />
                 {!collapsed && (
                   <span className="nav-label">{item.label}</span>
                 )}
               </Link>
             </li>
           ))}
+
+          {/* Account Dropdown integrated as navigation item */}
+          {user && (
+            <li className="nav-item" ref={dropdownRef}>
+              <button
+                type="button"
+                className="nav-link nav-link--automotive account-trigger"
+                onClick={() => {
+                  console.log('Account button clicked, current state:', isAccountDropdownOpen);
+                  console.log('Toggling to:', !isAccountDropdownOpen);
+                  setIsAccountDropdownOpen(!isAccountDropdownOpen);
+                  console.log('State after toggle call (may not be updated yet):', isAccountDropdownOpen);
+                }}
+                aria-label="Account menu"
+                aria-expanded={isAccountDropdownOpen}
+              >
+                <MaterialIcon name="account_circle" variant="outlined" className="nav-icon" />
+                {!collapsed && (
+                  <span className="nav-label">Account</span>
+                )}
+                {!collapsed && (
+                  <MaterialIcon
+                    name={isAccountDropdownOpen ? "keyboard_arrow_up" : "keyboard_arrow_down"}
+                    variant="outlined"
+                    className="nav-icon nav-icon--arrow"
+                  />
+                )}
+              </button>
+
+              {isAccountDropdownOpen && !collapsed && (
+                <div className="account-menu">
+                  <div className="account-menu-header">
+                    <div className="account-avatar">
+                      <MaterialIcon name="account_circle" variant="filled" size="lg" />
+                    </div>
+                    <div className="account-info">
+                      <div className="account-name">
+                        {user?.username || 'User'}
+                      </div>
+                      <div className="account-email">
+                        {user?.email || 'user@example.com'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="account-menu-divider" />
+
+                  <div className="account-menu-items">
+                    <button
+                      className="account-menu-item"
+                      onClick={() => setIsAccountDropdownOpen(false)}
+                    >
+                      <MaterialIcon name="settings" variant="outlined" size="sm" />
+                      <span>Settings</span>
+                    </button>
+
+                    <button
+                      className="account-menu-item"
+                      onClick={() => setIsAccountDropdownOpen(false)}
+                    >
+                      <MaterialIcon name="help_outline" variant="outlined" size="sm" />
+                      <span>Help</span>
+                    </button>
+
+                    <div className="account-menu-divider" />
+
+                    <button
+                      className="account-menu-item account-menu-item--logout"
+                      onClick={handleLogout}
+                    >
+                      <MaterialIcon name="logout" variant="outlined" size="sm" />
+                      <span>Sign out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </li>
+          )}
         </ul>
       </nav>
-
-      {/* Create Post Button */}
-      {!collapsed && (
-        <div className="sidebar-actions">
-          <Link
-            to="/create"
-            className="create-post-btn tama-btn tama-btn--automotive tama-btn--racing-red"
-            aria-label="Create new post"
-          >
-            🌟 Create Post
-          </Link>
-        </div>
-      )}
-
-      {/* User Mini Profile */}
-      {!collapsed && user && (
-        <div className="user-mini-profile">
-          <Link to="/profile" className="mini-profile-link">
-            <div className="mini-profile-avatar">
-              <div className="mini-avatar-placeholder">
-                <span className="mini-avatar-icon">👤</span>
-              </div>
-            </div>
-            <div className="mini-profile-info">
-              <div className="mini-profile-name">
-                @{user.username}
-              </div>
-              <div className="mini-profile-handle">
-                @{user.username}
-              </div>
-            </div>
-          </Link>
-        </div>
-      )}
     </aside>
   );
 };

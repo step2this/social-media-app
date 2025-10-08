@@ -13,28 +13,33 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   redirectTo = '/login',
   requireAuth = true
 }) => {
-  const { isAuthenticated, isLoading, checkSession } = useAuth();
+  const { isAuthenticated, isLoading, isHydrated, checkSession, tokens } = useAuth();
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const location = useLocation();
 
   useEffect(() => {
     const verifySession = async () => {
-      if (isAuthenticated) {
-        // If already authenticated, verify the session is still valid
+      // Wait for hydration before checking session
+      if (!isHydrated) {
+        return;
+      }
+
+      // If we have tokens but not authenticated, or if already authenticated, verify session
+      if (tokens?.accessToken || isAuthenticated) {
         try {
           await checkSession();
         } catch {
-          // Session check handled by useAuth hook
+          // Session check failure handled by useAuth hook
         }
       }
       setIsCheckingSession(false);
     };
 
     verifySession();
-  }, [isAuthenticated, checkSession]);
+  }, [isAuthenticated, isHydrated, tokens?.accessToken, checkSession]);
 
-  // Show loading while checking session or auth operations
-  if (isLoading || isCheckingSession) {
+  // Show loading while hydrating, checking session, or auth operations
+  if (!isHydrated || isLoading || isCheckingSession) {
     return (
       <div className="loading-container">
         <div className="loading-spinner" />

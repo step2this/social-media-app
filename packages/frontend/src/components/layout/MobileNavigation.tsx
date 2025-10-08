@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { MaterialIcon } from '../common/MaterialIcon';
 
 interface MobileNavigationProps {
   className?: string;
@@ -16,11 +17,11 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({ className = 
   const location = useLocation();
 
   const navigationTabs = [
-    { path: '/', label: 'Home', icon: '🏠', activeIcon: '🏠' },
-    { path: '/explore', label: 'Explore', icon: '🔍', activeIcon: '🔍' },
-    { path: '/create', label: 'Create', icon: '➕', activeIcon: '✨' },
-    { path: '/messages', label: 'Messages', icon: '💬', activeIcon: '💬' },
-    { path: '/profile', label: 'Profile', icon: '👤', activeIcon: '👤' },
+    { path: '/', label: 'Home', icon: 'home', activeIcon: 'home' },
+    { path: '/explore', label: 'Explore', icon: 'explore', activeIcon: 'explore' },
+    { path: '/create', label: 'Create', icon: 'add_circle_outline', activeIcon: 'add_circle' },
+    { path: '/messages', label: 'Messages', icon: 'chat_bubble_outline', activeIcon: 'chat_bubble' },
+    { path: '/profile', label: 'Profile', icon: 'person_outline', activeIcon: 'person' },
   ];
 
   const isActive = (path: string) => {
@@ -45,9 +46,11 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({ className = 
               aria-current={active ? 'page' : undefined}
               aria-label={`Navigate to ${tab.label}`}
             >
-              <div className="mobile-tab-icon" aria-hidden="true">
-                {active ? tab.activeIcon : tab.icon}
-              </div>
+              <MaterialIcon
+                name={active ? tab.activeIcon : tab.icon}
+                variant={active ? 'filled' : 'outlined'}
+                className="mobile-tab-icon"
+              />
               <div className="mobile-tab-label">
                 {tab.label}
               </div>

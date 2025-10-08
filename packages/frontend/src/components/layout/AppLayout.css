@@ -19,12 +19,18 @@
 
 /* Fixed positioned left sidebar that sticks to screen edge */
 .app-layout__left-sidebar--fixed {
-  position: fixed;
-  top: 0; /* Start from very top since no top nav */
-  left: 0;
-  height: 100vh; /* Full viewport height */
+  position: fixed !important;
+  top: 0 !important; /* Start from very top since no top nav */
+  left: 0 !important;
+  height: 100vh !important; /* Full viewport height */
   z-index: var(--z-sidebar, 100);
   transition: all var(--transition-normal);
+  width: 280px; /* Full width when expanded */
+}
+
+/* Fixed sidebar collapsed state */
+.app-layout__left-sidebar--fixed.left-sidebar--collapsed {
+  width: 80px !important; /* Collapsed width */
 }
 
 /* Main content with dynamic left margin based on sidebar state */
@@ -399,6 +405,7 @@
   background: var(--tama-performance-gradient);
   opacity: 0.1;
   transition: left var(--transition-normal);
+  pointer-events: none;
 }
 
 .nav-link:hover::before,

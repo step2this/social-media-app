@@ -8,6 +8,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  isHydrated: boolean;
 }
 
 export interface AuthActions {
@@ -15,6 +16,7 @@ export interface AuthActions {
   setTokens: (tokens: AuthTokens | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setHydrated: (hydrated: boolean) => void;
   login: (user: User, tokens: AuthTokens) => void;
   logout: () => void;
   clearError: () => void;
@@ -29,6 +31,7 @@ const initialState: AuthState = {
   isAuthenticated: false,
   isLoading: false,
   error: null,
+  isHydrated: false,
 };
 
 export const useAuthStore = create<AuthStore>()(
@@ -49,6 +52,8 @@ export const useAuthStore = create<AuthStore>()(
       setLoading: (isLoading) => set({ isLoading }),
 
       setError: (error) => set({ error }),
+
+      setHydrated: (isHydrated) => set({ isHydrated }),
 
       login: (user, tokens) => set({
         user,
@@ -77,6 +82,10 @@ export const useAuthStore = create<AuthStore>()(
         tokens: state.tokens,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Mark as hydrated when persistence restoration is complete
+        state?.setHydrated(true);
+      },
     }
   )
 );

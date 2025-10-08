@@ -13,6 +13,7 @@ export const useAuth = () => {
     isAuthenticated,
     isLoading,
     error,
+    isHydrated,
     setUser,
     setTokens,
     setLoading,
@@ -245,6 +246,7 @@ export const useAuth = () => {
     isAuthenticated,
     isLoading,
     error,
+    isHydrated,
 
     // Actions
     register,
