@@ -154,8 +154,8 @@ export class HttpClient {
   /**
    * DELETE request
    */
-  async delete<T>(path: string, options?: { headers?: Record<string, string>; timeout?: number }): Promise<HttpResponse<T>> {
-    return this.request<T>('DELETE', path, options);
+  async delete<T>(path: string, body?: any, options?: { headers?: Record<string, string>; timeout?: number }): Promise<HttpResponse<T>> {
+    return this.request<T>('DELETE', path, { ...options, body });
   }
 
   /**

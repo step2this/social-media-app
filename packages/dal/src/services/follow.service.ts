@@ -67,7 +67,7 @@ export class FollowService {
       };
     } catch (error: any) {
       // If conditional check fails, user already following
-      if (error.message?.includes('ConditionalCheckFailedException')) {
+      if (error.name === 'ConditionalCheckFailedException' || error.__type === 'ConditionalCheckFailedException') {
         return {
           success: true,
           followersCount: 0,

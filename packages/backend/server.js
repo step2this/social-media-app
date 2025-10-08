@@ -90,7 +90,7 @@ const port = 3001;
 
 // Middleware to capture raw body before JSON parsing (for Lambda compatibility)
 app.use((req, res, next) => {
-  if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+  if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH' || req.method === 'DELETE') {
     let data = '';
     req.setEncoding('utf8');
     req.on('data', chunk => {

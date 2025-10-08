@@ -4,3 +4,4 @@
 
 export * from './http-client.js';
 export * from './environment.js';
+export * from './helpers.js';

@@ -61,7 +61,7 @@ export class LikeService {
       };
     } catch (error: any) {
       // If conditional check fails, user already liked this post
-      if (error.message?.includes('ConditionalCheckFailedException')) {
+      if (error.name === 'ConditionalCheckFailedException' || error.__type === 'ConditionalCheckFailedException') {
         return {
           success: true,
           likesCount: 0,
