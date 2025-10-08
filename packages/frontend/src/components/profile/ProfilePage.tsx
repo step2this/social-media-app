@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import type { PublicProfile, PostGridItem } from '@social-media-app/shared';
-import { ProfileHeader } from './ProfileHeader';
+import { ProfileDisplay } from './ProfileDisplay';
+import { FollowButton } from '../common/FollowButton';
 import { PostGrid } from './PostGrid';
 import { LoadingSpinner, ErrorState } from '../common/LoadingStates';
 import { ProfileLayout } from '../layout/AppLayout';
 import { profileService } from '../../services/profileService';
 import { postService } from '../../services/postService';
+import { useAuth } from '../../hooks/useAuth';
 
 /**
  * Main profile page component
  */
 export const ProfilePage: React.FC = () => {
   const { handle } = useParams<{ handle: string }>();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [posts, setPosts] = useState<PostGridItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +23,9 @@ export const ProfilePage: React.FC = () => {
   const [postsLoading, setPostsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState<string | undefined>();
+
+  // Check if viewing own profile
+  const isOwnProfile = user && profile && user.id === profile.id;
 
   useEffect(() => {
     if (handle) {
@@ -90,8 +96,28 @@ export const ProfilePage: React.FC = () => {
 
   return (
     <ProfileLayout
-      header={<ProfileHeader profile={profile} />}
+      header={
+        <div className="profile-header">
+          <h1 className="profile-title tama-heading">🐾 Pet Profile</h1>
+          <p className="profile-subtitle">View pet adventures and activities</p>
+        </div>
+      }
     >
+      <div className="tama-card">
+        <ProfileDisplay profile={profile} />
+
+        {/* Follow Button for other users' profiles */}
+        {!isOwnProfile && profile.id && (
+          <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+            <FollowButton
+              userId={profile.id}
+              initialIsFollowing={false}
+              initialFollowersCount={profile.followersCount}
+            />
+          </div>
+        )}
+      </div>
+
       <PostGrid
         posts={posts}
         loading={postsLoading}
