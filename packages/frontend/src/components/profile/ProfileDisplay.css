@@ -115,7 +115,7 @@
 .stat-item {
   text-align: center;
   padding: var(--space-4);
-  background: var(--tama-gray-50);
+  background: var(--tama-champagne-metallic);
   border: var(--pixel-border);
   border-radius: var(--radius-md);
   box-shadow: var(--pixel-shadow-sm);
@@ -124,13 +124,13 @@
 .stat-number {
   font-size: var(--text-2xl);
   font-weight: var(--weight-bold);
-  color: var(--tama-blue);
+  color: var(--tama-racing-red);
   font-family: var(--font-pixel);
 }
 
 .stat-label {
   font-size: var(--text-sm);
-  color: var(--tama-gray-600);
+  color: var(--tama-night-grey);
   font-weight: var(--weight-medium);
   text-transform: uppercase;
   letter-spacing: 0.05em;
