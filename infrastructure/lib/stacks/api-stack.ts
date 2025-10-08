@@ -9,7 +9,9 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { AuthLambdas } from '../constructs/auth-lambdas.js';
 import { ProfileLambdas } from '../constructs/profile-lambdas.js';
+import { LikeLambdas } from '../constructs/like-lambdas.js';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import { DynamoEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,6 +64,44 @@ export class ApiStack extends Stack {
       mediaBucket: props.mediaBucket,
       cloudFrontDomain: props.cloudFrontDomain
     });
+
+    // Create like Lambda functions
+    const likeLambdas = new LikeLambdas(this, 'LikeLambdas', {
+      environment: props.environment,
+      table: props.table
+    });
+
+    // Wire up DynamoDB Stream to Like Counter Lambda
+    likeLambdas.likeCounter.addEventSource(
+      new DynamoEventSource(props.table, {
+        startingPosition: lambda.StartingPosition.LATEST,
+        batchSize: 10,
+        retryAttempts: 3,
+        filters: [
+          // Only process LIKE entities
+          lambda.FilterCriteria.filter({
+            eventName: lambda.FilterRule.isEqual('INSERT'),
+            dynamodb: {
+              NewImage: {
+                entityType: {
+                  S: lambda.FilterRule.isEqual('LIKE')
+                }
+              }
+            }
+          }),
+          lambda.FilterCriteria.filter({
+            eventName: lambda.FilterRule.isEqual('REMOVE'),
+            dynamodb: {
+              OldImage: {
+                entityType: {
+                  S: lambda.FilterRule.isEqual('LIKE')
+                }
+              }
+            }
+          })
+        ]
+      })
+    );
 
     // Create HTTP API Gateway
     const httpApi = new apigateway.HttpApi(this, 'HttpApi', {
@@ -215,6 +255,48 @@ export class ApiStack extends Stack {
       integration: new apigatewayIntegrations.HttpLambdaIntegration(
         'DeletePostIntegration',
         profileLambdas.deletePost
+      )
+    });
+
+    // Get feed/explore posts
+    httpApi.addRoutes({
+      path: '/feed',
+      methods: [apigateway.HttpMethod.GET],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'GetFeedIntegration',
+        profileLambdas.getFeed
+      )
+    });
+
+    // Like endpoints
+
+    // Like a post (postId in request body)
+    httpApi.addRoutes({
+      path: '/likes',
+      methods: [apigateway.HttpMethod.POST],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'LikePostIntegration',
+        likeLambdas.likePost
+      )
+    });
+
+    // Unlike a post (postId in request body)
+    httpApi.addRoutes({
+      path: '/likes',
+      methods: [apigateway.HttpMethod.DELETE],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'UnlikePostIntegration',
+        likeLambdas.unlikePost
+      )
+    });
+
+    // Get like status for a post (postId in path)
+    httpApi.addRoutes({
+      path: '/likes/{postId}',
+      methods: [apigateway.HttpMethod.GET],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'GetLikeStatusIntegration',
+        likeLambdas.getLikeStatus
       )
     });
 
