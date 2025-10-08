@@ -55,9 +55,9 @@ export const useLike = (
     try {
       const response = await likeService.likePost(postId);
 
-      // Update with server response (may differ from optimistic update)
+      // Confirm like status from server, but keep optimistic likesCount
+      // (server returns 0 because stream processor updates count async)
       setIsLiked(response.isLiked);
-      setLikesCount(response.likesCount);
       setIsLoading(false);
     } catch (err) {
       // Rollback on error
@@ -90,9 +90,9 @@ export const useLike = (
     try {
       const response = await likeService.unlikePost(postId);
 
-      // Update with server response (may differ from optimistic update)
+      // Confirm like status from server, but keep optimistic likesCount
+      // (server returns 0 because stream processor updates count async)
       setIsLiked(response.isLiked);
-      setLikesCount(response.likesCount);
       setIsLoading(false);
     } catch (err) {
       // Rollback on error
