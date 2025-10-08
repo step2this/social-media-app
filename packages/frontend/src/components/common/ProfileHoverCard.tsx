@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { profileService } from '../../services/profileService.js';
 import { FollowButton } from './FollowButton.js';
@@ -89,7 +90,7 @@ export const ProfileHoverCard = ({
 
   // Loading state
   if (loading) {
-    return (
+    return createPortal(
       <div
         className="profile-hover-card profile-hover-card--shadow"
         style={cardStyles}
@@ -101,13 +102,14 @@ export const ProfileHoverCard = ({
           <div className="spinner" />
           <p>Loading...</p>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
   // Error state
   if (error) {
-    return (
+    return createPortal(
       <div
         className="profile-hover-card profile-hover-card--shadow"
         style={cardStyles}
@@ -118,7 +120,8 @@ export const ProfileHoverCard = ({
         <div className="profile-hover-card__error">
           <p>{error}</p>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
@@ -132,7 +135,7 @@ export const ProfileHoverCard = ({
     ? `${profile.bio.substring(0, 120)}...`
     : profile.bio;
 
-  return (
+  const cardContent = (
     <div
       className="profile-hover-card profile-hover-card--shadow"
       style={cardStyles}
@@ -209,4 +212,6 @@ export const ProfileHoverCard = ({
       </div>
     </div>
   );
+
+  return createPortal(cardContent, document.body);
 };
