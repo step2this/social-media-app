@@ -1,0 +1,50 @@
+/* UserLink Component Styles */
+
+.user-link {
+  font-family: var(--font-ui);
+  font-size: inherit;
+  font-weight: var(--weight-medium);
+  color: var(--tama-black);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  display: inline;
+  cursor: pointer;
+}
+
+/* Hoverable State */
+.user-link--hoverable:hover {
+  color: var(--tama-burgundy);
+  text-decoration: underline;
+}
+
+/* Compact Mode */
+.user-link--compact {
+  font-size: var(--text-sm);
+}
+
+/* Responsive Behavior */
+.user-link--responsive {
+  word-break: break-word;
+}
+
+@media (max-width: 768px) {
+  .user-link {
+    font-size: var(--text-sm);
+  }
+
+  .user-link--compact {
+    font-size: var(--text-xs);
+  }
+}
+
+/* Focus State for Accessibility */
+.user-link:focus {
+  outline: 2px solid var(--tama-burgundy);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* Active State */
+.user-link:active {
+  color: var(--tama-burgundy-dark, #660019);
+}
