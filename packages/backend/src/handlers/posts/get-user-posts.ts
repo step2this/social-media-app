@@ -11,7 +11,7 @@ import {
   getTableName,
   getS3BucketName,
   getCloudFrontDomain
-} from '../../utils/aws-config.js';
+} from '../../utils/dynamodb.js';
 import { z } from 'zod';
 
 /**

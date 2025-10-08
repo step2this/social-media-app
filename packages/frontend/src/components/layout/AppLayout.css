@@ -378,6 +378,10 @@
   gap: var(--space-compact-2);
 }
 
+.nav-item {
+  position: relative;
+}
+
 .nav-link {
   display: flex;
   align-items: center;

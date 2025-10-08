@@ -12,7 +12,10 @@ vi.mock('@social-media-app/dal', () => ({
 
 vi.mock('../../utils/dynamodb.js', () => ({
   createDynamoDBClient: vi.fn(),
-  getTableName: vi.fn()
+  getTableName: vi.fn(),
+  createS3Client: vi.fn(),
+  getS3BucketName: vi.fn(),
+  getCloudFrontDomain: vi.fn()
 }));
 
 const MockPostService = PostService as vi.MockedClass<typeof PostService>;

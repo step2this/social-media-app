@@ -9,7 +9,6 @@ import {
   getCloudFrontDomain
 } from '../../utils/dynamodb.js';
 import {
-  createJWTProvider,
   getJWTConfigFromEnv,
   extractTokenFromHeader,
   verifyAccessToken
@@ -19,15 +18,14 @@ import { errorResponse, successResponse } from '../../utils/responses.js';
 export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   try {
     // Extract and verify JWT token
-    const token = extractTokenFromHeader(event.headers);
+    const authHeader = event.headers?.authorization || event.headers?.Authorization;
+    const token = extractTokenFromHeader(authHeader);
     if (!token) {
       return errorResponse(401, 'Access token required');
     }
 
     const jwtConfig = getJWTConfigFromEnv();
-    const jwtProvider = createJWTProvider(jwtConfig);
-
-    const payload = await verifyAccessToken(jwtProvider, token);
+    const payload = await verifyAccessToken(token, jwtConfig.secret);
     if (!payload) {
       return errorResponse(401, 'Invalid access token');
     }
