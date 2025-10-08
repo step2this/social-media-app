@@ -35,10 +35,10 @@ export const ProfilePage: React.FC = () => {
 
   // Load posts when profile is loaded
   useEffect(() => {
-    if (profile?.id) {
-      loadPosts(profile.id);
+    if (profile?.handle) {
+      loadPosts(profile.handle);
     }
-  }, [profile?.id]);
+  }, [profile?.handle]);
 
   const loadProfile = async (userHandle: string) => {
     try {
@@ -54,10 +54,10 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
-  const loadPosts = async (userId: string, nextCursor?: string) => {
+  const loadPosts = async (userHandle: string, nextCursor?: string) => {
     try {
       setPostsLoading(true);
-      const postsData = await postService.getUserPostsByUserId(userId, 24, nextCursor);
+      const postsData = await postService.getUserPosts(userHandle, 24, nextCursor);
 
       if (nextCursor) {
         setPosts(prev => [...prev, ...postsData.posts]);
@@ -75,8 +75,8 @@ export const ProfilePage: React.FC = () => {
   };
 
   const handleLoadMore = () => {
-    if (profile?.id && cursor && !postsLoading && hasMore) {
-      loadPosts(profile.id, cursor);
+    if (profile?.handle && cursor && !postsLoading && hasMore) {
+      loadPosts(profile.handle, cursor);
     }
   };
 
@@ -84,8 +84,8 @@ export const ProfilePage: React.FC = () => {
     if (handle) {
       loadProfile(handle);
     }
-    if (profile?.id) {
-      loadPosts(profile.id);
+    if (profile?.handle) {
+      loadPosts(profile.handle);
     }
   };
 

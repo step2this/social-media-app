@@ -186,14 +186,14 @@ app.post('/auth/refresh', (req, res) => callHandler('authRefresh', req, res));
 
 // Profile routes
 app.get('/profile/me', (req, res) => callHandler('profileGetCurrentProfile', req, res));
-app.get('/profile/:userId', (req, res) => callHandler('profileGetProfile', req, res));
-app.put('/profile/:userId', (req, res) => callHandler('profileUpdateProfile', req, res));
+app.get('/profile/:handle', (req, res) => callHandler('profileGetProfile', req, res));
+app.put('/profile', (req, res) => callHandler('profileUpdateProfile', req, res));
 app.post('/profile/upload-url', (req, res) => callHandler('profileGetUploadUrl', req, res));
 
 // Posts routes
 app.post('/posts', (req, res) => callHandler('postsCreatePost', req, res));
 app.put('/posts/:postId', (req, res) => callHandler('postsUpdatePost', req, res));
-app.get('/posts/:userId', (req, res) => callHandler('postsGetUserPosts', req, res));
+app.get('/posts/:handle', (req, res) => callHandler('postsGetUserPosts', req, res));
 app.delete('/posts/:postId', (req, res) => callHandler('postsDeletePost', req, res));
 app.get('/post/:postId', (req, res) => callHandler('postsGetPost', req, res));
 
@@ -251,8 +251,8 @@ async function startServer() {
     console.log(`  POST /auth/logout`);
     console.log(`  POST /auth/refresh`);
     console.log(`  GET  /profile/me`);
-    console.log(`  GET  /profile/:userId`);
-    console.log(`  PUT  /profile/:userId`);
+    console.log(`  GET  /profile/:handle`);
+    console.log(`  PUT  /profile`);
     console.log(`  POST /profile/upload-url`);
     console.log(`  POST /posts`);
     console.log(`  PUT  /posts/:postId`);
