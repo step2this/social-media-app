@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url';
 import { AuthLambdas } from '../constructs/auth-lambdas.js';
 import { ProfileLambdas } from '../constructs/profile-lambdas.js';
 import { LikeLambdas } from '../constructs/like-lambdas.js';
+import { FollowLambdas } from '../constructs/follow-lambdas.js';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import { DynamoEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 
@@ -95,6 +96,44 @@ export class ApiStack extends Stack {
               OldImage: {
                 entityType: {
                   S: lambda.FilterRule.isEqual('LIKE')
+                }
+              }
+            }
+          })
+        ]
+      })
+    );
+
+    // Create follow Lambda functions
+    const followLambdas = new FollowLambdas(this, 'FollowLambdas', {
+      environment: props.environment,
+      table: props.table
+    });
+
+    // Wire up DynamoDB Stream to Follow Counter Lambda
+    followLambdas.followCounter.addEventSource(
+      new DynamoEventSource(props.table, {
+        startingPosition: lambda.StartingPosition.LATEST,
+        batchSize: 10,
+        retryAttempts: 3,
+        filters: [
+          // Only process FOLLOW entities
+          lambda.FilterCriteria.filter({
+            eventName: lambda.FilterRule.isEqual('INSERT'),
+            dynamodb: {
+              NewImage: {
+                entityType: {
+                  S: lambda.FilterRule.isEqual('FOLLOW')
+                }
+              }
+            }
+          }),
+          lambda.FilterCriteria.filter({
+            eventName: lambda.FilterRule.isEqual('REMOVE'),
+            dynamodb: {
+              OldImage: {
+                entityType: {
+                  S: lambda.FilterRule.isEqual('FOLLOW')
                 }
               }
             }
@@ -297,6 +336,38 @@ export class ApiStack extends Stack {
       integration: new apigatewayIntegrations.HttpLambdaIntegration(
         'GetLikeStatusIntegration',
         likeLambdas.getLikeStatus
+      )
+    });
+
+    // Follow endpoints
+
+    // Follow a user (userId in request body)
+    httpApi.addRoutes({
+      path: '/follows',
+      methods: [apigateway.HttpMethod.POST],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'FollowUserIntegration',
+        followLambdas.followUser
+      )
+    });
+
+    // Unfollow a user (userId in request body)
+    httpApi.addRoutes({
+      path: '/follows',
+      methods: [apigateway.HttpMethod.DELETE],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'UnfollowUserIntegration',
+        followLambdas.unfollowUser
+      )
+    });
+
+    // Get follow status for a user (userId in path)
+    httpApi.addRoutes({
+      path: '/follows/{userId}/status',
+      methods: [apigateway.HttpMethod.GET],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'GetFollowStatusIntegration',
+        followLambdas.getFollowStatus
       )
     });
 

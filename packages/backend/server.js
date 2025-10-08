@@ -41,6 +41,9 @@ async function loadHandlers() {
       { name: 'likesLikePost', path: './dist/handlers/likes/like-post.js' },
       { name: 'likesUnlikePost', path: './dist/handlers/likes/unlike-post.js' },
       { name: 'likesGetLikeStatus', path: './dist/handlers/likes/get-like-status.js' },
+      { name: 'followsFollowUser', path: './dist/handlers/follows/follow-user.js' },
+      { name: 'followsUnfollowUser', path: './dist/handlers/follows/unfollow-user.js' },
+      { name: 'followsGetFollowStatus', path: './dist/handlers/follows/get-follow-status.js' },
       { name: 'hello', path: './dist/handlers/hello.js' }
     ];
 
@@ -202,6 +205,11 @@ app.post('/likes', (req, res) => callHandler('likesLikePost', req, res));
 app.delete('/likes', (req, res) => callHandler('likesUnlikePost', req, res));
 app.get('/likes/:postId', (req, res) => callHandler('likesGetLikeStatus', req, res));
 
+// Follow routes
+app.post('/follows', (req, res) => callHandler('followsFollowUser', req, res));
+app.delete('/follows', (req, res) => callHandler('followsUnfollowUser', req, res));
+app.get('/follows/:userId/status', (req, res) => callHandler('followsGetFollowStatus', req, res));
+
 // Hello endpoint
 app.get('/hello', (req, res) => callHandler('hello', req, res));
 
@@ -254,6 +262,9 @@ async function startServer() {
     console.log(`  POST /likes`);
     console.log(`  DELETE /likes`);
     console.log(`  GET  /likes/:postId`);
+    console.log(`  POST /follows`);
+    console.log(`  DELETE /follows`);
+    console.log(`  GET  /follows/:userId/status`);
     console.log(`  GET  /hello`);
     console.log(`  GET  /health`);
   });

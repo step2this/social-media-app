@@ -6,3 +6,4 @@ export * from './profile.schema.js';
 export * from './post.schema.js';
 export * from './feed.schema.js';
 export * from './like.schema.js';
+export * from './follow.schema.js';
