@@ -4,6 +4,7 @@ import { postService } from '../../services/postService';
 import type { Post } from '@social-media-app/shared';
 import { ContentLayout } from '../layout/AppLayout';
 import { MaterialIcon } from '../common/MaterialIcon';
+import { useLike } from '../../hooks/useLike.js';
 import './PostDetailPage.css';
 
 interface PostDetailPageProps {}
@@ -15,6 +16,17 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Initialize like hook with post data
+  const {
+    isLiked,
+    likesCount,
+    isLoading: likeLoading,
+    toggleLike
+  } = useLike(postId || '', {
+    initialIsLiked: post?.isLiked || false,
+    initialLikesCount: post?.likesCount || 0
+  });
 
   useEffect(() => {
     if (!postId) {
@@ -140,12 +152,19 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = () => {
                 <div className="action-buttons">
                   <div className="action-button-wrapper">
                     <button
-                      className="tama-btn tama-btn--icon"
-                      aria-label="Like"
+                      className={`tama-btn tama-btn--icon ${isLiked ? 'tama-btn--liked' : ''}`}
+                      onClick={toggleLike}
+                      disabled={likeLoading}
+                      aria-label={isLiked ? 'Unlike' : 'Like'}
+                      data-testid="like-button"
                     >
-                      <MaterialIcon name="favorite" variant="outlined" size="md" />
+                      <MaterialIcon
+                        name="favorite"
+                        variant={isLiked ? 'filled' : 'outlined'}
+                        size="md"
+                      />
                     </button>
-                    <span className="action-count">{post.likesCount}</span>
+                    <span className="action-count" data-testid="like-count">{likesCount}</span>
                   </div>
 
                   <div className="action-button-wrapper">

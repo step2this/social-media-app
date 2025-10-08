@@ -223,6 +223,20 @@
   color: var(--tama-gray-700);
 }
 
+/* Like Button States */
+.tama-btn--liked {
+  color: var(--tama-racing-red);
+}
+
+.tama-btn--liked:hover {
+  background-color: rgba(220, 20, 60, 0.1);
+}
+
+.tama-btn--icon:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Comments Section */
 .comments-section {
   flex: 1;
