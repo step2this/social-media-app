@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { UserLink } from './UserLink.js';
@@ -133,7 +133,10 @@ describe('UserLink', () => {
       await user.hover(link);
       await user.unhover(link);
 
-      expect(handleHoverEnd).toHaveBeenCalledWith('user-123');
+      // Wait for the 200ms delay before onHoverEnd is called
+      await waitFor(() => {
+        expect(handleHoverEnd).toHaveBeenCalledWith('user-123');
+      });
     });
 
     it('should not trigger hover callbacks when disabled', async () => {

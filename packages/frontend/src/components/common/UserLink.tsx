@@ -40,6 +40,7 @@ export const UserLink = ({
 }: UserLinkProps) => {
   const linkRef = useRef<HTMLAnchorElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showHoverCard, setShowHoverCard] = useState(false);
   const [hoverCardPosition, setHoverCardPosition] = useState({ x: 0, y: 0 });
 
@@ -48,11 +49,14 @@ export const UserLink = ({
     return null;
   }
 
-  // Cleanup timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current);
+      }
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
       }
     };
   }, []);
@@ -81,6 +85,10 @@ export const UserLink = ({
       clearTimeout(hoverTimeoutRef.current);
       hoverTimeoutRef.current = null;
     }
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
 
     if (onClick) {
       const result = onClick(userId);
@@ -92,6 +100,12 @@ export const UserLink = ({
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (disableHover) return;
+
+    // Cancel any pending hide
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
 
     // Calculate smart position for hover card
     const rect = e.currentTarget.getBoundingClientRect();
@@ -143,32 +157,46 @@ export const UserLink = ({
   };
 
   const handleMouseLeave = () => {
-    // Cancel pending hover card
+    // Cancel pending hover card show
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
       hoverTimeoutRef.current = null;
     }
 
-    // Hide hover card immediately
+    // Delay hiding to allow mouse to reach the hover card
+    // 200ms gives enough time to move mouse from link to card
+    hideTimeoutRef.current = setTimeout(() => {
+      setShowHoverCard(false);
+
+      // Call external callback if provided
+      if (onHoverEnd) {
+        onHoverEnd(userId);
+      }
+    }, 200);
+  };
+
+  const handleHoverCardMouseEnter = () => {
+    // Keep hover card visible when mouse enters it
+    // Cancel any pending show timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    // Cancel any pending hide timeout
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
+  };
+
+  const handleHoverCardMouseLeave = () => {
+    // Hide immediately when leaving hover card
     setShowHoverCard(false);
 
     // Call external callback if provided
     if (onHoverEnd) {
       onHoverEnd(userId);
     }
-  };
-
-  const handleHoverCardMouseEnter = () => {
-    // Keep hover card visible when mouse enters it
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-  };
-
-  const handleHoverCardMouseLeave = () => {
-    // Hide when leaving hover card
-    setShowHoverCard(false);
   };
 
   const handleHoverCardClose = () => {
