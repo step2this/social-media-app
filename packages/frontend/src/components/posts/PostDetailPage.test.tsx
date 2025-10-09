@@ -13,6 +13,18 @@ vi.mock('../../services/postService.js', () => ({
   }
 }));
 
+// Mock PostCard component to verify it's being used
+vi.mock('./PostCard', () => ({
+  PostCard: ({ post, currentUserId, showComments }: any) => (
+    <div data-testid="post-card-mock">
+      <div data-testid="post-card-id">{post.id}</div>
+      <div data-testid="post-card-user-id">{post.userId}</div>
+      <div data-testid="post-card-current-user">{currentUserId || 'none'}</div>
+      <div data-testid="post-card-show-comments">{showComments ? 'true' : 'false'}</div>
+    </div>
+  )
+}));
+
 const mockPost: Post = {
   id: 'post-123',
   userId: 'user-123',
@@ -45,6 +57,50 @@ describe('PostDetailPage', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('PostCard Integration (TDD Refactor)', () => {
+    it('should render PostCard component with post data', async () => {
+      vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
+
+      renderPostDetailPage();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('post-card-mock')).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId('post-card-id')).toHaveTextContent('post-123');
+      expect(screen.getByTestId('post-card-user-id')).toHaveTextContent('user-123');
+    });
+
+    it('should pass showComments prop to PostCard', async () => {
+      vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
+
+      renderPostDetailPage();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('post-card-mock')).toBeInTheDocument();
+      });
+
+      // PostDetailPage should show comments section
+      expect(screen.getByTestId('post-card-show-comments')).toHaveTextContent('true');
+    });
+
+    it('should NOT render inline post markup when using PostCard', async () => {
+      vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
+
+      renderPostDetailPage();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('post-card-mock')).toBeInTheDocument();
+      });
+
+      // These classes should NOT exist because they're now handled by PostCard
+      const container = screen.getByTestId('post-detail-page');
+      expect(container.querySelector('.post-sidebar')).not.toBeInTheDocument();
+      expect(container.querySelector('.post-info-section')).not.toBeInTheDocument();
+      expect(container.querySelector('.post-actions')).not.toBeInTheDocument();
+    });
   });
 
   describe('Design System Styling', () => {
@@ -87,25 +143,6 @@ describe('PostDetailPage', () => {
       expect(closeButton).toHaveClass('close-button');
     });
 
-    it('should use TamaFriends button styles for action buttons', async () => {
-      vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
-
-      renderPostDetailPage();
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /like/i })).toBeInTheDocument();
-      });
-
-      const likeButton = screen.getByRole('button', { name: /like/i });
-      expect(likeButton).toHaveClass('tama-btn', 'tama-btn--icon');
-
-      const commentButton = screen.getByRole('button', { name: /comment/i });
-      expect(commentButton).toHaveClass('tama-btn', 'tama-btn--icon');
-
-      const shareButton = screen.getByRole('button', { name: /share/i });
-      expect(shareButton).toHaveClass('tama-btn', 'tama-btn--icon');
-    });
-
     it('should NOT use Tailwind classes in the rendered output', async () => {
       vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
 
@@ -144,38 +181,6 @@ describe('PostDetailPage', () => {
   });
 
   describe('Component Rendering', () => {
-    it('should render post details with all content', async () => {
-      vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
-
-      renderPostDetailPage();
-
-      await waitFor(() => {
-        const userHandles = screen.getAllByText(`@${mockPost.userHandle}`);
-        expect(userHandles.length).toBeGreaterThan(0);
-      });
-
-      expect(screen.getByText(mockPost.caption!)).toBeInTheDocument();
-      expect(screen.getByAltText(mockPost.caption!)).toBeInTheDocument();
-      expect(screen.getByText(mockPost.likesCount.toString())).toBeInTheDocument();
-      expect(screen.getByText(mockPost.commentsCount.toString())).toBeInTheDocument();
-    });
-
-    it('should render all tags with proper styling', async () => {
-      vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
-
-      renderPostDetailPage();
-
-      await waitFor(() => {
-        expect(screen.getByText('#test')).toBeInTheDocument();
-      });
-
-      mockPost.tags!.forEach(tag => {
-        const tagElement = screen.getByText(`#${tag}`);
-        expect(tagElement).toBeInTheDocument();
-        expect(tagElement).toHaveClass('post-tag');
-      });
-    });
-
     it('should show loading state with proper styling', () => {
       vi.mocked(postService.postService.getPost).mockImplementation(
         () => new Promise(() => {}) // Never resolves
@@ -221,24 +226,10 @@ describe('PostDetailPage', () => {
       // Navigation is handled by router, just verify button is clickable
       expect(closeButton).toBeEnabled();
     });
-
-    it('should handle image load correctly', async () => {
-      vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
-
-      renderPostDetailPage();
-
-      await waitFor(() => {
-        expect(screen.getByAltText(mockPost.caption!)).toBeInTheDocument();
-      });
-
-      const image = screen.getByAltText(mockPost.caption!) as HTMLImageElement;
-      expect(image).toHaveAttribute('src', mockPost.imageUrl);
-      expect(image).toHaveClass('post-image');
-    });
   });
 
   describe('Accessibility', () => {
-    it('should have proper ARIA labels and roles', async () => {
+    it('should have proper ARIA label for close button', async () => {
       vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
 
       renderPostDetailPage();
@@ -247,13 +238,11 @@ describe('PostDetailPage', () => {
         expect(screen.getByRole('button', { name: /close/i })).toBeInTheDocument();
       });
 
-      expect(screen.getByRole('button', { name: /like/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /comment/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /share/i })).toBeInTheDocument();
+      const closeButton = screen.getByRole('button', { name: /close/i });
+      expect(closeButton).toHaveAttribute('aria-label', 'Close');
     });
 
-    it('should support keyboard navigation for action buttons', async () => {
-      const user = userEvent.setup();
+    it('should support keyboard navigation for close button', async () => {
       vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
 
       renderPostDetailPage();
@@ -262,18 +251,10 @@ describe('PostDetailPage', () => {
         expect(screen.getByRole('button', { name: /close/i })).toBeInTheDocument();
       });
 
-      // Verify buttons are keyboard accessible (can receive focus)
+      // Verify close button is keyboard accessible
       const closeButton = screen.getByRole('button', { name: /close/i });
       closeButton.focus();
       expect(closeButton).toHaveFocus();
-
-      const likeButton = screen.getByRole('button', { name: /like/i });
-      likeButton.focus();
-      expect(likeButton).toHaveFocus();
-
-      const commentButton = screen.getByRole('button', { name: /comment/i });
-      commentButton.focus();
-      expect(commentButton).toHaveFocus();
     });
   });
 });
