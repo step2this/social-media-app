@@ -4,7 +4,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute.js';
 import { AuthModal } from './components/auth/AuthModal.js';
 import { ProfilePage } from './components/profile/ProfilePage';
 import { MyProfilePage } from './components/profile/MyProfilePage';
-import { PlaceholderPage } from './components/common/PlaceholderPage';
+import { HomePage } from './pages/HomePage';
 import { CreatePostPage } from './components/posts/index.js';
 import { PostDetailPage } from './components/posts/PostDetailPage';
 import { ExplorePage } from './components/explore/ExplorePage';
@@ -80,12 +80,7 @@ function AppContent() {
           <Route path="/" element={
             <ProtectedRoute requireAuth={true}>
               <ContentLayout>
-                <PlaceholderPage
-                  icon="🏠"
-                  title="Home Feed"
-                  description="See what your friends' pets are up to"
-                  features={["📱 Recent Pet Updates", "🎮 Friend Activities", "🌟 Trending Adventures"]}
-                />
+                <HomePage />
               </ContentLayout>
             </ProtectedRoute>
           } />
