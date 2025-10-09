@@ -6,6 +6,7 @@ import {
   DescribeStreamCommand,
   ListShardsCommand
 } from '@aws-sdk/client-dynamodb-streams';
+import type { DynamoDBStreamEvent, DynamoDBStreamHandler } from 'aws-lambda';
 
 /**
  * Configuration for the stream processor
@@ -31,6 +32,7 @@ export class StreamProcessor {
   private intervalId: NodeJS.Timeout | null = null;
   private shardIterator: string | null = null;
   private isRunning: boolean = false;
+  private handlers: DynamoDBStreamHandler[] = [];
 
   constructor(config: StreamProcessorConfig) {
     this.tableName = config.tableName;
@@ -113,6 +115,46 @@ export class StreamProcessor {
   }
 
   /**
+   * Register a Lambda handler to process stream records
+   */
+  registerHandler(handler: DynamoDBStreamHandler): void {
+    this.handlers.push(handler);
+  }
+
+  /**
+   * Transform DynamoDB Streams records to Lambda event format
+   */
+  private transformRecordsToEvent(records: any[]): DynamoDBStreamEvent {
+    return {
+      Records: records.map(record => ({
+        eventID: record.eventID || '',
+        eventName: record.eventName as any,
+        eventVersion: record.eventVersion || '1.1',
+        eventSource: 'aws:dynamodb',
+        awsRegion: this.region,
+        dynamodb: record.dynamodb,
+        eventSourceARN: record.eventSourceARN || ''
+      }))
+    };
+  }
+
+  /**
+   * Process records by calling registered handlers
+   */
+  private async processRecords(records: any[]): Promise<void> {
+    if (records.length === 0 || this.handlers.length === 0) {
+      return;
+    }
+
+    const event = this.transformRecordsToEvent(records);
+
+    // Call all registered handlers
+    await Promise.all(
+      this.handlers.map(handler => handler(event))
+    );
+  }
+
+  /**
    * Poll for new records from the stream
    */
   private async poll(): Promise<void> {
@@ -130,7 +172,10 @@ export class StreamProcessor {
       // Update iterator for next poll
       this.shardIterator = response.NextShardIterator || null;
 
-      // TODO: Process records (will be implemented in Cycle 3)
+      // Process records if any
+      if (response.Records && response.Records.length > 0) {
+        await this.processRecords(response.Records);
+      }
     } catch (error) {
       console.error('Error polling stream:', error);
     }
