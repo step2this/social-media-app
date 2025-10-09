@@ -35,7 +35,7 @@ aws --endpoint-url=http://localhost:4566 s3api put-bucket-cors --bucket tamafrie
 
 # Create DynamoDB table (basic structure - will be enhanced in Phase 3)
 echo "🗄️  Creating DynamoDB table..."
-aws --endpoint-url=http://localhost:4566 dynamodb create-table \
+aws --endpoint-url=http://localhost:4566 --region us-east-1 dynamodb create-table \
     --table-name tamafriends-local \
     --attribute-definitions \
         AttributeName=PK,AttributeType=S \
@@ -52,6 +52,13 @@ aws --endpoint-url=http://localhost:4566 dynamodb create-table \
         'IndexName=GSI2,KeySchema=[{AttributeName=GSI2PK,KeyType=HASH},{AttributeName=GSI2SK,KeyType=RANGE}],Projection={ProjectionType=ALL}' \
     --billing-mode PAY_PER_REQUEST \
     || echo "Table already exists"
+
+# Enable DynamoDB Streams for event-sourced materialized views
+echo "🔄 Enabling DynamoDB Streams..."
+aws --endpoint-url=http://localhost:4566 --region us-east-1 dynamodb update-table \
+    --table-name tamafriends-local \
+    --stream-specification StreamEnabled=true,StreamViewType=NEW_AND_OLD_IMAGES \
+    || echo "Streams already enabled"
 
 echo "✅ TamaFriends LocalStack initialization complete!"
 echo "🌐 LocalStack Dashboard: http://localhost:4566"
