@@ -12,8 +12,8 @@ import type {
 export interface FollowEntity {
   readonly PK: string;           // USER#<followerId>
   readonly SK: string;           // FOLLOW#<followeeId>
-  readonly GSI2PK: string;       // USER#<followeeId> (for followers list queries)
-  readonly GSI2SK: string;       // FOLLOWER#<followerId>
+  readonly GSI1PK: string;       // USER#<followeeId> (for followers list queries)
+  readonly GSI1SK: string;       // FOLLOWER#<followerId>
   readonly followerId: string;
   readonly followeeId: string;
   readonly createdAt: string;
@@ -44,8 +44,8 @@ export class FollowService {
     const followEntity: FollowEntity = {
       PK: `USER#${followerId}`,
       SK: `FOLLOW#${followeeId}`,
-      GSI2PK: `USER#${followeeId}`,
-      GSI2SK: `FOLLOWER#${followerId}`,
+      GSI1PK: `USER#${followeeId}`,
+      GSI1SK: `FOLLOWER#${followerId}`,
       followerId,
       followeeId,
       createdAt: now,
