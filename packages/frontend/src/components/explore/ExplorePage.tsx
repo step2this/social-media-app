@@ -2,86 +2,8 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import type { PostGridItem } from '@social-media-app/shared';
 import { feedService } from '../../services/feedService';
 import { PostThumbnail } from '../profile/PostThumbnail';
+import { scramblePosts } from '../../utils/scramblePosts.js';
 import './ExplorePage.css';
-
-/**
- * Scramble posts to maximize user diversity
- * Ensures adjacent posts (horizontally and vertically) are from different users
- * Grid is 3 columns wide on desktop
- */
-function scramblePosts(posts: PostGridItem[]): PostGridItem[] {
-  if (posts.length === 0) return posts;
-
-  // Group posts by userId
-  const postsByUser = posts.reduce((acc, post) => {
-    if (!acc[post.userId]) {
-      acc[post.userId] = [];
-    }
-    acc[post.userId].push(post);
-    return acc;
-  }, {} as Record<string, PostGridItem[]>);
-
-  const userIds = Object.keys(postsByUser);
-  const scrambled: PostGridItem[] = [];
-  const GRID_WIDTH = 3; // 3 columns
-
-  // Round-robin through users to maximize diversity
-  let userIndex = 0;
-  let positionInRow = 0;
-  const usedInPreviousRow: string[] = [];
-
-  while (scrambled.length < posts.length) {
-    let attempts = 0;
-    let foundPost = false;
-
-    // Try to find a user different from adjacent positions
-    while (attempts < userIds.length && !foundPost) {
-      const currentUserId = userIds[userIndex % userIds.length];
-      const userPosts = postsByUser[currentUserId];
-
-      if (userPosts && userPosts.length > 0) {
-        // Check if this user is different from:
-        // 1. Previous post in same row (left neighbor)
-        // 2. Post directly above (same column, previous row)
-        const leftNeighbor = scrambled[scrambled.length - 1];
-        const aboveNeighbor = scrambled[scrambled.length - GRID_WIDTH];
-
-        const isDifferentFromLeft = !leftNeighbor || leftNeighbor.userId !== currentUserId;
-        const isDifferentFromAbove = !aboveNeighbor || aboveNeighbor.userId !== currentUserId;
-
-        if (isDifferentFromLeft && isDifferentFromAbove) {
-          scrambled.push(userPosts.shift()!);
-          foundPost = true;
-
-          // Track for next row
-          if (positionInRow === GRID_WIDTH - 1) {
-            usedInPreviousRow.push(currentUserId);
-            if (usedInPreviousRow.length > GRID_WIDTH) {
-              usedInPreviousRow.shift();
-            }
-          }
-        }
-      }
-
-      userIndex++;
-      attempts++;
-    }
-
-    // If we couldn't find a good match after trying all users, just take any available post
-    if (!foundPost) {
-      for (const userId of userIds) {
-        if (postsByUser[userId] && postsByUser[userId].length > 0) {
-          scrambled.push(postsByUser[userId].shift()!);
-          break;
-        }
-      }
-    }
-
-    positionInRow = (positionInRow + 1) % GRID_WIDTH;
-  }
-
-  return scrambled;
-}
 
 /**
  * Explore page - displays all public posts with infinite scroll
