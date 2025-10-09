@@ -80,9 +80,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={
             <ProtectedRoute requireAuth={true}>
-              <ContentLayout>
-                <HomePage />
-              </ContentLayout>
+              <HomePage />
             </ProtectedRoute>
           } />
 

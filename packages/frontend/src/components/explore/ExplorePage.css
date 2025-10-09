@@ -1,13 +1,22 @@
 .explore-page {
   min-height: 100vh;
-  background: var(--tama-cream, #f5f5f5);
-  padding-top: 80px;
+  background: transparent;
+  padding: 0;
 }
 
 .explore-container {
   max-width: 935px;
   margin: 0 auto;
   padding: 2rem 1rem;
+  /* Add right padding to account for fixed right panel */
+  padding-right: calc(320px + 2rem);
+}
+
+/* Remove right padding on smaller screens where right panel is hidden */
+@media (max-width: 1023px) {
+  .explore-container {
+    padding-right: 1rem;
+  }
 }
 
 .explore-title {
