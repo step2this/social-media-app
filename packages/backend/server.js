@@ -226,6 +226,9 @@ app.get('/hello', (req, res) => callHandler('hello', req, res));
 //   });
 // });
 
+// Store stream processor instance for graceful shutdown
+let streamProcessor = null;
+
 // Initialize server
 async function startServer() {
   console.log('🚀 Starting LocalStack Development Server...');
@@ -237,6 +240,34 @@ async function startServer() {
     console.error('❌ Failed to load handlers, starting server with limited functionality');
   }
 
+  // Start DynamoDB Stream processor in LocalStack mode
+  if (process.env.USE_LOCALSTACK === 'true') {
+    try {
+      console.log('🔄 Starting DynamoDB Stream processor for LocalStack...');
+      const { StreamProcessor } = await import('./dist/local-dev/stream-processor.js');
+
+      streamProcessor = new StreamProcessor({
+        tableName: process.env.TABLE_NAME || 'tamafriends-local',
+        endpoint: process.env.LOCALSTACK_ENDPOINT || 'http://localhost:4566',
+        region: process.env.AWS_REGION || 'us-east-1',
+        pollInterval: 2000  // Poll every 2 seconds
+      });
+
+      // Load and register stream handlers
+      const { handler: followCounterHandler } = await import('./dist/handlers/streams/follow-counter.js');
+      const { handler: likeCounterHandler } = await import('./dist/handlers/streams/like-counter.js');
+
+      streamProcessor.registerHandler(followCounterHandler);
+      streamProcessor.registerHandler(likeCounterHandler);
+
+      await streamProcessor.start();
+      console.log('✅ Stream processor started - profile stats will update automatically');
+    } catch (error) {
+      console.error('❌ Failed to start stream processor:', error);
+      console.error('   Profile stats (followers/following/likes) will not update automatically');
+    }
+  }
+
   app.listen(port, () => {
     console.log(`🚀 LocalStack Development Server running on http://localhost:${port}`);
     console.log(`📊 Mode: LocalStack Development`);
@@ -245,6 +276,7 @@ async function startServer() {
     console.log(`📦 S3: ${process.env.USE_LOCALSTACK === 'true' ? 'LocalStack' : 'AWS'}`);
     console.log(`🔑 Table: ${process.env.TABLE_NAME || 'undefined'}`);
     console.log(`📦 Handlers: ${Object.keys(handlers).length} loaded`);
+    console.log(`🔄 Stream Processor: ${streamProcessor ? 'Running' : 'Disabled'}`);
     console.log(`\n🌐 Available endpoints:`);
     console.log(`  POST /auth/login`);
     console.log(`  POST /auth/register`);
@@ -271,6 +303,25 @@ async function startServer() {
     console.log(`  GET  /health`);
   });
 }
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('📴 SIGTERM received, shutting down gracefully...');
+  if (streamProcessor) {
+    await streamProcessor.stop();
+    console.log('✅ Stream processor stopped');
+  }
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('📴 SIGINT received, shutting down gracefully...');
+  if (streamProcessor) {
+    await streamProcessor.stop();
+    console.log('✅ Stream processor stopped');
+  }
+  process.exit(0);
+});
 
 // Start the server
 startServer().catch((error) => {

@@ -3,10 +3,9 @@ import {
   DynamoDBStreamsClient,
   GetRecordsCommand,
   GetShardIteratorCommand,
-  DescribeStreamCommand,
-  ListShardsCommand
+  DescribeStreamCommand
 } from '@aws-sdk/client-dynamodb-streams';
-import type { DynamoDBStreamEvent, DynamoDBStreamHandler } from 'aws-lambda';
+import type { DynamoDBStreamEvent, DynamoDBStreamHandler, Context } from 'aws-lambda';
 
 /**
  * Configuration for the stream processor
@@ -149,11 +148,27 @@ export class StreamProcessor {
 
     const event = this.transformRecordsToEvent(records);
 
+    // Create minimal Lambda context for local invocation
+    const context: Context = {
+      callbackWaitsForEmptyEventLoop: false,
+      functionName: 'stream-processor',
+      functionVersion: '$LATEST',
+      invokedFunctionArn: 'local',
+      memoryLimitInMB: '512',
+      awsRequestId: Math.random().toString(36).substring(7),
+      logGroupName: '/aws/lambda/stream-processor',
+      logStreamName: new Date().toISOString(),
+      getRemainingTimeInMillis: () => 30000,
+      done: () => {},
+      fail: () => {},
+      succeed: () => {}
+    };
+
     // Call all registered handlers with individual error handling
     await Promise.all(
       this.handlers.map(async handler => {
         try {
-          await handler(event);
+          await handler(event, context, () => {});
         } catch (error) {
           console.error('Handler error (continuing processing):', error);
         }
