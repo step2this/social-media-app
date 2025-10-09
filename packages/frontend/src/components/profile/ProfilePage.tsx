@@ -91,7 +91,9 @@ export const ProfilePage: React.FC = () => {
 
   /**
    * Refresh profile data after follow/unfollow
-   * This ensures profile stats (followers/following) are updated
+   * NOTE: This callback is currently NOT used by FollowButton.
+   * We use pure optimistic UI instead - follow/unfollow counts update immediately
+   * and persist until next page load, when stream processor updates are fetched.
    */
   const handleFollowStatusChange = async () => {
     if (handle) {

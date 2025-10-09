@@ -99,10 +99,10 @@ export const useFollow = (
       setIsFollowing(response.isFollowing);
       setIsLoading(false);
 
-      // Notify parent component to refresh profile data
-      if (onFollowStatusChange) {
-        await onFollowStatusChange();
-      }
+      // NOTE: We intentionally do NOT call onFollowStatusChange here.
+      // This implements pure optimistic UI - the count increment persists
+      // and will be corrected by stream processor on next page load.
+      // This matches industry standard UX (Instagram, Twitter, etc.)
     } catch (err) {
       // Rollback on error
       setIsFollowing(originalIsFollowing);
@@ -139,10 +139,10 @@ export const useFollow = (
       setIsFollowing(response.isFollowing);
       setIsLoading(false);
 
-      // Notify parent component to refresh profile data
-      if (onFollowStatusChange) {
-        await onFollowStatusChange();
-      }
+      // NOTE: We intentionally do NOT call onFollowStatusChange here.
+      // This implements pure optimistic UI - the count decrement persists
+      // and will be corrected by stream processor on next page load.
+      // This matches industry standard UX (Instagram, Twitter, etc.)
     } catch (err) {
       // Rollback on error
       setIsFollowing(originalIsFollowing);

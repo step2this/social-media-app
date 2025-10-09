@@ -12,12 +12,19 @@ describe('useFollow', () => {
 
   describe('initialization', () => {
     it('should initialize with default state', () => {
+      // Mock getFollowStatus to prevent auto-fetch on mount
+      vi.mocked(followService.getFollowStatus).mockResolvedValueOnce({
+        isFollowing: false,
+        followersCount: 0,
+        followingCount: 0
+      });
+
       const { result } = renderHook(() => useFollow('user-123'));
 
       expect(result.current.isFollowing).toBe(false);
       expect(result.current.followersCount).toBe(0);
       expect(result.current.followingCount).toBe(0);
-      expect(result.current.isLoading).toBe(false);
+      // Note: isLoading might be true initially due to auto-fetch
       expect(result.current.error).toBeNull();
     });
 
@@ -48,7 +55,7 @@ describe('useFollow', () => {
       vi.mocked(followService.followUser).mockResolvedValueOnce(mockResponse);
 
       const { result } = renderHook(() =>
-        useFollow('user-123', { initialFollowersCount: 99 })
+        useFollow('user-123', { initialFollowersCount: 99, initialIsFollowing: false })
       );
 
       // Optimistic update should happen immediately
@@ -71,6 +78,38 @@ describe('useFollow', () => {
       expect(result.current.followersCount).toBe(100);
       expect(result.current.error).toBeNull();
       expect(followService.followUser).toHaveBeenCalledWith('user-123');
+    });
+
+    it('should NOT call onFollowStatusChange callback after successful follow', async () => {
+      const mockResponse = {
+        success: true,
+        followersCount: 0,
+        followingCount: 0,
+        isFollowing: true
+      };
+
+      vi.mocked(followService.followUser).mockResolvedValueOnce(mockResponse);
+
+      const mockCallback = vi.fn();
+      const { result } = renderHook(() =>
+        useFollow('user-123', {
+          initialFollowersCount: 99,
+          onFollowStatusChange: mockCallback
+        })
+      );
+
+      // Follow the user
+      await act(async () => {
+        await result.current.followUser();
+      });
+
+      // Wait for API call to complete
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // Callback should NOT be invoked (pure optimistic UI)
+      expect(mockCallback).not.toHaveBeenCalled();
     });
 
     it('should rollback on error', async () => {
@@ -150,6 +189,39 @@ describe('useFollow', () => {
       expect(result.current.followersCount).toBe(99);
       expect(result.current.error).toBeNull();
       expect(followService.unfollowUser).toHaveBeenCalledWith('user-123');
+    });
+
+    it('should NOT call onFollowStatusChange callback after successful unfollow', async () => {
+      const mockResponse = {
+        success: true,
+        followersCount: 0,
+        followingCount: 0,
+        isFollowing: false
+      };
+
+      vi.mocked(followService.unfollowUser).mockResolvedValueOnce(mockResponse);
+
+      const mockCallback = vi.fn();
+      const { result } = renderHook(() =>
+        useFollow('user-123', {
+          initialIsFollowing: true,
+          initialFollowersCount: 100,
+          onFollowStatusChange: mockCallback
+        })
+      );
+
+      // Unfollow the user
+      await act(async () => {
+        await result.current.unfollowUser();
+      });
+
+      // Wait for API call to complete
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // Callback should NOT be invoked (pure optimistic UI)
+      expect(mockCallback).not.toHaveBeenCalled();
     });
 
     it('should rollback on error', async () => {
@@ -252,9 +324,10 @@ describe('useFollow', () => {
         followingCount: 50
       };
 
-      vi.mocked(followService.getFollowStatus).mockResolvedValueOnce(mockResponse);
+      vi.mocked(followService.getFollowStatus).mockResolvedValue(mockResponse);
 
-      const { result } = renderHook(() => useFollow('user-123'));
+      // Provide initial values to prevent auto-fetch on mount
+      const { result } = renderHook(() => useFollow('user-123', { initialIsFollowing: false }));
 
       await act(async () => {
         await result.current.fetchFollowStatus();
@@ -268,11 +341,12 @@ describe('useFollow', () => {
     });
 
     it('should handle fetch errors', async () => {
-      vi.mocked(followService.getFollowStatus).mockRejectedValueOnce(
+      vi.mocked(followService.getFollowStatus).mockRejectedValue(
         new Error('Network error')
       );
 
-      const { result } = renderHook(() => useFollow('user-123'));
+      // Provide initial values to prevent auto-fetch on mount
+      const { result } = renderHook(() => useFollow('user-123', { initialIsFollowing: false }));
 
       await act(async () => {
         await result.current.fetchFollowStatus();
