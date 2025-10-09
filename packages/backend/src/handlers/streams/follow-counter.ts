@@ -35,9 +35,9 @@ export const handler: DynamoDBStreamHandler = async (
         return;
       }
 
-      // Only process FOLLOW entities
-      const entityType = image.entityType?.S;
-      if (entityType !== 'FOLLOW') {
+      // Only process FOLLOW entities (SK starts with "FOLLOW#")
+      const sk = image.SK?.S;
+      if (!sk || !sk.startsWith('FOLLOW#')) {
         return;
       }
 
@@ -49,13 +49,13 @@ export const handler: DynamoDBStreamHandler = async (
       }
       const followerPK = pk; // Keep full PK for follower update
 
-      // Extract followee ID from GSI2PK (format: USER#<followeeId>)
-      const gsi2pk = image.GSI2PK?.S;
-      if (!gsi2pk || !gsi2pk.startsWith('USER#')) {
-        console.warn('Invalid GSI2PK format:', gsi2pk);
+      // Extract followee ID from GSI1PK (format: USER#<followeeId>)
+      const gsi1pk = image.GSI1PK?.S;
+      if (!gsi1pk || !gsi1pk.startsWith('USER#')) {
+        console.warn('Invalid GSI1PK format:', gsi1pk);
         return;
       }
-      const followeePK = gsi2pk; // Keep full PK for followee update
+      const followeePK = gsi1pk; // Keep full PK for followee update
 
       // Determine increment or decrement
       const delta = record.eventName === 'INSERT' ? 1 : -1;

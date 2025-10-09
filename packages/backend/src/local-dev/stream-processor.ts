@@ -181,10 +181,12 @@ export class StreamProcessor {
    */
   private async poll(): Promise<void> {
     if (!this.shardIterator) {
+      console.log('⚠️  Stream processor: No shard iterator available');
       return;
     }
 
     try {
+      console.log('🔄 Polling DynamoDB Stream...');
       const response = await this.streamsClient.send(
         new GetRecordsCommand({
           ShardIterator: this.shardIterator
@@ -196,10 +198,13 @@ export class StreamProcessor {
 
       // Process records if any
       if (response.Records && response.Records.length > 0) {
+        console.log(`✅ Found ${response.Records.length} stream record(s)`);
         await this.processRecords(response.Records);
+      } else {
+        console.log('📭 No new records');
       }
     } catch (error) {
-      console.error('Error polling stream:', error);
+      console.error('❌ Error polling stream:', error);
     }
   }
 
