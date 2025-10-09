@@ -38,6 +38,7 @@ async function loadHandlers() {
       { name: 'postsDeletePost', path: './dist/handlers/posts/delete-post.js' },
       { name: 'postsGetPost', path: './dist/handlers/posts/get-post.js' },
       { name: 'feedGetFeed', path: './dist/handlers/feed/get-feed.js' },
+      { name: 'feedGetFollowingFeed', path: './dist/handlers/feed/get-following-feed.js' },
       { name: 'likesLikePost', path: './dist/handlers/likes/like-post.js' },
       { name: 'likesUnlikePost', path: './dist/handlers/likes/unlike-post.js' },
       { name: 'likesGetLikeStatus', path: './dist/handlers/likes/get-like-status.js' },
@@ -197,8 +198,9 @@ app.get('/profile/:handle/posts', (req, res) => callHandler('postsGetUserPosts',
 app.delete('/posts/:postId', (req, res) => callHandler('postsDeletePost', req, res));
 app.get('/post/:postId', (req, res) => callHandler('postsGetPost', req, res));
 
-// Feed route
+// Feed routes
 app.get('/feed', (req, res) => callHandler('feedGetFeed', req, res));
+app.get('/feed/following', (req, res) => callHandler('feedGetFollowingFeed', req, res));
 
 // Like routes
 app.post('/likes', (req, res) => callHandler('likesLikePost', req, res));
