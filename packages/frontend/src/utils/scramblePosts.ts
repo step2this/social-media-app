@@ -1,4 +1,5 @@
 import type { PostGridItem } from '@social-media-app/shared';
+import { groupBy, keys, filter } from 'lodash-es';
 
 /**
  * Scramble posts to maximize user diversity in a grid layout
@@ -12,15 +13,9 @@ export function scramblePosts(posts: PostGridItem[], gridWidth: number = 3): Pos
   if (posts.length === 0) return posts;
 
   // Group posts by userId
-  const postsByUser = posts.reduce((acc, post) => {
-    if (!acc[post.userId]) {
-      acc[post.userId] = [];
-    }
-    acc[post.userId].push(post);
-    return acc;
-  }, {} as Record<string, PostGridItem[]>);
+  const postsByUser = groupBy(posts, 'userId');
 
-  const userIds = Object.keys(postsByUser);
+  const userIds = keys(postsByUser);
   const scrambled: PostGridItem[] = [];
 
   // Round-robin through users to maximize diversity
@@ -67,11 +62,11 @@ export function scramblePosts(posts: PostGridItem[], gridWidth: number = 3): Pos
 
     // If we couldn't find a good match after trying all users, just take any available post
     if (!foundPost) {
-      for (const userId of userIds) {
-        if (postsByUser[userId] && postsByUser[userId].length > 0) {
-          scrambled.push(postsByUser[userId].shift()!);
-          break;
-        }
+      const availableUserIds = filter(userIds, userId =>
+        postsByUser[userId]?.length > 0
+      );
+      if (availableUserIds.length > 0) {
+        scrambled.push(postsByUser[availableUserIds[0]].shift()!);
       }
     }
 
