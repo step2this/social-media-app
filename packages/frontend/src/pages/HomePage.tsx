@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { PostGridItem } from '@social-media-app/shared';
+import type { FeedPostItem } from '@social-media-app/shared';
 import { feedService } from '../services/feedService';
 import { FeedPostCard } from '../components/feed/FeedPostCard';
 import './HomePage.css';
@@ -8,7 +8,7 @@ import './HomePage.css';
  * Home page - displays posts from followed users with infinite scroll
  */
 export const HomePage: React.FC = () => {
-  const [posts, setPosts] = useState<PostGridItem[]>([]);
+  const [posts, setPosts] = useState<FeedPostItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);

@@ -1,11 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { PostGridItem } from '@social-media-app/shared';
+import type { FeedPostItem } from '@social-media-app/shared';
 import { UserLink } from '../common/UserLink';
 import './FeedPostCard.css';
 
 interface FeedPostCardProps {
-  post: PostGridItem;
+  post: FeedPostItem;
 }
 
 /**
@@ -31,15 +31,10 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post }) => {
         <div className="feed-post-card__author">
           <UserLink
             userId={post.authorId}
-            handle={post.authorHandle}
-            displayName={post.authorFullName}
-            avatarUrl={post.authorProfilePictureUrl}
-            showAvatar={true}
+            username={post.authorHandle}
+            fullName={post.authorFullName}
             className="feed-post-card__author-link"
           />
-          <span className="feed-post-card__author-name">
-            {post.authorHandle}
-          </span>
         </div>
         <button className="feed-post-card__menu-btn" aria-label="More options">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
