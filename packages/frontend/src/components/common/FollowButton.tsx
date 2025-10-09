@@ -8,6 +8,7 @@ interface FollowButtonProps {
   initialIsFollowing?: boolean;
   initialFollowersCount?: number;
   initialFollowingCount?: number;
+  onFollowStatusChange?: () => void | Promise<void>;
 }
 
 /**
@@ -18,7 +19,8 @@ export const FollowButton = ({
   userId,
   initialIsFollowing,
   initialFollowersCount,
-  initialFollowingCount
+  initialFollowingCount,
+  onFollowStatusChange
 }: FollowButtonProps) => {
   const { user, isAuthenticated } = useAuth();
   const [isHovering, setIsHovering] = useState(false);
@@ -26,7 +28,8 @@ export const FollowButton = ({
   const options: UseFollowOptions = {
     initialIsFollowing,
     initialFollowersCount,
-    initialFollowingCount
+    initialFollowingCount,
+    onFollowStatusChange
   };
 
   const {

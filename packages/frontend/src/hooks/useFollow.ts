@@ -8,6 +8,7 @@ export interface UseFollowOptions {
   initialIsFollowing?: boolean;
   initialFollowersCount?: number;
   initialFollowingCount?: number;
+  onFollowStatusChange?: () => void | Promise<void>;
 }
 
 /**
@@ -21,7 +22,8 @@ export const useFollow = (
   const {
     initialIsFollowing = false,
     initialFollowersCount = 0,
-    initialFollowingCount = 0
+    initialFollowingCount = 0,
+    onFollowStatusChange
   } = options;
 
   // Track whether initial values were explicitly provided
@@ -96,6 +98,11 @@ export const useFollow = (
       // (server returns 0 because stream processor updates count async)
       setIsFollowing(response.isFollowing);
       setIsLoading(false);
+
+      // Notify parent component to refresh profile data
+      if (onFollowStatusChange) {
+        await onFollowStatusChange();
+      }
     } catch (err) {
       // Rollback on error
       setIsFollowing(originalIsFollowing);
@@ -103,7 +110,7 @@ export const useFollow = (
       setError('Failed to follow user');
       setIsLoading(false);
     }
-  }, [userId, isFollowing, followersCount]);
+  }, [userId, isFollowing, followersCount, onFollowStatusChange]);
 
   /**
    * Unfollow a user with optimistic update
@@ -131,6 +138,11 @@ export const useFollow = (
       // (server returns 0 because stream processor updates count async)
       setIsFollowing(response.isFollowing);
       setIsLoading(false);
+
+      // Notify parent component to refresh profile data
+      if (onFollowStatusChange) {
+        await onFollowStatusChange();
+      }
     } catch (err) {
       // Rollback on error
       setIsFollowing(originalIsFollowing);
@@ -138,7 +150,7 @@ export const useFollow = (
       setError('Failed to unfollow user');
       setIsLoading(false);
     }
-  }, [userId, isFollowing, followersCount]);
+  }, [userId, isFollowing, followersCount, onFollowStatusChange]);
 
   /**
    * Toggle follow status (convenience method)

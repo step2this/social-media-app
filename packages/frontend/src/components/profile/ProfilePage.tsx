@@ -89,6 +89,16 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
+  /**
+   * Refresh profile data after follow/unfollow
+   * This ensures profile stats (followers/following) are updated
+   */
+  const handleFollowStatusChange = async () => {
+    if (handle) {
+      await loadProfile(handle);
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner message="Loading profile..." />;
   }
@@ -121,6 +131,7 @@ export const ProfilePage: React.FC = () => {
               userId={profile.id}
               initialIsFollowing={false}
               initialFollowersCount={profile.followersCount}
+              onFollowStatusChange={handleFollowStatusChange}
             />
           </div>
         )}
