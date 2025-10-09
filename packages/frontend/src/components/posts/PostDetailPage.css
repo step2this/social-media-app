@@ -140,6 +140,12 @@
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+/* FollowButton in sidebar */
+.sidebar-user-info .follow-button-container {
+  margin-left: auto;
 }
 
 .sidebar-user-avatar {

@@ -21,7 +21,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const location = useLocation();
   const { user, logout, isAuthenticated, isHydrated } = useAuth();
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLLIElement>(null);
 
   // Debug logging for account button visibility
   useEffect(() => {

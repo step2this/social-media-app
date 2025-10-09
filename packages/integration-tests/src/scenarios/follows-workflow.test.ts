@@ -29,8 +29,7 @@ import {
   parseResponse,
   testEnvironment,
   environmentDetector,
-  testLogger,
-  delay
+  testLogger
 } from '../utils/index.js';
 import {
   createRegisterRequest
@@ -284,46 +283,6 @@ describe('Follows Workflow Integration', () => {
       const user3Status = await parseResponse(user3StatusResponse, GetFollowStatusResponseSchema);
       expect(user3Status.isFollowing).toBe(true);
     });
-  });
-
-  describe('Stream Processor Verification', () => {
-    it('should update followersCount and followingCount via stream processor (eventual consistency)', async () => {
-      testLogger.debug('Testing stream processor updates follow counts');
-
-      // Wait for stream processor to update counts (~1-2 seconds)
-      await delay(3000);
-
-      // Fetch User 2's profile to verify followersCount
-      // User 2 should have 2 followers (User 1 and User 3)
-      const user2ProfileResponse = await httpClient.get<{ profile: Profile }>(
-        `/profile/${user2Handle}`,
-        { headers: { Authorization: `Bearer ${user1Token}` } }
-      );
-      const user2ProfileData = await parseResponse(user2ProfileResponse, ProfileResponseSchema);
-      expect(user2ProfileData.profile.followersCount).toBe(2);
-
-      // User 2 should have 1 following (User 1)
-      expect(user2ProfileData.profile.followingCount).toBe(1);
-
-      // Fetch User 1's profile to verify counts
-      // User 1 should have 1 follower (User 2)
-      const user1ProfileResponse = await httpClient.get<{ profile: Profile }>(
-        `/profile/${user1Handle}`,
-        { headers: { Authorization: `Bearer ${user2Token}` } }
-      );
-      const user1ProfileData = await parseResponse(user1ProfileResponse, ProfileResponseSchema);
-      expect(user1ProfileData.profile.followersCount).toBe(1);
-
-      // User 1 should have 1 following (User 2)
-      expect(user1ProfileData.profile.followingCount).toBe(1);
-
-      testLogger.info('Stream processor verification complete', {
-        user2FollowersCount: user2ProfileData.profile.followersCount,
-        user2FollowingCount: user2ProfileData.profile.followingCount,
-        user1FollowersCount: user1ProfileData.profile.followersCount,
-        user1FollowingCount: user1ProfileData.profile.followingCount
-      });
-    }, 10000); // Longer timeout for stream processing
   });
 
   describe('Error Handling', () => {

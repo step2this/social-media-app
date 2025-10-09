@@ -42,6 +42,8 @@ describe('ProtectedRoute', () => {
       vi.mocked(useAuth).mockReturnValue({
         isAuthenticated: true,
         isLoading: false,
+        isHydrated: true,
+        tokens: { accessToken: 'test-token', refreshToken: 'test-refresh', expiresIn: 3600 },
         checkSession: vi.fn().mockResolvedValue(true)
       } as any);
 
@@ -61,6 +63,8 @@ describe('ProtectedRoute', () => {
       vi.mocked(useAuth).mockReturnValue({
         isAuthenticated: true,
         isLoading: false,
+        isHydrated: true,
+        tokens: { accessToken: 'test-token', refreshToken: 'test-refresh', expiresIn: 3600 },
         checkSession: vi.fn().mockResolvedValue(true)
       } as any);
 
@@ -85,6 +89,8 @@ describe('ProtectedRoute', () => {
       vi.mocked(useAuth).mockReturnValue({
         isAuthenticated: false,
         isLoading: false,
+        isHydrated: true,
+        tokens: null,
         checkSession: vi.fn()
       } as any);
 
@@ -104,6 +110,8 @@ describe('ProtectedRoute', () => {
       vi.mocked(useAuth).mockReturnValue({
         isAuthenticated: false,
         isLoading: false,
+        isHydrated: true,
+        tokens: null,
         checkSession: vi.fn()
       } as any);
 
@@ -120,6 +128,8 @@ describe('ProtectedRoute', () => {
       vi.mocked(useAuth).mockReturnValue({
         isAuthenticated: false,
         isLoading: false,
+        isHydrated: true,
+        tokens: null,
         checkSession: vi.fn()
       } as any);
 

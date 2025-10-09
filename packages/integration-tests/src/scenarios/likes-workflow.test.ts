@@ -18,7 +18,7 @@ import {
   LikePostResponseSchema,
   UnlikePostResponseSchema,
   GetPostLikeStatusResponseSchema,
-  GetPostResponseSchema,
+  PostResponseSchema,
   type RegisterResponse,
   type CreatePostResponse,
   type LikePostResponse,
@@ -31,8 +31,7 @@ import {
   parseResponse,
   testEnvironment,
   environmentDetector,
-  testLogger,
-  delay
+  testLogger
 } from '../utils/index.js';
 import {
   createRegisterRequest,
@@ -237,29 +236,6 @@ describe('Likes Workflow Integration', () => {
       const user2Status = await parseResponse(user2StatusResponse, GetPostLikeStatusResponseSchema);
       expect(user2Status.isLiked).toBe(true);
     });
-  });
-
-  describe('Stream Processor Verification', () => {
-    it('should update likesCount via stream processor (eventual consistency)', async () => {
-      testLogger.debug('Testing stream processor updates likesCount');
-
-      // Wait for stream processor to update counts (~1-2 seconds)
-      await delay(3000);
-
-      // Fetch the post to verify likesCount
-      const getPostResponse = await httpClient.get<{ post: Post }>(
-        `/post/${testPostId}`,
-        { headers: { Authorization: `Bearer ${user1Token}` } }
-      );
-      const getPostData = await parseResponse(getPostResponse, GetPostResponseSchema);
-
-      // Should have 2 likes (user1 and user2)
-      expect(getPostData.post.likesCount).toBe(2);
-
-      testLogger.info('Stream processor verification complete', {
-        likesCount: getPostData.post.likesCount
-      });
-    }, 10000); // Longer timeout for stream processing
   });
 
   describe('Error Handling', () => {

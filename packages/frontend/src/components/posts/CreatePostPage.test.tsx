@@ -292,7 +292,7 @@ describe('CreatePostPage', () => {
       );
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/profile');
+        expect(mockNavigate).toHaveBeenCalledWith('/post/post-123');
       });
     });
 
@@ -369,7 +369,7 @@ describe('CreatePostPage', () => {
 
       // Wait for completion
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/profile');
+        expect(mockNavigate).toHaveBeenCalledWith('/post/post-123');
       });
     });
 

@@ -193,7 +193,7 @@ app.post('/profile/upload-url', (req, res) => callHandler('profileGetUploadUrl',
 // Posts routes
 app.post('/posts', (req, res) => callHandler('postsCreatePost', req, res));
 app.put('/posts/:postId', (req, res) => callHandler('postsUpdatePost', req, res));
-app.get('/posts/:handle', (req, res) => callHandler('postsGetUserPosts', req, res));
+app.get('/profile/:handle/posts', (req, res) => callHandler('postsGetUserPosts', req, res));
 app.delete('/posts/:postId', (req, res) => callHandler('postsDeletePost', req, res));
 app.get('/post/:postId', (req, res) => callHandler('postsGetPost', req, res));
 

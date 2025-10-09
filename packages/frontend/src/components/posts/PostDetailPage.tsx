@@ -5,6 +5,8 @@ import type { Post } from '@social-media-app/shared';
 import { ContentLayout } from '../layout/AppLayout';
 import { MaterialIcon } from '../common/MaterialIcon';
 import { useLike } from '../../hooks/useLike.js';
+import { UserLink } from '../common/UserLink.js';
+import { FollowButton } from '../common/FollowButton.js';
 import './PostDetailPage.css';
 
 interface PostDetailPageProps {}
@@ -125,7 +127,15 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = () => {
               <div className="post-info-section">
                 <div className="sidebar-user-info">
                   <div className="sidebar-user-avatar"></div>
-                  <span className="sidebar-user-handle">@{post.userHandle}</span>
+                  <UserLink
+                    userId={post.userId}
+                    username={post.userHandle}
+                    className="sidebar-user-handle"
+                  />
+                  <FollowButton
+                    userId={post.userId}
+                    initialIsFollowing={false}
+                  />
                 </div>
 
                 {post.caption && (

@@ -7,6 +7,7 @@ import { MyProfilePage } from './components/profile/MyProfilePage';
 import { PlaceholderPage } from './components/common/PlaceholderPage';
 import { CreatePostPage } from './components/posts/index.js';
 import { PostDetailPage } from './components/posts/PostDetailPage';
+import { ExplorePage } from './components/explore/ExplorePage';
 import { AppLayout } from './components/layout/AppLayout';
 import { ContentLayout } from './components/layout/AppLayout';
 import { DesignSystemTest } from './components/design-system/DesignSystemTest.js';
@@ -101,12 +102,7 @@ function AppContent() {
 
           <Route path="/explore" element={
             <ProtectedRoute requireAuth={true}>
-              <PlaceholderPage
-                icon="🔍"
-                title="Explore"
-                description="Discover new pets and friends in the TamaFriends community"
-                features={["🐾 Browse Popular Pets", "🌟 Trending Adventures", "👥 Meet New Friends"]}
-              />
+              <ExplorePage />
             </ProtectedRoute>
           } />
 

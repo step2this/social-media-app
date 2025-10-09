@@ -113,29 +113,45 @@
 }
 
 .stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: var(--space-4);
-  background: var(--tama-champagne-metallic);
-  border: var(--pixel-border);
+  padding: var(--space-4) var(--space-5);
+  /* Subtle grid background inspired by the profile card */
+  background-image:
+    linear-gradient(0deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+  background-size: 8px 8px;
+  background-color: var(--tama-white);
+  border: 1px solid var(--tama-gray-300);
   border-radius: var(--radius-md);
-  box-shadow: var(--pixel-shadow-sm);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  min-width: 100px;
+  min-height: 72px;
+  flex: 1;
 }
 
 .stat-number {
+  /* Plain numbers - no effects, high contrast for readability */
   font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
-  color: var(--tama-racing-red);
+  font-weight: var(--weight-semibold);
+  color: var(--tama-black);
   font-family: var(--font-pixel);
+  letter-spacing: -0.01em;
 }
 
 .stat-label {
   font-size: var(--text-sm);
-  color: var(--tama-night-grey);
+  color: var(--tama-gray-600);
   font-weight: var(--weight-medium);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-top: var(--space-1);
   font-family: var(--font-ui);
+  white-space: nowrap;
+  text-align: center;
 }
 
 /* Profile Bio */

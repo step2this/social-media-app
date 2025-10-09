@@ -59,7 +59,7 @@ export const postService = {
     }
 
     const response = await apiClient.get<PostGridResponse>(
-      `/posts/${handle}?${params.toString()}`
+      `/profile/${handle}/posts?${params.toString()}`
     );
     return response;
   },

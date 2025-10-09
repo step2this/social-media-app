@@ -27,6 +27,8 @@ export interface UserEntity {
   GSI1SK: string; // USER#<userId>
   GSI2PK: string; // USERNAME#<username>
   GSI2SK: string; // USER#<userId>
+  GSI3PK?: string; // HANDLE#<handle>
+  GSI3SK?: string; // USER#<userId>
   // User identity fields
   id: string;
   email: string;
@@ -113,6 +115,8 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
       GSI1SK: `USER#${userId}`,
       GSI2PK: `USERNAME#${request.username}`,
       GSI2SK: `USER#${userId}`,
+      GSI3PK: `HANDLE#${request.username.toLowerCase()}`,
+      GSI3SK: `USER#${userId}`,
       // User identity fields
       id: userId,
       email: request.email,
@@ -127,7 +131,7 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
       // Profile fields with defaults
       fullName: undefined,
       bio: undefined,
-      handle: undefined,
+      handle: request.username,
       profilePictureUrl: undefined,
       profilePictureThumbnailUrl: undefined,
       postsCount: 0,

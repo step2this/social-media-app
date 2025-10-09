@@ -38,7 +38,6 @@ describe('AuthModal UI Tests', () => {
       expect(screen.getByText(/Create Your Pet Profile/)).toBeInTheDocument();
       expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/full name/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /start pet journey/i })).toBeInTheDocument();
     });
 
@@ -187,14 +186,12 @@ describe('AuthModal UI Tests', () => {
       // Fill all fields
       await user.type(screen.getByLabelText(/email/i), 'test@example.com');
       await user.type(screen.getByLabelText(/username/i), 'testuser');
-      await user.type(screen.getByLabelText(/full name/i), 'Test User');
       await user.type(screen.getByLabelText(/^password$/i), 'SecurePassword123!');
       await user.type(screen.getByLabelText(/confirm password/i), 'SecurePassword123!');
 
       // Verify fields are filled
       expect(screen.getByDisplayValue('test@example.com')).toBeInTheDocument();
       expect(screen.getByDisplayValue('testuser')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Test User')).toBeInTheDocument();
     });
   });
 });

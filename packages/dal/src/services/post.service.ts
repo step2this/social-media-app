@@ -4,7 +4,9 @@ import {
   UpdateCommand,
   DeleteCommand,
   QueryCommand,
-  type QueryCommandInput
+  ScanCommand,
+  type QueryCommandInput,
+  type ScanCommandInput
 } from '@aws-sdk/lib-dynamodb';
 import type {
   Post,
@@ -13,7 +15,8 @@ import type {
   UpdatePostRequest,
   GetUserPostsRequest,
   PostsListResponse,
-  PostGridResponse
+  PostGridResponse,
+  FeedResponse
 } from '@social-media-app/shared';
 import { randomUUID } from 'crypto';
 import { ProfileService } from './profile.service.js';
@@ -349,6 +352,49 @@ export class PostService {
       isPublic: entity.isPublic,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt
+    };
+  }
+
+  /**
+   * Get feed posts (all public posts from all users)
+   * Uses scan operation to get posts across all users
+   */
+  async getFeedPosts(
+    limit: number = 24,
+    cursor?: string
+  ): Promise<FeedResponse> {
+    const scanParams: ScanCommandInput = {
+      TableName: this.tableName,
+      FilterExpression: 'entityType = :entityType AND isPublic = :isPublic',
+      ExpressionAttributeValues: {
+        ':entityType': 'POST',
+        ':isPublic': true
+      },
+      Limit: limit
+    };
+
+    if (cursor) {
+      scanParams.ExclusiveStartKey = JSON.parse(
+        Buffer.from(cursor, 'base64').toString()
+      );
+    }
+
+    const result = await this.dynamoClient.send(new ScanCommand(scanParams));
+
+    // Map to PostGridItem
+    const posts = (result.Items || [])
+      .map(item => this.mapEntityToGridItem(item as PostEntity))
+      // Sort by createdAt descending (newest first)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const nextCursor = result.LastEvaluatedKey
+      ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
+      : undefined;
+
+    return {
+      posts,
+      nextCursor,
+      hasMore: !!result.LastEvaluatedKey
     };
   }
 

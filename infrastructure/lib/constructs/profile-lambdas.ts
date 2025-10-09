@@ -24,6 +24,7 @@ export class ProfileLambdas extends Construct {
   public readonly createPost: NodejsFunction;
   public readonly getUserPosts: NodejsFunction;
   public readonly deletePost: NodejsFunction;
+  public readonly getFeed: NodejsFunction;
 
   constructor(scope: Construct, id: string, props: ProfileLambdasProps) {
     super(scope, id);
@@ -119,6 +120,18 @@ export class ProfileLambdas extends Construct {
       bundling: commonBundling
     });
 
+    // Get Feed Lambda
+    this.getFeed = new NodejsFunction(this, 'GetFeedFunction', {
+      functionName: `social-media-app-get-feed-${props.environment}`,
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../../packages/backend/src/handlers/feed/get-feed.ts'),
+      handler: 'handler',
+      timeout: Duration.seconds(30),
+      memorySize: 512,
+      environment: commonEnvironment,
+      bundling: commonBundling
+    });
+
     // Grant DynamoDB permissions
     props.table.grantReadData(this.getProfile);
     props.table.grantReadData(this.getUserPosts);
@@ -126,6 +139,7 @@ export class ProfileLambdas extends Construct {
     props.table.grantReadWriteData(this.createPost);
     props.table.grantReadWriteData(this.deletePost);
     props.table.grantReadData(this.getUploadUrl);
+    props.table.grantReadData(this.getFeed);
 
     // Grant S3 permissions
     props.mediaBucket.grantPut(this.getUploadUrl);
