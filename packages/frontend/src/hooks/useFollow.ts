@@ -25,7 +25,8 @@ export const useFollow = (
   } = options;
 
   // Track whether initial values were explicitly provided
-  const hasInitialValues = 'initialIsFollowing' in options;
+  // Check if the value is not undefined (not just if the property exists)
+  const hasInitialValues = options.initialIsFollowing !== undefined;
 
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [followersCount, setFollowersCount] = useState(initialFollowersCount);
