@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { PostService, ProfileService } from '@social-media-app/dal';
 import {
-  FeedResponseSchema,
+  PostGridResponseSchema,
   type FeedRequest
 } from '@social-media-app/shared';
 import { errorResponse, successResponse } from '../../utils/index.js';
@@ -60,7 +60,7 @@ export const handler = async (
     const feedData = await postService.getFeedPosts(request.limit, request.cursor);
 
     // Validate response
-    const validatedResponse = FeedResponseSchema.parse(feedData);
+    const validatedResponse = PostGridResponseSchema.parse(feedData);
 
     return successResponse(200, validatedResponse);
   } catch (error) {

@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import type { FeedResponse } from '@social-media-app/shared';
+import type { FeedResponse, PostGridResponse } from '@social-media-app/shared';
 
 /**
  * Feed service for frontend API calls
@@ -11,14 +11,14 @@ export const feedService = {
   async getFeedPosts(
     limit: number = 24,
     cursor?: string
-  ): Promise<FeedResponse> {
+  ): Promise<PostGridResponse> {
     const params = new URLSearchParams();
     params.append('limit', limit.toString());
     if (cursor) {
       params.append('cursor', cursor);
     }
 
-    const response = await apiClient.get<FeedResponse>(
+    const response = await apiClient.get<PostGridResponse>(
       `/feed?${params.toString()}`
     );
     return response;
