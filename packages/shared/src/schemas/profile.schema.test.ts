@@ -155,5 +155,64 @@ describe('Profile Schemas', () => {
       expect(publicProfile).not.toHaveProperty('emailVerified');
       expect(publicProfile).not.toHaveProperty('updatedAt');
     });
+
+    it('should accept isFollowing as true', () => {
+      const profileWithFollowing = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        handle: 'userhandle',
+        username: 'username',
+        fullName: 'John Doe',
+        bio: 'My bio',
+        profilePictureUrl: 'https://example.com/picture.jpg',
+        profilePictureThumbnailUrl: 'https://example.com/thumb.jpg',
+        postsCount: 10,
+        followersCount: 100,
+        followingCount: 50,
+        createdAt: new Date().toISOString(),
+        isFollowing: true
+      };
+
+      const result = PublicProfileSchema.parse(profileWithFollowing);
+      expect(result.isFollowing).toBe(true);
+    });
+
+    it('should accept isFollowing as false', () => {
+      const profileNotFollowing = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        handle: 'userhandle',
+        username: 'username',
+        fullName: 'John Doe',
+        bio: 'My bio',
+        profilePictureUrl: 'https://example.com/picture.jpg',
+        profilePictureThumbnailUrl: 'https://example.com/thumb.jpg',
+        postsCount: 10,
+        followersCount: 100,
+        followingCount: 50,
+        createdAt: new Date().toISOString(),
+        isFollowing: false
+      };
+
+      const result = PublicProfileSchema.parse(profileNotFollowing);
+      expect(result.isFollowing).toBe(false);
+    });
+
+    it('should accept profile without isFollowing (optional field)', () => {
+      const profileWithoutFollowing = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        handle: 'userhandle',
+        username: 'username',
+        fullName: 'John Doe',
+        bio: 'My bio',
+        profilePictureUrl: 'https://example.com/picture.jpg',
+        profilePictureThumbnailUrl: 'https://example.com/thumb.jpg',
+        postsCount: 10,
+        followersCount: 100,
+        followingCount: 50,
+        createdAt: new Date().toISOString()
+      };
+
+      const result = PublicProfileSchema.parse(profileWithoutFollowing);
+      expect(result.isFollowing).toBeUndefined();
+    });
   });
 });

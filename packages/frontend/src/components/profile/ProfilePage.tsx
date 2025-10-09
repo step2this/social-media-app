@@ -129,7 +129,7 @@ export const ProfilePage: React.FC = () => {
           <div style={{ marginTop: '1rem', textAlign: 'center' }}>
             <FollowButton
               userId={profile.id}
-              initialIsFollowing={false}
+              initialIsFollowing={profile.isFollowing}
               initialFollowersCount={profile.followersCount}
               onFollowStatusChange={handleFollowStatusChange}
             />

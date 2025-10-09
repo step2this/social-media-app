@@ -1,10 +1,10 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { ProfileService } from '@social-media-app/dal';
+import { ProfileService, FollowService } from '@social-media-app/dal';
 import {
   PublicProfileResponseSchema,
   type PublicProfileResponse
 } from '@social-media-app/shared';
-import { errorResponse, successResponse } from '../../utils/index.js';
+import { errorResponse, successResponse, verifyAccessToken, getJWTConfigFromEnv } from '../../utils/index.js';
 import {
   createDynamoDBClient,
   createS3Client,
@@ -17,6 +17,7 @@ import { z } from 'zod';
 
 /**
  * Handler to get a public profile by handle
+ * Optionally includes isFollowing status when user is authenticated
  */
 export const handler = async (
   event: APIGatewayProxyEventV2
@@ -51,9 +52,38 @@ export const handler = async (
       return errorResponse(404, 'Profile not found');
     }
 
+    // Check follow status if user is authenticated
+    let isFollowing: boolean | undefined = undefined;
+
+    try {
+      const authHeader = event.headers.authorization || event.headers.Authorization;
+
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const jwtConfig = getJWTConfigFromEnv();
+        const decoded = await verifyAccessToken(token, jwtConfig.secret);
+
+        if (decoded?.userId && profile.id) {
+          // Only check follow status if not viewing own profile
+          if (decoded.userId !== profile.id) {
+            const followService = new FollowService(dynamoClient, tableName);
+            const followStatus = await followService.getFollowStatus(decoded.userId, profile.id);
+            isFollowing = followStatus.isFollowing;
+          }
+        }
+      }
+    } catch (authError) {
+      // Authentication failed or invalid token - continue without follow status
+      // This is not an error - just means profile is viewed by unauthenticated user
+      console.log('Profile viewed without authentication or invalid token');
+    }
+
     // Validate response
     const response: PublicProfileResponse = {
-      profile
+      profile: {
+        ...profile,
+        isFollowing
+      }
     };
 
     const validatedResponse = PublicProfileResponseSchema.parse(response);

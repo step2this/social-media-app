@@ -76,6 +76,8 @@ export const PublicProfileSchema = ProfileSchema.pick({
   followersCount: true,
   followingCount: true,
   createdAt: true
+}).extend({
+  isFollowing: z.boolean().optional()
 });
 
 export const PublicProfileResponseSchema = z.object({
