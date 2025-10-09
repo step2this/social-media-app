@@ -140,6 +140,7 @@ export class StreamProcessor {
 
   /**
    * Process records by calling registered handlers
+   * Errors in individual handlers are logged but don't stop processing
    */
   private async processRecords(records: any[]): Promise<void> {
     if (records.length === 0 || this.handlers.length === 0) {
@@ -148,9 +149,15 @@ export class StreamProcessor {
 
     const event = this.transformRecordsToEvent(records);
 
-    // Call all registered handlers
+    // Call all registered handlers with individual error handling
     await Promise.all(
-      this.handlers.map(handler => handler(event))
+      this.handlers.map(async handler => {
+        try {
+          await handler(event);
+        } catch (error) {
+          console.error('Handler error (continuing processing):', error);
+        }
+      })
     );
   }
 

@@ -448,3 +448,144 @@ describe('StreamProcessor - TDD Cycle 3: Record Processing', () => {
     await processor.stop();
   });
 });
+
+describe('StreamProcessor - TDD Cycle 5: Error Handling', () => {
+  beforeEach(() => {
+    dynamoMock.reset();
+    streamsMock.reset();
+    vi.clearAllTimers();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should continue processing if handler throws error', async () => {
+    // Arrange
+    const streamArn = 'arn:aws:dynamodb:us-east-1:000000000000:table/test-table/stream/2024-01-01T00:00:00.000';
+    const failingHandler = vi.fn().mockRejectedValue(new Error('Handler failed'));
+    const successHandler = vi.fn().mockResolvedValue(undefined);
+
+    dynamoMock.on(DescribeTableCommand).resolves({
+      Table: {
+        LatestStreamArn: streamArn,
+        StreamSpecification: {
+          StreamEnabled: true,
+          StreamViewType: 'NEW_AND_OLD_IMAGES'
+        }
+      }
+    });
+
+    streamsMock.on(DescribeStreamCommand).resolves({
+      StreamDescription: {
+        Shards: [{ ShardId: 'shard-001' }]
+      }
+    });
+
+    streamsMock.on(GetShardIteratorCommand).resolves({
+      ShardIterator: 'test-iterator'
+    });
+
+    streamsMock.on(GetRecordsCommand).resolvesOnce({
+      Records: [
+        {
+          eventID: '1',
+          eventName: 'INSERT',
+          dynamodb: {
+            NewImage: {
+              PK: { S: 'USER#123' },
+              SK: { S: 'FOLLOW#456' }
+            }
+          }
+        }
+      ],
+      NextShardIterator: 'next-iterator'
+    }).resolves({
+      Records: [],
+      NextShardIterator: 'next-iterator'
+    });
+
+    // Act
+    const processor = new StreamProcessor({
+      tableName: 'test-table',
+      endpoint: 'http://localhost:4566',
+      region: 'us-east-1',
+      pollInterval: 100
+    });
+
+    processor.registerHandler(failingHandler);
+    processor.registerHandler(successHandler);
+
+    await processor.start();
+    await vi.advanceTimersByTimeAsync(200);
+
+    // Assert - both handlers should be called despite first one failing
+    expect(failingHandler).toHaveBeenCalled();
+    expect(successHandler).toHaveBeenCalled();
+
+    await processor.stop();
+  });
+
+  it('should continue polling after handler error', async () => {
+    // Arrange
+    const streamArn = 'arn:aws:dynamodb:us-east-1:000000000000:table/test-table/stream/2024-01-01T00:00:00.000';
+    const failingHandler = vi.fn()
+      .mockRejectedValueOnce(new Error('First fail'))
+      .mockResolvedValue(undefined);
+
+    dynamoMock.on(DescribeTableCommand).resolves({
+      Table: {
+        LatestStreamArn: streamArn,
+        StreamSpecification: {
+          StreamEnabled: true,
+          StreamViewType: 'NEW_AND_OLD_IMAGES'
+        }
+      }
+    });
+
+    streamsMock.on(DescribeStreamCommand).resolves({
+      StreamDescription: {
+        Shards: [{ ShardId: 'shard-001' }]
+      }
+    });
+
+    streamsMock.on(GetShardIteratorCommand).resolves({
+      ShardIterator: 'test-iterator'
+    });
+
+    streamsMock.on(GetRecordsCommand).resolves({
+      Records: [
+        {
+          eventID: '1',
+          eventName: 'INSERT',
+          dynamodb: {
+            NewImage: {
+              PK: { S: 'USER#123' },
+              SK: { S: 'FOLLOW#456' }
+            }
+          }
+        }
+      ],
+      NextShardIterator: 'next-iterator'
+    });
+
+    // Act
+    const processor = new StreamProcessor({
+      tableName: 'test-table',
+      endpoint: 'http://localhost:4566',
+      region: 'us-east-1',
+      pollInterval: 100
+    });
+
+    processor.registerHandler(failingHandler);
+
+    await processor.start();
+    await vi.advanceTimersByTimeAsync(300);
+
+    // Assert - handler should be called multiple times (continues polling)
+    expect(failingHandler.mock.calls.length).toBeGreaterThanOrEqual(2);
+
+    await processor.stop();
+  });
+});
