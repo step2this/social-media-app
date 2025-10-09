@@ -24,6 +24,9 @@ export const useFollow = (
     initialFollowingCount = 0
   } = options;
 
+  // Track whether initial values were explicitly provided
+  const hasInitialValues = 'initialIsFollowing' in options;
+
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [followersCount, setFollowersCount] = useState(initialFollowersCount);
   const [followingCount, setFollowingCount] = useState(initialFollowingCount);
@@ -36,6 +39,35 @@ export const useFollow = (
     setFollowersCount(initialFollowersCount);
     setFollowingCount(initialFollowingCount);
   }, [initialIsFollowing, initialFollowersCount, initialFollowingCount]);
+
+  /**
+   * Fetch current follow status from server
+   */
+  const fetchFollowStatus = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await followService.getFollowStatus(userId);
+      setIsFollowing(response.isFollowing);
+      setFollowersCount(response.followersCount);
+      setFollowingCount(response.followingCount);
+      setIsLoading(false);
+    } catch (err) {
+      setError('Failed to fetch follow status');
+      setIsLoading(false);
+    }
+  }, [userId]);
+
+  /**
+   * Auto-fetch follow status on mount when no initial values provided
+   * This ensures FollowButton shows correct state even when parent doesn't provide initial data
+   */
+  useEffect(() => {
+    if (!hasInitialValues && userId) {
+      fetchFollowStatus();
+    }
+  }, []); // Empty deps - only run on mount
 
   /**
    * Follow a user with optimistic update
@@ -117,25 +149,6 @@ export const useFollow = (
       await followUser();
     }
   }, [isFollowing, followUser, unfollowUser]);
-
-  /**
-   * Fetch current follow status from server
-   */
-  const fetchFollowStatus = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await followService.getFollowStatus(userId);
-      setIsFollowing(response.isFollowing);
-      setFollowersCount(response.followersCount);
-      setFollowingCount(response.followingCount);
-      setIsLoading(false);
-    } catch (err) {
-      setError('Failed to fetch follow status');
-      setIsLoading(false);
-    }
-  }, [userId]);
 
   /**
    * Clear error state

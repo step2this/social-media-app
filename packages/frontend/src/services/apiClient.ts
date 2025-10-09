@@ -377,8 +377,11 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
       }, defaultRetryConfig, includeAuth);
     },
 
-    delete: async <T>(endpoint: string, includeAuth: boolean = true): Promise<T> => {
-      return sendRequest<T>(endpoint, { method: 'DELETE' }, defaultRetryConfig, includeAuth);
+    delete: async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
+      return sendRequest<T>(endpoint, {
+        method: 'DELETE',
+        body: data ? JSON.stringify(data) : undefined
+      }, defaultRetryConfig, includeAuth);
     },
 
     /**

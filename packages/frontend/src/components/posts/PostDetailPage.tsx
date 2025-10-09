@@ -134,7 +134,6 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = () => {
                   />
                   <FollowButton
                     userId={post.userId}
-                    initialIsFollowing={false}
                   />
                 </div>
 
