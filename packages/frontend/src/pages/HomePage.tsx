@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { FeedPostItem } from '@social-media-app/shared';
 import { feedService } from '../services/feedService';
-import { FeedPostCard } from '../components/feed/FeedPostCard';
+import { PostCard } from '../components/posts/PostCard';
 import './HomePage.css';
 
 /**
@@ -138,7 +138,7 @@ export const HomePage: React.FC = () => {
         {/* Vertical feed of posts */}
         <div className="home-page__feed">
           {posts.map((post) => (
-            <FeedPostCard key={post.id} post={post} />
+            <PostCard key={post.id} post={post} compact={true} />
           ))}
         </div>
 
