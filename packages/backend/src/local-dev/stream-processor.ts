@@ -106,7 +106,7 @@ export class StreamProcessor {
       new GetShardIteratorCommand({
         StreamArn: streamArn,
         ShardId: shardId,
-        ShardIteratorType: 'LATEST' // Start from latest records
+        ShardIteratorType: 'TRIM_HORIZON' // Start from beginning to process all records
       })
     );
 
