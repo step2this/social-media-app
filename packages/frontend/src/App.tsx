@@ -5,6 +5,7 @@ import { AuthModal } from './components/auth/AuthModal.js';
 import { ProfilePage } from './components/profile/ProfilePage';
 import { MyProfilePage } from './components/profile/MyProfilePage';
 import { HomePage } from './pages/HomePage';
+import { PlaceholderPage } from './components/common/PlaceholderPage';
 import { CreatePostPage } from './components/posts/index.js';
 import { PostDetailPage } from './components/posts/PostDetailPage';
 import { ExplorePage } from './components/explore/ExplorePage';
