@@ -26,7 +26,10 @@ const createMockDynamoClient = () => {
 
     // Check condition expression for duplicate prevention
     if (command.input.ConditionExpression === 'attribute_not_exists(PK)' && items.has(key)) {
-      throw new Error('ConditionalCheckFailedException');
+      const error: any = new Error('ConditionalCheckFailedException');
+      error.name = 'ConditionalCheckFailedException';
+      error.__type = 'ConditionalCheckFailedException';
+      throw error;
     }
 
     items.set(key, item);
@@ -45,6 +48,21 @@ const createMockDynamoClient = () => {
     return { $metadata: {} };
   };
 
+  const handleQueryCommand = (command: MockDynamoCommand) => {
+    const results: Record<string, unknown>[] = [];
+    const pkValue = command.input.ExpressionAttributeValues?.[':pk'] as string;
+    const skPrefix = command.input.ExpressionAttributeValues?.[':sk'] as string;
+
+    // Filter items by PK and SK prefix
+    for (const [key, item] of items.entries()) {
+      if (item.PK === pkValue && typeof item.SK === 'string' && item.SK.startsWith(skPrefix)) {
+        results.push(item);
+      }
+    }
+
+    return { Items: results, $metadata: {} };
+  };
+
   const send = vi.fn((command: MockDynamoCommand) => {
     const commandName = command.constructor.name;
 
@@ -55,6 +73,8 @@ const createMockDynamoClient = () => {
         return Promise.resolve(handleGetCommand(command));
       case 'DeleteCommand':
         return Promise.resolve(handleDeleteCommand(command));
+      case 'QueryCommand':
+        return Promise.resolve(handleQueryCommand(command));
       default:
         return Promise.resolve({ $metadata: {} });
     }
@@ -231,6 +251,63 @@ describe('FollowService', () => {
       vi.spyOn(mockClient, 'send').mockRejectedValueOnce(new Error('DynamoDB error'));
 
       await expect(service.getFollowStatus(followerId, followeeId)).rejects.toThrow('DynamoDB error');
+    });
+  });
+
+  describe('getFollowingList', () => {
+    it('should return empty array when user is not following anyone', async () => {
+      const userId = 'user-123';
+
+      const result = await service.getFollowingList(userId);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return list of followee IDs', async () => {
+      const followerId = 'user-123';
+      const followeeId1 = 'user-456';
+      const followeeId2 = 'user-789';
+      const followeeId3 = 'user-abc';
+
+      // Follow multiple users
+      await service.followUser(followerId, followeeId1);
+      await service.followUser(followerId, followeeId2);
+      await service.followUser(followerId, followeeId3);
+
+      // Get following list
+      const result = await service.getFollowingList(followerId);
+
+      expect(result).toEqual(
+        expect.arrayContaining([followeeId1, followeeId2, followeeId3])
+      );
+      expect(result).toHaveLength(3);
+    });
+
+    it('should only return followees for the specific user', async () => {
+      const followerId1 = 'user-123';
+      const followerId2 = 'user-999';
+      const followeeId1 = 'user-456';
+      const followeeId2 = 'user-789';
+
+      // User 1 follows user 456
+      await service.followUser(followerId1, followeeId1);
+      // User 2 follows user 789
+      await service.followUser(followerId2, followeeId2);
+
+      // Get following list for user 1
+      const result = await service.getFollowingList(followerId1);
+
+      expect(result).toEqual([followeeId1]);
+      expect(result).not.toContain(followeeId2);
+    });
+
+    it('should handle errors gracefully', async () => {
+      const userId = 'user-123';
+
+      // Mock an error
+      vi.spyOn(mockClient, 'send').mockRejectedValueOnce(new Error('DynamoDB error'));
+
+      await expect(service.getFollowingList(userId)).rejects.toThrow('DynamoDB error');
     });
   });
 });

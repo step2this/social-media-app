@@ -35,6 +35,14 @@ const createMockProfileService = () => ({
   generatePresignedUrl: vi.fn()
 });
 
+// Mock FollowService
+const createMockFollowService = () => ({
+  followUser: vi.fn(),
+  unfollowUser: vi.fn(),
+  getFollowStatus: vi.fn(),
+  getFollowingList: vi.fn()
+});
+
 // Mock DynamoDB client with proper typing
 const createMockDynamoClient = () => {
   const items = new Map<string, Record<string, unknown>>();
@@ -569,6 +577,261 @@ describe('PostService', () => {
         isPublic: false
       });
       expect(result.hasMore).toBe(false);
+    });
+  });
+
+  describe('getFollowingFeedPosts', () => {
+    it('should return empty array when user is not following anyone', async () => {
+      const userId = 'user123';
+      const mockFollowService = createMockFollowService();
+      mockFollowService.getFollowingList.mockResolvedValue([]);
+
+      const result = await postService.getFollowingFeedPosts(userId, mockFollowService, 24);
+
+      expect(result.posts).toEqual([]);
+      expect(result.hasMore).toBe(false);
+      expect(mockFollowService.getFollowingList).toHaveBeenCalledWith(userId);
+    });
+
+    it('should return posts from followed users only', async () => {
+      const userId = 'user123';
+      const followeeId1 = 'user-followed-1';
+      const followeeId2 = 'user-followed-2';
+      const unfollowedUserId = 'user-unfollowed';
+
+      // Create posts from followed users
+      const post1: PostEntity = {
+        PK: `USER#${followeeId1}`,
+        SK: `POST#2025-01-01T10:00:00.000Z#post1`,
+        GSI1PK: `POST#post1`,
+        GSI1SK: `USER#${followeeId1}`,
+        id: 'post1',
+        userId: followeeId1,
+        userHandle: 'followed1',
+        imageUrl: 'https://example.com/image1.jpg',
+        thumbnailUrl: 'https://example.com/thumb1.jpg',
+        caption: 'Post from followed user 1',
+        tags: [],
+        likesCount: 5,
+        commentsCount: 2,
+        isPublic: true,
+        createdAt: '2025-01-01T10:00:00.000Z',
+        updatedAt: '2025-01-01T10:00:00.000Z',
+        entityType: 'POST'
+      };
+
+      const post2: PostEntity = {
+        PK: `USER#${followeeId2}`,
+        SK: `POST#2025-01-01T11:00:00.000Z#post2`,
+        GSI1PK: `POST#post2`,
+        GSI1SK: `USER#${followeeId2}`,
+        id: 'post2',
+        userId: followeeId2,
+        userHandle: 'followed2',
+        imageUrl: 'https://example.com/image2.jpg',
+        thumbnailUrl: 'https://example.com/thumb2.jpg',
+        caption: 'Post from followed user 2',
+        tags: [],
+        likesCount: 10,
+        commentsCount: 3,
+        isPublic: true,
+        createdAt: '2025-01-01T11:00:00.000Z',
+        updatedAt: '2025-01-01T11:00:00.000Z',
+        entityType: 'POST'
+      };
+
+      // Create post from unfollowed user (should NOT appear in feed)
+      const post3: PostEntity = {
+        PK: `USER#${unfollowedUserId}`,
+        SK: `POST#2025-01-01T12:00:00.000Z#post3`,
+        GSI1PK: `POST#post3`,
+        GSI1SK: `USER#${unfollowedUserId}`,
+        id: 'post3',
+        userId: unfollowedUserId,
+        userHandle: 'unfollowed',
+        imageUrl: 'https://example.com/image3.jpg',
+        thumbnailUrl: 'https://example.com/thumb3.jpg',
+        caption: 'Post from unfollowed user',
+        tags: [],
+        likesCount: 1,
+        commentsCount: 0,
+        isPublic: true,
+        createdAt: '2025-01-01T12:00:00.000Z',
+        updatedAt: '2025-01-01T12:00:00.000Z',
+        entityType: 'POST'
+      };
+
+      mockDynamoClient._getItems().set(`${post1.PK}#${post1.SK}`, post1);
+      mockDynamoClient._getItems().set(`${post2.PK}#${post2.SK}`, post2);
+      mockDynamoClient._getItems().set(`${post3.PK}#${post3.SK}`, post3);
+
+      const mockFollowService = createMockFollowService();
+      mockFollowService.getFollowingList.mockResolvedValue([followeeId1, followeeId2]);
+
+      const result = await postService.getFollowingFeedPosts(userId, mockFollowService, 24);
+
+      expect(result.posts).toHaveLength(2);
+      expect(result.posts.map(p => p.id)).toEqual(expect.arrayContaining(['post1', 'post2']));
+      expect(result.posts.map(p => p.id)).not.toContain('post3');
+    });
+
+    it('should return posts sorted by createdAt DESC (newest first)', async () => {
+      const userId = 'user123';
+      const followeeId = 'user-followed';
+
+      const olderPost: PostEntity = {
+        PK: `USER#${followeeId}`,
+        SK: `POST#2025-01-01T10:00:00.000Z#post-older`,
+        GSI1PK: `POST#post-older`,
+        GSI1SK: `USER#${followeeId}`,
+        id: 'post-older',
+        userId: followeeId,
+        userHandle: 'followed',
+        imageUrl: 'https://example.com/old.jpg',
+        thumbnailUrl: 'https://example.com/old-thumb.jpg',
+        caption: 'Older post',
+        tags: [],
+        likesCount: 0,
+        commentsCount: 0,
+        isPublic: true,
+        createdAt: '2025-01-01T10:00:00.000Z',
+        updatedAt: '2025-01-01T10:00:00.000Z',
+        entityType: 'POST'
+      };
+
+      const newerPost: PostEntity = {
+        PK: `USER#${followeeId}`,
+        SK: `POST#2025-01-02T10:00:00.000Z#post-newer`,
+        GSI1PK: `POST#post-newer`,
+        GSI1SK: `USER#${followeeId}`,
+        id: 'post-newer',
+        userId: followeeId,
+        userHandle: 'followed',
+        imageUrl: 'https://example.com/new.jpg',
+        thumbnailUrl: 'https://example.com/new-thumb.jpg',
+        caption: 'Newer post',
+        tags: [],
+        likesCount: 0,
+        commentsCount: 0,
+        isPublic: true,
+        createdAt: '2025-01-02T10:00:00.000Z',
+        updatedAt: '2025-01-02T10:00:00.000Z',
+        entityType: 'POST'
+      };
+
+      mockDynamoClient._getItems().set(`${olderPost.PK}#${olderPost.SK}`, olderPost);
+      mockDynamoClient._getItems().set(`${newerPost.PK}#${newerPost.SK}`, newerPost);
+
+      const mockFollowService = createMockFollowService();
+      mockFollowService.getFollowingList.mockResolvedValue([followeeId]);
+
+      const result = await postService.getFollowingFeedPosts(userId, mockFollowService, 24);
+
+      expect(result.posts).toHaveLength(2);
+      // Newer post should be first
+      expect(result.posts[0].id).toBe('post-newer');
+      expect(result.posts[1].id).toBe('post-older');
+    });
+
+    it('should only return public posts', async () => {
+      const userId = 'user123';
+      const followeeId = 'user-followed';
+
+      const publicPost: PostEntity = {
+        PK: `USER#${followeeId}`,
+        SK: `POST#2025-01-01T10:00:00.000Z#post-public`,
+        GSI1PK: `POST#post-public`,
+        GSI1SK: `USER#${followeeId}`,
+        id: 'post-public',
+        userId: followeeId,
+        userHandle: 'followed',
+        imageUrl: 'https://example.com/public.jpg',
+        thumbnailUrl: 'https://example.com/public-thumb.jpg',
+        caption: 'Public post',
+        tags: [],
+        likesCount: 0,
+        commentsCount: 0,
+        isPublic: true,
+        createdAt: '2025-01-01T10:00:00.000Z',
+        updatedAt: '2025-01-01T10:00:00.000Z',
+        entityType: 'POST'
+      };
+
+      const privatePost: PostEntity = {
+        PK: `USER#${followeeId}`,
+        SK: `POST#2025-01-01T11:00:00.000Z#post-private`,
+        GSI1PK: `POST#post-private`,
+        GSI1SK: `USER#${followeeId}`,
+        id: 'post-private',
+        userId: followeeId,
+        userHandle: 'followed',
+        imageUrl: 'https://example.com/private.jpg',
+        thumbnailUrl: 'https://example.com/private-thumb.jpg',
+        caption: 'Private post',
+        tags: [],
+        likesCount: 0,
+        commentsCount: 0,
+        isPublic: false,
+        createdAt: '2025-01-01T11:00:00.000Z',
+        updatedAt: '2025-01-01T11:00:00.000Z',
+        entityType: 'POST'
+      };
+
+      mockDynamoClient._getItems().set(`${publicPost.PK}#${publicPost.SK}`, publicPost);
+      mockDynamoClient._getItems().set(`${privatePost.PK}#${privatePost.SK}`, privatePost);
+
+      const mockFollowService = createMockFollowService();
+      mockFollowService.getFollowingList.mockResolvedValue([followeeId]);
+
+      const result = await postService.getFollowingFeedPosts(userId, mockFollowService, 24);
+
+      expect(result.posts).toHaveLength(1);
+      expect(result.posts[0].id).toBe('post-public');
+    });
+
+    it('should respect limit parameter', async () => {
+      const userId = 'user123';
+      const followeeId = 'user-followed';
+
+      // Create 5 posts
+      for (let i = 1; i <= 5; i++) {
+        const post: PostEntity = {
+          PK: `USER#${followeeId}`,
+          SK: `POST#2025-01-01T${String(i).padStart(2, '0')}:00:00.000Z#post-${i}`,
+          GSI1PK: `POST#post-${i}`,
+          GSI1SK: `USER#${followeeId}`,
+          id: `post-${i}`,
+          userId: followeeId,
+          userHandle: 'followed',
+          imageUrl: `https://example.com/image${i}.jpg`,
+          thumbnailUrl: `https://example.com/thumb${i}.jpg`,
+          caption: `Post ${i}`,
+          tags: [],
+          likesCount: 0,
+          commentsCount: 0,
+          isPublic: true,
+          createdAt: `2025-01-01T${String(i).padStart(2, '0')}:00:00.000Z`,
+          updatedAt: `2025-01-01T${String(i).padStart(2, '0')}:00:00.000Z`,
+          entityType: 'POST'
+        };
+        mockDynamoClient._getItems().set(`${post.PK}#${post.SK}`, post);
+      }
+
+      const mockFollowService = createMockFollowService();
+      mockFollowService.getFollowingList.mockResolvedValue([followeeId]);
+
+      const result = await postService.getFollowingFeedPosts(userId, mockFollowService, 3);
+
+      expect(result.posts).toHaveLength(3);
+    });
+
+    it('should handle errors gracefully', async () => {
+      const userId = 'user123';
+      const mockFollowService = createMockFollowService();
+      mockFollowService.getFollowingList.mockRejectedValue(new Error('Database error'));
+
+      await expect(postService.getFollowingFeedPosts(userId, mockFollowService, 24))
+        .rejects.toThrow('Database error');
     });
   });
 });

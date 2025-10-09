@@ -399,6 +399,85 @@ export class PostService {
   }
 
   /**
+   * Get following feed posts (home page - posts from followed users only)
+   * Phase 1: Query-Time approach - queries posts from each followed user
+   *
+   * ARCHITECTURE NOTE: This implements the Query-Time (Fan-Out on Read) pattern.
+   * Future Phase 2 (Hybrid) will check materialized cache first, then fallback to this.
+   *
+   * @param userId - ID of user whose feed to retrieve
+   * @param followService - FollowService instance for getting following list
+   * @param limit - Maximum number of posts to return
+   * @param cursor - Pagination cursor (not implemented in Phase 1)
+   * @returns Feed response with posts from followed users
+   */
+  async getFollowingFeedPosts(
+    userId: string,
+    followService: { getFollowingList: (userId: string) => Promise<string[]> },
+    limit: number = 24,
+    _cursor?: string // Not implemented in Phase 1, will be used in Phase 2
+  ): Promise<FeedResponse> {
+    // Get list of users this user is following
+    const followingUserIds = await followService.getFollowingList(userId);
+
+    // If not following anyone, return empty feed
+    if (followingUserIds.length === 0) {
+      return {
+        posts: [],
+        nextCursor: undefined,
+        hasMore: false
+      };
+    }
+
+    // Query posts from all followed users
+    // PERFORMANCE NOTE: This queries each user separately. In production, consider:
+    // 1. Batch queries for efficiency
+    // 2. Caching frequently accessed posts
+    // 3. Hybrid approach with materialized top 25 posts
+    const allPosts: PostEntity[] = [];
+
+    for (const followeeId of followingUserIds) {
+      const queryParams: QueryCommandInput = {
+        TableName: this.tableName,
+        KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
+        ExpressionAttributeValues: {
+          ':pk': `USER#${followeeId}`,
+          ':skPrefix': 'POST#'
+        },
+        ScanIndexForward: false, // Sort descending by SK (newest first)
+        // Fetch more than limit to account for filtering
+        Limit: limit * 2
+      };
+
+      const result = await this.dynamoClient.send(new QueryCommand(queryParams));
+
+      if (result.Items && result.Items.length > 0) {
+        allPosts.push(...(result.Items as PostEntity[]));
+      }
+    }
+
+    // Filter for public posts only
+    const publicPosts = allPosts.filter(post => post.isPublic);
+
+    // Sort by createdAt descending (newest first)
+    const sortedPosts = publicPosts.sort((a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    // Apply limit
+    const limitedPosts = sortedPosts.slice(0, limit);
+
+    // Map to PostGridItem
+    const posts = limitedPosts.map(entity => this.mapEntityToGridItem(entity));
+
+    return {
+      posts,
+      nextCursor: undefined, // Pagination not implemented in Phase 1
+      hasMore: sortedPosts.length > limit
+    };
+  }
+
+  /**
    * Map entity to PostGridItem
    */
   private mapEntityToGridItem(entity: PostEntity): PostGridItem {

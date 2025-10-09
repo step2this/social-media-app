@@ -1,5 +1,5 @@
 /* eslint-disable max-lines-per-function */
-import { DynamoDBDocumentClient, PutCommand, GetCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, GetCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import type {
   FollowUserResponse,
   UnfollowUserResponse,
@@ -129,5 +129,35 @@ export class FollowService {
       followersCount: 0,
       followingCount: 0
     };
+  }
+
+  /**
+   * Get list of user IDs that this user is following
+   * This is the foundation for the Following Feed (Query-Time approach)
+   *
+   * ARCHITECTURE NOTE: This method supports Phase 1 (Query-Time) feed pattern.
+   * In Phase 2 (Hybrid), we'll add a materialized feed cache and use this as fallback.
+   *
+   * @param userId - ID of user whose following list to retrieve
+   * @returns Array of followee user IDs
+   */
+  async getFollowingList(userId: string): Promise<string[]> {
+    const result = await this.client.send(new QueryCommand({
+      TableName: this.tableName,
+      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
+      ExpressionAttributeValues: {
+        ':pk': `USER#${userId}`,
+        ':sk': 'FOLLOW#'
+      }
+    }));
+
+    if (!result.Items || result.Items.length === 0) {
+      return [];
+    }
+
+    // Extract followeeId from each follow entity
+    return result.Items
+      .map((item) => (item as FollowEntity).followeeId)
+      .filter((id): id is string => !!id);
   }
 }
