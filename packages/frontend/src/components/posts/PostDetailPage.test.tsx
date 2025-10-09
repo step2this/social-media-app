@@ -15,12 +15,13 @@ vi.mock('../../services/postService.js', () => ({
 
 // Mock PostCard component to verify it's being used
 vi.mock('./PostCard', () => ({
-  PostCard: ({ post, currentUserId, showComments }: any) => (
+  PostCard: ({ post, currentUserId, showComments, variant }: any) => (
     <div data-testid="post-card-mock">
       <div data-testid="post-card-id">{post.id}</div>
       <div data-testid="post-card-user-id">{post.userId}</div>
       <div data-testid="post-card-current-user">{currentUserId || 'none'}</div>
       <div data-testid="post-card-show-comments">{showComments ? 'true' : 'false'}</div>
+      <div data-testid="post-card-variant">{variant || 'feed'}</div>
     </div>
   )
 }));
@@ -84,6 +85,19 @@ describe('PostDetailPage', () => {
 
       // PostDetailPage should show comments section
       expect(screen.getByTestId('post-card-show-comments')).toHaveTextContent('true');
+    });
+
+    it('should pass variant="detail" prop to PostCard', async () => {
+      vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
+
+      renderPostDetailPage();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('post-card-mock')).toBeInTheDocument();
+      });
+
+      // PostDetailPage should use detail variant for full post view
+      expect(screen.getByTestId('post-card-variant')).toHaveTextContent('detail');
     });
 
     it('should NOT render inline post markup when using PostCard', async () => {

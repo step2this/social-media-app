@@ -151,4 +151,30 @@ describe('PostCard', () => {
       expect(image).toHaveClass('loading');
     });
   });
+
+  describe('Layout Variants', () => {
+    it('should render with default feed variant', () => {
+      renderWithRouter(<PostCard post={mockPost} />);
+
+      const card = screen.getByTestId('post-card');
+      expect(card).toHaveClass('post-card');
+      expect(card).not.toHaveClass('post-card--detail');
+    });
+
+    it('should render with detail variant when specified', () => {
+      renderWithRouter(<PostCard post={mockPost} variant="detail" />);
+
+      const card = screen.getByTestId('post-card');
+      expect(card).toHaveClass('post-card');
+      expect(card).toHaveClass('post-card--detail');
+    });
+
+    it('should render with feed variant when explicitly specified', () => {
+      renderWithRouter(<PostCard post={mockPost} variant="feed" />);
+
+      const card = screen.getByTestId('post-card');
+      expect(card).toHaveClass('post-card');
+      expect(card).not.toHaveClass('post-card--detail');
+    });
+  });
 });

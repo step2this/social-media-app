@@ -93,6 +93,7 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = () => {
           <PostCard
             post={post}
             showComments={true}
+            variant="detail"
           />
         </div>
       </div>

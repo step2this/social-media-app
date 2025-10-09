@@ -11,18 +11,21 @@ export interface PostCardProps {
   currentUserId?: string;
   showComments?: boolean;
   compact?: boolean;
+  variant?: 'feed' | 'detail';
 }
 
 /**
  * Reusable post card component
  * Displays post with image, caption, tags, and interaction buttons
  * Consistent UI across feed and post detail pages
+ * @param variant - Layout variant: 'feed' (square images, compact) or 'detail' (full images, expanded)
  */
 export const PostCard: React.FC<PostCardProps> = ({
   post,
   currentUserId,
   showComments = false,
-  compact = false
+  compact = false,
+  variant = 'feed'
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -40,8 +43,15 @@ export const PostCard: React.FC<PostCardProps> = ({
   // Determine if this is the current user's post
   const isOwnPost = currentUserId && currentUserId === post.userId;
 
+  // Build class names based on props
+  const cardClasses = [
+    'post-card',
+    compact && 'post-card--compact',
+    variant === 'detail' && 'post-card--detail'
+  ].filter(Boolean).join(' ');
+
   return (
-    <article className={`post-card ${compact ? 'post-card--compact' : ''}`} data-testid="post-card">
+    <article className={cardClasses} data-testid="post-card">
       {/* Post Image */}
       <div className="post-card__image-container">
         {!imageLoaded && (

@@ -20,12 +20,12 @@
   flex-direction: column;
 }
 
-/* Close Button Overlay */
+/* Close Button Overlay - Now positioned over PostCard */
 .close-button {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  z-index: 10;
+  z-index: 100;
   width: 40px;
   height: 40px;
   border-radius: 50%;
