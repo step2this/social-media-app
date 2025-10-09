@@ -32,8 +32,8 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post }) => {
           <UserLink
             userId={post.authorId}
             handle={post.authorHandle}
-            displayName={post.authorDisplayName}
-            avatarUrl={post.authorAvatarUrl}
+            displayName={post.authorFullName}
+            avatarUrl={post.authorProfilePictureUrl}
             showAvatar={true}
             className="feed-post-card__author-link"
           />

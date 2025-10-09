@@ -79,6 +79,8 @@ export const DeletePostResponseSchema = SuccessResponseSchema;
  */
 export const PostGridItemSchema = PostSchema.pick({
   id: true,
+  userId: true, // Needed for user diversity in explore page
+  userHandle: true, // Needed for user diversity in explore page
   thumbnailUrl: true,
   caption: true,
   likesCount: true,
@@ -92,10 +94,33 @@ export const PostGridResponseSchema = PaginationResponseSchema.extend({
 });
 
 /**
+ * Feed post item - data for Instagram-style vertical feed
+ * Includes full image URL and author information for feed cards
+ */
+export const FeedPostItemSchema = PostSchema.pick({
+  id: true,
+  userId: true,
+  userHandle: true,
+  imageUrl: true, // Full image for feed display (not thumbnail)
+  caption: true,
+  likesCount: true,
+  commentsCount: true,
+  createdAt: true
+}).extend({
+  // Author display info for feed cards (aligned with Profile schema naming)
+  authorId: z.string().uuid(),
+  authorHandle: z.string(),
+  authorFullName: z.string().optional(), // matches profile.fullName
+  authorProfilePictureUrl: z.string().url().optional(), // matches profile.profilePictureUrl
+  isLiked: z.boolean().optional()
+});
+
+/**
  * Type exports
  */
 export type Post = z.infer<typeof PostSchema>;
 export type PostGridItem = z.infer<typeof PostGridItemSchema>;
+export type FeedPostItem = z.infer<typeof FeedPostItemSchema>;
 export type CreatePostRequest = z.infer<typeof CreatePostRequestSchema>;
 export type UpdatePostRequest = z.infer<typeof UpdatePostRequestSchema>;
 export type GetUserPostsRequest = z.infer<typeof GetUserPostsRequestSchema>;

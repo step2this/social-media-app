@@ -11,6 +11,7 @@ import {
 import type {
   Post,
   PostGridItem,
+  FeedPostItem,
   CreatePostRequest,
   UpdatePostRequest,
   GetUserPostsRequest,
@@ -358,11 +359,12 @@ export class PostService {
   /**
    * Get feed posts (all public posts from all users)
    * Uses scan operation to get posts across all users
+   * Returns grid items for explore page
    */
   async getFeedPosts(
     limit: number = 24,
     cursor?: string
-  ): Promise<FeedResponse> {
+  ): Promise<PostGridResponse> {
     const scanParams: ScanCommandInput = {
       TableName: this.tableName,
       FilterExpression: 'entityType = :entityType AND isPublic = :isPublic',
@@ -394,7 +396,8 @@ export class PostService {
     return {
       posts,
       nextCursor,
-      hasMore: !!result.LastEvaluatedKey
+      hasMore: !!result.LastEvaluatedKey,
+      totalCount: result.Count || 0
     };
   }
 
@@ -467,8 +470,10 @@ export class PostService {
     // Apply limit
     const limitedPosts = sortedPosts.slice(0, limit);
 
-    // Map to PostGridItem
-    const posts = limitedPosts.map(entity => this.mapEntityToGridItem(entity));
+    // Map to FeedPostItem (with full images and author info)
+    const posts = await Promise.all(
+      limitedPosts.map(entity => this.mapEntityToFeedItem(entity))
+    );
 
     return {
       posts,
@@ -483,11 +488,39 @@ export class PostService {
   private mapEntityToGridItem(entity: PostEntity): PostGridItem {
     return {
       id: entity.id,
+      userId: entity.userId,
+      userHandle: entity.userHandle,
       thumbnailUrl: entity.thumbnailUrl,
       caption: entity.caption,
       likesCount: entity.likesCount,
       commentsCount: entity.commentsCount,
       createdAt: entity.createdAt
+    };
+  }
+
+  /**
+   * Map entity to FeedPostItem (for Instagram-style feed)
+   * Includes full image URL and author information
+   */
+  private async mapEntityToFeedItem(entity: PostEntity): Promise<FeedPostItem> {
+    // Get author profile for display info
+    const profile = await this.profileService.getProfileById(entity.userId);
+
+    return {
+      id: entity.id,
+      userId: entity.userId,
+      userHandle: entity.userHandle,
+      imageUrl: entity.imageUrl, // Full image, not thumbnail
+      caption: entity.caption,
+      likesCount: entity.likesCount,
+      commentsCount: entity.commentsCount,
+      createdAt: entity.createdAt,
+      // Author info for feed cards (aligned with Profile schema)
+      authorId: entity.userId,
+      authorHandle: entity.userHandle,
+      authorFullName: profile?.fullName,
+      authorProfilePictureUrl: profile?.profilePictureUrl,
+      isLiked: false // Will be enriched later with user's like status
     };
   }
 }
