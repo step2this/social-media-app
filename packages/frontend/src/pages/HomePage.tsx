@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { PostGridItem } from '@social-media-app/shared';
 import { feedService } from '../services/feedService';
-import { PostThumbnail } from '../components/profile/PostThumbnail';
-import '../components/explore/ExplorePage.css'; // Reuse explore page styles
+import { FeedPostCard } from '../components/feed/FeedPostCard';
+import './HomePage.css';
 
 /**
  * Home page - displays posts from followed users with infinite scroll
@@ -92,12 +92,11 @@ export const HomePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="explore-page">
-        <div className="explore-container">
-          <h1 className="explore-title">Your Feed</h1>
-          <div className="loading-container">
+      <div className="home-page">
+        <div className="home-page__container">
+          <div className="home-page__loading">
             <div className="spinner"></div>
-            <p>Loading posts...</p>
+            <p>Loading your feed...</p>
           </div>
         </div>
       </div>
@@ -106,12 +105,11 @@ export const HomePage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="explore-page">
-        <div className="explore-container">
-          <h1 className="explore-title">Your Feed</h1>
-          <div className="error-container">
-            <p className="error-message">{error}</p>
-            <button onClick={loadInitialPosts} className="retry-button">
+      <div className="home-page">
+        <div className="home-page__container">
+          <div className="home-page__error">
+            <p className="home-page__error-message">{error}</p>
+            <button onClick={loadInitialPosts} className="home-page__retry-btn">
               Try Again
             </button>
           </div>
@@ -122,11 +120,10 @@ export const HomePage: React.FC = () => {
 
   if (posts.length === 0) {
     return (
-      <div className="explore-page">
-        <div className="explore-container">
-          <h1 className="explore-title">Your Feed</h1>
-          <div className="empty-container">
-            <p className="empty-message">
+      <div className="home-page">
+        <div className="home-page__container">
+          <div className="home-page__empty">
+            <p className="home-page__empty-message">
               No posts yet! Follow some users to see their posts here.
             </p>
           </div>
@@ -136,22 +133,20 @@ export const HomePage: React.FC = () => {
   }
 
   return (
-    <div className="explore-page">
-      <div className="explore-container">
-        <h1 className="explore-title">Your Feed</h1>
-
-        {/* Posts grid */}
-        <div className="posts-grid">
+    <div className="home-page">
+      <div className="home-page__container">
+        {/* Vertical feed of posts */}
+        <div className="home-page__feed">
           {posts.map((post) => (
-            <PostThumbnail key={post.id} post={post} />
+            <FeedPostCard key={post.id} post={post} />
           ))}
         </div>
 
         {/* Infinite scroll sentinel */}
         {hasMore && (
-          <div ref={sentinelRef} className="scroll-sentinel">
+          <div ref={sentinelRef} className="home-page__sentinel">
             {loadingMore && (
-              <div className="loading-more">
+              <div className="home-page__loading-more">
                 <div className="spinner"></div>
                 <p>Loading more...</p>
               </div>
@@ -161,7 +156,7 @@ export const HomePage: React.FC = () => {
 
         {/* End of feed message */}
         {!hasMore && posts.length > 0 && (
-          <div className="end-of-feed">
+          <div className="home-page__end">
             <p>You're all caught up! 🎉</p>
           </div>
         )}
