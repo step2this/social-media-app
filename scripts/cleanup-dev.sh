@@ -44,6 +44,13 @@ safe_kill "$NODE_DEV_PIDS" "frontend dev servers"
 echo "🐳 Stopping LocalStack..."
 docker-compose -f docker-compose.local.yml down 2>/dev/null || echo "LocalStack not running"
 
+# Clear LocalStack persistence volume (fresh start)
+if [ -d "volume/state" ]; then
+    echo "🗑️  Clearing LocalStack persistence..."
+    rm -rf volume/state
+    echo "✅ LocalStack persistence cleared"
+fi
+
 # Clean up any orphaned processes
 echo "🔍 Checking for orphaned processes..."
 ORPHANED=$(pgrep -f "node.*packages.*(frontend|backend)" 2>/dev/null || true)
