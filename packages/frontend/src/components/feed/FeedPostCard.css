@@ -12,8 +12,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--tama-gray-100, #f0f0f0);
+  padding: 14px 4px 14px 16px;
 }
 
 .feed-post-card__author {
@@ -21,31 +20,17 @@
   align-items: center;
   gap: 12px;
   flex: 1;
+  min-width: 0;
 }
 
 .feed-post-card__author-link {
   flex-shrink: 0;
 }
 
-.feed-post-card__author-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
 .feed-post-card__author-name {
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 14px;
   color: var(--tama-gray-900, #171717);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.feed-post-card__author-handle {
-  font-size: 0.75rem;
-  color: var(--tama-gray-600, #666);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -92,8 +77,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--tama-gray-100, #f0f0f0);
+  padding: 8px 16px 4px 16px;
 }
 
 .feed-post-card__actions-left {
@@ -125,7 +109,7 @@
 
 /* Post Info */
 .feed-post-card__info {
-  padding: 12px 16px 16px;
+  padding: 0 16px 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;

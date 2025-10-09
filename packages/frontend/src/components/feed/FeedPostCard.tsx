@@ -37,12 +37,9 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post }) => {
             showAvatar={true}
             className="feed-post-card__author-link"
           />
-          <div className="feed-post-card__author-info">
-            <span className="feed-post-card__author-name">
-              {post.authorDisplayName || post.authorHandle}
-            </span>
-            <span className="feed-post-card__author-handle">@{post.authorHandle}</span>
-          </div>
+          <span className="feed-post-card__author-name">
+            {post.authorHandle}
+          </span>
         </div>
         <button className="feed-post-card__menu-btn" aria-label="More options">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
