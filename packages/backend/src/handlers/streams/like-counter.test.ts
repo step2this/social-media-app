@@ -93,9 +93,9 @@ describe('like-counter stream processor', () => {
         PK: 'POST#post-123',
         SK: 'POST'
       });
-      expect(updateCommand.input.UpdateExpression).toBe('ADD likesCount :inc');
+      expect(updateCommand.input.UpdateExpression).toBe('ADD likesCount :delta');
       expect(updateCommand.input.ExpressionAttributeValues).toEqual({
-        ':inc': 1
+        ':delta': 1
       });
     });
 
@@ -126,8 +126,8 @@ describe('like-counter stream processor', () => {
       expect(sentCommands).toHaveLength(2);
       sentCommands.forEach(command => {
         expect(command.constructor.name).toBe('UpdateCommand');
-        expect(command.input.UpdateExpression).toBe('ADD likesCount :inc');
-        expect(command.input.ExpressionAttributeValues).toEqual({ ':inc': 1 });
+        expect(command.input.UpdateExpression).toBe('ADD likesCount :delta');
+        expect(command.input.ExpressionAttributeValues).toEqual({ ':delta': 1 });
       });
     });
   });
@@ -152,9 +152,9 @@ describe('like-counter stream processor', () => {
       expect(sentCommands).toHaveLength(1);
       const updateCommand = sentCommands[0];
       expect(updateCommand.constructor.name).toBe('UpdateCommand');
-      expect(updateCommand.input.UpdateExpression).toBe('ADD likesCount :dec');
+      expect(updateCommand.input.UpdateExpression).toBe('ADD likesCount :delta');
       expect(updateCommand.input.ExpressionAttributeValues).toEqual({
-        ':dec': -1
+        ':delta': -1
       });
     });
   });

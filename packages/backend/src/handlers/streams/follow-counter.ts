@@ -1,6 +1,13 @@
 import type { DynamoDBStreamEvent, DynamoDBStreamHandler } from 'aws-lambda';
 import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
+import {
+  shouldProcessRecord,
+  getStreamRecordImage,
+  parseSKEntity,
+  calculateCounterDelta,
+  createUpdateExpression
+} from '../../utils/stream-counter-helpers.js';
 
 /**
  * Stream processor for updating user follow counts
@@ -21,15 +28,12 @@ export const handler: DynamoDBStreamHandler = async (
   const processPromises = event.Records.map(async (record) => {
     try {
       // Only process INSERT and REMOVE events
-      if (!record.eventName || !['INSERT', 'REMOVE'].includes(record.eventName)) {
+      if (!shouldProcessRecord(record.eventName)) {
         return;
       }
 
-      // Get the image to check (NewImage for INSERT, OldImage for REMOVE)
-      const image = record.eventName === 'INSERT'
-        ? record.dynamodb?.NewImage
-        : record.dynamodb?.OldImage;
-
+      // Get the appropriate image based on event type
+      const image = getStreamRecordImage(record);
       if (!image) {
         console.warn('No image in stream record:', record);
         return;
@@ -37,67 +41,53 @@ export const handler: DynamoDBStreamHandler = async (
 
       // Only process FOLLOW entities (SK starts with "FOLLOW#")
       const sk = image.SK?.S;
-      if (!sk || !sk.startsWith('FOLLOW#')) {
+      if (!sk) {
         return;
       }
 
-      // Extract follower ID from PK (format: USER#<followerId>)
-      const pk = image.PK?.S;
-      if (!pk || !pk.startsWith('USER#')) {
-        console.warn('Invalid PK format:', pk);
+      const skEntity = parseSKEntity(sk);
+      if (!skEntity || skEntity.entityType !== 'FOLLOW') {
         return;
       }
-      const followerPK = pk; // Keep full PK for follower update
 
-      // Extract followee ID from GSI1PK (format: USER#<followeeId>)
-      const gsi1pk = image.GSI1PK?.S;
-      if (!gsi1pk || !gsi1pk.startsWith('USER#')) {
-        console.warn('Invalid GSI1PK format:', gsi1pk);
+      // Extract follower PK (format: USER#<followerId>)
+      const followerPK = image.PK?.S;
+      if (!followerPK || !followerPK.startsWith('USER#')) {
+        console.warn('Invalid PK format:', followerPK);
         return;
       }
-      const followeePK = gsi1pk; // Keep full PK for followee update
 
-      // Determine increment or decrement
-      const delta = record.eventName === 'INSERT' ? 1 : -1;
-
-      // Update follower's followingCount (wrapped to continue even if it fails)
-      try {
-        await dynamoClient.send(new UpdateCommand({
-          TableName: tableName,
-          Key: {
-            PK: followerPK,
-            SK: 'PROFILE'
-          },
-          UpdateExpression: delta > 0 ? 'ADD followingCount :inc' : 'ADD followingCount :dec',
-          ExpressionAttributeValues: delta > 0 ? {
-            ':inc': delta
-          } : {
-            ':dec': delta
-          }
-        }));
-      } catch (updateError) {
-        console.error(`Failed to update followingCount for ${followerPK}:`, updateError);
-        // Continue to try updating followee
+      // Extract followee PK from GSI2PK (format: USER#<followeeId>)
+      const followeePK = image.GSI2PK?.S;
+      if (!followeePK || !followeePK.startsWith('USER#')) {
+        console.warn('Invalid GSI2PK format:', followeePK);
+        return;
       }
 
-      // Update followee's followersCount (attempt even if follower update failed)
-      try {
-        await dynamoClient.send(new UpdateCommand({
-          TableName: tableName,
-          Key: {
-            PK: followeePK,
-            SK: 'PROFILE'
-          },
-          UpdateExpression: delta > 0 ? 'ADD followersCount :inc' : 'ADD followersCount :dec',
-          ExpressionAttributeValues: delta > 0 ? {
-            ':inc': delta
-          } : {
-            ':dec': delta
-          }
-        }));
-      } catch (updateError) {
-        console.error(`Failed to update followersCount for ${followeePK}:`, updateError);
-      }
+      // Calculate counter delta
+      const delta = calculateCounterDelta(
+        record.eventName!,
+        record.dynamodb?.NewImage,
+        record.dynamodb?.OldImage
+      );
+
+      // Update follower's followingCount
+      await updateCounter(
+        dynamoClient,
+        tableName,
+        followerPK,
+        'followingCount',
+        delta
+      );
+
+      // Update followee's followersCount
+      await updateCounter(
+        dynamoClient,
+        tableName,
+        followeePK,
+        'followersCount',
+        delta
+      );
 
       console.log(`Successfully updated follow counts for ${followerPK} → ${followeePK} by ${delta}`);
     } catch (error) {
@@ -109,4 +99,41 @@ export const handler: DynamoDBStreamHandler = async (
 
   // Wait for all updates to complete
   await Promise.all(processPromises);
+};
+
+/**
+ * Update a counter field in DynamoDB using atomic ADD operation
+ *
+ * @param client - DynamoDB document client
+ * @param tableName - DynamoDB table name
+ * @param pk - Partition key for the item to update
+ * @param counterField - Name of the counter field
+ * @param delta - Amount to add (positive or negative)
+ */
+const updateCounter = async (
+  client: any,
+  tableName: string,
+  pk: string,
+  counterField: string,
+  delta: number
+): Promise<void> => {
+  try {
+    const { UpdateExpression, ExpressionAttributeValues } = createUpdateExpression(
+      counterField,
+      delta
+    );
+
+    await client.send(new UpdateCommand({
+      TableName: tableName,
+      Key: {
+        PK: pk,
+        SK: 'PROFILE'
+      },
+      UpdateExpression,
+      ExpressionAttributeValues
+    }));
+  } catch (error) {
+    console.error(`Failed to update ${counterField} for ${pk}:`, error);
+    // Don't throw - allow other updates to continue
+  }
 };

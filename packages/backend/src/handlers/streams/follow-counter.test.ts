@@ -98,9 +98,9 @@ describe('follow-counter stream processor', () => {
         PK: 'USER#follower-123',
         SK: 'PROFILE'
       });
-      expect(followerUpdate.input.UpdateExpression).toBe('ADD followingCount :inc');
+      expect(followerUpdate.input.UpdateExpression).toBe('ADD followingCount :delta');
       expect(followerUpdate.input.ExpressionAttributeValues).toEqual({
-        ':inc': 1
+        ':delta': 1
       });
 
       // Second command: Update followee's followersCount
@@ -111,9 +111,9 @@ describe('follow-counter stream processor', () => {
         PK: 'USER#followee-456',
         SK: 'PROFILE'
       });
-      expect(followeeUpdate.input.UpdateExpression).toBe('ADD followersCount :inc');
+      expect(followeeUpdate.input.UpdateExpression).toBe('ADD followersCount :delta');
       expect(followeeUpdate.input.ExpressionAttributeValues).toEqual({
-        ':inc': 1
+        ':delta': 1
       });
     });
 
@@ -174,16 +174,16 @@ describe('follow-counter stream processor', () => {
 
       // First command: Decrement follower's followingCount
       const followerUpdate = sentCommands[0];
-      expect(followerUpdate.input.UpdateExpression).toBe('ADD followingCount :dec');
+      expect(followerUpdate.input.UpdateExpression).toBe('ADD followingCount :delta');
       expect(followerUpdate.input.ExpressionAttributeValues).toEqual({
-        ':dec': -1
+        ':delta': -1
       });
 
       // Second command: Decrement followee's followersCount
       const followeeUpdate = sentCommands[1];
-      expect(followeeUpdate.input.UpdateExpression).toBe('ADD followersCount :dec');
+      expect(followeeUpdate.input.UpdateExpression).toBe('ADD followersCount :delta');
       expect(followeeUpdate.input.ExpressionAttributeValues).toEqual({
-        ':dec': -1
+        ':delta': -1
       });
     });
   });

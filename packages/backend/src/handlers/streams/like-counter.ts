@@ -1,6 +1,12 @@
 import type { DynamoDBStreamEvent, DynamoDBStreamHandler } from 'aws-lambda';
 import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
+import {
+  shouldProcessRecord,
+  getStreamRecordImage,
+  calculateCounterDelta,
+  createUpdateExpression
+} from '../../utils/stream-counter-helpers.js';
 
 /**
  * Stream processor for updating post like counts
@@ -21,15 +27,12 @@ export const handler: DynamoDBStreamHandler = async (
   const processPromises = event.Records.map(async (record) => {
     try {
       // Only process INSERT and REMOVE events
-      if (!record.eventName || !['INSERT', 'REMOVE'].includes(record.eventName)) {
+      if (!shouldProcessRecord(record.eventName)) {
         return;
       }
 
-      // Get the image to check (NewImage for INSERT, OldImage for REMOVE)
-      const image = record.eventName === 'INSERT'
-        ? record.dynamodb?.NewImage
-        : record.dynamodb?.OldImage;
-
+      // Get the appropriate image based on event type
+      const image = getStreamRecordImage(record);
       if (!image) {
         console.warn('No image in stream record:', record);
         return;
@@ -48,8 +51,18 @@ export const handler: DynamoDBStreamHandler = async (
         return;
       }
 
-      // Determine increment or decrement
-      const delta = record.eventName === 'INSERT' ? 1 : -1;
+      // Calculate counter delta
+      const delta = calculateCounterDelta(
+        record.eventName!,
+        record.dynamodb?.NewImage,
+        record.dynamodb?.OldImage
+      );
+
+      // Create update expression
+      const { UpdateExpression, ExpressionAttributeValues } = createUpdateExpression(
+        'likesCount',
+        delta
+      );
 
       // Update the Post entity's likesCount using atomic ADD
       await dynamoClient.send(new UpdateCommand({
@@ -58,12 +71,8 @@ export const handler: DynamoDBStreamHandler = async (
           PK: pk,
           SK: 'POST'
         },
-        UpdateExpression: delta > 0 ? 'ADD likesCount :inc' : 'ADD likesCount :dec',
-        ExpressionAttributeValues: delta > 0 ? {
-          ':inc': delta
-        } : {
-          ':dec': delta
-        }
+        UpdateExpression,
+        ExpressionAttributeValues
       }));
 
       console.log(`Successfully updated likesCount for ${pk} by ${delta}`);
