@@ -467,6 +467,16 @@
   box-shadow: var(--pixel-shadow-lg);
   overflow: hidden;
   z-index: 1000;
+  min-width: 280px;
+}
+
+/* Account menu in collapsed sidebar - position to the right */
+.account-menu--collapsed {
+  top: 0;
+  left: 100%;
+  right: auto;
+  margin-top: 0;
+  margin-left: var(--space-2);
 }
 
 .account-menu-header {

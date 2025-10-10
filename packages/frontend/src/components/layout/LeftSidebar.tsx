@@ -123,8 +123,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                 )}
               </button>
 
-              {isAccountDropdownOpen && !collapsed && (
-                <div className="account-menu">
+              {isAccountDropdownOpen && (
+                <div className={`account-menu ${collapsed ? 'account-menu--collapsed' : ''}`}>
                   <div className="account-menu-header">
                     <div className="account-avatar">
                       <MaterialIcon name="account_circle" variant="filled" size="lg" />
