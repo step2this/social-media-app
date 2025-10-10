@@ -15,6 +15,16 @@ import type {
   UpdateProfileWithHandleRequest
 } from '@social-media-app/shared';
 import { randomBytes, pbkdf2Sync, timingSafeEqual } from 'crypto';
+import {
+  calculateRefreshTokenExpiry,
+  createRefreshTokenEntity,
+  createAuthTokensResponse,
+  createUserEntity,
+  buildUserByEmailQuery,
+  buildUserByUsernameQuery,
+  buildRefreshTokenQuery,
+  buildUpdateExpressionFromObject
+} from '../utils/index.js';
 
 /**
  * User entity for DynamoDB single-table design
@@ -108,63 +118,31 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
     const passwordHash = deps.hashProvider.hashPassword(request.password, salt);
     const emailVerificationToken = deps.jwtProvider.generateRefreshToken();
 
-    const userEntity: UserEntity = {
-      PK: `USER#${userId}`,
-      SK: 'PROFILE',
-      GSI1PK: `EMAIL#${request.email}`,
-      GSI1SK: `USER#${userId}`,
-      GSI2PK: `USERNAME#${request.username}`,
-      GSI2SK: `USER#${userId}`,
-      GSI3PK: `HANDLE#${request.username.toLowerCase()}`,
-      GSI3SK: `USER#${userId}`,
-      // User identity fields
-      id: userId,
+    // Create user entity using factory
+    const userEntity = createUserEntity({
+      userId,
       email: request.email,
       username: request.username,
-      emailVerified: false,
-      createdAt: now,
-      updatedAt: now,
-      // Auth-specific fields
       passwordHash,
       salt,
       emailVerificationToken,
-      // Profile fields with defaults
-      fullName: undefined,
-      bio: undefined,
-      handle: request.username,
-      profilePictureUrl: undefined,
-      profilePictureThumbnailUrl: undefined,
-      postsCount: 0,
-      followersCount: 0,
-      followingCount: 0,
-      entityType: 'USER'
-    };
+      createdAt: now,
+      updatedAt: now
+    });
 
     // Check if email already exists
-    const existingEmailUser = await deps.dynamoClient.send(new QueryCommand({
-      TableName: deps.tableName,
-      IndexName: 'GSI1',
-      KeyConditionExpression: 'GSI1PK = :email',
-      ExpressionAttributeValues: {
-        ':email': `EMAIL#${request.email}`
-      },
-      Limit: 1
-    }));
+    const existingEmailUser = await deps.dynamoClient.send(
+      new QueryCommand(buildUserByEmailQuery(request.email, deps.tableName))
+    );
 
     if (existingEmailUser.Items && existingEmailUser.Items.length > 0) {
       throw new Error('Email already registered');
     }
 
     // Check if username already exists
-    const existingUsernameUser = await deps.dynamoClient.send(new QueryCommand({
-      TableName: deps.tableName,
-      IndexName: 'GSI2',
-      KeyConditionExpression: 'GSI2PK = :username',
-      ExpressionAttributeValues: {
-        ':username': `USERNAME#${request.username}`
-      },
-      Limit: 1
-    }));
+    const existingUsernameUser = await deps.dynamoClient.send(
+      new QueryCommand(buildUserByUsernameQuery(request.username, deps.tableName))
+    );
 
     if (existingUsernameUser.Items && existingUsernameUser.Items.length > 0) {
       throw new Error('Username already taken');
@@ -179,38 +157,29 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
 
     // Generate tokens for auto-login after registration
     const accessToken = await deps.jwtProvider.generateAccessToken({
-      userId: userId,
+      userId,
       email: request.email
     });
 
     const refreshTokenValue = deps.jwtProvider.generateRefreshToken();
     const refreshTokenId = deps.uuidProvider();
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
+    const expiresAt = calculateRefreshTokenExpiry(30); // 30 days
 
-    // Store refresh token
-    const refreshTokenEntity: RefreshTokenEntity = {
-      PK: `USER#${userId}`,
-      SK: `REFRESH_TOKEN#${refreshTokenId}`,
-      GSI1PK: `REFRESH_TOKEN#${refreshTokenValue}`,
-      GSI1SK: `USER#${userId}`,
+    // Store refresh token using factory
+    const refreshTokenEntity = createRefreshTokenEntity({
+      userId,
       tokenId: refreshTokenId,
-      hashedToken: refreshTokenValue,
-      userId: userId,
+      refreshTokenValue,
       expiresAt,
-      createdAt: now,
-      entityType: 'REFRESH_TOKEN'
-    };
+      createdAt: now
+    });
 
     await deps.dynamoClient.send(new PutCommand({
       TableName: deps.tableName,
       Item: refreshTokenEntity
     }));
 
-    const tokens: AuthTokens = {
-      accessToken,
-      refreshToken: refreshTokenValue,
-      expiresIn: 900 // 15 minutes
-    };
+    const tokens = createAuthTokensResponse(accessToken, refreshTokenValue);
 
     return {
       user: {
@@ -230,15 +199,9 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
    */
   const login = async (request: Readonly<LoginRequest>): Promise<LoginResponse> => {
     // Get user by email
-    const userQuery = await deps.dynamoClient.send(new QueryCommand({
-      TableName: deps.tableName,
-      IndexName: 'GSI1',
-      KeyConditionExpression: 'GSI1PK = :email',
-      ExpressionAttributeValues: {
-        ':email': `EMAIL#${request.email}`
-      },
-      Limit: 1
-    }));
+    const userQuery = await deps.dynamoClient.send(
+      new QueryCommand(buildUserByEmailQuery(request.email, deps.tableName))
+    );
 
     if (!userQuery.Items || userQuery.Items.length === 0) {
       throw new Error('Invalid email or password');
@@ -266,49 +229,31 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
     const refreshTokenValue = deps.jwtProvider.generateRefreshToken();
     const refreshTokenId = deps.uuidProvider();
     const now = deps.timeProvider();
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
+    const expiresAt = calculateRefreshTokenExpiry(30); // 30 days
 
-    // Store refresh token
-    const refreshTokenEntity: RefreshTokenEntity = {
-      PK: `USER#${user.id}`,
-      SK: `REFRESH_TOKEN#${refreshTokenId}`,
-      GSI1PK: `REFRESH_TOKEN#${refreshTokenValue}`,
-      GSI1SK: `USER#${user.id}`,
-      tokenId: refreshTokenId,
-      hashedToken: refreshTokenValue,
+    // Store refresh token using factory
+    const refreshTokenEntity = createRefreshTokenEntity({
       userId: user.id,
+      tokenId: refreshTokenId,
+      refreshTokenValue,
       deviceInfo: request.deviceInfo,
       expiresAt,
-      createdAt: now,
-      entityType: 'REFRESH_TOKEN'
-    };
+      createdAt: now
+    });
 
     await deps.dynamoClient.send(new PutCommand({
       TableName: deps.tableName,
       Item: refreshTokenEntity
     }));
 
-    const userProfile: User = {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      emailVerified: user.emailVerified,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt
-    };
-
-    const tokens: AuthTokens = {
-      accessToken,
-      refreshToken: refreshTokenValue,
-      expiresIn: 900 // 15 minutes
-    };
+    const tokens = createAuthTokensResponse(accessToken, refreshTokenValue);
 
     return {
       user: {
-        id: userProfile.id,
-        email: userProfile.email,
-        username: userProfile.username,
-        emailVerified: userProfile.emailVerified
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        emailVerified: user.emailVerified
       },
       tokens
     };
@@ -319,15 +264,9 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
    */
   const refreshToken = async (request: Readonly<RefreshTokenRequest>): Promise<RefreshTokenResponse> => {
     // Find refresh token
-    const tokenQuery = await deps.dynamoClient.send(new QueryCommand({
-      TableName: deps.tableName,
-      IndexName: 'GSI1',
-      KeyConditionExpression: 'GSI1PK = :token',
-      ExpressionAttributeValues: {
-        ':token': `REFRESH_TOKEN#${request.refreshToken}`
-      },
-      Limit: 1
-    }));
+    const tokenQuery = await deps.dynamoClient.send(
+      new QueryCommand(buildRefreshTokenQuery(request.refreshToken, deps.tableName))
+    );
 
     if (!tokenQuery.Items || tokenQuery.Items.length === 0) {
       throw new Error('Invalid refresh token');
@@ -391,11 +330,7 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
       }
     }));
 
-    const tokens: AuthTokens = {
-      accessToken,
-      refreshToken: newRefreshTokenValue,
-      expiresIn: 900 // 15 minutes
-    };
+    const tokens = createAuthTokensResponse(accessToken, newRefreshTokenValue);
 
     return { tokens };
   };
@@ -432,15 +367,9 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
    */
   const logout = async (refreshToken: string, userId: string): Promise<void> => {
     // Find and delete the refresh token
-    const tokenQuery = await deps.dynamoClient.send(new QueryCommand({
-      TableName: deps.tableName,
-      IndexName: 'GSI1',
-      KeyConditionExpression: 'GSI1PK = :token',
-      ExpressionAttributeValues: {
-        ':token': `REFRESH_TOKEN#${refreshToken}`
-      },
-      Limit: 1
-    }));
+    const tokenQuery = await deps.dynamoClient.send(
+      new QueryCommand(buildRefreshTokenQuery(refreshToken, deps.tableName))
+    );
 
     if (tokenQuery.Items && tokenQuery.Items.length > 0) {
       const tokenEntity = tokenQuery.Items[0] as RefreshTokenEntity;
@@ -468,35 +397,15 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
       throw new Error('User not found');
     }
 
-    // Update user with simple field updates
+    // Build update expression using utility
     const now = deps.timeProvider();
+    const updateData = {
+      ...updates,
+      updatedAt: now
+    };
 
-    const updateExpression: string[] = [];
-    const expressionAttributeNames: Record<string, string> = {};
-    const expressionAttributeValues: Record<string, unknown> = {};
-
-    if (updates.fullName !== undefined) {
-      updateExpression.push('#fullName = :fullName');
-      expressionAttributeNames['#fullName'] = 'fullName';
-      expressionAttributeValues[':fullName'] = updates.fullName;
-    }
-
-    if (updates.bio !== undefined) {
-      updateExpression.push('#bio = :bio');
-      expressionAttributeNames['#bio'] = 'bio';
-      expressionAttributeValues[':bio'] = updates.bio;
-    }
-
-    if (updates.handle !== undefined) {
-      updateExpression.push('#handle = :handle');
-      expressionAttributeNames['#handle'] = 'handle';
-      expressionAttributeValues[':handle'] = updates.handle;
-    }
-
-    // Always update the updatedAt field
-    updateExpression.push('#updatedAt = :updatedAt');
-    expressionAttributeNames['#updatedAt'] = 'updatedAt';
-    expressionAttributeValues[':updatedAt'] = now;
+    const { UpdateExpression, ExpressionAttributeNames, ExpressionAttributeValues } =
+      buildUpdateExpressionFromObject(updateData);
 
     await deps.dynamoClient.send(new UpdateCommand({
       TableName: deps.tableName,
@@ -504,9 +413,9 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
         PK: `USER#${userId}`,
         SK: 'PROFILE'
       },
-      UpdateExpression: `SET ${updateExpression.join(', ')}`,
-      ExpressionAttributeNames: expressionAttributeNames,
-      ExpressionAttributeValues: expressionAttributeValues
+      UpdateExpression,
+      ExpressionAttributeNames,
+      ExpressionAttributeValues
     }));
 
     // Return updated user with only User identity fields
