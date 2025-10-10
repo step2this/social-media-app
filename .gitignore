@@ -77,3 +77,10 @@ Thumbs.db
 
 # Package manager
 pnpm-lock.yaml
+
+# LocalStack state and volumes
+volume/
+
+# Test artifacts
+test-results.json
+**/test-results.json
