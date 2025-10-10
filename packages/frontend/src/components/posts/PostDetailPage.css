@@ -10,6 +10,7 @@
 
 /* Main Container - Full Width Card */
 .post-detail-container {
+  position: relative; /* Enable absolute positioning for close button */
   width: 100%;
   max-width: 100%;
   background: var(--tama-white);
