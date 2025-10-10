@@ -4,9 +4,7 @@ import {
   UpdateCommand,
   DeleteCommand,
   QueryCommand,
-  ScanCommand,
-  type QueryCommandInput,
-  type ScanCommandInput
+  ScanCommand
 } from '@aws-sdk/lib-dynamodb';
 import type {
   Post,
@@ -21,29 +19,23 @@ import type {
 } from '@social-media-app/shared';
 import { randomUUID } from 'crypto';
 import { ProfileService } from './profile.service.js';
+import {
+  mapEntityToPost,
+  mapEntityToPostGridItem,
+  mapEntityToFeedItemBase,
+  enrichWithProfile,
+  buildUserPostsQuery,
+  buildPostByIdQuery,
+  buildPostFeedQuery,
+  buildUpdateExpressionFromObject,
+  type PostEntity
+} from '../utils/index.js';
 
 /**
  * Post entity for DynamoDB
+ * Re-exported from utils for backward compatibility
  */
-export interface PostEntity {
-  PK: string; // USER#<userId>
-  SK: string; // POST#<timestamp>#<postId>
-  GSI1PK: string; // POST#<postId>
-  GSI1SK: string; // USER#<userId>
-  id: string;
-  userId: string;
-  userHandle: string;
-  imageUrl: string;
-  thumbnailUrl: string;
-  caption?: string;
-  tags: string[];
-  likesCount: number;
-  commentsCount: number;
-  isPublic: boolean;
-  createdAt: string;
-  updatedAt: string;
-  entityType: 'POST';
-}
+export type { PostEntity };
 
 /**
  * Post service for managing user posts
@@ -103,28 +95,21 @@ export class PostService {
     // Increment user's posts count
     await this.profileService.incrementPostsCount(userId);
 
-    return this.mapEntityToPost(entity);
+    return mapEntityToPost(entity);
   }
 
   /**
    * Get a post by ID
    */
   async getPostById(postId: string): Promise<Post | null> {
-    const result = await this.dynamoClient.send(new QueryCommand({
-      TableName: this.tableName,
-      IndexName: 'GSI1',
-      KeyConditionExpression: 'GSI1PK = :pk',
-      ExpressionAttributeValues: {
-        ':pk': `POST#${postId}`
-      },
-      Limit: 1
-    }));
+    const queryParams = buildPostByIdQuery(postId, this.tableName);
+    const result = await this.dynamoClient.send(new QueryCommand(queryParams));
 
     if (!result.Items || result.Items.length === 0) {
       return null;
     }
 
-    return this.mapEntityToPost(result.Items[0] as PostEntity);
+    return mapEntityToPost(result.Items[0] as PostEntity);
   }
 
   /**
@@ -142,16 +127,14 @@ export class PostService {
     }
 
     // Find the exact SK for the post
-    const queryResult = await this.dynamoClient.send(new QueryCommand({
-      TableName: this.tableName,
-      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
-      FilterExpression: 'id = :postId',
-      ExpressionAttributeValues: {
-        ':pk': `USER#${userId}`,
-        ':skPrefix': 'POST#',
-        ':postId': postId
-      }
-    }));
+    const queryParams = buildUserPostsQuery(userId, this.tableName);
+    queryParams.FilterExpression = 'id = :postId';
+    queryParams.ExpressionAttributeValues = {
+      ...queryParams.ExpressionAttributeValues,
+      ':postId': postId
+    };
+
+    const queryResult = await this.dynamoClient.send(new QueryCommand(queryParams));
 
     if (!queryResult.Items || queryResult.Items.length === 0) {
       return null;
@@ -159,31 +142,13 @@ export class PostService {
 
     const entity = queryResult.Items[0] as PostEntity;
 
-    const updateExpressions: string[] = ['#updatedAt = :updatedAt'];
-    const expressionAttributeNames: Record<string, string> = {
-      '#updatedAt': 'updatedAt'
-    };
-    const expressionAttributeValues: Record<string, any> = {
-      ':updatedAt': new Date().toISOString()
+    // Build update expression using utility
+    const updateData = {
+      updatedAt: new Date().toISOString(),
+      ...updates
     };
 
-    if (updates.caption !== undefined) {
-      updateExpressions.push('#caption = :caption');
-      expressionAttributeNames['#caption'] = 'caption';
-      expressionAttributeValues[':caption'] = updates.caption;
-    }
-
-    if (updates.tags !== undefined) {
-      updateExpressions.push('#tags = :tags');
-      expressionAttributeNames['#tags'] = 'tags';
-      expressionAttributeValues[':tags'] = updates.tags;
-    }
-
-    if (updates.isPublic !== undefined) {
-      updateExpressions.push('#isPublic = :isPublic');
-      expressionAttributeNames['#isPublic'] = 'isPublic';
-      expressionAttributeValues[':isPublic'] = updates.isPublic;
-    }
+    const updateExpression = buildUpdateExpressionFromObject(updateData);
 
     const result = await this.dynamoClient.send(new UpdateCommand({
       TableName: this.tableName,
@@ -191,16 +156,14 @@ export class PostService {
         PK: entity.PK,
         SK: entity.SK
       },
-      UpdateExpression: `SET ${updateExpressions.join(', ')}`,
-      ExpressionAttributeNames: expressionAttributeNames,
-      ExpressionAttributeValues: expressionAttributeValues,
+      ...updateExpression,
       ReturnValues: 'ALL_NEW'
     }));
 
     if (!result.Attributes) {
       throw new Error('Failed to update post - no data returned');
     }
-    return this.mapEntityToPost(result.Attributes as PostEntity);
+    return mapEntityToPost(result.Attributes as PostEntity);
   }
 
   /**
@@ -214,16 +177,14 @@ export class PostService {
     }
 
     // Find the exact SK for the post
-    const queryResult = await this.dynamoClient.send(new QueryCommand({
-      TableName: this.tableName,
-      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
-      ExpressionAttributeValues: {
-        ':pk': `USER#${userId}`,
-        ':skPrefix': 'POST#',
-        ':postId': postId
-      },
-      FilterExpression: 'id = :postId'
-    }));
+    const queryParams = buildUserPostsQuery(userId, this.tableName);
+    queryParams.FilterExpression = 'id = :postId';
+    queryParams.ExpressionAttributeValues = {
+      ...queryParams.ExpressionAttributeValues,
+      ':postId': postId
+    };
+
+    const queryResult = await this.dynamoClient.send(new QueryCommand(queryParams));
 
     if (!queryResult.Items || queryResult.Items.length === 0) {
       return false;
@@ -259,27 +220,15 @@ export class PostService {
       };
     }
 
-    const queryParams: QueryCommandInput = {
-      TableName: this.tableName,
-      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
-      ExpressionAttributeValues: {
-        ':pk': `USER#${profile.id}`,
-        ':skPrefix': 'POST#'
-      },
-      ScanIndexForward: false, // Sort by newest first
-      Limit: request.limit || 24
-    };
-
-    if (request.cursor) {
-      queryParams.ExclusiveStartKey = JSON.parse(
-        Buffer.from(request.cursor, 'base64').toString()
-      );
-    }
+    const queryParams = buildUserPostsQuery(profile.id, this.tableName, {
+      limit: request.limit || 24,
+      cursor: request.cursor
+    });
 
     const result = await this.dynamoClient.send(new QueryCommand(queryParams));
 
     const posts = (result.Items || []).map(item =>
-      this.mapEntityToGridItem(item as PostEntity)
+      mapEntityToPostGridItem(item as PostEntity)
     );
 
     const nextCursor = result.LastEvaluatedKey
@@ -302,27 +251,15 @@ export class PostService {
     limit: number = 24,
     cursor?: string
   ): Promise<PostsListResponse> {
-    const queryParams: QueryCommandInput = {
-      TableName: this.tableName,
-      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
-      ExpressionAttributeValues: {
-        ':pk': `USER#${userId}`,
-        ':skPrefix': 'POST#'
-      },
-      ScanIndexForward: false, // Sort by newest first
-      Limit: limit
-    };
-
-    if (cursor) {
-      queryParams.ExclusiveStartKey = JSON.parse(
-        Buffer.from(cursor, 'base64').toString()
-      );
-    }
+    const queryParams = buildUserPostsQuery(userId, this.tableName, {
+      limit,
+      cursor
+    });
 
     const result = await this.dynamoClient.send(new QueryCommand(queryParams));
 
     const posts = (result.Items || []).map(item =>
-      this.mapEntityToPost(item as PostEntity)
+      mapEntityToPost(item as PostEntity)
     );
 
     const nextCursor = result.LastEvaluatedKey
@@ -337,26 +274,6 @@ export class PostService {
   }
 
   /**
-   * Map entity to Post
-   */
-  private mapEntityToPost(entity: PostEntity): Post {
-    return {
-      id: entity.id,
-      userId: entity.userId,
-      userHandle: entity.userHandle,
-      imageUrl: entity.imageUrl,
-      thumbnailUrl: entity.thumbnailUrl,
-      caption: entity.caption,
-      tags: entity.tags,
-      likesCount: entity.likesCount,
-      commentsCount: entity.commentsCount,
-      isPublic: entity.isPublic,
-      createdAt: entity.createdAt,
-      updatedAt: entity.updatedAt
-    };
-  }
-
-  /**
    * Get feed posts (all public posts from all users)
    * Uses scan operation to get posts across all users
    * Returns grid items for explore page
@@ -365,27 +282,17 @@ export class PostService {
     limit: number = 24,
     cursor?: string
   ): Promise<PostGridResponse> {
-    const scanParams: ScanCommandInput = {
-      TableName: this.tableName,
-      FilterExpression: 'entityType = :entityType AND isPublic = :isPublic',
-      ExpressionAttributeValues: {
-        ':entityType': 'POST',
-        ':isPublic': true
-      },
-      Limit: limit
-    };
-
-    if (cursor) {
-      scanParams.ExclusiveStartKey = JSON.parse(
-        Buffer.from(cursor, 'base64').toString()
-      );
-    }
+    const scanParams = buildPostFeedQuery({
+      tableName: this.tableName,
+      limit,
+      cursor
+    });
 
     const result = await this.dynamoClient.send(new ScanCommand(scanParams));
 
     // Map to PostGridItem
     const posts = (result.Items || [])
-      .map(item => this.mapEntityToGridItem(item as PostEntity))
+      .map(item => mapEntityToPostGridItem(item as PostEntity))
       // Sort by createdAt descending (newest first)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -432,25 +339,13 @@ export class PostService {
       };
     }
 
-    // Query posts from all followed users
-    // PERFORMANCE NOTE: This queries each user separately. In production, consider:
-    // 1. Batch queries for efficiency
-    // 2. Caching frequently accessed posts
-    // 3. Hybrid approach with materialized top 25 posts
+    // Query posts from all followed users using utility
     const allPosts: PostEntity[] = [];
 
     for (const followeeId of followingUserIds) {
-      const queryParams: QueryCommandInput = {
-        TableName: this.tableName,
-        KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
-        ExpressionAttributeValues: {
-          ':pk': `USER#${followeeId}`,
-          ':skPrefix': 'POST#'
-        },
-        ScanIndexForward: false, // Sort descending by SK (newest first)
-        // Fetch more than limit to account for filtering
-        Limit: limit * 2
-      };
+      const queryParams = buildUserPostsQuery(followeeId, this.tableName, {
+        limit: limit * 2
+      });
 
       const result = await this.dynamoClient.send(new QueryCommand(queryParams));
 
@@ -472,55 +367,17 @@ export class PostService {
 
     // Map to FeedPostItem (with full images and author info)
     const posts = await Promise.all(
-      limitedPosts.map(entity => this.mapEntityToFeedItem(entity))
+      limitedPosts.map(async (entity) => {
+        const baseFeedItem = mapEntityToFeedItemBase(entity);
+        const profile = await this.profileService.getProfileById(entity.userId);
+        return profile ? enrichWithProfile(baseFeedItem, profile) : { ...baseFeedItem, authorFullName: undefined, authorProfilePictureUrl: undefined };
+      })
     );
 
     return {
       posts,
       nextCursor: undefined, // Pagination not implemented in Phase 1
       hasMore: sortedPosts.length > limit
-    };
-  }
-
-  /**
-   * Map entity to PostGridItem
-   */
-  private mapEntityToGridItem(entity: PostEntity): PostGridItem {
-    return {
-      id: entity.id,
-      userId: entity.userId,
-      userHandle: entity.userHandle,
-      thumbnailUrl: entity.thumbnailUrl,
-      caption: entity.caption,
-      likesCount: entity.likesCount,
-      commentsCount: entity.commentsCount,
-      createdAt: entity.createdAt
-    };
-  }
-
-  /**
-   * Map entity to FeedPostItem (for Instagram-style feed)
-   * Includes full image URL and author information
-   */
-  private async mapEntityToFeedItem(entity: PostEntity): Promise<FeedPostItem> {
-    // Get author profile for display info
-    const profile = await this.profileService.getProfileById(entity.userId);
-
-    return {
-      id: entity.id,
-      userId: entity.userId,
-      userHandle: entity.userHandle,
-      imageUrl: entity.imageUrl, // Full image, not thumbnail
-      caption: entity.caption,
-      likesCount: entity.likesCount,
-      commentsCount: entity.commentsCount,
-      createdAt: entity.createdAt,
-      // Author info for feed cards (aligned with Profile schema)
-      authorId: entity.userId,
-      authorHandle: entity.userHandle,
-      authorFullName: profile?.fullName,
-      authorProfilePictureUrl: profile?.profilePictureUrl,
-      isLiked: false // Will be enriched later with user's like status
     };
   }
 }
