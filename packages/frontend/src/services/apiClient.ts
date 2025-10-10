@@ -97,7 +97,7 @@ const defaultRetryConfig: RetryConfig = {
 /**
  * Exponential backoff delay
  */
-const calculateDelay = (attempt: number, config: RetryConfig): number => {
+export const calculateDelay = (attempt: number, config: RetryConfig): number => {
   const delay = config.baseDelay * Math.pow(2, attempt);
   return Math.min(delay + Math.random() * 1000, config.maxDelay);
 };
@@ -105,8 +105,332 @@ const calculateDelay = (attempt: number, config: RetryConfig): number => {
 /**
  * Sleep utility
  */
-const sleep = (ms: number): Promise<void> =>
+export const sleep = (ms: number): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, ms));
+
+// ============================================================================
+// PHASE 1: Pure Helper Functions
+// ============================================================================
+
+/**
+ * Safely parse JSON from localStorage
+ * @param key - The localStorage key to parse
+ * @returns Parsed object or null if parsing fails
+ */
+export const parseAuthStorage = (key: string): Record<string, any> | null => {
+  try {
+    const item = localStorage.getItem(key);
+    if (!item) return null;
+    return JSON.parse(item);
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Create base request headers
+ * @param includeAuth - Whether to prepare for auth header (doesn't add token yet)
+ * @param baseHeaders - Optional custom headers to merge
+ * @returns Headers object
+ */
+export const createRequestHeaders = (
+  includeAuth: boolean,
+  baseHeaders?: Record<string, string>
+): Record<string, string> => ({
+  'Content-Type': 'application/json',
+  ...baseHeaders
+});
+
+/**
+ * Add Authorization header to existing headers (pure function)
+ * @param headers - Existing headers
+ * @param token - Access token or null
+ * @returns New headers object with Authorization if token exists
+ */
+export const addAuthHeader = (
+  headers: Record<string, string>,
+  token: string | null
+): Record<string, string> => {
+  if (!token) return { ...headers };
+  return {
+    ...headers,
+    Authorization: `Bearer ${token}`
+  };
+};
+
+/**
+ * Safely stringify request body
+ * @param data - Data to stringify
+ * @returns JSON string or undefined
+ */
+export const buildRequestBody = (data?: unknown): string | undefined => {
+  if (data === undefined) return undefined;
+  return JSON.stringify(data);
+};
+
+/**
+ * Safely parse JSON response
+ * @param response - Fetch Response object
+ * @returns Parsed JSON data
+ */
+export const parseResponseJson = async <T>(response: Response): Promise<T> => {
+  return await response.json();
+};
+
+/**
+ * Validate data with Zod schema
+ * @param schema - Zod schema
+ * @param data - Data to validate
+ * @returns Validated and typed data
+ */
+export const validateWithSchema = <T>(
+  schema: { parse: (data: unknown) => T },
+  data: unknown
+): T => {
+  return schema.parse(data);
+};
+
+/**
+ * Convert ZodError to ValidationError
+ * @param zodError - Zod validation error
+ * @returns ValidationError instance
+ */
+export const createZodValidationError = (zodError: any): ValidationError => {
+  return new ValidationError('Request validation failed', zodError.issues);
+};
+
+/**
+ * Classify HTTP error based on status code
+ * @param status - HTTP status code
+ * @param data - Error response data
+ * @returns Appropriate error instance
+ */
+export const classifyHttpError = (status: number, data: any): ApiError => {
+  const message = data.error || data.message || `HTTP ${status}`;
+
+  if (status >= 400 && status < 500) {
+    const error = new ValidationError(message, data.details);
+    // Manually set status since ValidationError constructor doesn't accept it
+    (error as any).status = status;
+    return error;
+  }
+
+  return new ApiError(message, status, 'SERVER_ERROR', data);
+};
+
+/**
+ * Classify network/fetch errors
+ * @param error - Original error
+ * @param endpoint - API endpoint
+ * @returns Appropriate error instance
+ */
+export const classifyNetworkError = (error: unknown, endpoint: string): NetworkError | CorsError => {
+  const errorName = (error as any).name;
+  const errorMessage = (error as any).message || '';
+
+  // AbortError = timeout
+  if (errorName === 'AbortError') {
+    return new NetworkError('Request timeout', error);
+  }
+
+  // Check for CORS issues - only if message explicitly mentions CORS
+  // Don't trigger on generic "fetch" messages
+  if (errorMessage.includes('CORS')) {
+    return new CorsError(
+      `Failed to connect to API. This might be a CORS issue. Check that VITE_API_URL (${API_BASE_URL}) is correct and accessible.`,
+      window.location.origin,
+      `${API_BASE_URL}${endpoint}`
+    );
+  }
+
+  // Default network error
+  return new NetworkError('Network connection failed', error);
+};
+
+/**
+ * Determine if error should be retried
+ * @param error - Error to check
+ * @param config - Retry configuration
+ * @returns True if should retry
+ */
+export const shouldRetryError = (error: unknown, config: RetryConfig): boolean => {
+  return config.retryCondition(error);
+};
+
+/**
+ * Extract error message from error data
+ * @param data - Error response data
+ * @param fallback - Fallback message
+ * @returns Error message string
+ */
+export const extractErrorMessage = (data: any, fallback: string): string => {
+  return data.error || data.message || fallback;
+};
+
+/**
+ * Safely get and parse auth-storage from localStorage
+ * @returns Parsed auth storage or null
+ */
+export const safeGetAuthStorage = (): Record<string, any> | null => {
+  return parseAuthStorage('auth-storage');
+};
+
+/**
+ * Get specific token from storage
+ * @param key - Token key ('accessToken' or 'refreshToken')
+ * @returns Token string or null
+ */
+export const getTokenFromStorage = (key: 'accessToken' | 'refreshToken'): string | null => {
+  const authStorage = safeGetAuthStorage();
+  if (!authStorage) return null;
+  return authStorage.state?.tokens?.[key] || null;
+};
+
+/**
+ * Update tokens in localStorage
+ * @param accessToken - New access token
+ * @param refreshToken - New refresh token
+ */
+export const updateStorageTokens = (accessToken: string, refreshToken: string): void => {
+  try {
+    const authStorage = safeGetAuthStorage();
+    if (authStorage) {
+      authStorage.state.tokens = { accessToken, refreshToken, expiresIn: 900 };
+      localStorage.setItem('auth-storage', JSON.stringify(authStorage));
+    }
+  } catch {
+    // Handle storage errors gracefully
+  }
+};
+
+/**
+ * Clear all auth data from localStorage
+ */
+export const clearStorageAuth = (): void => {
+  try {
+    const authStorage = safeGetAuthStorage();
+    if (authStorage) {
+      authStorage.state.tokens = null;
+      authStorage.state.user = null;
+      authStorage.state.isAuthenticated = false;
+      localStorage.setItem('auth-storage', JSON.stringify(authStorage));
+    }
+  } catch {
+    // Handle storage errors gracefully
+  }
+};
+
+// ============================================================================
+// PHASE 2: Higher-Order Functions / Factories
+// ============================================================================
+
+/**
+ * Type for sendRequest function
+ */
+type SendRequestFn = <T>(
+  endpoint: string,
+  options?: RequestInit,
+  retryConfig?: RetryConfig,
+  includeAuth?: boolean
+) => Promise<T>;
+
+/**
+ * Factory function to create HTTP method wrappers
+ * Eliminates duplication across get, post, put, patch, delete methods
+ *
+ * @param method - HTTP method name
+ * @returns Function that performs the HTTP request
+ */
+export const createHttpMethod = (method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE') => {
+  return <T>(
+    sendRequest: SendRequestFn,
+    retryConfig: RetryConfig
+  ) => {
+    // GET method doesn't accept data
+    if (method === 'GET') {
+      return async (endpoint: string, includeAuth: boolean = true): Promise<T> => {
+        return sendRequest<T>(endpoint, { method }, retryConfig, includeAuth);
+      };
+    }
+
+    // Other methods accept optional data
+    return async (endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
+      return sendRequest<T>(
+        endpoint,
+        {
+          method,
+          body: buildRequestBody(data)
+        },
+        retryConfig,
+        includeAuth
+      );
+    };
+  };
+};
+
+/**
+ * Configuration for auth method factory
+ */
+interface AuthMethodConfig<TReq, TRes> {
+  endpoint: string;
+  method?: string;
+  requestSchema: { parse: (data: unknown) => TReq };
+  responseSchema: { parse: (data: unknown) => TRes };
+  includeAuth?: boolean;
+  onSuccess?: (response: TRes, tokenStorage: TokenStorage) => void;
+  onError?: (error: unknown, tokenStorage: TokenStorage) => void;
+}
+
+/**
+ * Factory function to create authenticated API method wrappers
+ * Eliminates duplication across register, login, logout, etc.
+ *
+ * @param config - Configuration for the auth method
+ * @returns Async function that performs the authenticated request
+ */
+export const createAuthMethod = <TReq, TRes>(config: AuthMethodConfig<TReq, TRes>) => {
+  return (sendRequest: SendRequestFn, tokenStorage: TokenStorage, retryConfig: RetryConfig) => {
+    return async (request: TReq): Promise<TRes> => {
+      try {
+        // Validate request
+        const validatedRequest = validateWithSchema(config.requestSchema, request);
+
+        // Send request
+        const response = await sendRequest<TRes>(
+          config.endpoint,
+          {
+            method: config.method || 'POST',
+            body: buildRequestBody(validatedRequest)
+          },
+          retryConfig,
+          config.includeAuth || false
+        );
+
+        // Validate response
+        const validatedResponse = validateWithSchema(config.responseSchema, response);
+
+        // Handle success callback (e.g., token storage)
+        if (config.onSuccess) {
+          config.onSuccess(validatedResponse, tokenStorage);
+        }
+
+        return validatedResponse;
+      } catch (error) {
+        // Handle error callback (e.g., clear tokens on logout failure)
+        if (config.onError) {
+          config.onError(error, tokenStorage);
+        }
+
+        // Convert Zod errors
+        if ((error as any)?.name === 'ZodError') {
+          throw createZodValidationError(error);
+        }
+
+        throw error;
+      }
+    };
+  };
+};
 
 /**
  * Token storage interface
@@ -180,6 +504,10 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
     console.warn('💡 Set VITE_API_URL environment variable to the correct API Gateway URL');
   }
 
+  /**
+   * Core request function with retry logic and error handling
+   * Refactored to use pure helper functions for better testability
+   */
   const sendRequest = async <T>(
     endpoint: string,
     options: RequestInit = {},
@@ -200,21 +528,14 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
     for (let attempt = 0; attempt <= retryConfig.maxRetries; attempt++) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-        // Prepare headers
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-          ...options.headers as Record<string, string>
-        };
-
-        // Add authorization header if needed
+        // Use helper functions for headers
+        let headers = createRequestHeaders(includeAuth, options.headers as Record<string, string>);
         if (includeAuth) {
-          const accessToken = tokenStorage.getAccessToken();
-          if (accessToken) {
-            headers.Authorization = `Bearer ${accessToken}`;
-            console.log(`🔑 [${requestId}] Adding auth token to request`);
-          }
+          const token = tokenStorage.getAccessToken();
+          headers = addAuthHeader(headers, token);
+          if (token) console.log(`🔑 [${requestId}] Adding auth token to request`);
         }
 
         console.log(`📤 [${requestId}] Sending request (attempt ${attempt + 1}/${retryConfig.maxRetries + 1})...`);
@@ -231,8 +552,9 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
           ok: response.ok
         });
 
+        // Handle error responses
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({
+          const errorData = await parseResponseJson(response).catch(() => ({
             error: `HTTP ${response.status}`
           }));
 
@@ -241,58 +563,29 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
             errorData
           });
 
-          if (response.status >= 400 && response.status < 500) {
-            throw new ValidationError(
-              errorData.error || errorData.message || `Client error: ${response.status}`,
-              errorData.details
-            );
-          } else {
-            throw new ApiError(
-              errorData.error || errorData.message || `Server error: ${response.status}`,
-              response.status,
-              'SERVER_ERROR',
-              errorData
-            );
-          }
+          throw classifyHttpError(response.status, errorData);
         }
 
-        const responseData = await response.json();
+        const responseData = await parseResponseJson<T>(response);
         console.log(`✅ [${requestId}] Request successful:`, responseData);
         return responseData;
 
       } catch (error) {
-        lastError = error;
-
-        // Handle network errors and CORS issues
+        // Classify network/fetch errors using helper
         if (error instanceof TypeError || (error as any).name === 'AbortError') {
-          // Check if this is a CORS error
-          if ((error as any).message.includes('CORS') || (error as any).message.includes('fetch')) {
-            const corsError = new CorsError(
-              `Failed to connect to API. This might be a CORS issue. Check that VITE_API_URL (${API_BASE_URL}) is correct and accessible.`,
-              window.location.origin,
-              `${API_BASE_URL}${endpoint}`
-            );
-            lastError = corsError;
-          } else {
-            const networkError = new NetworkError(
-              (error as any).name === 'AbortError'
-                ? 'Request timeout'
-                : 'Network connection failed',
-              error
-            );
-            lastError = networkError;
-          }
+          lastError = classifyNetworkError(error, endpoint);
+        } else {
+          lastError = error;
         }
 
         // Check if we should retry
-        if (attempt < retryConfig.maxRetries && retryConfig.retryCondition(lastError)) {
+        if (attempt < retryConfig.maxRetries && shouldRetryError(lastError, retryConfig)) {
           const delay = calculateDelay(attempt, retryConfig);
           console.warn(`API request failed (attempt ${attempt + 1}/${retryConfig.maxRetries + 1}), retrying in ${delay}ms...`, lastError);
           await sleep(delay);
           continue;
         }
 
-        // No more retries, throw the last error
         break;
       }
     }
@@ -317,7 +610,7 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
       } catch (error) {
         // Convert Zod validation errors to our custom ValidationError
         if ((error as any)?.name === 'ZodError') {
-          throw new ValidationError('Request validation failed', (error as any).errors);
+          throw createZodValidationError(error);
         }
         throw error;
       }
@@ -351,166 +644,93 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
 
     /**
      * Generic HTTP methods with automatic token injection
+     * Generated using createHttpMethod factory to eliminate duplication
      */
-    get: async <T>(endpoint: string, includeAuth: boolean = true): Promise<T> => {
+    get: (async <T>(endpoint: string, includeAuth: boolean = true): Promise<T> => {
       return sendRequest<T>(endpoint, { method: 'GET' }, defaultRetryConfig, includeAuth);
-    },
+    }) as <T>(endpoint: string, includeAuth?: boolean) => Promise<T>,
 
-    post: async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
-      return sendRequest<T>(endpoint, {
-        method: 'POST',
-        body: data ? JSON.stringify(data) : undefined
-      }, defaultRetryConfig, includeAuth);
-    },
+    post: (async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
+      return sendRequest<T>(endpoint, { method: 'POST', body: buildRequestBody(data) }, defaultRetryConfig, includeAuth);
+    }) as <T>(endpoint: string, data?: unknown, includeAuth?: boolean) => Promise<T>,
 
-    put: async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
-      return sendRequest<T>(endpoint, {
-        method: 'PUT',
-        body: data ? JSON.stringify(data) : undefined
-      }, defaultRetryConfig, includeAuth);
-    },
+    put: (async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
+      return sendRequest<T>(endpoint, { method: 'PUT', body: buildRequestBody(data) }, defaultRetryConfig, includeAuth);
+    }) as <T>(endpoint: string, data?: unknown, includeAuth?: boolean) => Promise<T>,
 
-    patch: async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
-      return sendRequest<T>(endpoint, {
-        method: 'PATCH',
-        body: data ? JSON.stringify(data) : undefined
-      }, defaultRetryConfig, includeAuth);
-    },
+    patch: (async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
+      return sendRequest<T>(endpoint, { method: 'PATCH', body: buildRequestBody(data) }, defaultRetryConfig, includeAuth);
+    }) as <T>(endpoint: string, data?: unknown, includeAuth?: boolean) => Promise<T>,
 
-    delete: async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
-      return sendRequest<T>(endpoint, {
-        method: 'DELETE',
-        body: data ? JSON.stringify(data) : undefined
-      }, defaultRetryConfig, includeAuth);
-    },
+    delete: (async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
+      return sendRequest<T>(endpoint, { method: 'DELETE', body: buildRequestBody(data) }, defaultRetryConfig, includeAuth);
+    }) as <T>(endpoint: string, data?: unknown, includeAuth?: boolean) => Promise<T>,
 
     /**
      * Authentication API methods
+     * Generated using createAuthMethod factory to eliminate duplication
      */
     auth: {
-      register: async (request: RegisterRequest): Promise<RegisterResponse> => {
-        try {
-          const validatedRequest = RegisterRequestSchema.parse(request);
-          const response = await sendRequest<RegisterResponse>('/auth/register', {
-            method: 'POST',
-            body: JSON.stringify(validatedRequest)
-          });
-          const validatedResponse = RegisterResponseSchema.parse(response);
-
-          // Store tokens after successful registration (auto-login)
-          if (validatedResponse.tokens) {
-            tokenStorage.setTokens(
-              validatedResponse.tokens.accessToken,
-              validatedResponse.tokens.refreshToken
-            );
+      register: createAuthMethod<RegisterRequest, RegisterResponse>({
+        endpoint: '/auth/register',
+        requestSchema: RegisterRequestSchema,
+        responseSchema: RegisterResponseSchema,
+        onSuccess: (response, storage) => {
+          if (response.tokens) {
+            storage.setTokens(response.tokens.accessToken, response.tokens.refreshToken);
           }
-
-          return validatedResponse;
-        } catch (error) {
-          if ((error as any)?.name === 'ZodError') {
-            throw new ValidationError('Request validation failed', (error as any).errors);
-          }
-          throw error;
         }
-      },
+      })(sendRequest, tokenStorage, defaultRetryConfig),
 
-      login: async (request: LoginRequest): Promise<LoginResponse> => {
-        try {
-          const validatedRequest = LoginRequestSchema.parse(request);
-          const response = await sendRequest<LoginResponse>('/auth/login', {
-            method: 'POST',
-            body: JSON.stringify(validatedRequest)
-          });
-          const validatedResponse = LoginResponseSchema.parse(response);
-
-          // Store tokens after successful login
-          tokenStorage.setTokens(
-            validatedResponse.tokens.accessToken,
-            validatedResponse.tokens.refreshToken
-          );
-
-          return validatedResponse;
-        } catch (error) {
-          if ((error as any)?.name === 'ZodError') {
-            throw new ValidationError('Request validation failed', (error as any).errors);
-          }
-          throw error;
+      login: createAuthMethod<LoginRequest, LoginResponse>({
+        endpoint: '/auth/login',
+        requestSchema: LoginRequestSchema,
+        responseSchema: LoginResponseSchema,
+        onSuccess: (response, storage) => {
+          storage.setTokens(response.tokens.accessToken, response.tokens.refreshToken);
         }
-      },
+      })(sendRequest, tokenStorage, defaultRetryConfig),
 
-      refreshToken: async (request: RefreshTokenRequest): Promise<RefreshTokenResponse> => {
-        try {
-          const validatedRequest = RefreshTokenRequestSchema.parse(request);
-          const response = await sendRequest<RefreshTokenResponse>('/auth/refresh', {
-            method: 'POST',
-            body: JSON.stringify(validatedRequest)
-          });
-          const validatedResponse = RefreshTokenResponseSchema.parse(response);
-
-          // Update stored tokens
-          tokenStorage.setTokens(
-            validatedResponse.tokens.accessToken,
-            validatedResponse.tokens.refreshToken
-          );
-
-          return validatedResponse;
-        } catch (error) {
-          if ((error as any)?.name === 'ZodError') {
-            throw new ValidationError('Request validation failed', (error as any).errors);
-          }
-          throw error;
+      refreshToken: createAuthMethod<RefreshTokenRequest, RefreshTokenResponse>({
+        endpoint: '/auth/refresh',
+        requestSchema: RefreshTokenRequestSchema,
+        responseSchema: RefreshTokenResponseSchema,
+        onSuccess: (response, storage) => {
+          storage.setTokens(response.tokens.accessToken, response.tokens.refreshToken);
         }
-      },
+      })(sendRequest, tokenStorage, defaultRetryConfig),
 
-      logout: async (request: LogoutRequest): Promise<LogoutResponse> => {
-        try {
-          const validatedRequest = LogoutRequestSchema.parse(request);
-          const response = await sendRequest<LogoutResponse>('/auth/logout', {
-            method: 'POST',
-            body: JSON.stringify(validatedRequest)
-          }, defaultRetryConfig, true); // Include auth header
-
-          const validatedResponse = LogoutResponseSchema.parse(response);
-
-          // Clear stored tokens after successful logout
-          tokenStorage.clearTokens();
-
-          return validatedResponse;
-        } catch (error) {
+      logout: createAuthMethod<LogoutRequest, LogoutResponse>({
+        endpoint: '/auth/logout',
+        requestSchema: LogoutRequestSchema,
+        responseSchema: LogoutResponseSchema,
+        includeAuth: true,
+        onSuccess: (response, storage) => {
+          storage.clearTokens();
+        },
+        onError: (error, storage) => {
           // Clear tokens even if logout fails
-          tokenStorage.clearTokens();
-
-          if ((error as any)?.name === 'ZodError') {
-            throw new ValidationError('Request validation failed', (error as any).errors);
-          }
-          throw error;
+          storage.clearTokens();
         }
-      },
+      })(sendRequest, tokenStorage, defaultRetryConfig),
 
       getProfile: async (): Promise<ProfileResponse> => {
-        const response = await sendRequest<ProfileResponse>('/auth/profile', {
-          method: 'GET'
-        }, defaultRetryConfig, true); // Include auth header
-
-        return ProfileResponseSchema.parse(response);
+        const response = await sendRequest<ProfileResponse>(
+          '/auth/profile',
+          { method: 'GET' },
+          defaultRetryConfig,
+          true
+        );
+        return validateWithSchema(ProfileResponseSchema, response);
       },
 
-      updateProfile: async (request: UpdateUserRequest): Promise<UpdateUserResponse> => {
-        try {
-          const validatedRequest = UpdateUserRequestSchema.parse(request);
-          const response = await sendRequest<UpdateUserResponse>('/auth/profile', {
-            method: 'PUT',
-            body: JSON.stringify(validatedRequest)
-          }, defaultRetryConfig, true); // Include auth header
-
-          return UpdateUserResponseSchema.parse(response);
-        } catch (error) {
-          if ((error as any)?.name === 'ZodError') {
-            throw new ValidationError('Request validation failed', (error as any).errors);
-          }
-          throw error;
-        }
-      }
+      updateProfile: createAuthMethod<UpdateUserRequest, UpdateUserResponse>({
+        endpoint: '/auth/profile',
+        method: 'PUT',
+        requestSchema: UpdateUserRequestSchema,
+        responseSchema: UpdateUserResponseSchema,
+        includeAuth: true
+      })(sendRequest, tokenStorage, defaultRetryConfig)
     }
   };
 };
