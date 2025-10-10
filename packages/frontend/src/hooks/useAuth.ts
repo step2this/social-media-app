@@ -1,7 +1,16 @@
 import { useCallback } from 'react';
 import { useAuthStore } from '../stores/authStore.js';
-import { apiClient, ApiError, NetworkError, ValidationError } from '../services/apiClient.js';
+import { apiClient } from '../services/apiClient.js';
 import type { RegisterRequest, LoginRequest, UpdateUserRequest } from '@social-media-app/shared';
+import {
+  createRegisterErrorMessage,
+  createLoginErrorMessage,
+  createProfileErrorMessage,
+  createUpdateProfileErrorMessage,
+  buildUserWithFallbacks,
+  extractUserFromProfile,
+  processRegisterResponse,
+} from '../utils/index.js';
 
 /**
  * Authentication hook that provides auth operations with store integration
@@ -36,25 +45,19 @@ export const useAuth = () => {
       const response = await apiClient.auth.register(userData);
       console.log('✅ useAuth: Registration API call successful:', response);
 
-      // If tokens are returned, automatically log the user in
-      if (response.tokens) {
+      // Process response and handle conditional auto-login
+      const { shouldLogin, user: normalizedUser, tokens } = processRegisterResponse(response);
+
+      if (shouldLogin && normalizedUser && tokens) {
         console.log('🔑 useAuth: Tokens received, logging user in automatically');
-        // Create a more complete user object for the store
-        const userWithDetails = {
-          ...response.user,
-          updatedAt: response.user.createdAt, // Use createdAt as initial updatedAt if not provided
-        };
-        setLoginState(userWithDetails, response.tokens);
+        setLoginState(normalizedUser, tokens);
       }
 
       setLoading(false);
       return response;
     } catch (err) {
       console.error('❌ useAuth: Registration error caught:', err);
-      const errorMessage = err instanceof ApiError || err instanceof NetworkError || err instanceof ValidationError
-        ? err.message
-        : 'Registration failed. Please try again.';
-
+      const errorMessage = createRegisterErrorMessage(err);
       console.error('🔴 useAuth: Setting error message:', errorMessage);
       setError(errorMessage);
       setLoading(false);
@@ -72,22 +75,14 @@ export const useAuth = () => {
     try {
       const response = await apiClient.auth.login(credentials);
 
-      // Update auth store with user data and tokens
-      // Ensure user object has all required properties
-      const userWithDetails = {
-        ...response.user,
-        createdAt: (response.user as any).createdAt,
-        updatedAt: (response.user as any).updatedAt || (response.user as any).createdAt, // Fallback if updatedAt missing
-      };
-      setLoginState(userWithDetails, response.tokens);
+      // Normalize user object and update auth store
+      const normalizedUser = buildUserWithFallbacks(response.user);
+      setLoginState(normalizedUser, response.tokens);
       setLoading(false);
 
       return response;
     } catch (err) {
-      const errorMessage = err instanceof ApiError || err instanceof NetworkError || err instanceof ValidationError
-        ? err.message
-        : 'Login failed. Please check your credentials.';
-
+      const errorMessage = createLoginErrorMessage(err);
       setError(errorMessage);
       setLoading(false);
       throw err;
@@ -158,15 +153,8 @@ export const useAuth = () => {
     try {
       const response = await apiClient.auth.getProfile();
 
-      // Extract user data from profile response
-      const userData = {
-        id: response.profile.id,
-        email: response.profile.email,
-        username: response.profile.username,
-        emailVerified: response.profile.emailVerified,
-        createdAt: response.profile.createdAt,
-        updatedAt: response.profile.updatedAt
-      };
+      // Extract user fields from profile response
+      const userData = extractUserFromProfile(response.profile);
 
       // Update user data in store
       setUser(userData);
@@ -174,10 +162,7 @@ export const useAuth = () => {
 
       return userData;
     } catch (err) {
-      const errorMessage = err instanceof ApiError || err instanceof NetworkError
-        ? err.message
-        : 'Failed to get profile. Please try again.';
-
+      const errorMessage = createProfileErrorMessage(err);
       setError(errorMessage);
       setLoading(false);
       throw err;
@@ -204,10 +189,7 @@ export const useAuth = () => {
 
       return response.user;
     } catch (err) {
-      const errorMessage = err instanceof ApiError || err instanceof NetworkError || err instanceof ValidationError
-        ? err.message
-        : 'Failed to update profile. Please try again.';
-
+      const errorMessage = createUpdateProfileErrorMessage(err);
       setError(errorMessage);
       setLoading(false);
       throw err;
