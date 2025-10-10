@@ -55,3 +55,29 @@ export {
   shouldAutoLogin,
   processRegisterResponse,
 } from './auth-response-handlers.js';
+
+// Follow State Helper Utilities
+export {
+  incrementFollowersCount,
+  decrementFollowersCount,
+  calculateOptimisticFollowState,
+  calculateOptimisticUnfollowState,
+  createStateSnapshot,
+  shouldAllowFollow,
+  shouldAllowUnfollow,
+  hasInitialFollowValues,
+  type FollowState,
+  type FollowStateSnapshot,
+} from './follow-state-helpers.js';
+
+// Follow Error Handler Utilities
+export {
+  createFollowErrorMessage,
+  createUnfollowErrorMessage,
+  createFetchStatusErrorMessage,
+  extractFollowErrorMessage,
+  isNetworkError,
+  isAuthenticationError,
+  formatFollowOperationError,
+  type FollowErrorContext,
+} from './follow-error-handler.js';

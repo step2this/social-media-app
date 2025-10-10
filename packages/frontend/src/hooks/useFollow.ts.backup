@@ -1,17 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import { followService } from '../services/followService.js';
-import {
-  calculateOptimisticFollowState,
-  calculateOptimisticUnfollowState,
-  createStateSnapshot,
-  shouldAllowFollow,
-  shouldAllowUnfollow,
-  hasInitialFollowValues,
-  createFollowErrorMessage,
-  createUnfollowErrorMessage,
-  createFetchStatusErrorMessage,
-  type FollowState,
-} from '../utils/index.js';
 
 /**
  * Options for initializing useFollow hook
@@ -37,6 +25,10 @@ export const useFollow = (
     initialFollowingCount = 0,
     onFollowStatusChange
   } = options;
+
+  // Track whether initial values were explicitly provided
+  // Check if the value is not undefined (not just if the property exists)
+  const hasInitialValues = options.initialIsFollowing !== undefined;
 
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [followersCount, setFollowersCount] = useState(initialFollowersCount);
@@ -65,7 +57,7 @@ export const useFollow = (
       setFollowingCount(response.followingCount);
       setIsLoading(false);
     } catch (err) {
-      setError(createFetchStatusErrorMessage());
+      setError('Failed to fetch follow status');
       setIsLoading(false);
     }
   }, [userId]);
@@ -75,7 +67,7 @@ export const useFollow = (
    * This ensures FollowButton shows correct state even when parent doesn't provide initial data
    */
   useEffect(() => {
-    if (!hasInitialFollowValues(options) && userId) {
+    if (!hasInitialValues && userId) {
       fetchFollowStatus();
     }
   }, []); // Empty deps - only run on mount
@@ -85,26 +77,17 @@ export const useFollow = (
    */
   const followUser = useCallback(async () => {
     // Don't follow if already following
-    if (!shouldAllowFollow(isFollowing)) {
+    if (isFollowing) {
       return;
     }
 
-    // Create snapshot for rollback
-    const snapshot = createStateSnapshot({
-      isFollowing,
-      followersCount,
-      followingCount,
-    });
+    // Store original state for rollback
+    const originalIsFollowing = isFollowing;
+    const originalFollowersCount = followersCount;
 
-    // Calculate and apply optimistic state
-    const optimisticState = calculateOptimisticFollowState({
-      isFollowing,
-      followersCount,
-      followingCount,
-    });
-
-    setIsFollowing(optimisticState.isFollowing);
-    setFollowersCount(optimisticState.followersCount);
+    // Optimistic update
+    setIsFollowing(true);
+    setFollowersCount(prev => prev + 1);
     setIsLoading(true);
     setError(null);
 
@@ -122,38 +105,29 @@ export const useFollow = (
       // This matches industry standard UX (Instagram, Twitter, etc.)
     } catch (err) {
       // Rollback on error
-      setIsFollowing(snapshot.isFollowing);
-      setFollowersCount(snapshot.followersCount);
-      setError(createFollowErrorMessage());
+      setIsFollowing(originalIsFollowing);
+      setFollowersCount(originalFollowersCount);
+      setError('Failed to follow user');
       setIsLoading(false);
     }
-  }, [userId, isFollowing, followersCount, followingCount, onFollowStatusChange]);
+  }, [userId, isFollowing, followersCount, onFollowStatusChange]);
 
   /**
    * Unfollow a user with optimistic update
    */
   const unfollowUser = useCallback(async () => {
     // Don't unfollow if not following
-    if (!shouldAllowUnfollow(isFollowing)) {
+    if (!isFollowing) {
       return;
     }
 
-    // Create snapshot for rollback
-    const snapshot = createStateSnapshot({
-      isFollowing,
-      followersCount,
-      followingCount,
-    });
+    // Store original state for rollback
+    const originalIsFollowing = isFollowing;
+    const originalFollowersCount = followersCount;
 
-    // Calculate and apply optimistic state
-    const optimisticState = calculateOptimisticUnfollowState({
-      isFollowing,
-      followersCount,
-      followingCount,
-    });
-
-    setIsFollowing(optimisticState.isFollowing);
-    setFollowersCount(optimisticState.followersCount);
+    // Optimistic update
+    setIsFollowing(false);
+    setFollowersCount(prev => prev - 1);
     setIsLoading(true);
     setError(null);
 
@@ -171,12 +145,12 @@ export const useFollow = (
       // This matches industry standard UX (Instagram, Twitter, etc.)
     } catch (err) {
       // Rollback on error
-      setIsFollowing(snapshot.isFollowing);
-      setFollowersCount(snapshot.followersCount);
-      setError(createUnfollowErrorMessage());
+      setIsFollowing(originalIsFollowing);
+      setFollowersCount(originalFollowersCount);
+      setError('Failed to unfollow user');
       setIsLoading(false);
     }
-  }, [userId, isFollowing, followersCount, followingCount, onFollowStatusChange]);
+  }, [userId, isFollowing, followersCount, onFollowStatusChange]);
 
   /**
    * Toggle follow status (convenience method)
