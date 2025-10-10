@@ -114,8 +114,8 @@ describe('FollowService', () => {
             Item: expect.objectContaining({
               PK: `USER#${followerId}`,
               SK: `FOLLOW#${followeeId}`,
-              GSI2PK: `USER#${followeeId}`,
-              GSI2SK: `FOLLOWER#${followerId}`,
+              GSI1PK: `USER#${followeeId}`,
+              GSI1SK: `FOLLOWER#${followerId}`,
               followerId,
               followeeId,
               entityType: 'FOLLOW'

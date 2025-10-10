@@ -26,7 +26,9 @@ const createMockDynamoClient = () => {
 
     // Check condition expression for duplicate prevention
     if (command.input.ConditionExpression === 'attribute_not_exists(PK)' && items.has(key)) {
-      throw new Error('ConditionalCheckFailedException');
+      const error = new Error('The conditional request failed');
+      error.name = 'ConditionalCheckFailedException';
+      throw error;
     }
 
     items.set(key, item);
