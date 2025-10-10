@@ -105,8 +105,8 @@ export const parseSKEntity = (sk: string): ParsedEntity | null => {
  */
 export const calculateCounterDelta = (
   eventName: string,
-  newImage: any,
-  oldImage: any
+  _newImage: any,
+  _oldImage: any
 ): number => {
   switch (eventName) {
     case 'INSERT':
@@ -170,11 +170,11 @@ export const getStreamRecordImage = (
   const { eventName } = record;
 
   if (eventName === 'REMOVE') {
-    return record.dynamodb.OldImage ?? null;
+    return (record.dynamodb.OldImage as Record<string, AttributeValue>) ?? null;
   }
 
   // INSERT or MODIFY - use NewImage
-  return record.dynamodb.NewImage ?? null;
+  return (record.dynamodb.NewImage as Record<string, AttributeValue>) ?? null;
 };
 
 /**

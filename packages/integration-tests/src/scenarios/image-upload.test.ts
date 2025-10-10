@@ -15,9 +15,11 @@ import {
   GetPresignedUrlResponseSchema,
   CreatePostResponseSchema,
   LoginResponseSchema,
+  RegisterResponseSchema,
   type GetPresignedUrlResponse,
   type CreatePostResponse,
-  type LoginResponse
+  type LoginResponse,
+  type RegisterResponse
 } from '@social-media-app/shared';
 import {
   createLocalStackHttpClient,
@@ -28,6 +30,7 @@ import {
 } from '../utils/index.js';
 import {
   createLoginRequest,
+  createRegisterRequest,
   createPresignedUrlRequest,
   createPostRequest,
   TestCredentials
@@ -61,6 +64,26 @@ describe('LocalStack Image Upload Integration', () => {
     }
 
     testLogger.info('All required services are ready');
+
+    // Register test user if needed
+    try {
+      const registerRequest = createRegisterRequest()
+        .withEmail(TestCredentials.localstackUser.email)
+        .withPassword(TestCredentials.localstackUser.password)
+        .withUsername('localstacktest')
+        .build();
+
+      await httpClient.post('/auth/register', registerRequest);
+      testLogger.info('Test user registered successfully');
+    } catch (error: any) {
+      // User might already exist - that's fine
+      if (error.status === 400 || error.status === 409) {
+        testLogger.debug('Test user already exists - continuing');
+      } else {
+        // Log but don't fail - user might exist from previous test run
+        testLogger.warn('Could not register test user:', error.message);
+      }
+    }
   }, 30000);
 
   beforeEach(async () => {

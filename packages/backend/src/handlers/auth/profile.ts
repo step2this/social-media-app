@@ -96,8 +96,14 @@ export const updateHandler = async (
       return validationErrorResponse(error.errors);
     }
 
-    console.error('Update profile error:', error instanceof Error ? error.message : String(error), {
-      requestId: event.requestContext?.requestId
+    // Log detailed error information for debugging
+    console.error('Update profile error - Full Details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      errorType: error?.constructor?.name,
+      requestId: event.requestContext?.requestId,
+      body: event.body,
+      userId: event.headers?.Authorization ? 'present' : 'missing'
     });
 
     return internalServerErrorResponse();
