@@ -94,6 +94,8 @@ describe('Get User Posts Handler', () => {
       posts: [
         {
           id: '123e4567-e89b-12d3-a456-426614174001',
+          userId: '123e4567-e89b-12d3-a456-426614174000',
+          userHandle: 'testuser',
           thumbnailUrl: 'https://cdn.example.com/thumb1.jpg',
           caption: 'First post',
           likesCount: 10,
@@ -102,6 +104,8 @@ describe('Get User Posts Handler', () => {
         },
         {
           id: '123e4567-e89b-12d3-a456-426614174002',
+          userId: '123e4567-e89b-12d3-a456-426614174000',
+          userHandle: 'testuser',
           thumbnailUrl: 'https://cdn.example.com/thumb2.jpg',
           caption: 'Second post',
           likesCount: 8,
@@ -151,6 +155,8 @@ describe('Get User Posts Handler', () => {
       posts: [
         {
           id: '123e4567-e89b-12d3-a456-426614174001',
+          userId: '123e4567-e89b-12d3-a456-426614174000',
+          userHandle: 'testuser',
           thumbnailUrl: 'https://cdn.example.com/thumb1.jpg',
           caption: 'Test post',
           likesCount: 5,

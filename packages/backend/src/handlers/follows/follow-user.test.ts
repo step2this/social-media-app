@@ -107,7 +107,7 @@ describe('follow-user handler', () => {
       expect(putCommand.input.Item.entityType).toBe('FOLLOW');
     });
 
-    it('should include GSI2 keys for follower queries', async () => {
+    it('should include GSI1 keys for follower queries', async () => {
       const event = createMockEvent(
         JSON.stringify({ userId: testUserId }),
         `Bearer ${mockJWT}`
@@ -116,8 +116,8 @@ describe('follow-user handler', () => {
       await handler(event);
 
       const putCommand = sentCommands.find(cmd => cmd.constructor.name === 'PutCommand');
-      expect(putCommand.input.Item.GSI2PK).toBe(`USER#${testUserId}`);
-      expect(putCommand.input.Item.GSI2SK).toBe('FOLLOWER#follower-user-id');
+      expect(putCommand.input.Item.GSI1PK).toBe(`USER#${testUserId}`);
+      expect(putCommand.input.Item.GSI1SK).toBe('FOLLOWER#follower-user-id');
     });
 
     it('should use conditional expression to prevent duplicates', async () => {
