@@ -1,9 +1,18 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
-import { CreatePostRequestSchema, type CreatePostRequest, ImageFileTypeField } from '@social-media-app/shared';
-// import { useAuthStore } from '../../stores/authStore.js';
+import { CreatePostRequestSchema, type CreatePostRequest } from '@social-media-app/shared';
 import { postService } from '../../services/postService.js';
+import {
+  validateCaptionLength,
+  validateTags,
+  validateImageFile,
+  createImagePreview,
+  revokeImagePreview,
+  parseTags,
+  formatTagsDisplay,
+  buildCreatePostRequest,
+} from '../../utils/index.js';
 import './CreatePostPage.css';
 
 interface FormData {
@@ -21,14 +30,13 @@ interface FormErrors {
 
 export const CreatePostPage: React.FC = () => {
   const navigate = useNavigate();
-  // const { user } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [formData, setFormData] = useState<FormData>({
     caption: '',
     tags: '',
-    isPublic: true
+    isPublic: true,
   });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -37,91 +45,68 @@ export const CreatePostPage: React.FC = () => {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isDragOver, setIsDragOver] = useState(false);
 
-  // Parse tags for validation (without limiting)
-  const parseTagsForValidation = useCallback((tagsString: string): string[] => {
-    if (!tagsString.trim()) return [];
-
-    return tagsString
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag.length > 0);
-  }, []);
-
-  // Parse and normalize tags for final submission
-  const parseTags = useCallback((tagsString: string): string[] => {
-    if (!tagsString.trim()) return [];
-
-    return tagsString
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag.length > 0)
-      .slice(0, 5); // Limit to 5 tags
-  }, []);
-
   // Handle form input changes
-  const handleInputChange = useCallback((field: keyof FormData, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = useCallback(
+    (field: keyof FormData, value: string | boolean) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
 
-    // Clear related errors
-    if (errors[field as keyof FormErrors]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
-
-    // Live validation for caption length
-    if (field === 'caption' && typeof value === 'string') {
-      if (value.length > 500) {
-        setErrors(prev => ({ ...prev, caption: 'Caption must be 500 characters or less' }));
+      // Clear related errors
+      if (errors[field as keyof FormErrors]) {
+        setErrors((prev) => ({ ...prev, [field]: undefined }));
       }
-    }
 
-    // Live validation for tags
-    if (field === 'tags' && typeof value === 'string') {
-      const tags = parseTagsForValidation(value);
-
-      if (tags.some(tag => tag.includes('#'))) {
-        setErrors(prev => ({ ...prev, tags: 'Tags should not include # symbol' }));
-      } else if (tags.length > 5) {
-        setErrors(prev => ({ ...prev, tags: 'Maximum 5 tags allowed' }));
-      } else {
-        setErrors(prev => ({ ...prev, tags: undefined }));
+      // Live validation for caption length
+      if (field === 'caption' && typeof value === 'string') {
+        const validation = validateCaptionLength(value);
+        if (!validation.isValid) {
+          setErrors((prev) => ({ ...prev, caption: validation.error }));
+        }
       }
-    }
-  }, [errors, parseTagsForValidation]);
+
+      // Live validation for tags
+      if (field === 'tags' && typeof value === 'string') {
+        const validation = validateTags(value);
+        if (!validation.isValid) {
+          setErrors((prev) => ({ ...prev, tags: validation.error }));
+        } else {
+          setErrors((prev) => ({ ...prev, tags: undefined }));
+        }
+      }
+    },
+    [errors]
+  );
 
   // Handle file selection
   const handleFileSelect = useCallback((file: File) => {
-    // Validate file type using shared schema
-    const fileTypeValidation = ImageFileTypeField.safeParse(file.type);
-    if (!fileTypeValidation.success) {
-      setErrors(prev => ({ ...prev, image: 'Please select a valid image file (JPEG, PNG, GIF, or WebP)' }));
-      return;
-    }
-
-    // Validate file size (10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setErrors(prev => ({ ...prev, image: 'Image size must be less than 10MB' }));
+    // Validate file using utility function
+    const validation = validateImageFile(file);
+    if (!validation.isValid) {
+      setErrors((prev) => ({ ...prev, image: validation.error }));
       return;
     }
 
     setSelectedFile(file);
-    setErrors(prev => ({ ...prev, image: undefined }));
+    setErrors((prev) => ({ ...prev, image: undefined }));
 
-    // Create preview URL
-    const url = URL.createObjectURL(file);
+    // Create preview URL using utility function
+    const url = createImagePreview(file);
     setPreviewUrl(url);
 
     return () => {
-      URL.revokeObjectURL(url);
+      revokeImagePreview(url);
     };
   }, []);
 
   // Handle file input change
-  const handleFileInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      handleFileSelect(file);
-    }
-  }, [handleFileSelect]);
+  const handleFileInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file) {
+        handleFileSelect(file);
+      }
+    },
+    [handleFileSelect]
+  );
 
   // Handle drag and drop
   const handleDragOver = useCallback((event: React.DragEvent) => {
@@ -134,20 +119,23 @@ export const CreatePostPage: React.FC = () => {
     setIsDragOver(false);
   }, []);
 
-  const handleDrop = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    setIsDragOver(false);
+  const handleDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      setIsDragOver(false);
 
-    const file = event.dataTransfer.files[0];
-    if (file) {
-      handleFileSelect(file);
-    }
-  }, [handleFileSelect]);
+      const file = event.dataTransfer.files[0];
+      if (file) {
+        handleFileSelect(file);
+      }
+    },
+    [handleFileSelect]
+  );
 
   // Remove selected image
   const handleRemoveImage = useCallback(() => {
     if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
+      revokeImagePreview(previewUrl);
     }
     setSelectedFile(null);
     setPreviewUrl(null);
@@ -155,7 +143,6 @@ export const CreatePostPage: React.FC = () => {
       fileInputRef.current.value = '';
     }
   }, [previewUrl]);
-
 
   // Validate form
   const validateForm = useCallback((): boolean => {
@@ -167,82 +154,78 @@ export const CreatePostPage: React.FC = () => {
     }
 
     // Validate caption
-    if (formData.caption.length > 500) {
-      newErrors.caption = 'Caption must be 500 characters or less';
+    const captionValidation = validateCaptionLength(formData.caption);
+    if (!captionValidation.isValid) {
+      newErrors.caption = captionValidation.error;
     }
 
     // Validate tags
-    const tags = parseTagsForValidation(formData.tags);
-    if (tags.some(tag => tag.includes('#'))) {
-      newErrors.tags = 'Tags should not include # symbol';
-    } else if (tags.length > 5) {
-      newErrors.tags = 'Maximum 5 tags allowed';
+    const tagsValidation = validateTags(formData.tags);
+    if (!tagsValidation.isValid) {
+      newErrors.tags = tagsValidation.error;
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [selectedFile, formData, parseTagsForValidation]);
+  }, [selectedFile, formData]);
 
   // Handle form submission
-  const handleSubmit = useCallback(async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleSubmit = useCallback(
+    async (event: React.FormEvent) => {
+      event.preventDefault();
 
-    if (!validateForm() || !selectedFile) {
-      return;
-    }
-
-    setIsLoading(true);
-    setErrors({});
-
-    try {
-      // Validate file type again (defensive programming)
-      const fileTypeValidation = ImageFileTypeField.safeParse(selectedFile.type);
-      if (!fileTypeValidation.success) {
-        setErrors({ general: 'Invalid file type selected' });
+      if (!validateForm() || !selectedFile) {
         return;
       }
 
-      // Prepare request data
-      const tags = parseTags(formData.tags);
-      const requestData: CreatePostRequest = {
-        fileType: fileTypeValidation.data, // Type-safe after validation
-        caption: formData.caption.trim() || undefined,
-        tags: tags.length > 0 ? tags : undefined,
-        isPublic: formData.isPublic
-      };
+      setIsLoading(true);
+      setErrors({});
 
-      // Validate with schema
-      const validatedData = CreatePostRequestSchema.parse(requestData);
+      try {
+        // Build request using utility function
+        const requestData = buildCreatePostRequest(formData, selectedFile.type);
 
-      // Create post
-      const createdPost = await postService.createPost(validatedData, selectedFile);
+        // Validate with schema
+        const validatedData = CreatePostRequestSchema.parse(requestData);
 
-      // Navigate to the new post detail page on success
-      navigate(`/post/${createdPost.id}`);
-    } catch (error) {
-      console.error('Error creating post:', error);
+        // Create post
+        const createdPost = await postService.createPost(validatedData, selectedFile);
 
-      if (error instanceof z.ZodError) {
-        setErrors({ general: 'Invalid request data' });
-      } else if (error instanceof Error) {
-        if (error.message.includes('Network')) {
-          setErrors({ general: 'Network error. Please try again.' });
+        // Navigate to the new post detail page on success
+        navigate(`/post/${createdPost.id}`);
+      } catch (error) {
+        console.error('Error creating post:', error);
+
+        if (error instanceof z.ZodError) {
+          setErrors({ general: 'Invalid request data' });
+        } else if (error instanceof Error) {
+          if (error.message.includes('Network')) {
+            setErrors({ general: 'Network error. Please try again.' });
+          } else {
+            setErrors({ general: 'Failed to create post. Please try again.' });
+          }
         } else {
-          setErrors({ general: 'Failed to create post. Please try again.' });
+          setErrors({ general: 'An unexpected error occurred' });
         }
-      } else {
-        setErrors({ general: 'An unexpected error occurred' });
+      } finally {
+        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [validateForm, selectedFile, formData, parseTags, navigate]);
+    },
+    [validateForm, selectedFile, formData, navigate]
+  );
 
-  // Format tags display
-  const formatTagsDisplay = useCallback((tagsString: string): string => {
-    const tags = parseTags(tagsString);
-    return tags.join(', ');
-  }, [parseTags]);
+  // Handle tags normalization on blur
+  const handleTagsBlur = useCallback(
+    (event: React.FocusEvent<HTMLInputElement>) => {
+      // Normalize tags on blur for better UX
+      const tags = parseTags(event.target.value);
+      const normalizedTags = formatTagsDisplay(tags);
+      if (normalizedTags !== event.target.value) {
+        handleInputChange('tags', normalizedTags);
+      }
+    },
+    [handleInputChange]
+  );
 
   return (
     <main className="create-post-page" data-testid="create-post-page">
@@ -331,9 +314,7 @@ export const CreatePostPage: React.FC = () => {
               rows={4}
               aria-label="Post caption"
             />
-            <div className="character-count">
-              {formData.caption.length} / 500
-            </div>
+            <div className="character-count">{formData.caption.length} / 500</div>
             {errors.caption && (
               <div className="error-message" role="alert" aria-live="polite">
                 {errors.caption}
@@ -353,13 +334,7 @@ export const CreatePostPage: React.FC = () => {
               placeholder="adventure, cute, funny (max 5)"
               value={formData.tags}
               onChange={(e) => handleInputChange('tags', e.target.value)}
-              onBlur={(e) => {
-                // Normalize tags on blur for better UX
-                const normalizedTags = formatTagsDisplay(e.target.value);
-                if (normalizedTags !== e.target.value) {
-                  handleInputChange('tags', normalizedTags);
-                }
-              }}
+              onBlur={handleTagsBlur}
               aria-label="Post tags"
             />
             <div className="form-hint">
@@ -393,14 +368,17 @@ export const CreatePostPage: React.FC = () => {
             <div className="form-hint">
               {formData.isPublic
                 ? 'Everyone can see this post'
-                : 'Only you can see this post'
-              }
+                : 'Only you can see this post'}
             </div>
           </div>
 
           {/* General errors */}
           {errors.general && (
-            <div className="error-message error-message--general" role="alert" aria-live="polite">
+            <div
+              className="error-message error-message--general"
+              role="alert"
+              aria-live="polite"
+            >
               {errors.general}
             </div>
           )}
