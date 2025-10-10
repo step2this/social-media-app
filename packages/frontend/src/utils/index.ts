@@ -81,3 +81,18 @@ export {
   formatFollowOperationError,
   type FollowErrorContext,
 } from './follow-error-handler.js';
+
+// Profile Edit Helper Utilities
+export {
+  validateProfileForm,
+  initializeProfileFormData,
+  buildProfileUpdateRequest,
+  clearValidationError,
+  shouldSubmitProfileForm,
+  formatProfileValidationError,
+  isProfileFormValid,
+  hasProfileChanges,
+  type ProfileFormData,
+  type ProfileValidationErrors,
+  type ProfileUpdateRequest,
+} from './profile-edit-helpers.js';

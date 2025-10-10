@@ -5,6 +5,16 @@ import { profileService } from '../../services/profileService';
 import { ProfileDisplay } from './ProfileDisplay';
 import { LoadingSpinner, ErrorState } from '../common/LoadingStates';
 import { ProfileLayout } from '../layout/AppLayout';
+import {
+  validateProfileForm,
+  initializeProfileFormData,
+  buildProfileUpdateRequest,
+  clearValidationError,
+  formatProfileValidationError,
+  isProfileFormValid,
+  type ProfileFormData,
+  type ProfileValidationErrors,
+} from '../../utils/index.js';
 import './MyProfilePage.css';
 
 /**
@@ -16,12 +26,12 @@ export const MyProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editFormData, setEditFormData] = useState({
+  const [editFormData, setEditFormData] = useState<ProfileFormData>({
     fullName: '',
     bio: ''
   });
   const [editError, setEditError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [validationErrors, setValidationErrors] = useState<ProfileValidationErrors>({});
 
   // Handle avatar upload
   const handleAvatarClick = () => {
@@ -64,10 +74,7 @@ export const MyProfilePage: React.FC = () => {
   // Handle edit modal open
   const handleEditClick = () => {
     if (profile) {
-      setEditFormData({
-        fullName: profile.fullName || '',
-        bio: profile.bio || ''
-      });
+      setEditFormData(initializeProfileFormData(profile));
       setEditError(null);
       setValidationErrors({});
       setEditModalOpen(true);
@@ -76,14 +83,9 @@ export const MyProfilePage: React.FC = () => {
 
   // Validate form data
   const validateForm = () => {
-    const errors: Record<string, string> = {};
-
-    if (!editFormData.fullName.trim()) {
-      errors.fullName = 'Full name is required';
-    }
-
+    const errors = validateProfileForm(editFormData);
     setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
+    return isProfileFormValid(errors);
   };
 
   // Handle form submission
@@ -94,10 +96,8 @@ export const MyProfilePage: React.FC = () => {
 
     try {
       setEditError(null);
-      const updatedProfile = await profileService.updateProfile({
-        fullName: editFormData.fullName,
-        bio: editFormData.bio
-      });
+      const updateRequest = buildProfileUpdateRequest(editFormData);
+      const updatedProfile = await profileService.updateProfile(updateRequest);
 
       setProfile(updatedProfile);
       setEditModalOpen(false);
@@ -107,7 +107,7 @@ export const MyProfilePage: React.FC = () => {
   };
 
   // Handle input changes
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: keyof ProfileFormData, value: string) => {
     setEditFormData(prev => ({
       ...prev,
       [field]: value
@@ -115,10 +115,7 @@ export const MyProfilePage: React.FC = () => {
 
     // Clear validation error when user starts typing
     if (validationErrors[field]) {
-      setValidationErrors(prev => ({
-        ...prev,
-        [field]: ''
-      }));
+      setValidationErrors(prev => clearValidationError(prev, field));
     }
   };
 
@@ -190,8 +187,8 @@ export const MyProfilePage: React.FC = () => {
                   className="tama-input tama-input--automotive"
                   placeholder="Enter your full name"
                 />
-                {validationErrors.fullName && (
-                  <p className="tama-form-error">{validationErrors.fullName}</p>
+                {formatProfileValidationError(validationErrors, 'fullName') && (
+                  <p className="tama-form-error">{formatProfileValidationError(validationErrors, 'fullName')}</p>
                 )}
               </div>
 
@@ -207,8 +204,8 @@ export const MyProfilePage: React.FC = () => {
                   className="tama-input tama-input--automotive tama-textarea"
                   placeholder="Tell others about your pet adventures..."
                 />
-                {validationErrors.bio && (
-                  <p className="tama-form-error">{validationErrors.bio}</p>
+                {formatProfileValidationError(validationErrors, 'bio') && (
+                  <p className="tama-form-error">{formatProfileValidationError(validationErrors, 'bio')}</p>
                 )}
               </div>
             </div>
