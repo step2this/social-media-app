@@ -19,6 +19,12 @@ import {
   mapEntityToProfile,
   mapEntityToPublicProfile
 } from '../entities/user-profile.entity.js';
+import { buildUpdateExpressionFromObject } from '../utils/update-expression-builder.js';
+import {
+  buildProfileUpdateData,
+  isGSI3ValidationError
+} from '../utils/profile-update-helpers.js';
+import { getS3BaseUrl } from '../utils/environment-config.js';
 
 /**
  * Profile service for managing user profiles
@@ -39,28 +45,36 @@ export class ProfileService {
     this.tableName = tableName;
     this.s3BucketName = s3BucketName || process.env.MEDIA_BUCKET_NAME || '';
     this.cloudFrontDomain = cloudFrontDomain || process.env.CLOUDFRONT_DOMAIN;
+
     // Create S3 client with environment-aware configuration if not provided
     if (s3Client) {
       this.s3Client = s3Client;
     } else {
-      // Use same environment detection logic as backend
-      const isLocalStack = (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') &&
-                          process.env.USE_LOCALSTACK === 'true';
-
-      const s3Config: any = {
-        region: process.env.AWS_REGION || 'us-east-1'
-      };
-
-      if (isLocalStack) {
-        s3Config.endpoint = process.env.LOCALSTACK_ENDPOINT || 'http://localhost:4566';
-        s3Config.forcePathStyle = true;
-        // For LocalStack compatibility, disable automatic checksum calculation
-        s3Config.requestChecksumCalculation = 'WHEN_REQUIRED';
-        s3Config.responseChecksumValidation = 'WHEN_REQUIRED';
-      }
-
-      this.s3Client = new S3Client(s3Config);
+      this.s3Client = this.createS3Client();
     }
+  }
+
+  /**
+   * Creates S3 client with environment-specific configuration
+   * Private helper for S3 client initialization
+   */
+  private createS3Client(): S3Client {
+    const isLocalStackEnv = (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') &&
+                            process.env.USE_LOCALSTACK === 'true';
+
+    const s3Config: any = {
+      region: process.env.AWS_REGION || 'us-east-1'
+    };
+
+    if (isLocalStackEnv) {
+      s3Config.endpoint = process.env.LOCALSTACK_ENDPOINT || 'http://localhost:4566';
+      s3Config.forcePathStyle = true;
+      // For LocalStack compatibility, disable automatic checksum calculation
+      s3Config.requestChecksumCalculation = 'WHEN_REQUIRED';
+      s3Config.responseChecksumValidation = 'WHEN_REQUIRED';
+    }
+
+    return new S3Client(s3Config);
   }
 
   /**
@@ -143,57 +157,35 @@ export class ProfileService {
     userId: string,
     updates: UpdateProfileWithHandleRequest
   ): Promise<Profile> {
-    const updateExpressions: string[] = ['#updatedAt = :updatedAt'];
-    const expressionAttributeNames: Record<string, string> = {
-      '#updatedAt': 'updatedAt'
-    };
-    const expressionAttributeValues: Record<string, any> = {
-      ':updatedAt': new Date().toISOString()
-    };
+    // Check handle availability if handle update is requested
+    let gsi3Available = true;
 
-    // Handle update (with uniqueness check)
     if (updates.handle !== undefined) {
-      let gsi3Available = true;
-
       try {
         const isAvailable = await this.isHandleAvailable(updates.handle, userId);
         if (!isAvailable) {
           throw new Error('Handle is already taken');
         }
-      } catch (error: any) {
-        if (error.name === 'ValidationException' && error.message.includes('Index not found')) {
+      } catch (error: unknown) {
+        if (isGSI3ValidationError(error)) {
           console.warn('GSI3 index not found - allowing handle update without uniqueness check');
           gsi3Available = false;
         } else {
-          throw error; // Re-throw other errors (like validation failures)
+          throw error;
         }
       }
-
-      updateExpressions.push('#handle = :handle');
-      expressionAttributeNames['#handle'] = 'handle';
-      expressionAttributeValues[':handle'] = updates.handle.toLowerCase();
-
-      // Only update GSI3 fields if GSI3 exists
-      if (gsi3Available) {
-        updateExpressions.push('GSI3PK = :gsi3pk');
-        updateExpressions.push('GSI3SK = :gsi3sk');
-        expressionAttributeValues[':gsi3pk'] = `HANDLE#${updates.handle.toLowerCase()}`;
-        expressionAttributeValues[':gsi3sk'] = `USER#${userId}`;
-      }
     }
 
-    // Other updates
-    if (updates.bio !== undefined) {
-      updateExpressions.push('#bio = :bio');
-      expressionAttributeNames['#bio'] = 'bio';
-      expressionAttributeValues[':bio'] = updates.bio;
-    }
+    // Build update data using helper
+    const updateData = buildProfileUpdateData(updates, {
+      includeGSI3: gsi3Available,
+      userId,
+      timestamp: new Date().toISOString()
+    });
 
-    if (updates.fullName !== undefined) {
-      updateExpressions.push('#fullName = :fullName');
-      expressionAttributeNames['#fullName'] = 'fullName';
-      expressionAttributeValues[':fullName'] = updates.fullName;
-    }
+    // Build UpdateExpression using utility from Phase 2.1
+    const { UpdateExpression, ExpressionAttributeNames, ExpressionAttributeValues } =
+      buildUpdateExpressionFromObject(updateData);
 
     const result = await this.dynamoClient.send(new UpdateCommand({
       TableName: this.tableName,
@@ -201,9 +193,9 @@ export class ProfileService {
         PK: `USER#${userId}`,
         SK: 'PROFILE'
       },
-      UpdateExpression: `SET ${updateExpressions.join(', ')}`,
-      ExpressionAttributeNames: expressionAttributeNames,
-      ExpressionAttributeValues: expressionAttributeValues,
+      UpdateExpression,
+      ExpressionAttributeNames,
+      ExpressionAttributeValues,
       ReturnValues: 'ALL_NEW'
     }));
 
@@ -327,29 +319,16 @@ export class ProfileService {
 
   /**
    * Get base URL for file storage based on environment configuration
+   * Uses environment-config utility for consistent URL generation
    * Priority: CloudFront > LocalStack > AWS S3
    */
   private getBaseUrl(): string {
-    // First priority: CloudFront domain (production/staging)
-    if (this.cloudFrontDomain) {
-      return `https://${this.cloudFrontDomain}`;
-    }
-
-    // Second priority: LocalStack (local development)
-    const useLocalStack = (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') &&
-                         process.env.USE_LOCALSTACK === 'true';
-    const localStackEndpoint = process.env.LOCALSTACK_ENDPOINT;
-
-    if (useLocalStack && localStackEndpoint && this.s3BucketName) {
-      return `${localStackEndpoint}/${this.s3BucketName}`;
-    }
-
-    // Third priority: AWS S3 (fallback)
-    if (this.s3BucketName) {
-      return `https://${this.s3BucketName}.s3.amazonaws.com`;
-    }
-
-    throw new Error('S3 bucket not configured');
+    return getS3BaseUrl({
+      cloudFrontDomain: this.cloudFrontDomain,
+      s3BucketName: this.s3BucketName,
+      region: process.env.AWS_REGION,
+      localStackEndpoint: process.env.LOCALSTACK_ENDPOINT
+    });
   }
 
 }

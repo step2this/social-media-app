@@ -592,13 +592,19 @@ describe('ProfileService', () => {
 
       const result = await profileServiceWithoutCF.generatePresignedUrl(userId, request);
 
-      expect(result.publicUrl).toMatch(/^https:\/\/test-bucket\.s3\.amazonaws\.com\/users\/user123\/profile\/.+\.jpeg$/);
+      // Updated to match new region-aware S3 URL format
+      expect(result.publicUrl).toMatch(/^https:\/\/test-bucket\.s3\.[a-z0-9-]+\.amazonaws\.com\/users\/user123\/profile\/.+\.jpeg$/);
     });
 
     it('should throw error when S3 bucket not configured', async () => {
+      // Clear environment variable to test bucket validation
+      const originalMediaBucket = process.env.MEDIA_BUCKET_NAME;
+      delete process.env.MEDIA_BUCKET_NAME;
+
       const profileServiceNoBucket = new ProfileService(
         mockDynamoClient as unknown as DynamoDBDocumentClient,
-        tableName
+        tableName,
+        '' // Explicitly pass empty string
       );
 
       const userId = 'user123';
@@ -609,6 +615,11 @@ describe('ProfileService', () => {
 
       await expect(profileServiceNoBucket.generatePresignedUrl(userId, request))
         .rejects.toThrow('S3 bucket not configured');
+
+      // Restore environment variable
+      if (originalMediaBucket) {
+        process.env.MEDIA_BUCKET_NAME = originalMediaBucket;
+      }
     });
 
     it('should generate LocalStack URLs when USE_LOCALSTACK=true', async () => {
@@ -696,7 +707,8 @@ describe('ProfileService', () => {
 
       const result = await profileServiceWithoutCF.generatePresignedUrl(userId, request);
 
-      expect(result.publicUrl).toMatch(/^https:\/\/test-bucket\.s3\.amazonaws\.com\/users\/user123\/profile\/.+\.jpeg$/);
+      // Updated to match new region-aware S3 URL format
+      expect(result.publicUrl).toMatch(/^https:\/\/test-bucket\.s3\.[a-z0-9-]+\.amazonaws\.com\/users\/user123\/profile\/.+\.jpeg$/);
     });
   });
 
