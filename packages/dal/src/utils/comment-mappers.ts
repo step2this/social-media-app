@@ -31,6 +31,8 @@ export interface CommentEntity {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly entityType: 'COMMENT';
+  readonly postUserId: string; // User ID of the post owner (for notifications)
+  readonly postSK: string; // SK of the post entity (for efficient post lookup)
 }
 
 /**

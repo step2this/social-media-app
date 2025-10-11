@@ -117,6 +117,8 @@ describe('CommentService', () => {
   const postId = 'post-456';
   const userHandle = 'testuser';
   const content = 'This is a test comment';
+  const postUserId = 'post-owner-789';
+  const postSK = 'POST#2024-01-01T00:00:00.000Z#post-456';
 
   beforeEach(() => {
     mockDynamoClient = createMockDynamoClient();
@@ -125,7 +127,7 @@ describe('CommentService', () => {
 
   describe('createComment', () => {
     it('should create comment entity with correct DynamoDB keys', async () => {
-      const result = await commentService.createComment(userId, postId, userHandle, content);
+      const result = await commentService.createComment(userId, postId, userHandle, content, postUserId, postSK);
 
       expect(result.comment).toBeDefined();
       expect(result.comment.userId).toBe(userId);
@@ -151,32 +153,102 @@ describe('CommentService', () => {
       expect(commentEntity?.entityType).toBe('COMMENT');
     });
 
+    it('should store postUserId in comment entity', async () => {
+      const postUserId = 'post-owner-789';
+      const postSK = 'POST#2024-01-01T00:00:00.000Z#post-456';
+
+      const result = await commentService.createComment(
+        userId,
+        postId,
+        userHandle,
+        content,
+        postUserId,
+        postSK
+      );
+
+      // Verify the comment was created
+      expect(result.comment).toBeDefined();
+
+      // Verify postUserId is stored in DynamoDB entity
+      const allItems = Array.from(mockDynamoClient._items.values());
+      const commentEntity = allItems.find(item => item.id === result.comment.id);
+
+      expect(commentEntity).toBeDefined();
+      expect(commentEntity?.postUserId).toBe(postUserId);
+    });
+
+    it('should store postSK in comment entity', async () => {
+      const postUserId = 'post-owner-789';
+      const postSK = 'POST#2024-01-01T00:00:00.000Z#post-456';
+
+      const result = await commentService.createComment(
+        userId,
+        postId,
+        userHandle,
+        content,
+        postUserId,
+        postSK
+      );
+
+      // Verify the comment was created
+      expect(result.comment).toBeDefined();
+
+      // Verify postSK is stored in DynamoDB entity
+      const allItems = Array.from(mockDynamoClient._items.values());
+      const commentEntity = allItems.find(item => item.id === result.comment.id);
+
+      expect(commentEntity).toBeDefined();
+      expect(commentEntity?.postSK).toBe(postSK);
+    });
+
+    it('should store both postUserId and postSK together', async () => {
+      const postUserId = 'post-owner-789';
+      const postSK = 'POST#2024-01-01T00:00:00.000Z#post-456';
+
+      const result = await commentService.createComment(
+        userId,
+        postId,
+        userHandle,
+        content,
+        postUserId,
+        postSK
+      );
+
+      // Verify both fields are stored correctly
+      const allItems = Array.from(mockDynamoClient._items.values());
+      const commentEntity = allItems.find(item => item.id === result.comment.id);
+
+      expect(commentEntity).toBeDefined();
+      expect(commentEntity?.postUserId).toBe(postUserId);
+      expect(commentEntity?.postSK).toBe(postSK);
+    });
+
     it('should generate unique comment IDs', async () => {
-      const result1 = await commentService.createComment(userId, postId, userHandle, 'Comment 1');
-      const result2 = await commentService.createComment(userId, postId, userHandle, 'Comment 2');
+      const result1 = await commentService.createComment(userId, postId, userHandle, 'Comment 1', postUserId, postSK);
+      const result2 = await commentService.createComment(userId, postId, userHandle, 'Comment 2', postUserId, postSK);
 
       expect(result1.comment.id).not.toBe(result2.comment.id);
     });
 
     it('should handle empty content validation', async () => {
-      await expect(commentService.createComment(userId, postId, userHandle, '')).rejects.toThrow();
+      await expect(commentService.createComment(userId, postId, userHandle, '', postUserId, postSK)).rejects.toThrow();
     });
 
     it('should handle content exceeding 500 characters', async () => {
       const longContent = 'a'.repeat(501);
-      await expect(commentService.createComment(userId, postId, userHandle, longContent)).rejects.toThrow();
+      await expect(commentService.createComment(userId, postId, userHandle, longContent, postUserId, postSK)).rejects.toThrow();
     });
 
     it('should allow content exactly 500 characters', async () => {
       const maxContent = 'a'.repeat(500);
-      const result = await commentService.createComment(userId, postId, userHandle, maxContent);
+      const result = await commentService.createComment(userId, postId, userHandle, maxContent, postUserId, postSK);
 
       expect(result.comment.content).toBe(maxContent);
     });
 
     it('should handle special characters and emojis', async () => {
       const specialContent = 'Great post! 👍 @user #tag <html> & "quotes"';
-      const result = await commentService.createComment(userId, postId, userHandle, specialContent);
+      const result = await commentService.createComment(userId, postId, userHandle, specialContent, postUserId, postSK);
 
       expect(result.comment.content).toBe(specialContent);
     });
@@ -185,7 +257,7 @@ describe('CommentService', () => {
   describe('deleteComment', () => {
     it('should delete comment entity', async () => {
       // Create a comment first
-      const created = await commentService.createComment(userId, postId, userHandle, content);
+      const created = await commentService.createComment(userId, postId, userHandle, content, postUserId, postSK);
       const commentId = created.comment.id;
 
       // Verify it exists
@@ -205,7 +277,7 @@ describe('CommentService', () => {
     });
 
     it('should prevent deletion by non-owner', async () => {
-      const created = await commentService.createComment(userId, postId, userHandle, content);
+      const created = await commentService.createComment(userId, postId, userHandle, content, postUserId, postSK);
       const commentId = created.comment.id;
 
       // Try to delete with different user
@@ -216,11 +288,11 @@ describe('CommentService', () => {
   describe('getCommentsByPost', () => {
     beforeEach(async () => {
       // Create multiple comments for testing with small delays to ensure ordering
-      await commentService.createComment('user1', postId, 'user1handle', 'First comment');
+      await commentService.createComment('user1', postId, 'user1handle', 'First comment', postUserId, postSK);
       await new Promise(resolve => setTimeout(resolve, 10));
-      await commentService.createComment('user2', postId, 'user2handle', 'Second comment');
+      await commentService.createComment('user2', postId, 'user2handle', 'Second comment', postUserId, postSK);
       await new Promise(resolve => setTimeout(resolve, 10));
-      await commentService.createComment('user3', postId, 'user3handle', 'Third comment');
+      await commentService.createComment('user3', postId, 'user3handle', 'Third comment', postUserId, postSK);
     });
 
     it('should retrieve all comments for a post', async () => {
@@ -272,28 +344,28 @@ describe('CommentService', () => {
 
   describe('Edge cases', () => {
     it('should handle comment with single character', async () => {
-      const result = await commentService.createComment(userId, postId, userHandle, '!');
+      const result = await commentService.createComment(userId, postId, userHandle, '!', postUserId, postSK);
 
       expect(result.comment.content).toBe('!');
     });
 
     it('should handle comment with unicode characters', async () => {
       const unicodeContent = 'Hello 世界 🌍 مرحبا';
-      const result = await commentService.createComment(userId, postId, userHandle, unicodeContent);
+      const result = await commentService.createComment(userId, postId, userHandle, unicodeContent, postUserId, postSK);
 
       expect(result.comment.content).toBe(unicodeContent);
     });
 
     it('should handle comment with newlines', async () => {
       const multilineContent = 'Line 1\nLine 2\nLine 3';
-      const result = await commentService.createComment(userId, postId, userHandle, multilineContent);
+      const result = await commentService.createComment(userId, postId, userHandle, multilineContent, postUserId, postSK);
 
       expect(result.comment.content).toBe(multilineContent);
     });
 
     it('should handle very long userHandle', async () => {
       const longHandle = 'a'.repeat(30);
-      const result = await commentService.createComment(userId, postId, longHandle, content);
+      const result = await commentService.createComment(userId, postId, longHandle, content, postUserId, postSK);
 
       expect(result.comment.userHandle).toBe(longHandle);
     });

@@ -27,6 +27,8 @@ export class CommentService {
    * @param postId - ID of post being commented on
    * @param userHandle - Handle of user creating the comment
    * @param content - Comment content (1-500 characters)
+   * @param postUserId - User ID of the post owner (for notifications)
+   * @param postSK - SK of the post entity (for efficient post lookup)
    * @returns CreateCommentResponse with comment details
    * @throws Error if validation fails
    */
@@ -34,7 +36,9 @@ export class CommentService {
     userId: string,
     postId: string,
     userHandle: string,
-    content: string
+    content: string,
+    postUserId: string,
+    postSK: string
   ): Promise<CreateCommentResponse> {
     // Validate content using Zod schema
     const validationResult = CommentContentField.safeParse(content);
@@ -59,7 +63,9 @@ export class CommentService {
       content: validationResult.data, // Use validated & trimmed content
       createdAt: now,
       updatedAt: now,
-      entityType: 'COMMENT'
+      entityType: 'COMMENT',
+      postUserId,
+      postSK
     };
 
     await this.dynamoClient.send(new PutCommand({
