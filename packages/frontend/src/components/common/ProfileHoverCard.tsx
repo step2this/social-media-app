@@ -198,7 +198,7 @@ export const ProfileHoverCard = ({
           <div data-user-id={userId}>
             <FollowButton
               userId={userId}
-              initialIsFollowing={false}
+              initialIsFollowing={profile.isFollowing ?? false}
               initialFollowersCount={profile.followersCount}
             />
           </div>
