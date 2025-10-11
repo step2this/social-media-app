@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Post, FeedPostItem } from '@social-media-app/shared';
 import { MaterialIcon } from '../common/MaterialIcon';
 import { useLike } from '../../hooks/useLike';
@@ -27,6 +28,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   compact = false,
   variant = 'feed'
 }) => {
+  const navigate = useNavigate();
   const [imageLoaded, setImageLoaded] = useState(false);
 
   // Initialize like hook with post data
@@ -42,6 +44,13 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   // Determine if this is the current user's post
   const isOwnPost = currentUserId && currentUserId === post.userId;
+
+  // Navigate to post detail page
+  const handleCommentClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate(`/posts/${post.id}`);
+  };
 
   // Build class names based on props
   const cardClasses = [
@@ -130,7 +139,10 @@ export const PostCard: React.FC<PostCardProps> = ({
           <div className="action-button-wrapper">
             <button
               className="tama-btn tama-btn--icon"
-              aria-label="Comment"
+              onClick={handleCommentClick}
+              disabled={likeLoading}
+              aria-label={`View ${post.commentsCount || 0} comments`}
+              data-testid="comment-button"
             >
               <MaterialIcon name="chat_bubble" variant="outlined" size="md" />
             </button>
@@ -148,16 +160,6 @@ export const PostCard: React.FC<PostCardProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Comments Section (optional) */}
-      {showComments && (
-        <div className="post-card__comments">
-          <h4 className="post-card__comments-heading">Comments</h4>
-          <div className="post-card__comments-empty">
-            <p>Comments coming soon...</p>
-          </div>
-        </div>
-      )}
     </article>
   );
 };

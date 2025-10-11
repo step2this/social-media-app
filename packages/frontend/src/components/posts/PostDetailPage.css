@@ -252,6 +252,11 @@
   max-height: 400px;
 }
 
+/* Post Detail Comments Integration */
+.post-detail__comments {
+  /* Remove margin and padding - let CommentList handle spacing */
+}
+
 .comments-heading {
   font-family: var(--font-pixel);
   font-weight: var(--weight-semibold);
