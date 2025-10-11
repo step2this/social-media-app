@@ -8,8 +8,6 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import type {
   Post,
-  PostGridItem,
-  FeedPostItem,
   CreatePostRequest,
   UpdatePostRequest,
   GetUserPostsRequest,

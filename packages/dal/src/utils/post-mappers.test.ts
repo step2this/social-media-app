@@ -112,7 +112,7 @@ describe('post-mappers', () => {
 
   describe('createPostMapper - Post mapping', () => {
     it('should create a mapper that returns Post type', () => {
-      const config: MapperConfig<Post> = {
+      const config: MapperConfig = {
         type: 'post',
         additionalFields: []
       };
@@ -139,7 +139,7 @@ describe('post-mappers', () => {
 
   describe('createPostMapper - PostGridItem mapping', () => {
     it('should create a mapper that returns PostGridItem type', () => {
-      const config: MapperConfig<PostGridItem> = {
+      const config: MapperConfig = {
         type: 'grid',
         additionalFields: []
       };
@@ -167,7 +167,7 @@ describe('post-mappers', () => {
     });
 
     it('should handle grid item with undefined caption', () => {
-      const config: MapperConfig<PostGridItem> = {
+      const config: MapperConfig = {
         type: 'grid',
         additionalFields: []
       };
@@ -181,7 +181,7 @@ describe('post-mappers', () => {
 
   describe('createPostMapper - FeedPostItem base mapping', () => {
     it('should create a mapper that includes feed item fields', () => {
-      const config: MapperConfig<Omit<FeedPostItem, 'authorFullName' | 'authorProfilePictureUrl'>> = {
+      const config: MapperConfig = {
         type: 'feed',
         additionalFields: []
       };

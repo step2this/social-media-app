@@ -49,7 +49,7 @@ interface BasePostFields {
 /**
  * Mapper configuration for specialized post types
  */
-export interface MapperConfig<T> {
+export interface MapperConfig {
   readonly type: 'post' | 'grid' | 'feed';
   readonly additionalFields: readonly string[];
 }
@@ -89,7 +89,7 @@ export const mapBasePostFields = (entity: PostEntity): BasePostFields => ({
  * const post = postMapper(entity);
  * ```
  */
-export const createPostMapper = <T>(config: MapperConfig<T>) => {
+export const createPostMapper = <T>(config: MapperConfig) => {
   return (entity: PostEntity): T => {
     const base = mapBasePostFields(entity);
 
