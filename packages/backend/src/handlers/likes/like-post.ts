@@ -1,5 +1,5 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { LikeService } from '@social-media-app/dal';
+import { LikeService, PostService, ProfileService } from '@social-media-app/dal';
 import {
   LikePostRequestSchema,
   LikePostResponseSchema,
@@ -11,6 +11,7 @@ import { z } from 'zod';
 
 /**
  * Handler to like a post
+ * Validates request, authenticates user, fetches post metadata (owner ID and SK), and creates like
  */
 export const handler = async (
   event: APIGatewayProxyEventV2
@@ -44,10 +45,36 @@ export const handler = async (
     // Initialize services
     const dynamoClient = createDynamoDBClient();
     const tableName = getTableName();
-    const likeService = new LikeService(dynamoClient, tableName);
 
-    // Like the post
-    const result = await likeService.likePost(decoded.userId, validatedRequest.postId);
+    // Fetch post to get metadata (owner ID and SK)
+    const profileService = new ProfileService(dynamoClient, tableName);
+    const postService = new PostService(dynamoClient, tableName, profileService);
+    const post = await postService.getPostById(validatedRequest.postId);
+
+    if (!post) {
+      return errorResponse(404, 'Post not found');
+    }
+
+    /**
+     * Extract post metadata for like creation:
+     * - postUserId: User ID of the post owner (from post.userId)
+     * - postSK: Reconstructed SK for the post (format: POST#<timestamp>#<postId>)
+     *
+     * These metadata fields are stored with the like entity to enable:
+     * - Post owner notifications (knowing who owns the post that was liked)
+     * - Efficient post entity lookup (using the post's SK)
+     */
+    const postUserId = post.userId;
+    const postSK = `POST#${post.createdAt}#${post.id}`;
+
+    // Like the post with metadata
+    const likeService = new LikeService(dynamoClient, tableName);
+    const result = await likeService.likePost(
+      decoded.userId,
+      validatedRequest.postId,
+      postUserId,
+      postSK
+    );
 
     // Validate response
     const validatedResponse: LikePostResponse = LikePostResponseSchema.parse(result);
