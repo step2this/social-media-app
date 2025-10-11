@@ -256,9 +256,11 @@ async function startServer() {
       // Load and register stream handlers
       const { handler: followCounterHandler } = await import('./dist/handlers/streams/follow-counter.js');
       const { handler: likeCounterHandler } = await import('./dist/handlers/streams/like-counter.js');
+      const { handler: commentCounterHandler } = await import('./dist/handlers/streams/comment-counter.js');
 
       streamProcessor.registerHandler(followCounterHandler);
       streamProcessor.registerHandler(likeCounterHandler);
+      streamProcessor.registerHandler(commentCounterHandler);
 
       await streamProcessor.start();
       console.log('✅ Stream processor started - profile stats will update automatically');
