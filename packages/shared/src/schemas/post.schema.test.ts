@@ -216,6 +216,8 @@ describe('Post Schemas', () => {
 
       // Should include grid fields
       expect(gridItem).toHaveProperty('id');
+      expect(gridItem).toHaveProperty('userId'); // Needed for explore page diversity
+      expect(gridItem).toHaveProperty('userHandle'); // Needed for explore page diversity
       expect(gridItem).toHaveProperty('thumbnailUrl');
       expect(gridItem).toHaveProperty('caption');
       expect(gridItem).toHaveProperty('likesCount');
@@ -223,8 +225,6 @@ describe('Post Schemas', () => {
       expect(gridItem).toHaveProperty('createdAt');
 
       // Should NOT include other fields
-      expect(gridItem).not.toHaveProperty('userId');
-      expect(gridItem).not.toHaveProperty('userHandle');
       expect(gridItem).not.toHaveProperty('imageUrl');
       expect(gridItem).not.toHaveProperty('tags');
       expect(gridItem).not.toHaveProperty('isPublic');
