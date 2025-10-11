@@ -74,6 +74,8 @@ describe('LikeService', () => {
   const tableName = 'test-table';
   const userId = 'user-123';
   const postId = 'post-456';
+  const postUserId = 'post-owner-789';
+  const postSK = 'POST#2024-01-01T00:00:00.000Z#post-456';
 
   beforeEach(() => {
     mockDynamoClient = createMockDynamoClient();
@@ -82,7 +84,7 @@ describe('LikeService', () => {
 
   describe('likePost', () => {
     it('should create like entity with correct DynamoDB keys', async () => {
-      const result = await likeService.likePost(userId, postId);
+      const result = await likeService.likePost(userId, postId, postUserId, postSK);
 
       expect(result.success).toBe(true);
       expect(result.isLiked).toBe(true);
@@ -103,17 +105,17 @@ describe('LikeService', () => {
 
     it('should prevent duplicate likes (idempotent)', async () => {
       // First like should succeed
-      await likeService.likePost(userId, postId);
+      await likeService.likePost(userId, postId, postUserId, postSK);
 
       // Second like should handle gracefully (already liked)
-      const result = await likeService.likePost(userId, postId);
+      const result = await likeService.likePost(userId, postId, postUserId, postSK);
 
       expect(result.success).toBe(true);
       expect(result.isLiked).toBe(true);
     });
 
     it('should use ConditionExpression to prevent race conditions', async () => {
-      await likeService.likePost(userId, postId);
+      await likeService.likePost(userId, postId, postUserId, postSK);
 
       // Verify condition expression was used
       const calls = mockDynamoClient.send.mock.calls;
@@ -126,7 +128,7 @@ describe('LikeService', () => {
   describe('unlikePost', () => {
     it('should delete like entity', async () => {
       // First like the post
-      await likeService.likePost(userId, postId);
+      await likeService.likePost(userId, postId, postUserId, postSK);
       expect(mockDynamoClient._items.has(`POST#${postId}#LIKE#${userId}`)).toBe(true);
 
       // Then unlike
@@ -146,7 +148,7 @@ describe('LikeService', () => {
     });
 
     it('should use correct DynamoDB keys for deletion', async () => {
-      await likeService.likePost(userId, postId);
+      await likeService.likePost(userId, postId, postUserId, postSK);
       await likeService.unlikePost(userId, postId);
 
       const calls = mockDynamoClient.send.mock.calls;
@@ -161,7 +163,7 @@ describe('LikeService', () => {
 
   describe('getPostLikeStatus', () => {
     it('should return correct status when user has liked post', async () => {
-      await likeService.likePost(userId, postId);
+      await likeService.likePost(userId, postId, postUserId, postSK);
 
       const status = await likeService.getPostLikeStatus(userId, postId);
 
@@ -184,6 +186,59 @@ describe('LikeService', () => {
         PK: `POST#${postId}`,
         SK: `LIKE#${userId}`
       });
+    });
+  });
+
+  describe('likePost with post metadata', () => {
+    it('should store postUserId in like entity', async () => {
+      const result = await likeService.likePost(
+        userId,
+        postId,
+        postUserId,
+        postSK
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.isLiked).toBe(true);
+
+      // Verify postUserId is stored in DynamoDB entity
+      const createdLike = mockDynamoClient._items.get(`POST#${postId}#LIKE#${userId}`);
+      expect(createdLike).toBeDefined();
+      expect(createdLike?.postUserId).toBe(postUserId);
+    });
+
+    it('should store postSK in like entity', async () => {
+      const result = await likeService.likePost(
+        userId,
+        postId,
+        postUserId,
+        postSK
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.isLiked).toBe(true);
+
+      // Verify postSK is stored in DynamoDB entity
+      const createdLike = mockDynamoClient._items.get(`POST#${postId}#LIKE#${userId}`);
+      expect(createdLike).toBeDefined();
+      expect(createdLike?.postSK).toBe(postSK);
+    });
+
+    it('should store both postUserId and postSK together', async () => {
+      const result = await likeService.likePost(
+        userId,
+        postId,
+        postUserId,
+        postSK
+      );
+
+      expect(result.success).toBe(true);
+
+      // Verify both fields are stored correctly
+      const createdLike = mockDynamoClient._items.get(`POST#${postId}#LIKE#${userId}`);
+      expect(createdLike).toBeDefined();
+      expect(createdLike?.postUserId).toBe(postUserId);
+      expect(createdLike?.postSK).toBe(postSK);
     });
   });
 });

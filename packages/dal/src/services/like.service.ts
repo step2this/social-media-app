@@ -16,6 +16,8 @@ export interface LikeEntity {
   GSI2SK: string;   // LIKE#<postId>
   userId: string;
   postId: string;
+  postUserId: string; // User ID of the post owner (for notifications)
+  postSK: string;     // SK of the post entity (for efficient post lookup)
   createdAt: string;
   entityType: 'LIKE';
 }
@@ -32,8 +34,13 @@ export class LikeService {
   /**
    * Like a post
    * Uses conditional PutItem to prevent duplicate likes
+   *
+   * @param userId - User ID of the user liking the post
+   * @param postId - Post ID being liked
+   * @param postUserId - User ID of the post owner (for notifications)
+   * @param postSK - Sort key of the post entity (for efficient post lookup)
    */
-  async likePost(userId: string, postId: string): Promise<LikePostResponse> {
+  async likePost(userId: string, postId: string, postUserId: string, postSK: string): Promise<LikePostResponse> {
     const now = new Date().toISOString();
 
     const likeEntity: LikeEntity = {
@@ -43,6 +50,8 @@ export class LikeService {
       GSI2SK: `LIKE#${postId}`,
       userId,
       postId,
+      postUserId,
+      postSK,
       createdAt: now,
       entityType: 'LIKE'
     };
