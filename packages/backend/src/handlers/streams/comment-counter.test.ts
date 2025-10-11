@@ -80,7 +80,9 @@ describe('comment-counter stream processor', () => {
             postId: 'post-123',
             commentId: 'comment-456',
             content: 'Great post!',
-            createdAt: '2024-01-01T00:00:00.000Z'
+            createdAt: '2024-01-01T00:00:00.000Z',
+            postUserId: 'user-owner-123',
+            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
           })
         ]
       };
@@ -92,8 +94,8 @@ describe('comment-counter stream processor', () => {
       expect(updateCommand.constructor.name).toBe('UpdateCommand');
       expect(updateCommand.input.TableName).toBe('test-table');
       expect(updateCommand.input.Key).toEqual({
-        PK: 'POST#post-123',
-        SK: 'POST'
+        PK: 'USER#user-owner-123',
+        SK: 'POST#2024-01-01T00:00:00.000Z#post-123'
       });
       expect(updateCommand.input.UpdateExpression).toBe('ADD commentsCount :delta');
       expect(updateCommand.input.ExpressionAttributeValues).toEqual({
@@ -112,7 +114,9 @@ describe('comment-counter stream processor', () => {
             postId: 'post-123',
             commentId: 'comment-1',
             content: 'First comment',
-            createdAt: '2024-01-01T00:00:00.000Z'
+            createdAt: '2024-01-01T00:00:00.000Z',
+            postUserId: 'user-owner-123',
+            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
           }),
           createStreamRecord('INSERT', {
             PK: 'POST#post-123',
@@ -122,7 +126,9 @@ describe('comment-counter stream processor', () => {
             postId: 'post-123',
             commentId: 'comment-2',
             content: 'Second comment',
-            createdAt: '2024-01-01T00:00:01.000Z'
+            createdAt: '2024-01-01T00:00:01.000Z',
+            postUserId: 'user-owner-123',
+            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
           })
         ]
       };
@@ -150,7 +156,9 @@ describe('comment-counter stream processor', () => {
             postId: 'post-123',
             commentId: 'comment-456',
             content: 'Great post!',
-            createdAt: '2024-01-01T00:00:00.000Z'
+            createdAt: '2024-01-01T00:00:00.000Z',
+            postUserId: 'user-owner-123',
+            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
           })
         ]
       };
@@ -188,7 +196,9 @@ describe('comment-counter stream processor', () => {
             SK: 'COMMENT#comment-789',
             entityType: 'COMMENT',
             userId: 'user-789',
-            content: 'Nice!'
+            content: 'Nice!',
+            postUserId: 'user-owner-123',
+            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
           })
         ]
       };
@@ -227,14 +237,18 @@ describe('comment-counter stream processor', () => {
             SK: 'COMMENT#comment-1',
             entityType: 'COMMENT',
             userId: 'user-1',
-            content: 'First'
+            content: 'First',
+            postUserId: 'user-owner-123',
+            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
           }),
           createStreamRecord('INSERT', {
             PK: 'POST#post-456',
             SK: 'COMMENT#comment-2',
             entityType: 'COMMENT',
             userId: 'user-2',
-            content: 'Second'
+            content: 'Second',
+            postUserId: 'user-owner-456',
+            postSK: 'POST#2024-01-01T00:00:00.000Z#post-456'
           })
         ]
       };
@@ -255,7 +269,9 @@ describe('comment-counter stream processor', () => {
             SK: 'COMMENT#comment-789',
             entityType: 'COMMENT',
             userId: 'user-789',
-            content: 'Comment on complex post ID'
+            content: 'Comment on complex post ID',
+            postUserId: 'user-owner-789',
+            postSK: 'POST#2024-01-01T00:00:00.000Z#abc-123-def-456'
           })
         ]
       };
@@ -263,7 +279,171 @@ describe('comment-counter stream processor', () => {
       await handler(event);
 
       const updateCommand = sentCommands[0];
-      expect(updateCommand.input.Key.PK).toBe('POST#abc-123-def-456');
+      expect(updateCommand.input.Key.PK).toBe('USER#user-owner-789');
+      expect(updateCommand.input.Key.SK).toBe('POST#2024-01-01T00:00:00.000Z#abc-123-def-456');
+    });
+  });
+
+  describe('post metadata extraction (event-driven design)', () => {
+    it('should extract post metadata from COMMENT entity and update actual post', async () => {
+      const event: DynamoDBStreamEvent = {
+        Records: [
+          createStreamRecord('INSERT', {
+            PK: 'POST#post-123',
+            SK: 'COMMENT#comment-456',
+            entityType: 'COMMENT',
+            userId: 'user-789',
+            postId: 'post-123',
+            commentId: 'comment-456',
+            content: 'Great post!',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            postUserId: 'user-owner-123',
+            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
+          })
+        ]
+      };
+
+      await handler(event);
+
+      expect(sentCommands).toHaveLength(1);
+      const updateCommand = sentCommands[0];
+      expect(updateCommand.constructor.name).toBe('UpdateCommand');
+      expect(updateCommand.input.Key).toEqual({
+        PK: 'USER#user-owner-123',
+        SK: 'POST#2024-01-01T00:00:00.000Z#post-123'
+      });
+      expect(updateCommand.input.UpdateExpression).toBe('ADD commentsCount :delta');
+      expect(updateCommand.input.ExpressionAttributeValues).toEqual({
+        ':delta': 1
+      });
+    });
+
+    it('should NOT update zombie counter entity', async () => {
+      const event: DynamoDBStreamEvent = {
+        Records: [
+          createStreamRecord('INSERT', {
+            PK: 'POST#post-123',
+            SK: 'COMMENT#comment-456',
+            entityType: 'COMMENT',
+            userId: 'user-789',
+            postId: 'post-123',
+            commentId: 'comment-456',
+            content: 'Great post!',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            postUserId: 'user-owner-456',
+            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
+          })
+        ]
+      };
+
+      await handler(event);
+
+      expect(sentCommands).toHaveLength(1);
+      const updateCommand = sentCommands[0];
+
+      // Should NOT be updating zombie counter entity
+      expect(updateCommand.input.Key).not.toEqual({
+        PK: 'POST#post-123',
+        SK: 'POST'
+      });
+
+      // Should be updating actual post entity
+      expect(updateCommand.input.Key.PK).toBe('USER#user-owner-456');
+      expect(updateCommand.input.Key.SK).toBe('POST#2024-01-01T00:00:00.000Z#post-123');
+    });
+
+    it('should handle missing postUserId gracefully', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const event: DynamoDBStreamEvent = {
+        Records: [
+          createStreamRecord('INSERT', {
+            PK: 'POST#post-123',
+            SK: 'COMMENT#comment-456',
+            entityType: 'COMMENT',
+            userId: 'user-789',
+            postId: 'post-123',
+            content: 'Great post!',
+            // Missing postUserId and postSK
+          })
+        ]
+      };
+
+      await handler(event);
+
+      // Should not send any update commands
+      expect(sentCommands).toHaveLength(0);
+
+      // Should log error about missing metadata
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Missing post metadata'),
+        expect.any(Object)
+      );
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should handle missing postSK gracefully', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const event: DynamoDBStreamEvent = {
+        Records: [
+          createStreamRecord('INSERT', {
+            PK: 'POST#post-123',
+            SK: 'COMMENT#comment-456',
+            entityType: 'COMMENT',
+            userId: 'user-789',
+            postId: 'post-123',
+            content: 'Great post!',
+            postUserId: 'user-owner-123'
+            // Missing postSK
+          })
+        ]
+      };
+
+      await handler(event);
+
+      // Should not send any update commands
+      expect(sentCommands).toHaveLength(0);
+
+      // Should log error about missing metadata
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Missing post metadata'),
+        expect.any(Object)
+      );
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should update actual post entity for REMOVE events', async () => {
+      const event: DynamoDBStreamEvent = {
+        Records: [
+          createStreamRecord('REMOVE', undefined, {
+            PK: 'POST#post-123',
+            SK: 'COMMENT#comment-456',
+            entityType: 'COMMENT',
+            userId: 'user-789',
+            postId: 'post-123',
+            commentId: 'comment-456',
+            content: 'Great post!',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            postUserId: 'user-owner-789',
+            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
+          })
+        ]
+      };
+
+      await handler(event);
+
+      expect(sentCommands).toHaveLength(1);
+      const updateCommand = sentCommands[0];
+      expect(updateCommand.input.Key).toEqual({
+        PK: 'USER#user-owner-789',
+        SK: 'POST#2024-01-01T00:00:00.000Z#post-123'
+      });
+      expect(updateCommand.input.ExpressionAttributeValues).toEqual({
+        ':delta': -1
+      });
     });
   });
 });
