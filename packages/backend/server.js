@@ -45,6 +45,14 @@ async function loadHandlers() {
       { name: 'followsFollowUser', path: './dist/handlers/follows/follow-user.js' },
       { name: 'followsUnfollowUser', path: './dist/handlers/follows/unfollow-user.js' },
       { name: 'followsGetFollowStatus', path: './dist/handlers/follows/get-follow-status.js' },
+      { name: 'commentsCreateComment', path: './dist/handlers/comments/create-comment.js' },
+      { name: 'commentsDeleteComment', path: './dist/handlers/comments/delete-comment.js' },
+      { name: 'commentsGetComments', path: './dist/handlers/comments/get-comments.js' },
+      { name: 'notificationsGetNotifications', path: './dist/handlers/notifications/get-notifications.js' },
+      { name: 'notificationsGetUnreadCount', path: './dist/handlers/notifications/get-unread-count.js' },
+      { name: 'notificationsMarkRead', path: './dist/handlers/notifications/mark-notification-read.js' },
+      { name: 'notificationsMarkAllRead', path: './dist/handlers/notifications/mark-all-notifications-read.js' },
+      { name: 'notificationsDelete', path: './dist/handlers/notifications/delete-notification.js' },
       { name: 'hello', path: './dist/handlers/hello.js' }
     ];
 
@@ -195,8 +203,9 @@ app.post('/profile/upload-url', (req, res) => callHandler('profileGetUploadUrl',
 app.post('/posts', (req, res) => callHandler('postsCreatePost', req, res));
 app.put('/posts/:postId', (req, res) => callHandler('postsUpdatePost', req, res));
 app.get('/profile/:handle/posts', (req, res) => callHandler('postsGetUserPosts', req, res));
+app.get('/posts/my', (req, res) => callHandler('postsGetMyPosts', req, res));
 app.delete('/posts/:postId', (req, res) => callHandler('postsDeletePost', req, res));
-app.get('/post/:postId', (req, res) => callHandler('postsGetPost', req, res));
+app.get('/posts/:postId', (req, res) => callHandler('postsGetPost', req, res));
 
 // Feed routes
 app.get('/feed', (req, res) => callHandler('feedGetFeed', req, res));
@@ -211,6 +220,18 @@ app.get('/likes/:postId', (req, res) => callHandler('likesGetLikeStatus', req, r
 app.post('/follows', (req, res) => callHandler('followsFollowUser', req, res));
 app.delete('/follows', (req, res) => callHandler('followsUnfollowUser', req, res));
 app.get('/follows/:userId/status', (req, res) => callHandler('followsGetFollowStatus', req, res));
+
+// Comment routes
+app.post('/comments', (req, res) => callHandler('commentsCreateComment', req, res));
+app.delete('/comments', (req, res) => callHandler('commentsDeleteComment', req, res));
+app.get('/comments', (req, res) => callHandler('commentsGetComments', req, res));
+
+// Notification routes
+app.get('/notifications', (req, res) => callHandler('notificationsGetNotifications', req, res));
+app.get('/notifications/unread-count', (req, res) => callHandler('notificationsGetUnreadCount', req, res));
+app.put('/notifications/:notificationId/read', (req, res) => callHandler('notificationsMarkRead', req, res));
+app.put('/notifications/mark-all-read', (req, res) => callHandler('notificationsMarkAllRead', req, res));
+app.delete('/notifications/:notificationId', (req, res) => callHandler('notificationsDelete', req, res));
 
 // Hello endpoint
 app.get('/hello', (req, res) => callHandler('hello', req, res));
@@ -293,14 +314,20 @@ async function startServer() {
     console.log(`  POST /posts`);
     console.log(`  PUT  /posts/:postId`);
     console.log(`  GET  /posts/:handle`);
+    console.log(`  GET  /posts/my`);
     console.log(`  DELETE /posts/:postId`);
-    console.log(`  GET  /post/:postId`);
+    console.log(`  GET  /posts/:postId`);
     console.log(`  POST /likes`);
     console.log(`  DELETE /likes`);
     console.log(`  GET  /likes/:postId`);
     console.log(`  POST /follows`);
     console.log(`  DELETE /follows`);
     console.log(`  GET  /follows/:userId/status`);
+    console.log(`  GET  /notifications`);
+    console.log(`  GET  /notifications/unread-count`);
+    console.log(`  PUT  /notifications/:notificationId/read`);
+    console.log(`  PUT  /notifications/mark-all-read`);
+    console.log(`  DELETE /notifications/:notificationId`);
     console.log(`  GET  /hello`);
     console.log(`  GET  /health`);
   });

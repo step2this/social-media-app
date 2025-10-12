@@ -15,6 +15,12 @@ import {
  * - Increments likesCount when a LIKE entity is inserted
  * - Decrements likesCount when a LIKE entity is removed
  *
+ * Event-Driven Design:
+ * - Extracts post metadata (postUserId, postSK) directly from LIKE entities
+ * - Updates the actual post entity at PK=USER#<postUserId>, SK=<postSK>
+ * - No zombie counter entities (PK=POST#<postId>, SK=POST) are created
+ * - Post metadata is embedded in LIKE entities during creation
+ *
  * Uses atomic ADD operation to handle concurrent likes safely
  */
 export const handler: DynamoDBStreamHandler = async (
@@ -44,11 +50,19 @@ export const handler: DynamoDBStreamHandler = async (
         return;
       }
 
-      // Extract postId from PK (format: POST#<postId>)
-      const pk = image.PK?.S;
-      if (!pk || !pk.startsWith('POST#')) {
-        console.warn('Invalid PK format:', pk);
-        return;
+      // Extract post metadata from LIKE entity
+      // These fields are embedded during like creation to enable event-driven updates
+      const postUserId = image.postUserId?.S;
+      const postSK = image.postSK?.S;
+
+      if (!postUserId || !postSK) {
+        console.error('Missing post metadata in LIKE entity', {
+          postUserId,
+          postSK,
+          likeSK: image.SK?.S,
+          likePK: image.PK?.S
+        });
+        return; // Skip this record - cannot update post without metadata
       }
 
       // Calculate counter delta
@@ -64,18 +78,19 @@ export const handler: DynamoDBStreamHandler = async (
         delta
       );
 
-      // Update the Post entity's likesCount using atomic ADD
+      // Update the actual Post entity's likesCount using atomic ADD
+      // This updates the real post entity, not a zombie counter
       await dynamoClient.send(new UpdateCommand({
         TableName: tableName,
         Key: {
-          PK: pk,
-          SK: 'POST'
+          PK: `USER#${postUserId}`,  // Actual post entity key
+          SK: postSK                   // Full post SK with timestamp
         },
         UpdateExpression,
         ExpressionAttributeValues
       }));
 
-      console.log(`Successfully updated likesCount for ${pk} by ${delta}`);
+      console.log(`Successfully updated likesCount for ${postSK} by ${delta}`);
     } catch (error) {
       console.error('Error processing stream record:', error);
       console.error('Record:', JSON.stringify(record, null, 2));

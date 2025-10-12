@@ -116,6 +116,8 @@ describe('FollowService', () => {
               SK: `FOLLOW#${followeeId}`,
               GSI1PK: `USER#${followeeId}`,
               GSI1SK: `FOLLOWER#${followerId}`,
+              GSI2PK: `USER#${followeeId}`,
+              GSI2SK: `FOLLOW#${followerId}`,
               followerId,
               followeeId,
               entityType: 'FOLLOW'

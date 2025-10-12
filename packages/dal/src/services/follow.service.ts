@@ -14,6 +14,8 @@ export interface FollowEntity {
   readonly SK: string;           // FOLLOW#<followeeId>
   readonly GSI1PK: string;       // USER#<followeeId> (for followers list queries)
   readonly GSI1SK: string;       // FOLLOWER#<followerId>
+  readonly GSI2PK: string;       // USER#<followeeId> (for stream processor)
+  readonly GSI2SK: string;       // FOLLOW#<followerId>
   readonly followerId: string;
   readonly followeeId: string;
   readonly createdAt: string;
@@ -46,6 +48,8 @@ export class FollowService {
       SK: `FOLLOW#${followeeId}`,
       GSI1PK: `USER#${followeeId}`,
       GSI1SK: `FOLLOWER#${followerId}`,
+      GSI2PK: `USER#${followeeId}`,
+      GSI2SK: `FOLLOW#${followerId}`,
       followerId,
       followeeId,
       createdAt: now,
