@@ -28,7 +28,8 @@
     "@aws-sdk/lib-dynamodb": "^3.0.0",
     "@aws-sdk/s3-request-presigner": "^3.0.0",
     "@social-media-app/shared": "workspace:*",
-    "lodash-es": "^4.17.21"
+    "lodash-es": "^4.17.21",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/lodash-es": "^4.17.0",

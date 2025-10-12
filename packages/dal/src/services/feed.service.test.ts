@@ -128,6 +128,28 @@ const createMockDynamoClient = () => {
     };
   };
 
+  const handleScanCommand = (command: MockDynamoCommand) => {
+    const { FilterExpression, ExpressionAttributeValues } = command.input;
+
+    let results = Array.from(items.values());
+
+    // Apply filter expression
+    if (FilterExpression?.includes('postId = :postId')) {
+      const postId = ExpressionAttributeValues?.[':postId'] as string;
+      results = results.filter(item => item.postId === postId);
+    }
+
+    if (FilterExpression?.includes('entityType = :entityType')) {
+      const entityType = ExpressionAttributeValues?.[':entityType'] as string;
+      results = results.filter(item => item.entityType === entityType);
+    }
+
+    return {
+      Items: results,
+      Count: results.length
+    };
+  };
+
   return {
     send: vi.fn().mockImplementation((command: MockDynamoCommand) => {
       switch (command.constructor.name) {
@@ -135,6 +157,8 @@ const createMockDynamoClient = () => {
           return Promise.resolve(handlePutCommand(command));
         case 'QueryCommand':
           return Promise.resolve(handleQueryCommand(command));
+        case 'ScanCommand':
+          return Promise.resolve(handleScanCommand(command));
         case 'BatchWriteCommand':
           return Promise.resolve(handleBatchWriteCommand(command));
         default:
