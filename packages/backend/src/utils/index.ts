@@ -11,3 +11,15 @@ export * from './jwt.js';
 
 // DynamoDB utilities
 export * from './dynamodb.js';
+
+// Authentication helpers for API Gateway handlers
+export * from './auth.js';
+
+// Validation helpers for request data
+export * from './validation.js';
+
+// Error handling utilities
+export * from './error-handler.js';
+
+// Service factory helpers
+export * from './notification-service-factory.js';
