@@ -1,0 +1,569 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "lastUpdated": "2025-10-12",
+    "description": "Semantic knowledge graph for Social Media App project",
+    "purpose": "Capture entity relationships, dependencies, and semantic links for agent coordination"
+  },
+  "entities": {
+    "features": [
+      {
+        "id": "notification-system",
+        "name": "Notification System",
+        "type": "feature",
+        "status": "implemented",
+        "completedDate": "2025-10-12",
+        "description": "Automatic notification creation for social actions",
+        "components": ["notification-service", "notification-schema", "notification-handlers"],
+        "dependencies": ["post-system", "like-system", "comment-system", "follow-system"],
+        "tests": ["notification-workflow-test"],
+        "documentation": ["project-context.md#notification-system"],
+        "tags": ["social-actions", "real-time", "user-engagement"]
+      },
+      {
+        "id": "post-system",
+        "name": "Post System",
+        "type": "feature",
+        "status": "implemented",
+        "description": "Core posting functionality",
+        "components": ["post-service", "post-schema", "post-handlers"],
+        "relatedFeatures": ["like-system", "comment-system", "notification-system"],
+        "tags": ["core", "content"]
+      },
+      {
+        "id": "like-system",
+        "name": "Like System",
+        "type": "feature",
+        "status": "implemented",
+        "description": "Post liking functionality",
+        "components": ["like-service", "like-schema", "like-handlers"],
+        "relatedFeatures": ["post-system", "notification-system"],
+        "notificationTrigger": true,
+        "tags": ["social-actions", "engagement"]
+      },
+      {
+        "id": "comment-system",
+        "name": "Comment System",
+        "type": "feature",
+        "status": "implemented",
+        "description": "Post commenting functionality",
+        "components": ["comment-service", "comment-schema", "comment-handlers"],
+        "relatedFeatures": ["post-system", "notification-system"],
+        "notificationTrigger": true,
+        "tags": ["social-actions", "content"]
+      },
+      {
+        "id": "follow-system",
+        "name": "Follow System",
+        "type": "feature",
+        "status": "implemented",
+        "description": "User following functionality",
+        "components": ["follow-service", "follow-schema", "follow-handlers"],
+        "relatedFeatures": ["notification-system"],
+        "notificationTrigger": true,
+        "tags": ["social-graph", "relationships"]
+      }
+    ],
+    "components": {
+      "services": [
+        {
+          "id": "notification-service",
+          "name": "NotificationService",
+          "type": "dal-service",
+          "package": "@social-media-app/dal",
+          "path": "packages/dal/src/notification-service.ts",
+          "purpose": "Data access layer for notifications",
+          "dependencies": ["notification-schema", "notification-mappers", "dynamodb"],
+          "consumers": ["like-handler", "comment-handler", "follow-handler"],
+          "patterns": ["service-pattern", "dependency-injection"],
+          "tags": ["data-access", "dynamodb"]
+        },
+        {
+          "id": "post-service",
+          "name": "PostService",
+          "type": "dal-service",
+          "package": "@social-media-app/dal",
+          "path": "packages/dal/src/post-service.ts",
+          "purpose": "Data access layer for posts",
+          "tags": ["data-access", "core"]
+        },
+        {
+          "id": "comment-service",
+          "name": "CommentService",
+          "type": "dal-service",
+          "package": "@social-media-app/dal",
+          "path": "packages/dal/src/comment-service.ts",
+          "purpose": "Data access layer for comments",
+          "tags": ["data-access", "content"]
+        }
+      ],
+      "schemas": [
+        {
+          "id": "notification-schema",
+          "name": "NotificationSchema",
+          "type": "zod-schema",
+          "package": "@social-media-app/shared",
+          "path": "packages/shared/src/schemas/notification.ts",
+          "purpose": "Runtime validation and type definition for notifications",
+          "fields": [
+            {
+              "name": "notificationId",
+              "type": "string",
+              "validation": "uuid"
+            },
+            {
+              "name": "userId",
+              "type": "string",
+              "description": "Recipient of notification"
+            },
+            {
+              "name": "type",
+              "type": "enum",
+              "values": ["like", "comment", "follow"]
+            },
+            {
+              "name": "message",
+              "type": "string"
+            },
+            {
+              "name": "isRead",
+              "type": "boolean"
+            },
+            {
+              "name": "createdAt",
+              "type": "string",
+              "validation": "datetime"
+            },
+            {
+              "name": "actor",
+              "type": "object",
+              "properties": ["userId", "username"]
+            },
+            {
+              "name": "target",
+              "type": "object",
+              "properties": ["type", "id", "metadata"]
+            },
+            {
+              "name": "url",
+              "type": "string",
+              "optional": true,
+              "note": "Usually constructed by frontend"
+            }
+          ],
+          "consumers": ["notification-service", "notification-handlers", "frontend"],
+          "patterns": ["single-source-of-truth", "shared-validation"],
+          "tags": ["schema", "validation", "types"]
+        },
+        {
+          "id": "post-schema",
+          "name": "PostSchema",
+          "type": "zod-schema",
+          "package": "@social-media-app/shared",
+          "path": "packages/shared/src/schemas/post.ts",
+          "tags": ["schema", "core"]
+        },
+        {
+          "id": "comment-schema",
+          "name": "CommentSchema",
+          "type": "zod-schema",
+          "package": "@social-media-app/shared",
+          "path": "packages/shared/src/schemas/comment.ts",
+          "tags": ["schema", "content"]
+        }
+      ],
+      "handlers": [
+        {
+          "id": "like-handler",
+          "name": "like-post handler",
+          "type": "lambda-handler",
+          "package": "@social-media-app/backend",
+          "path": "packages/backend/src/handlers/likes/like-post.ts",
+          "purpose": "Handle post like requests and create notifications",
+          "workflow": [
+            "authenticate-user",
+            "validate-request",
+            "create-like",
+            "create-notification-if-not-self",
+            "return-response"
+          ],
+          "dependencies": ["like-service", "notification-service"],
+          "patterns": ["error-isolation", "self-prevention"],
+          "modifiedDate": "2025-10-12",
+          "tags": ["handler", "social-actions"]
+        },
+        {
+          "id": "comment-handler",
+          "name": "create-comment handler",
+          "type": "lambda-handler",
+          "package": "@social-media-app/backend",
+          "path": "packages/backend/src/handlers/comments/create-comment.ts",
+          "purpose": "Handle comment creation and create notifications",
+          "workflow": [
+            "authenticate-user",
+            "validate-request",
+            "create-comment",
+            "create-notification-if-not-self",
+            "return-response"
+          ],
+          "dependencies": ["comment-service", "notification-service"],
+          "patterns": ["error-isolation", "self-prevention"],
+          "modifiedDate": "2025-10-12",
+          "tags": ["handler", "social-actions"]
+        },
+        {
+          "id": "follow-handler",
+          "name": "follow-user handler",
+          "type": "lambda-handler",
+          "package": "@social-media-app/backend",
+          "path": "packages/backend/src/handlers/follows/follow-user.ts",
+          "purpose": "Handle follow requests and create notifications",
+          "patterns": ["error-isolation", "self-prevention"],
+          "tags": ["handler", "social-graph"]
+        }
+      ],
+      "mappers": [
+        {
+          "id": "notification-mappers",
+          "name": "Notification Mappers",
+          "type": "data-mapper",
+          "package": "@social-media-app/dal",
+          "path": "packages/dal/src/mappers/notification-mappers.ts",
+          "purpose": "Transform between DynamoDB and domain models",
+          "functions": [
+            "toDomainNotification",
+            "toDynamoNotification"
+          ],
+          "patterns": ["pure-functions", "functional-programming"],
+          "tags": ["mappers", "transformations"]
+        }
+      ]
+    },
+    "tests": [
+      {
+        "id": "notification-workflow-test",
+        "name": "Notification Workflow Tests",
+        "type": "integration-test",
+        "package": "@social-media-app/integration-tests",
+        "path": "packages/integration-tests/src/scenarios/notifications-workflow.test.ts",
+        "purpose": "End-to-end notification system testing",
+        "scenarios": [
+          "like-notification",
+          "comment-notification",
+          "follow-notification",
+          "self-action-prevention",
+          "notification-metadata"
+        ],
+        "status": "passing",
+        "testCount": 28,
+        "modifiedDate": "2025-10-12",
+        "fixes": [
+          "removed-invalid-url-field",
+          "corrected-field-names",
+          "updated-response-properties"
+        ],
+        "tags": ["integration", "notifications", "e2e"]
+      }
+    ],
+    "infrastructure": [
+      {
+        "id": "notifications-table",
+        "name": "Notifications DynamoDB Table",
+        "type": "dynamodb-table",
+        "purpose": "Store user notifications",
+        "schema": {
+          "partitionKey": "notificationId",
+          "gsi": [
+            {
+              "name": "UserNotificationsIndex",
+              "partitionKey": "userId",
+              "sortKey": "createdAt"
+            }
+          ]
+        },
+        "tags": ["database", "storage"]
+      },
+      {
+        "id": "localstack",
+        "name": "LocalStack",
+        "type": "development-infrastructure",
+        "purpose": "Local AWS service emulation",
+        "port": 4566,
+        "services": ["dynamodb", "s3", "lambda"],
+        "tags": ["development", "infrastructure"]
+      }
+    ]
+  },
+  "relationships": [
+    {
+      "type": "triggers",
+      "from": "like-system",
+      "to": "notification-system",
+      "description": "Liking a post triggers notification creation",
+      "condition": "actor !== post author"
+    },
+    {
+      "type": "triggers",
+      "from": "comment-system",
+      "to": "notification-system",
+      "description": "Commenting on a post triggers notification creation",
+      "condition": "actor !== post author"
+    },
+    {
+      "type": "triggers",
+      "from": "follow-system",
+      "to": "notification-system",
+      "description": "Following a user triggers notification creation",
+      "condition": "actor !== target user"
+    },
+    {
+      "type": "depends-on",
+      "from": "like-handler",
+      "to": "notification-service",
+      "description": "Like handler uses notification service",
+      "errorHandling": "isolated"
+    },
+    {
+      "type": "depends-on",
+      "from": "comment-handler",
+      "to": "notification-service",
+      "description": "Comment handler uses notification service",
+      "errorHandling": "isolated"
+    },
+    {
+      "type": "depends-on",
+      "from": "notification-service",
+      "to": "notification-schema",
+      "description": "Service validates data with schema"
+    },
+    {
+      "type": "depends-on",
+      "from": "notification-service",
+      "to": "notification-mappers",
+      "description": "Service uses mappers for data transformation"
+    },
+    {
+      "type": "validates",
+      "from": "notification-schema",
+      "to": "notification-handlers",
+      "description": "Schema validates handler requests/responses"
+    },
+    {
+      "type": "tests",
+      "from": "notification-workflow-test",
+      "to": "notification-system",
+      "description": "Integration tests verify notification system behavior"
+    }
+  ],
+  "patterns": {
+    "architectural": [
+      {
+        "id": "single-source-of-truth",
+        "name": "Single Source of Truth",
+        "description": "One canonical definition for all schemas, shared between client and server",
+        "applies-to": ["schemas", "apis", "validation"],
+        "benefits": ["no-drift", "type-safety", "consistency"],
+        "implementation": "Zod schemas in @social-media-app/shared package"
+      },
+      {
+        "id": "data-access-layer",
+        "name": "Data Access Layer (DAL)",
+        "description": "Separation of data access logic into dedicated services",
+        "applies-to": ["services", "database-operations"],
+        "benefits": ["testability", "reusability", "abstraction"],
+        "implementation": "Service classes in @social-media-app/dal package"
+      },
+      {
+        "id": "error-isolation",
+        "name": "Error Isolation",
+        "description": "Non-critical failures don't break main workflow",
+        "applies-to": ["side-effects", "notifications", "logging"],
+        "benefits": ["reliability", "graceful-degradation"],
+        "implementation": "Try-catch blocks with scoped error handling"
+      },
+      {
+        "id": "mapper-pattern",
+        "name": "Mapper Pattern",
+        "description": "Pure functions transform between data representations",
+        "applies-to": ["database-transformations", "api-responses"],
+        "benefits": ["testability", "separation-of-concerns"],
+        "implementation": "Mapper files with toDomain/toDynamo functions"
+      }
+    ],
+    "coding": [
+      {
+        "id": "functional-programming",
+        "name": "Functional Programming",
+        "description": "Prefer map/filter/reduce over loops, pure functions over stateful",
+        "examples": ["lodash/fp", "pure-mappers", "composable-utilities"],
+        "antipatterns": ["for-loops", "mutation", "side-effects"]
+      },
+      {
+        "id": "tdd-workflow",
+        "name": "Test-Driven Development",
+        "description": "Red -> Green -> Refactor cycle",
+        "phases": [
+          "RED: Write failing tests",
+          "GREEN: Implement minimal code",
+          "REFACTOR: Clean up while keeping tests green"
+        ]
+      },
+      {
+        "id": "self-prevention",
+        "name": "Self-Action Prevention",
+        "description": "Users don't trigger notifications for their own actions",
+        "implementation": "Check actor !== target before creating notification",
+        "applies-to": ["notifications", "social-actions"]
+      }
+    ]
+  },
+  "conventions": {
+    "naming": {
+      "services": "PascalCase with 'Service' suffix (e.g., NotificationService)",
+      "handlers": "kebab-case files (e.g., like-post.ts)",
+      "schemas": "PascalCase with 'Schema' suffix (e.g., NotificationSchema)",
+      "types": "PascalCase matching schema name (e.g., Notification)",
+      "functions": "camelCase (e.g., createNotification)",
+      "constants": "UPPER_SNAKE_CASE (e.g., TABLE_NAME)"
+    },
+    "file-structure": {
+      "handlers": "packages/backend/src/handlers/{feature}/{action}.ts",
+      "services": "packages/dal/src/{feature}-service.ts",
+      "schemas": "packages/shared/src/schemas/{feature}.ts",
+      "mappers": "packages/dal/src/mappers/{feature}-mappers.ts",
+      "tests": "packages/integration-tests/src/scenarios/{feature}-workflow.test.ts"
+    },
+    "imports": {
+      "esm-extensions": "Always use .js extension for local imports",
+      "barrel-exports": "Use index.ts for clean package exports",
+      "shared-package": "Import schemas/types from @social-media-app/shared",
+      "dal-package": "Import services from @social-media-app/dal"
+    }
+  },
+  "workflows": {
+    "tdd-implementation": {
+      "name": "TDD Feature Implementation",
+      "phases": [
+        {
+          "phase": "RED",
+          "steps": [
+            "Design schema in shared package",
+            "Write failing integration test",
+            "Run test to verify failure",
+            "Commit failing test"
+          ]
+        },
+        {
+          "phase": "GREEN",
+          "steps": [
+            "Implement service in DAL",
+            "Create handler in backend",
+            "Run tests until passing",
+            "Commit working implementation"
+          ]
+        },
+        {
+          "phase": "REFACTOR",
+          "steps": [
+            "Extract shared utilities",
+            "Improve code structure",
+            "Ensure tests still pass",
+            "Commit refactoring"
+          ]
+        }
+      ]
+    },
+    "notification-creation": {
+      "name": "Notification Creation Workflow",
+      "steps": [
+        "Social action occurs (like, comment, follow)",
+        "Verify actor !== target (self-prevention)",
+        "Extract metadata (actor info, target info)",
+        "Call NotificationService.createNotification()",
+        "Handle errors in isolation (log but don't fail)",
+        "Continue main workflow regardless of notification result"
+      ],
+      "error-handling": "Isolated - notification failure doesn't break social action"
+    }
+  },
+  "issues": {
+    "resolved": [
+      {
+        "id": "notification-integration-test-failures",
+        "date": "2025-10-12",
+        "description": "Integration tests failing due to schema mismatches",
+        "root-cause": [
+          "Invalid url field in notification creation",
+          "Wrong field name: targetUserId vs userId",
+          "Wrong response property: items vs notifications"
+        ],
+        "resolution": [
+          "Removed url field from handler calls",
+          "Corrected field name to userId",
+          "Updated test expectations to use 'notifications'"
+        ],
+        "prevention": "Better schema validation in tests"
+      }
+    ],
+    "known": [
+      {
+        "id": "server-chaos",
+        "description": "Background bash processes create server management issues",
+        "impact": "High - blocks development",
+        "workaround": "Use pnpm reset and standardized scripts",
+        "permanent-fix": "Never use background processes (&), always use pnpm scripts",
+        "status": "Mitigated with guidelines"
+      }
+    ]
+  },
+  "roadmap": {
+    "immediate": [
+      {
+        "feature": "Notification UI",
+        "description": "Frontend components for displaying notifications",
+        "dependencies": ["notification-system"],
+        "priority": "high"
+      },
+      {
+        "feature": "Mark as Read",
+        "description": "Ability to mark notifications as read/unread",
+        "dependencies": ["notification-system"],
+        "priority": "high"
+      }
+    ],
+    "short-term": [
+      {
+        "feature": "Real-time Notifications",
+        "description": "WebSocket-based real-time notification delivery",
+        "dependencies": ["notification-system"],
+        "priority": "medium"
+      },
+      {
+        "feature": "Notification Preferences",
+        "description": "User preferences for notification types",
+        "dependencies": ["notification-system"],
+        "priority": "medium"
+      }
+    ]
+  },
+  "tags": {
+    "index": {
+      "social-actions": ["like-system", "comment-system", "follow-system", "notification-system"],
+      "core": ["post-system", "user-system"],
+      "data-access": ["notification-service", "post-service", "comment-service"],
+      "schemas": ["notification-schema", "post-schema", "comment-schema"],
+      "handlers": ["like-handler", "comment-handler", "follow-handler"],
+      "integration": ["notification-workflow-test"],
+      "infrastructure": ["localstack", "notifications-table"]
+    }
+  },
+  "queryHelpers": {
+    "findByFeature": "Filter entities by feature name",
+    "findByTag": "Filter entities by tag",
+    "findDependencies": "Get all dependencies of an entity",
+    "findConsumers": "Get all consumers of an entity",
+    "findRelated": "Get all related entities via relationships",
+    "findByPattern": "Get all entities using a specific pattern",
+    "findByPackage": "Get all entities in a package"
+  }
+}
