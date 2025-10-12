@@ -13,6 +13,126 @@ import { createFeedItemKeys } from '../entities/feed-item.entity.js';
 import { mapEntityToFeedPostItem } from '../utils/feed-item-mappers.js';
 
 /**
+ * Retry configuration options
+ */
+interface RetryOptions {
+  readonly maxRetries: number;
+  readonly backoffMs: number;
+}
+
+/**
+ * Paginated result with cursor
+ */
+interface PaginatedResult<T> {
+  readonly items: T[];
+  readonly nextCursor?: Record<string, unknown>;
+}
+
+/**
+ * Batch processing result
+ */
+interface BatchResult {
+  readonly successCount: number;
+  readonly failedIndices: number[];
+}
+
+/**
+ * Higher-order function: Executes an async operation with exponential backoff retry
+ *
+ * @param fn - Async function to execute
+ * @param options - Retry configuration
+ * @returns Promise with the result of fn
+ */
+const withRetry = async <T>(
+  fn: () => Promise<T>,
+  options: RetryOptions
+): Promise<T> => {
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt <= options.maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      if (attempt < options.maxRetries) {
+        const backoffMs = Math.pow(2, attempt) * options.backoffMs;
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      }
+    }
+  }
+
+  throw lastError ?? new Error('Retry failed with unknown error');
+};
+
+/**
+ * Async generator: Paginate through all results
+ *
+ * @param fetcher - Async function that returns paginated results
+ * @returns Async generator yielding all items
+ */
+async function* paginateAll<T>(
+  fetcher: (cursor?: Record<string, unknown>) => Promise<PaginatedResult<T>>
+): AsyncGenerator<T, void, undefined> {
+  let cursor: Record<string, unknown> | undefined;
+
+  do {
+    const result = await fetcher(cursor);
+    yield* result.items;
+    cursor = result.nextCursor;
+  } while (cursor);
+}
+
+/**
+ * Process items in batches with controlled concurrency
+ *
+ * @param items - Array of items to process
+ * @param batchSize - Size of each batch
+ * @param processor - Async function to process each batch
+ * @param concurrency - Number of concurrent batches to process
+ * @returns Promise with array of results
+ */
+const processBatches = async <T, R>(
+  items: T[],
+  batchSize: number,
+  processor: (batch: T[]) => Promise<R>,
+  concurrency: number
+): Promise<R[]> => {
+  const chunks = chunkArray(items, batchSize);
+  const results: R[] = [];
+
+  for (let i = 0; i < chunks.length; i += concurrency) {
+    const batchSlice = chunks.slice(i, i + concurrency);
+    const batchResults = await Promise.all(batchSlice.map(processor));
+    results.push(...batchResults);
+  }
+
+  return results;
+};
+
+/**
+ * Chunk array into groups of specified size
+ *
+ * @param arr - Array to chunk
+ * @param size - Size of each chunk
+ * @returns Array of chunks
+ */
+const chunkArray = <T>(arr: T[], size: number): T[][] =>
+  Array.from(
+    { length: Math.ceil(arr.length / size) },
+    (_, i) => arr.slice(i * size, i * size + size)
+  );
+
+/**
+ * Sleep for specified milliseconds
+ *
+ * @param ms - Milliseconds to sleep
+ * @returns Promise that resolves after ms
+ */
+const sleep = (ms: number): Promise<void> =>
+  new Promise(resolve => setTimeout(resolve, ms));
+
+/**
  * Feed service for managing materialized feed items
  * Part of Phase 2 hybrid feed architecture
  *
@@ -224,133 +344,216 @@ export class FeedService {
       return { successCount: 0, failedItems: [] };
     }
 
-    // Validate all UUIDs before processing
-    for (const item of items) {
-      try {
-        UUIDField.parse(item.userId);
-        UUIDField.parse(item.postId);
-        UUIDField.parse(item.authorId);
-      } catch (error) {
-        throw new Error(`Invalid UUID in batch item: ${error instanceof z.ZodError ? error.message : 'UUID validation failed'}`);
-      }
+    // Validate all items using functional approach
+    this.validateBatchItems(items);
 
-      if (!item.authorHandle || item.authorHandle.trim() === '') {
-        throw new Error('Author handle cannot be empty in batch item');
-      }
-    }
+    // Convert to FeedItemEntity objects using map
+    const feedItems = items.map(this.createFeedItemEntity);
 
-    // Convert to FeedItemEntity objects
-    const ttl = Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60);
-    const feedItems: FeedItemEntity[] = items.map((item) => {
-      const { PK, SK } = createFeedItemKeys(item.userId, item.createdAt, item.postId);
+    // Process chunks with functional pipeline
+    const { successCount, failedIndices } = await this.processBatchWrites(feedItems);
 
-      return {
-        PK,
-        SK,
-        postId: item.postId,
-        authorId: item.authorId,
-        authorHandle: item.authorHandle,
-        authorFullName: item.authorFullName,
-        authorProfilePictureUrl: item.authorProfilePictureUrl,
-        caption: item.caption,
-        imageUrl: item.imageUrl,
-        thumbnailUrl: item.thumbnailUrl,
-        likesCount: item.likesCount ?? 0,
-        commentsCount: item.commentsCount ?? 0,
-        isLiked: item.isLiked,
-        createdAt: item.createdAt,
-        feedItemCreatedAt: new Date().toISOString(),
-        expiresAt: ttl,
-        entityType: 'FEED_ITEM',
-        schemaVersion: 1
-      };
-    });
-
-    // Split into chunks of 25 (DynamoDB BatchWriteItem limit)
-    const chunks: FeedItemEntity[][] = [];
-    for (let i = 0; i < feedItems.length; i += 25) {
-      chunks.push(feedItems.slice(i, i + 25));
-    }
-
-    let successCount = 0;
-    const failedIndices: number[] = [];
-
-    // Process all chunks
-    for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
-      const chunk = chunks[chunkIndex];
-      const chunkStartIndex = chunkIndex * 25;
-
-      try {
-        const requests = chunk.map((item) => ({
-          PutRequest: {
-            Item: item
-          }
-        }));
-
-        let unprocessedItems = requests;
-        let retries = 0;
-        const maxRetries = 3;
-
-        // Retry loop for unprocessed items
-        while (unprocessedItems.length > 0 && retries < maxRetries) {
-          const result = await this.dynamoClient.send(
-            new BatchWriteCommand({
-              RequestItems: {
-                [this.tableName]: unprocessedItems
-              }
-            })
-          );
-
-          // Count successful writes
-          const processedCount = unprocessedItems.length - (result.UnprocessedItems?.[this.tableName]?.length ?? 0);
-          successCount += processedCount;
-
-          // Check for unprocessed items
-          if (result.UnprocessedItems?.[this.tableName]) {
-            unprocessedItems = result.UnprocessedItems[this.tableName];
-
-            // Exponential backoff before retry
-            if (unprocessedItems.length > 0 && retries < maxRetries - 1) {
-              const backoffMs = Math.pow(2, retries) * 100;
-              await this.sleep(backoffMs);
-              retries++;
-            } else {
-              // Max retries reached, record failures
-              for (let i = 0; i < unprocessedItems.length; i++) {
-                failedIndices.push(chunkStartIndex + i);
-              }
-              break;
-            }
-          } else {
-            // All items processed
-            break;
-          }
-        }
-      } catch (error) {
-        // Entire chunk failed, record all indices as failed
-        console.error('[FeedService] Batch write chunk failed', {
-          chunkIndex,
-          chunkSize: chunk.length,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
-
-        for (let i = 0; i < chunk.length; i++) {
-          failedIndices.push(chunkStartIndex + i);
-        }
-      }
-    }
-
-    // Build array of failed items for caller to retry
-    const failedItems = failedIndices.map((index) => items[index]);
+    // Map failed indices back to original items
+    const failedItems = failedIndices.map(index => items[index]);
 
     return { successCount, failedItems };
   }
 
   /**
-   * Utility: Sleep for specified milliseconds (for exponential backoff)
+   * Validate batch items (pure function, throws on invalid data)
+   *
+   * @param items - Items to validate
+   * @throws Error if validation fails
    */
-  private async sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+  private validateBatchItems(
+    items: Array<{
+      userId: string;
+      postId: string;
+      authorId: string;
+      authorHandle: string;
+    }>
+  ): void {
+    // Validate UUIDs using map for transformation
+    const validationErrors = items
+      .map((item, index) => {
+        try {
+          UUIDField.parse(item.userId);
+          UUIDField.parse(item.postId);
+          UUIDField.parse(item.authorId);
+
+          if (!item.authorHandle || item.authorHandle.trim() === '') {
+            return { index, error: 'Author handle cannot be empty' };
+          }
+
+          return null;
+        } catch (error) {
+          return {
+            index,
+            error: `Invalid UUID: ${error instanceof z.ZodError ? error.message : 'UUID validation failed'}`
+          };
+        }
+      })
+      .filter(Boolean);
+
+    // Throw if any errors found
+    if (validationErrors.length > 0) {
+      const firstError = validationErrors[0];
+      throw new Error(`Batch item validation failed at index ${firstError?.index}: ${firstError?.error}`);
+    }
+  }
+
+  /**
+   * Create FeedItemEntity from batch item (pure function)
+   *
+   * @param item - Batch item
+   * @returns FeedItemEntity
+   */
+  private createFeedItemEntity = (item: {
+    userId: string;
+    postId: string;
+    authorId: string;
+    authorHandle: string;
+    authorFullName?: string;
+    authorProfilePictureUrl?: string;
+    caption?: string;
+    imageUrl?: string;
+    thumbnailUrl?: string;
+    likesCount?: number;
+    commentsCount?: number;
+    isLiked: boolean;
+    createdAt: string;
+  }): FeedItemEntity => {
+    const { PK, SK } = createFeedItemKeys(item.userId, item.createdAt, item.postId);
+    const ttl = Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60);
+
+    return {
+      PK,
+      SK,
+      postId: item.postId,
+      authorId: item.authorId,
+      authorHandle: item.authorHandle,
+      authorFullName: item.authorFullName,
+      authorProfilePictureUrl: item.authorProfilePictureUrl,
+      caption: item.caption,
+      imageUrl: item.imageUrl,
+      thumbnailUrl: item.thumbnailUrl,
+      likesCount: item.likesCount ?? 0,
+      commentsCount: item.commentsCount ?? 0,
+      isLiked: item.isLiked,
+      createdAt: item.createdAt,
+      feedItemCreatedAt: new Date().toISOString(),
+      expiresAt: ttl,
+      entityType: 'FEED_ITEM',
+      schemaVersion: 1
+    };
+  };
+
+  /**
+   * Process batch writes with retry logic
+   *
+   * @param feedItems - Feed items to write
+   * @returns Batch result with success count and failed indices
+   */
+  private async processBatchWrites(
+    feedItems: FeedItemEntity[]
+  ): Promise<BatchResult> {
+    const chunks = chunkArray(feedItems, 25);
+
+    // Process each chunk and collect results
+    const results = await Promise.all(
+      chunks.map((chunk, chunkIndex) =>
+        this.writeSingleChunkWithRetry(chunk, chunkIndex)
+      )
+    );
+
+    // Reduce results into single batch result
+    return results.reduce(
+      (acc, result) => ({
+        successCount: acc.successCount + result.successCount,
+        failedIndices: [...acc.failedIndices, ...result.failedIndices]
+      }),
+      { successCount: 0, failedIndices: [] }
+    );
+  }
+
+  /**
+   * Write a single chunk with retry logic
+   *
+   * @param chunk - Chunk of feed items to write
+   * @param chunkIndex - Index of this chunk
+   * @returns Batch result for this chunk
+   */
+  private async writeSingleChunkWithRetry(
+    chunk: FeedItemEntity[],
+    chunkIndex: number
+  ): Promise<BatchResult> {
+    const chunkStartIndex = chunkIndex * 25;
+
+    try {
+      const requests = chunk.map(item => ({
+        PutRequest: { Item: item }
+      }));
+
+      // Process with retry using functional approach
+      const result = await this.retryBatchWrite(requests);
+
+      return {
+        successCount: result.successCount,
+        failedIndices: result.failedIndices.map(i => chunkStartIndex + i)
+      };
+    } catch (error) {
+      console.error('[FeedService] Batch write chunk failed', {
+        chunkIndex,
+        chunkSize: chunk.length,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+
+      // All items in chunk failed
+      return {
+        successCount: 0,
+        failedIndices: chunk.map((_, i) => chunkStartIndex + i)
+      };
+    }
+  }
+
+  /**
+   * Retry batch write with exponential backoff
+   *
+   * @param requests - Batch write requests
+   * @returns Batch result
+   */
+  private async retryBatchWrite(
+    requests: Array<{ PutRequest: { Item: FeedItemEntity } }>
+  ): Promise<BatchResult> {
+    let unprocessed = requests;
+    let successCount = 0;
+    const maxRetries = 3;
+
+    for (let retry = 0; retry < maxRetries && unprocessed.length > 0; retry++) {
+      const result = await this.dynamoClient.send(
+        new BatchWriteCommand({
+          RequestItems: {
+            [this.tableName]: unprocessed
+          }
+        })
+      );
+
+      const processedCount = unprocessed.length - (result.UnprocessedItems?.[this.tableName]?.length ?? 0);
+      successCount += processedCount;
+
+      unprocessed = result.UnprocessedItems?.[this.tableName] ?? [];
+
+      if (unprocessed.length > 0 && retry < maxRetries - 1) {
+        await sleep(Math.pow(2, retry) * 100);
+      }
+    }
+
+    // Calculate failed indices (items that remain unprocessed)
+    const failedIndices = unprocessed.length > 0
+      ? Array.from({ length: unprocessed.length }, (_, i) => requests.length - unprocessed.length + i)
+      : [];
+
+    return { successCount, failedIndices };
   }
 
   /**
@@ -473,61 +676,69 @@ export class FeedService {
   async deleteFeedItemsByPost(params: {
     postId: string;
   }): Promise<{ deletedCount: number }> {
-    // Skip UUID validation for non-UUID strings (for compatibility with tests)
-    // In production, you might want to validate UUIDs strictly
-
     const startTime = Date.now();
-    let deletedCount = 0;
-    const itemsToDelete: Array<{ PK: string; SK: string }> = [];
 
     try {
-      // Scan to find all feed items for this post across all users
-      // OPTIMIZATION: ProjectionExpression reduces data transfer by 90%
-      let lastEvaluatedKey: Record<string, unknown> | undefined;
+      // Scan and collect all items using functional pipeline
+      const itemsToDelete = await this.collectItemsByPostId(params.postId);
 
-      do {
-        const scanResult = await this.dynamoClient.send(new ScanCommand({
-          TableName: this.tableName,
-          FilterExpression: 'postId = :postId AND entityType = :entityType',
-          ExpressionAttributeValues: {
-            ':postId': params.postId,
-            ':entityType': 'FEED_ITEM'
-          },
-          ProjectionExpression: 'PK, SK', // Only fetch keys (reduces cost)
-          ExclusiveStartKey: lastEvaluatedKey
-        }));
+      // Execute batch deletes
+      const deletedCount = await this.executeBatchDeletes(itemsToDelete);
 
-        // Collect items to delete
-        if (scanResult.Items) {
-          for (const item of scanResult.Items) {
-            itemsToDelete.push({
-              PK: item.PK as string,
-              SK: item.SK as string
-            });
-          }
-        }
-
-        lastEvaluatedKey = scanResult.LastEvaluatedKey;
-      } while (lastEvaluatedKey);
-
-      // OPTIMIZATION: Parallel batch deletes with retry logic
-      deletedCount = await this.executeBatchDeletes(itemsToDelete);
-
-      // Performance logging (helps identify bottlenecks in production)
-      const durationMs = Date.now() - startTime;
-      if (durationMs > 1000) {
-        console.warn('[FeedService] Slow deleteFeedItemsByPost detected', {
-          postId: params.postId,
-          deletedCount,
-          durationMs,
-          note: 'Consider adding GSI4 for 99% cost reduction'
-        });
-      }
+      // Performance logging
+      this.logSlowOperation(
+        'deleteFeedItemsByPost',
+        startTime,
+        { postId: params.postId, deletedCount }
+      );
 
       return { deletedCount };
     } catch (error) {
       throw new Error(`Failed to delete feed items by post: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Collect all feed items for a specific post using functional pagination
+   *
+   * @param postId - Post ID to search for
+   * @returns Array of items to delete
+   */
+  private async collectItemsByPostId(
+    postId: string
+  ): Promise<Array<{ PK: string; SK: string }>> {
+    const items: Array<{ PK: string; SK: string }> = [];
+
+    // Use async generator to paginate through all results
+    const fetcher = async (cursor?: Record<string, unknown>) => {
+      const scanResult = await this.dynamoClient.send(
+        new ScanCommand({
+          TableName: this.tableName,
+          FilterExpression: 'postId = :postId AND entityType = :entityType',
+          ExpressionAttributeValues: {
+            ':postId': postId,
+            ':entityType': 'FEED_ITEM'
+          },
+          ProjectionExpression: 'PK, SK',
+          ExclusiveStartKey: cursor
+        })
+      );
+
+      return {
+        items: (scanResult.Items ?? []).map(item => ({
+          PK: item.PK as string,
+          SK: item.SK as string
+        })),
+        nextCursor: scanResult.LastEvaluatedKey
+      };
+    };
+
+    // Collect all items using generator
+    for await (const item of paginateAll(fetcher)) {
+      items.push(item);
+    }
+
+    return items;
   }
 
   /**
@@ -564,62 +775,101 @@ export class FeedService {
     userId: string;
     authorId: string;
   }): Promise<{ deletedCount: number }> {
-    // Skip UUID validation for non-UUID strings (for compatibility with tests)
-    // In production, you might want to validate UUIDs strictly
-
     const startTime = Date.now();
-    let deletedCount = 0;
-    const itemsToDelete: Array<{ PK: string; SK: string }> = [];
 
     try {
-      // Query to find all feed items for this user
-      // OPTIMIZATION: ProjectionExpression reduces data transfer by 90%
-      let lastEvaluatedKey: Record<string, unknown> | undefined;
+      // Query and collect items using functional pipeline
+      const itemsToDelete = await this.collectItemsByUserAndAuthor(
+        params.userId,
+        params.authorId
+      );
 
-      do {
-        const queryResult = await this.dynamoClient.send(new QueryCommand({
-          TableName: this.tableName,
-          KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
-          FilterExpression: 'authorId = :authorId',
-          ExpressionAttributeValues: {
-            ':pk': `USER#${params.userId}`,
-            ':skPrefix': 'FEED#',
-            ':authorId': params.authorId
-          },
-          ProjectionExpression: 'PK, SK', // Only fetch keys (reduces cost)
-          ExclusiveStartKey: lastEvaluatedKey
-        }));
+      // Execute batch deletes
+      const deletedCount = await this.executeBatchDeletes(itemsToDelete);
 
-        // Collect items to delete
-        if (queryResult.Items) {
-          for (const item of queryResult.Items) {
-            itemsToDelete.push({
-              PK: item.PK as string,
-              SK: item.SK as string
-            });
-          }
-        }
-
-        lastEvaluatedKey = queryResult.LastEvaluatedKey;
-      } while (lastEvaluatedKey);
-
-      // OPTIMIZATION: Parallel batch deletes with retry logic
-      deletedCount = await this.executeBatchDeletes(itemsToDelete);
-
-      // Performance logging (helps identify large cleanup operations)
-      const durationMs = Date.now() - startTime;
-      if (deletedCount > 100 || durationMs > 500) {
+      // Performance logging
+      if (deletedCount > 100 || Date.now() - startTime > 500) {
         console.log('[FeedService] deleteFeedItemsForUser completed', {
           userId: params.userId,
           authorId: params.authorId,
           deletedCount,
-          durationMs
+          durationMs: Date.now() - startTime
         });
       }
 
       return { deletedCount };
     } catch (error) {
       throw new Error(`Failed to delete feed items for user: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Collect feed items for specific user and author using functional pagination
+   *
+   * @param userId - User ID whose feed to search
+   * @param authorId - Author ID to filter by
+   * @returns Array of items to delete
+   */
+  private async collectItemsByUserAndAuthor(
+    userId: string,
+    authorId: string
+  ): Promise<Array<{ PK: string; SK: string }>> {
+    const items: Array<{ PK: string; SK: string }> = [];
+
+    // Use async generator to paginate through all results
+    const fetcher = async (cursor?: Record<string, unknown>) => {
+      const queryResult = await this.dynamoClient.send(
+        new QueryCommand({
+          TableName: this.tableName,
+          KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
+          FilterExpression: 'authorId = :authorId',
+          ExpressionAttributeValues: {
+            ':pk': `USER#${userId}`,
+            ':skPrefix': 'FEED#',
+            ':authorId': authorId
+          },
+          ProjectionExpression: 'PK, SK',
+          ExclusiveStartKey: cursor
+        })
+      );
+
+      return {
+        items: (queryResult.Items ?? []).map(item => ({
+          PK: item.PK as string,
+          SK: item.SK as string
+        })),
+        nextCursor: queryResult.LastEvaluatedKey
+      };
+    };
+
+    // Collect all items using generator
+    for await (const item of paginateAll(fetcher)) {
+      items.push(item);
+    }
+
+    return items;
+  }
+
+  /**
+   * Log slow operations for monitoring
+   *
+   * @param operation - Operation name
+   * @param startTime - Start time in milliseconds
+   * @param metadata - Additional metadata to log
+   */
+  private logSlowOperation(
+    operation: string,
+    startTime: number,
+    metadata: Record<string, unknown>
+  ): void {
+    const durationMs = Date.now() - startTime;
+
+    if (durationMs > 1000) {
+      console.warn(`[FeedService] Slow ${operation} detected`, {
+        ...metadata,
+        durationMs,
+        note: 'Consider adding GSI4 for 99% cost reduction'
+      });
     }
   }
 
@@ -639,94 +889,70 @@ export class FeedService {
   ): Promise<number> {
     if (items.length === 0) return 0;
 
-    let totalDeleted = 0;
-    const chunks = this.chunkArray(items, 25);
-
-    // Process batches with controlled concurrency
     const BATCH_CONCURRENCY = 10;
-    for (let i = 0; i < chunks.length; i += BATCH_CONCURRENCY) {
-      const batchSlice = chunks.slice(i, i + BATCH_CONCURRENCY);
 
-      const batchPromises = batchSlice.map(async (chunk) => {
-        let deleted = 0;
-        let unprocessed = chunk;
-        let retries = 0;
-        const MAX_RETRIES = 3;
+    // Process batches and sum deleted counts using functional reduce
+    const deletedCounts = await processBatches(
+      items,
+      25,
+      chunk => this.deleteSingleChunkWithRetry(chunk),
+      BATCH_CONCURRENCY
+    );
 
-        while (unprocessed.length > 0 && retries <= MAX_RETRIES) {
-          try {
-            const deleteRequests = unprocessed.map(key => ({
-              DeleteRequest: { Key: key }
-            }));
+    return deletedCounts.reduce((sum, count) => sum + count, 0);
+  }
 
-            const batchResult = await this.dynamoClient.send(new BatchWriteCommand({
-              RequestItems: {
-                [this.tableName]: deleteRequests
-              }
-            }));
+  /**
+   * Delete a single chunk with retry logic
+   *
+   * @param chunk - Chunk of items to delete
+   * @returns Number of successfully deleted items
+   */
+  private async deleteSingleChunkWithRetry(
+    chunk: Array<{ PK: string; SK: string }>
+  ): Promise<number> {
+    let unprocessed = chunk;
+    let deleted = 0;
+    const MAX_RETRIES = 3;
 
-            // Count successful deletions
-            deleted += unprocessed.length;
+    for (let retry = 0; retry <= MAX_RETRIES && unprocessed.length > 0; retry++) {
+      try {
+        const deleteRequests = unprocessed.map(key => ({
+          DeleteRequest: { Key: key }
+        }));
 
-            // Check for unprocessed items
-            const unprocessedItems = batchResult.UnprocessedItems?.[this.tableName];
-            if (unprocessedItems && unprocessedItems.length > 0) {
-              // Extract keys from unprocessed delete requests
-              unprocessed = unprocessedItems.map(item =>
-                item.DeleteRequest?.Key as { PK: string; SK: string }
-              ).filter(Boolean);
-              deleted -= unprocessed.length;
-
-              // Exponential backoff before retry
-              if (retries < MAX_RETRIES) {
-                retries++;
-                const backoffMs = Math.pow(2, retries) * 100; // 200ms, 400ms, 800ms
-                await this.sleep(backoffMs);
-              }
-            } else {
-              // All items processed successfully
-              break;
+        const batchResult = await this.dynamoClient.send(
+          new BatchWriteCommand({
+            RequestItems: {
+              [this.tableName]: deleteRequests
             }
-          } catch (error) {
-            console.error('[FeedService] Batch delete failed', {
-              chunkSize: chunk.length,
-              retries,
-              error: error instanceof Error ? error.message : 'Unknown error'
-            });
-            // Don't retry on non-throttling errors
-            break;
-          }
+          })
+        );
+
+        const processedCount = unprocessed.length;
+        const unprocessedItems = batchResult.UnprocessedItems?.[this.tableName] ?? [];
+
+        // Extract keys from unprocessed items
+        unprocessed = unprocessedItems
+          .map(item => item.DeleteRequest?.Key as { PK: string; SK: string })
+          .filter(Boolean);
+
+        deleted += processedCount - unprocessed.length;
+
+        // Exponential backoff if items remain and retries available
+        if (unprocessed.length > 0 && retry < MAX_RETRIES) {
+          await sleep(Math.pow(2, retry + 1) * 100);
         }
-
-        return deleted;
-      });
-
-      const results = await Promise.all(batchPromises);
-      totalDeleted += results.reduce((sum, count) => sum + count, 0);
+      } catch (error) {
+        console.error('[FeedService] Batch delete failed', {
+          chunkSize: chunk.length,
+          retries: retry,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+        break;
+      }
     }
 
-    return totalDeleted;
-  }
-
-  /**
-   * Sleep utility for exponential backoff
-   * @param ms - Milliseconds to sleep
-   */
-  private async sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  /**
-   * Helper function to chunk array into groups
-   * @param arr - Array to chunk
-   * @param size - Size of each chunk
-   * @returns Array of chunks
-   */
-  private chunkArray<T>(arr: T[], size: number): T[][] {
-    const chunks: T[][] = [];
-    for (let i = 0; i < arr.length; i += size) {
-      chunks.push(arr.slice(i, i + size));
-    }
-    return chunks;
+    return deleted;
   }
 }
