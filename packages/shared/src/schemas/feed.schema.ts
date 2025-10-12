@@ -20,7 +20,8 @@ export const FeedRequestSchema = PaginationRequestSchema.extend({
  */
 export const FeedResponseSchema = PaginationResponseSchema.extend({
   posts: z.array(FeedPostItemSchema),
-  totalCount: z.number().int().nonnegative().optional()
+  totalCount: z.number().int().nonnegative().optional(),
+  source: z.enum(['materialized', 'query-time', 'hybrid']).optional()
 });
 
 /**

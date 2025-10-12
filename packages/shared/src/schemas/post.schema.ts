@@ -112,7 +112,8 @@ export const FeedPostItemSchema = PostSchema.pick({
   authorHandle: z.string(),
   authorFullName: z.string().optional(), // matches profile.fullName
   authorProfilePictureUrl: z.string().url().optional(), // matches profile.profilePictureUrl
-  isLiked: z.boolean().optional()
+  isLiked: z.boolean().optional(),
+  source: z.enum(['materialized', 'query-time']).optional() // Feed item source type
 });
 
 /**
