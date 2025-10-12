@@ -254,7 +254,7 @@
 
 /* Post Detail Comments Integration */
 .post-detail__comments {
-  /* Remove margin and padding - let CommentList handle spacing */
+  padding: var(--space-6);
 }
 
 .comments-heading {

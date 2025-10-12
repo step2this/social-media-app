@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { PostDetailPage } from './PostDetailPage.js';
 import * as postService from '../../services/postService.js';
+import * as useAuthModule from '../../hooks/useAuth.js';
 import type { Post } from '@social-media-app/shared';
 
 // Mock the postService
@@ -24,6 +25,24 @@ vi.mock('./PostCard', () => ({
       <div data-testid="post-card-variant">{variant || 'feed'}</div>
     </div>
   )
+}));
+
+// Mock CommentList component
+vi.mock('../comments', () => ({
+  CommentList: ({ postId, currentUserId }: any) => (
+    <div data-testid="comment-list-mock">
+      <div data-testid="comment-list-post-id">{postId}</div>
+      <div data-testid="comment-list-current-user-id">{currentUserId || 'not-provided'}</div>
+    </div>
+  )
+}));
+
+// Mock useAuth hook
+vi.mock('../../hooks/useAuth', () => ({
+  useAuth: vi.fn(() => ({
+    user: null,
+    isAuthenticated: false
+  }))
 }));
 
 const mockPost: Post = {
@@ -269,6 +288,95 @@ describe('PostDetailPage', () => {
       const closeButton = screen.getByRole('button', { name: /close/i });
       closeButton.focus();
       expect(closeButton).toHaveFocus();
+    });
+  });
+
+  describe('Comments Integration', () => {
+    it('should render CommentList for post', async () => {
+      vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
+
+      renderPostDetailPage();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('comment-list-mock')).toBeInTheDocument();
+      });
+
+      // Verify CommentList receives correct postId
+      expect(screen.getByTestId('comment-list-post-id')).toHaveTextContent('post-123');
+    });
+
+    it('should pass currentUserId to CommentList when authenticated', async () => {
+      const mockUser = { id: 'user-456', username: 'testuser', email: 'test@example.com' };
+      vi.mocked(useAuthModule.useAuth).mockReturnValue({
+        user: mockUser,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+        isHydrated: true,
+        tokens: null,
+        register: vi.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
+        refreshToken: vi.fn(),
+        getProfile: vi.fn(),
+        updateProfile: vi.fn(),
+        checkSession: vi.fn(),
+        clearError: vi.fn()
+      });
+      vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
+
+      renderPostDetailPage();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('comment-list-mock')).toBeInTheDocument();
+      });
+
+      // Verify CommentList receives currentUserId when user is authenticated
+      expect(screen.getByTestId('comment-list-current-user-id')).toHaveTextContent('user-456');
+    });
+
+    it('should pass undefined currentUserId to CommentList when not authenticated', async () => {
+      vi.mocked(useAuthModule.useAuth).mockReturnValue({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null,
+        isHydrated: true,
+        tokens: null,
+        register: vi.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
+        refreshToken: vi.fn(),
+        getProfile: vi.fn(),
+        updateProfile: vi.fn(),
+        checkSession: vi.fn(),
+        clearError: vi.fn()
+      });
+      vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
+
+      renderPostDetailPage();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('comment-list-mock')).toBeInTheDocument();
+      });
+
+      // Verify CommentList receives undefined when no user is authenticated
+      expect(screen.getByTestId('comment-list-current-user-id')).toHaveTextContent('not-provided');
+    });
+
+    it('should render comments section with proper styling', async () => {
+      vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
+
+      renderPostDetailPage();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('post-detail-page')).toBeInTheDocument();
+      });
+
+      // Verify comments section has proper class
+      const commentsSection = document.querySelector('.post-detail__comments');
+      expect(commentsSection).toBeInTheDocument();
+      expect(commentsSection).toHaveClass('post-detail__comments');
     });
   });
 });

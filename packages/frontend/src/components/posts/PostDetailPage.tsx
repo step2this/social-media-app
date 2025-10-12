@@ -5,6 +5,8 @@ import type { Post } from '@social-media-app/shared';
 import { ContentLayout } from '../layout/AppLayout';
 import { MaterialIcon } from '../common/MaterialIcon';
 import { PostCard } from './PostCard';
+import { CommentList } from '../comments';
+import { useAuth } from '../../hooks/useAuth';
 import './PostDetailPage.css';
 
 interface PostDetailPageProps {}
@@ -12,6 +14,7 @@ interface PostDetailPageProps {}
 export const PostDetailPage: React.FC<PostDetailPageProps> = () => {
   const { postId } = useParams<{ postId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +98,14 @@ export const PostDetailPage: React.FC<PostDetailPageProps> = () => {
             showComments={true}
             variant="detail"
           />
+
+          {/* Comments Section */}
+          <div className="post-detail__comments">
+            <CommentList
+              postId={post.id}
+              currentUserId={user?.id}
+            />
+          </div>
         </div>
       </div>
     </ContentLayout>

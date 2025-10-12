@@ -49,7 +49,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   const handleCommentClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    navigate(`/posts/${post.id}`);
+    navigate(`/post/${post.id}`);
   };
 
   // Build class names based on props
