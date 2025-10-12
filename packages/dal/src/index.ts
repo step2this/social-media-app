@@ -5,3 +5,4 @@ export * from './services/post.service.js';
 export * from './services/like.service.js';
 export * from './services/follow.service.js';
 export * from './services/comment.service.js';
+export * from './services/notification.service.js';
