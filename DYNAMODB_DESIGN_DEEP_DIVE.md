@@ -148,48 +148,48 @@ erDiagram
     POST ||--o{ COMMENT : "receives"
 
     USER_PROFILE {
-        string PK "USER#userId"
-        string SK "PROFILE"
-        string GSI1PK "EMAIL#email"
-        string GSI2PK "USERNAME#username"
-        string GSI3PK "HANDLE#handle"
-        int postsCount "denormalized"
-        int followersCount "denormalized"
-        int followingCount "denormalized"
+        string PK
+        string SK
+        string GSI1PK
+        string GSI2PK
+        string GSI3PK
+        int postsCount
+        int followersCount
+        int followingCount
     }
 
     POST {
-        string PK "USER#userId"
-        string SK "POST#timestamp#postId"
-        string GSI1PK "POST#postId"
-        int likesCount "denormalized"
-        int commentsCount "denormalized"
-        string userHandle "snapshot"
+        string PK
+        string SK
+        string GSI1PK
+        int likesCount
+        int commentsCount
+        string userHandle
     }
 
     LIKE {
-        string PK "POST#postId"
-        string SK "LIKE#userId"
-        string GSI2PK "USER#userId"
-        string postUserId "embedded metadata"
-        string postSK "embedded metadata"
+        string PK
+        string SK
+        string GSI2PK
+        string postUserId
+        string postSK
     }
 
     COMMENT {
-        string PK "POST#postId"
-        string SK "COMMENT#timestamp#commentId"
-        string GSI1PK "COMMENT#commentId"
-        string GSI2PK "USER#userId"
-        string postUserId "embedded metadata"
-        string postSK "embedded metadata"
-        string userHandle "snapshot"
+        string PK
+        string SK
+        string GSI1PK
+        string GSI2PK
+        string postUserId
+        string postSK
+        string userHandle
     }
 
     FOLLOW {
-        string PK "USER#followerId"
-        string SK "FOLLOW#followeeId"
-        string GSI1PK "USER#followeeId"
-        string GSI2PK "USER#followeeId"
+        string PK
+        string SK
+        string GSI1PK
+        string GSI2PK
     }
 ```
 
