@@ -48,9 +48,14 @@ beforeEach(() => {
       // This simulates resolving handles to user IDs
       if (handle === 'mentioneduser') {
         return {
-          userId: 'mentioned-user-456',
+          id: 'mentioned-user-456',
           handle: 'mentioneduser',
-          displayName: 'Mentioned User'
+          username: 'mentioneduser',
+          fullName: 'Mentioned User',
+          postsCount: 0,
+          followersCount: 0,
+          followingCount: 0,
+          createdAt: '2024-01-01T00:00:00.000Z'
         };
       }
       // Return null for unknown handles

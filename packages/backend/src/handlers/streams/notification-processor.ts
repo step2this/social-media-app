@@ -1,7 +1,7 @@
 import type { DynamoDBStreamEvent, DynamoDBStreamHandler } from 'aws-lambda';
 import type { AttributeValue } from '@aws-sdk/client-dynamodb';
 import { NotificationService, ProfileService } from '@social-media-app/dal';
-import type { NotificationInput } from '@social-media-app/dal';
+import type { CreateNotificationRequest } from '@social-media-app/shared';
 import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
 
 /**
@@ -93,15 +93,15 @@ export const handler: DynamoDBStreamHandler = async (
       // Route to appropriate handler based on entity type
       switch (entityType) {
         case 'LIKE':
-          await processLikeEntity(image, notificationService);
+          await processLikeEntity(image as unknown as StreamImage, notificationService);
           break;
 
         case 'COMMENT':
-          await processCommentEntity(image, notificationService, profileService);
+          await processCommentEntity(image as unknown as StreamImage, notificationService, profileService);
           break;
 
         case 'FOLLOW':
-          await processFollowEntity(image, notificationService);
+          await processFollowEntity(image as unknown as StreamImage, notificationService);
           break;
 
         default:
@@ -168,7 +168,7 @@ const processLikeEntity = async (
   }
 
   // Build notification input
-  const notificationInput: NotificationInput = {
+  const notificationInput: CreateNotificationRequest = {
     userId: postUserId,
     type: 'like',
     title: 'New like',
@@ -268,7 +268,7 @@ const processCommentEntity = async (
 
   // 1. Create comment notification to post owner (if not self-comment)
   if (actor.userId !== postUserId) {
-    const commentNotification: NotificationInput = {
+    const commentNotification: CreateNotificationRequest = {
       userId: postUserId,
       type: 'comment',
       title: 'New comment',
@@ -297,7 +297,7 @@ const processCommentEntity = async (
       continue;
     }
 
-    const mentionNotification: NotificationInput = {
+    const mentionNotification: CreateNotificationRequest = {
       userId: mentionedUserId,
       type: 'mention',
       title: 'New mention',
@@ -369,7 +369,7 @@ const processFollowEntity = async (
   }
 
   // Build notification input
-  const notificationInput: NotificationInput = {
+  const notificationInput: CreateNotificationRequest = {
     userId: followeeId,
     type: 'follow',
     title: 'New follower',
@@ -469,7 +469,7 @@ const buildActorObject = (actorInfo: ActorInfo) => ({
  */
 const createNotificationWithLogging = async (
   notificationService: NotificationService,
-  input: NotificationInput,
+  input: CreateNotificationRequest,
   context: string
 ): Promise<void> => {
   try {
@@ -609,8 +609,8 @@ const resolveMentionedHandles = async (
   for (const handle of handles) {
     try {
       const profile = await profileService.getProfileByHandle(handle);
-      if (profile?.userId) {
-        userIds.push(profile.userId);
+      if (profile?.id) {
+        userIds.push(profile.id);
       }
     } catch (error) {
       // Log error but continue processing other handles
