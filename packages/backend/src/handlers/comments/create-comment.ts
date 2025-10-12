@@ -1,5 +1,5 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { CommentService, ProfileService } from '@social-media-app/dal';
+import { CommentService, PostService, ProfileService, NotificationService } from '@social-media-app/dal';
 import {
   CreateCommentRequestSchema,
   CreateCommentResponseSchema,
@@ -11,7 +11,8 @@ import { z } from 'zod';
 
 /**
  * Handler to create a comment on a post
- * Validates request, authenticates user, fetches user handle from profile, and creates comment
+ * Validates request, authenticates user, fetches user handle from profile,
+ * fetches post metadata (owner ID and SK), and creates comment
  */
 export const handler = async (
   event: APIGatewayProxyEventV2
@@ -54,14 +55,66 @@ export const handler = async (
       return errorResponse(500, 'User profile not found');
     }
 
-    // Create comment
+    // Fetch post to get metadata (owner ID and SK)
+    const postService = new PostService(dynamoClient, tableName, profileService);
+    const post = await postService.getPostById(validatedRequest.postId);
+
+    if (!post) {
+      return errorResponse(404, 'Post not found');
+    }
+
+    /**
+     * Extract post metadata for comment creation:
+     * - postUserId: User ID of the post owner (from post.userId)
+     * - postSK: Reconstructed SK for the post (format: POST#<timestamp>#<postId>)
+     *
+     * These metadata fields are stored with the comment entity to enable:
+     * - Post owner notifications (knowing who owns the post that was commented on)
+     * - Efficient post entity lookup (using the post's SK)
+     */
+    const postUserId = post.userId;
+    const postSK = `POST#${post.createdAt}#${post.id}`;
+
+    // Create comment with post metadata
     const commentService = new CommentService(dynamoClient, tableName);
     const result = await commentService.createComment(
       decoded.userId,
       validatedRequest.postId,
       profile.handle,
-      validatedRequest.content
+      validatedRequest.content,
+      postUserId,
+      postSK
     );
+
+    // Create notification for post owner (if not self-comment)
+    if (decoded.userId !== postUserId) {
+      try {
+        const notificationService = new NotificationService(dynamoClient, tableName);
+        const commentPreview = validatedRequest.content.substring(0, 50);
+        const message = `${profile.handle} commented: ${commentPreview}${validatedRequest.content.length > 50 ? '...' : ''}`;
+
+        await notificationService.createNotification({
+          userId: postUserId,
+          type: 'comment',
+          title: 'New comment',
+          message,
+          priority: 'normal',
+          actor: {
+            userId: decoded.userId,
+            handle: profile.handle,
+            displayName: profile.fullName,
+            avatarUrl: profile.profilePictureUrl
+          },
+          target: {
+            type: 'post',
+            id: validatedRequest.postId,
+            preview: post.caption?.substring(0, 100)
+          }
+        });
+      } catch (notificationError) {
+        console.error('Failed to create notification for comment:', notificationError);
+      }
+    }
 
     // Validate response
     const validatedResponse: CreateCommentResponse = CreateCommentResponseSchema.parse(result);

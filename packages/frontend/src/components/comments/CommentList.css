@@ -3,7 +3,7 @@
 .comment-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--space-4);
   /* Remove padding to prevent extra space in post detail view */
 }
 
@@ -11,7 +11,7 @@
 .comment-list__loading {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--space-4);
 }
 
 .comment-list__skeleton {
@@ -21,8 +21,8 @@
 
 .comment-skeleton {
   display: flex;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
+  gap: var(--space-3);
+  padding: var(--space-4);
   border-bottom: 1px solid var(--tama-gray-200);
 }
 
@@ -42,7 +42,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: var(--space-2);
 }
 
 .comment-skeleton__line {
@@ -71,22 +71,22 @@
 
 /* Error State */
 .comment-list__error {
-  padding: var(--spacing-lg);
+  padding: var(--space-6);
   text-align: center;
-  background: var(--color-error-light, #fee);
-  border: 1px solid var(--color-error);
+  background: #fee;
+  border: 1px solid var(--error);
   border-radius: var(--radius-md);
 }
 
 .comment-list__error-message {
   font-family: var(--font-ui);
   font-size: var(--text-sm);
-  color: var(--color-error);
-  margin-bottom: var(--spacing-md);
+  color: var(--error);
+  margin-bottom: var(--space-4);
 }
 
 .comment-list__retry-button {
-  padding: var(--spacing-sm) var(--spacing-lg);
+  padding: var(--space-3) var(--space-6);
   font-family: var(--font-ui);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
@@ -110,7 +110,7 @@
 
 /* Empty State */
 .comment-list__empty {
-  padding: var(--spacing-xl);
+  padding: var(--space-8);
   text-align: center;
   background: var(--tama-gray-50);
   border-radius: var(--radius-md);
@@ -127,7 +127,7 @@
 .comment-list__items {
   display: flex;
   flex-direction: column;
-  background: var(--color-surface);
+  background: var(--tama-white);
   border-radius: var(--radius-md);
   border: 1px solid var(--tama-gray-200);
   overflow: hidden;
@@ -136,12 +136,12 @@
 /* Responsive */
 @media (max-width: 768px) {
   .comment-list {
-    gap: var(--spacing-sm);
+    gap: var(--space-3);
   }
 
   .comment-list__error,
   .comment-list__empty {
-    padding: var(--spacing-md);
+    padding: var(--space-4);
   }
 
   .comment-list__error-message,
@@ -150,7 +150,7 @@
   }
 
   .comment-skeleton {
-    padding: var(--spacing-sm);
+    padding: var(--space-3);
   }
 
   .comment-skeleton__avatar {

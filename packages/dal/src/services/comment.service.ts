@@ -4,8 +4,7 @@ import { randomUUID } from 'crypto';
 import type {
   CreateCommentResponse,
   DeleteCommentResponse,
-  CommentsListResponse,
-  Comment
+  CommentsListResponse
 } from '@social-media-app/shared';
 import { CommentContentField } from '@social-media-app/shared';
 import { type CommentEntity, mapEntityToComment } from '../utils/comment-mappers.js';
