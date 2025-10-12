@@ -6,6 +6,8 @@
   "scripts": {
     "build": "tsc && vite build",
     "dev": "vite --port 3000",
+    "dev:force": "vite --port 3000 --force",
+    "dev:clean": "rm -rf node_modules/.vite && vite --port 3000",
     "dev:aws": "rm -f .env.local && vite --port 3000",
     "dev:local": "cp .env.local.example .env.local 2>/dev/null || echo 'VITE_API_URL=http://localhost:3001\nVITE_ENABLE_MSW=true' > .env.local && vite --port 3000",
     "preview": "vite preview",

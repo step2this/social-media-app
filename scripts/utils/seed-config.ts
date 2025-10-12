@@ -14,11 +14,11 @@ export const SEED_CONFIG = {
   // Engagement metrics ranges
   likesPerPost: {
     min: 0,
-    max: 50
+    max: 0
   },
   commentsPerPost: {
     min: 0,
-    max: 20
+    max: 0
   },
 
   // Time range for created dates (days ago)

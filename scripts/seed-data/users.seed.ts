@@ -18,6 +18,10 @@ import {
 interface UserProfileEntity {
   PK: string;
   SK: string;
+  GSI1PK: string;
+  GSI1SK: string;
+  GSI2PK: string;
+  GSI2SK: string;
   GSI3PK: string;
   GSI3SK: string;
   id: string;
@@ -34,7 +38,7 @@ interface UserProfileEntity {
   emailVerified: boolean;
   createdAt: string;
   updatedAt: string;
-  entityType: 'PROFILE';
+  entityType: 'USER_PROFILE';
 }
 
 /**
@@ -84,6 +88,10 @@ export async function seedUsers(
     const entity: UserProfileEntity = {
       PK: `USER#${userId}`,
       SK: 'PROFILE',
+      GSI1PK: `EMAIL#${email}`,
+      GSI1SK: `USER#${userId}`,
+      GSI2PK: `USERNAME#${handle}`,
+      GSI2SK: `USER#${userId}`,
       GSI3PK: `HANDLE#${handle.toLowerCase()}`,
       GSI3SK: `USER#${userId}`,
       id: userId,
@@ -100,7 +108,7 @@ export async function seedUsers(
       emailVerified: true, // All seed users are verified
       createdAt: now,
       updatedAt: now,
-      entityType: 'PROFILE'
+      entityType: 'USER_PROFILE'
     };
 
     try {

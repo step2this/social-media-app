@@ -23,7 +23,7 @@
     "dev:mocks": "pnpm switch:mocks && pnpm dev:frontend",
     "dev:servers": "concurrently \"pnpm dev:backend\" \"pnpm dev:frontend\" --names \"API,WEB\" --prefix-colors \"blue,green\"",
     "dev:backend": "pnpm --filter @social-media-app/backend dev:local",
-    "dev:frontend": "pnpm --filter @social-media-app/frontend dev",
+    "dev:frontend": "pnpm --filter @social-media-app/frontend dev:force",
     "servers:start": "pnpm dev:servers",
     "servers:stop": "pnpm dev:stop && pnpm local:stop",
     "servers:restart": "pnpm servers:stop && sleep 2 && pnpm dev:localstack",

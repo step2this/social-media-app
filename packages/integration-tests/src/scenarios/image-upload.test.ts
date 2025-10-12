@@ -253,7 +253,7 @@ describe('LocalStack Image Upload Integration', () => {
       testLogger.debug('Created post for retrieval test:', { postId });
 
       // Act: Retrieve the post
-      const getResponse = await httpClient.get(`/post/${postId}`);
+      const getResponse = await httpClient.get(`/posts/${postId}`);
       expect(getResponse.status).toBe(200);
 
       // Assert: Verify LocalStack URLs are maintained

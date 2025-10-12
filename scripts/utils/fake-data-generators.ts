@@ -149,13 +149,14 @@ export function generateProfilePictureUrl(userId: string): string {
 
 /**
  * Generate follower counts for a user
+ * Set to 0 to enable testing of follow/unfollow counter system
  */
 export function generateFollowerCounts(): {
   followersCount: number;
   followingCount: number;
 } {
   return {
-    followersCount: faker.number.int({ min: 10, max: 500 }),
-    followingCount: faker.number.int({ min: 20, max: 300 })
+    followersCount: 0,
+    followingCount: 0
   };
 }

@@ -27,6 +27,7 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['@social-media-app/shared']
+    // Exclude workspace packages from pre-bundling to enable proper HMR in monorepo
+    exclude: ['@social-media-app/shared']
   }
 });
