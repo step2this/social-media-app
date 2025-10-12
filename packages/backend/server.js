@@ -279,11 +279,15 @@ async function startServer() {
       const { handler: likeCounterHandler } = await import('./dist/handlers/streams/like-counter.js');
       const { handler: commentCounterHandler } = await import('./dist/handlers/streams/comment-counter.js');
       const { handler: feedFanoutHandler } = await import('./dist/handlers/streams/feed-fanout.js');
+      const { handler: feedCleanupPostDeleteHandler } = await import('./dist/handlers/streams/feed-cleanup-post-delete.js');
+      const { handler: feedCleanupUnfollowHandler } = await import('./dist/handlers/streams/feed-cleanup-unfollow.js');
 
       streamProcessor.registerHandler(followCounterHandler);
       streamProcessor.registerHandler(likeCounterHandler);
       streamProcessor.registerHandler(commentCounterHandler);
       streamProcessor.registerHandler(feedFanoutHandler);
+      streamProcessor.registerHandler(feedCleanupPostDeleteHandler);
+      streamProcessor.registerHandler(feedCleanupUnfollowHandler);
 
       await streamProcessor.start();
       console.log('✅ Stream processor started - profile stats will update automatically');
