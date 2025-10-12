@@ -5,12 +5,12 @@ import { AuthModal } from './components/auth/AuthModal.js';
 import { ProfilePage } from './components/profile/ProfilePage';
 import { MyProfilePage } from './components/profile/MyProfilePage';
 import { HomePage } from './pages/HomePage';
+import { NotificationsPage } from './pages/NotificationsPage';
 import { PlaceholderPage } from './components/common/PlaceholderPage';
 import { CreatePostPage } from './components/posts/index.js';
 import { PostDetailPage } from './components/posts/PostDetailPage';
 import { ExplorePage } from './components/explore/ExplorePage';
 import { AppLayout } from './components/layout/AppLayout';
-import { ContentLayout } from './components/layout/AppLayout';
 import { DesignSystemTest } from './components/design-system/DesignSystemTest.js';
 import { ServiceProvider, useServices } from './services/ServiceProvider';
 import { useAuthStore } from './stores/authStore.js';
@@ -109,6 +109,12 @@ function AppContent() {
           <Route path="/post/:postId" element={
             <ProtectedRoute requireAuth={true}>
               <PostDetailPage />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/notifications" element={
+            <ProtectedRoute requireAuth={true}>
+              <NotificationsPage />
             </ProtectedRoute>
           } />
 

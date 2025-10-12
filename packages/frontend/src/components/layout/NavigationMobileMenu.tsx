@@ -11,6 +11,7 @@ import {
   HomeIcon,
   ExploreIcon,
   CreateIcon,
+  NotificationIcon,
   InboxIcon,
   ProfileIcon,
   LogoutIcon
@@ -58,6 +59,13 @@ const getMobileNavItems = (pathname: string, onClose: () => void) => [
     icon: <CreateIcon />,
     label: 'Create',
     isActive: pathname === '/create',
+    onClick: onClose
+  },
+  {
+    to: '/notifications',
+    icon: <NotificationIcon />,
+    label: 'Notifications',
+    isActive: pathname === '/notifications',
     onClick: onClose
   },
   {

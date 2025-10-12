@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { MaterialIcon } from '../common/MaterialIcon';
+import { notificationService } from '../../services/notificationService';
+import { useAuth } from '../../hooks/useAuth';
 
 interface MobileNavigationProps {
   className?: string;
@@ -15,12 +17,35 @@ interface MobileNavigationProps {
  */
 export const MobileNavigation: React.FC<MobileNavigationProps> = ({ className = '' }) => {
   const location = useLocation();
+  const { isAuthenticated, isHydrated } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Fetch unread notification count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await notificationService.getUnreadCount();
+        setUnreadCount(response.count);
+      } catch (error) {
+        console.error('Failed to fetch unread count:', error);
+      }
+    };
+
+    if (isAuthenticated && isHydrated) {
+      fetchUnreadCount();
+      // Poll every 30 seconds for updates
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+
+    return undefined;
+  }, [isAuthenticated, isHydrated]);
 
   const navigationTabs = [
     { path: '/', label: 'Home', icon: 'home', activeIcon: 'home' },
     { path: '/explore', label: 'Explore', icon: 'explore', activeIcon: 'explore' },
+    { path: '/notifications', label: 'Notifications', icon: 'notifications_outlined', activeIcon: 'notifications', badge: unreadCount },
     { path: '/create', label: 'Create', icon: 'add_circle_outline', activeIcon: 'add_circle' },
-    { path: '/messages', label: 'Messages', icon: 'chat_bubble_outline', activeIcon: 'chat_bubble' },
     { path: '/profile', label: 'Profile', icon: 'person_outline', activeIcon: 'person' },
   ];
 
@@ -51,6 +76,9 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = ({ className = 
                 variant={active ? 'filled' : 'outlined'}
                 className="mobile-tab-icon"
               />
+              {tab.badge && tab.badge > 0 && (
+                <span className="mobile-tab-badge">{tab.badge > 99 ? '99+' : tab.badge}</span>
+              )}
               <div className="mobile-tab-label">
                 {tab.label}
               </div>

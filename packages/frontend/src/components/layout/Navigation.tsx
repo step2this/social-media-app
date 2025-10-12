@@ -14,6 +14,7 @@ import {
   HomeIcon,
   ExploreIcon,
   CreateIcon,
+  NotificationIcon,
   InboxIcon,
   ProfileIcon,
   MenuIcon,
@@ -75,6 +76,7 @@ const DesktopNavItems: React.FC<{ pathname: string }> = ({ pathname }) => {
     { to: '/', icon: <HomeIcon />, label: 'Home', isActive: pathname === '/' },
     { to: '/explore', icon: <ExploreIcon />, label: 'Explore', isActive: pathname === '/explore' },
     { to: '/create', icon: <CreateIcon />, label: 'Create', isActive: pathname === '/create' },
+    { to: '/notifications', icon: <NotificationIcon />, label: 'Notifications', isActive: pathname === '/notifications' },
     { to: '/messages', icon: <InboxIcon />, label: 'Messages', isActive: pathname === '/messages' },
     { to: '/profile', icon: <ProfileIcon />, label: 'Profile', isActive: pathname === '/profile' }
   ];
