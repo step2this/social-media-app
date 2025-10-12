@@ -18,6 +18,7 @@ interface MockDynamoCommand {
     readonly Limit?: number;
     readonly ExclusiveStartKey?: Record<string, unknown>;
     readonly ConditionExpression?: string;
+    readonly Select?: string;
   };
 }
 
@@ -62,9 +63,26 @@ const createMockDynamoClient = () => {
       return command.input.ScanIndexForward ? skA.localeCompare(skB) : skB.localeCompare(skA);
     });
 
+    // Handle COUNT queries (for totalCount)
+    if (command.input.Select === 'COUNT') {
+      return {
+        Count: sorted.length,
+        $metadata: {}
+      };
+    }
+
+    // Handle pagination with ExclusiveStartKey
+    let startIndex = 0;
+    if (command.input.ExclusiveStartKey) {
+      const exclusiveKey = command.input.ExclusiveStartKey;
+      startIndex = sorted.findIndex(item =>
+        item.PK === exclusiveKey.PK && item.SK === exclusiveKey.SK
+      ) + 1;
+    }
+
     // Apply limit
     const limit = command.input.Limit || sorted.length;
-    const result = sorted.slice(0, limit);
+    const result = sorted.slice(startIndex, startIndex + limit);
 
     return {
       Items: result,
@@ -338,6 +356,151 @@ describe('CommentService', () => {
       expect(queryCall![0].input.ExpressionAttributeValues).toEqual({
         ':pk': `POST#${postId}`,
         ':skPrefix': 'COMMENT#'
+      });
+    });
+
+    describe('Pagination', () => {
+      // Reset mock client for pagination tests
+      let paginationPostId: string;
+
+      beforeEach(async () => {
+        // Use a different post ID for pagination tests to avoid interference
+        paginationPostId = 'post-pagination-test';
+        mockDynamoClient = createMockDynamoClient();
+        commentService = new CommentService(mockDynamoClient as unknown as DynamoDBDocumentClient, tableName);
+      });
+
+      it('should return accurate totalCount even with limit (5 total, limit 2)', async () => {
+        // Create 5 comments
+        for (let i = 1; i <= 5; i++) {
+          await commentService.createComment(
+            `user${i}`,
+            paginationPostId,
+            `user${i}handle`,
+            `Comment ${i}`,
+            postUserId,
+            postSK
+          );
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+
+        // Query with limit 2
+        const result = await commentService.getCommentsByPost(paginationPostId, 2);
+
+        // Should return 2 comments but totalCount should be 5
+        expect(result.comments).toHaveLength(2);
+        expect(result.totalCount).toBe(5);
+      });
+
+      it('should return hasMore=true when more results exist (5 total, limit 2)', async () => {
+        // Create 5 comments
+        for (let i = 1; i <= 5; i++) {
+          await commentService.createComment(
+            `user${i}`,
+            paginationPostId,
+            `user${i}handle`,
+            `Comment ${i}`,
+            postUserId,
+            postSK
+          );
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+
+        // Query with limit 2
+        const result = await commentService.getCommentsByPost(paginationPostId, 2);
+
+        expect(result.hasMore).toBe(true);
+      });
+
+      it('should return hasMore=false when no more results exist (2 total, limit 10)', async () => {
+        // Create 2 comments
+        await commentService.createComment('user1', paginationPostId, 'user1handle', 'Comment 1', postUserId, postSK);
+        await new Promise(resolve => setTimeout(resolve, 10));
+        await commentService.createComment('user2', paginationPostId, 'user2handle', 'Comment 2', postUserId, postSK);
+
+        // Query with limit 10
+        const result = await commentService.getCommentsByPost(paginationPostId, 10);
+
+        expect(result.comments).toHaveLength(2);
+        expect(result.hasMore).toBe(false);
+      });
+
+      it('should return nextCursor when hasMore=true', async () => {
+        // Create 5 comments
+        for (let i = 1; i <= 5; i++) {
+          await commentService.createComment(
+            `user${i}`,
+            paginationPostId,
+            `user${i}handle`,
+            `Comment ${i}`,
+            postUserId,
+            postSK
+          );
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+
+        // Query with limit 2
+        const result = await commentService.getCommentsByPost(paginationPostId, 2);
+
+        expect(result.hasMore).toBe(true);
+        expect(result.nextCursor).toBeDefined();
+        expect(typeof result.nextCursor).toBe('string');
+      });
+
+      it('should use cursor to get next page of results', async () => {
+        // Create 5 comments
+        for (let i = 1; i <= 5; i++) {
+          await commentService.createComment(
+            `user${i}`,
+            paginationPostId,
+            `user${i}handle`,
+            `Comment ${i}`,
+            postUserId,
+            postSK
+          );
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+
+        // Get first page
+        const firstPage = await commentService.getCommentsByPost(paginationPostId, 2);
+        expect(firstPage.comments).toHaveLength(2);
+        expect(firstPage.nextCursor).toBeDefined();
+
+        // Get second page using cursor
+        const secondPage = await commentService.getCommentsByPost(paginationPostId, 2, firstPage.nextCursor);
+        expect(secondPage.comments).toHaveLength(2);
+
+        // Verify different results
+        expect(firstPage.comments[0].id).not.toBe(secondPage.comments[0].id);
+        expect(firstPage.comments[1].id).not.toBe(secondPage.comments[1].id);
+      });
+
+      it('should return nextCursor=undefined when hasMore=false on last page', async () => {
+        // Create 5 comments
+        for (let i = 1; i <= 5; i++) {
+          await commentService.createComment(
+            `user${i}`,
+            paginationPostId,
+            `user${i}handle`,
+            `Comment ${i}`,
+            postUserId,
+            postSK
+          );
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+
+        // Get first page (2 items)
+        const firstPage = await commentService.getCommentsByPost(paginationPostId, 2);
+
+        // Get second page (2 items)
+        const secondPage = await commentService.getCommentsByPost(paginationPostId, 2, firstPage.nextCursor);
+
+        // Get third page (1 item remaining)
+        const thirdPage = await commentService.getCommentsByPost(paginationPostId, 2, secondPage.nextCursor);
+
+        expect(thirdPage.comments).toHaveLength(1);
+        expect(thirdPage.hasMore).toBe(false);
+        expect(thirdPage.nextCursor).toBeUndefined();
       });
     });
   });

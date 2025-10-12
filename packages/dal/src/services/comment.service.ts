@@ -140,8 +140,21 @@ export class CommentService {
   async getCommentsByPost(
     postId: string,
     limit: number = 20,
-    _cursor?: string
+    cursor?: string
   ): Promise<CommentsListResponse> {
+    // 1. Get total count first
+    const countResult = await this.dynamoClient.send(new QueryCommand({
+      TableName: this.tableName,
+      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
+      ExpressionAttributeValues: {
+        ':pk': `POST#${postId}`,
+        ':skPrefix': 'COMMENT#'
+      },
+      Select: 'COUNT'
+    }));
+    const totalCount = countResult.Count || 0;
+
+    // 2. Get paginated results (fetch limit+1 to detect hasMore)
     const result = await this.dynamoClient.send(new QueryCommand({
       TableName: this.tableName,
       KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
@@ -150,17 +163,52 @@ export class CommentService {
         ':skPrefix': 'COMMENT#'
       },
       ScanIndexForward: false, // Descending order (newest first)
-      Limit: limit
+      Limit: limit + 1, // Fetch one extra to detect if more exist
+      ExclusiveStartKey: cursor ? this.decodeCursor(cursor) : undefined
     }));
 
-    const comments: Comment[] = (result.Items || [])
-      .map(item => mapEntityToComment(item as CommentEntity));
+    // 3. Check if more results exist
+    const items = result.Items || [];
+    const hasMore = items.length > limit;
+
+    // 4. Slice to actual limit (remove the extra item)
+    const paginatedItems = items.slice(0, limit);
+    const comments = paginatedItems.map(item => mapEntityToComment(item as CommentEntity));
+
+    // 5. Encode cursor from last returned item (for next page)
+    const nextCursor = hasMore && paginatedItems.length > 0
+      ? this.encodeCursor({
+          PK: paginatedItems[paginatedItems.length - 1].PK as string,
+          SK: paginatedItems[paginatedItems.length - 1].SK as string
+        })
+      : undefined;
 
     return {
       comments,
-      totalCount: comments.length,
-      hasMore: false, // Simplified for now - pagination can be enhanced later
-      nextCursor: undefined
+      totalCount,
+      hasMore,
+      nextCursor
     };
+  }
+
+  /**
+   * Encode DynamoDB key as base64 cursor
+   *
+   * @param key - DynamoDB key object with PK and SK
+   * @returns Base64-encoded cursor string
+   */
+  private encodeCursor(key: { PK: string; SK: string }): string {
+    return Buffer.from(JSON.stringify(key)).toString('base64');
+  }
+
+  /**
+   * Decode base64 cursor to DynamoDB key
+   *
+   * @param cursor - Base64-encoded cursor string
+   * @returns DynamoDB key object with PK and SK
+   */
+  private decodeCursor(cursor: string): { PK: string; SK: string } {
+    const decoded = Buffer.from(cursor, 'base64').toString('utf-8');
+    return JSON.parse(decoded) as { PK: string; SK: string };
   }
 }
