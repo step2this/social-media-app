@@ -66,8 +66,32 @@ beforeEach(() => {
         return { $metadata: {} };
       }
 
-      // Simulate GetCommand for follow status check
+      // Simulate GetCommand for profile and follow status check
       if (command.constructor.name === 'GetCommand') {
+        // Check if it's a profile lookup (PK starts with USER# and SK is PROFILE)
+        if (command.input?.Key?.PK?.startsWith('USER#') && command.input?.Key?.SK === 'PROFILE') {
+          return {
+            Item: {
+              PK: 'USER#follower-user-id',
+              SK: 'PROFILE',
+              id: 'follower-user-id',
+              handle: 'followerhandle',
+              username: 'followeruser',
+              fullName: 'Follower User',
+              email: 'follower@example.com',
+              profilePictureUrl: 'https://example.com/follower-avatar.jpg',
+              bio: 'Follower bio',
+              createdAt: '2024-01-01T00:00:00.000Z',
+              updatedAt: '2024-01-01T00:00:00.000Z',
+              entityType: 'PROFILE',
+              postsCount: 0,
+              followersCount: 0,
+              followingCount: 0
+            },
+            $metadata: {}
+          };
+        }
+        // Otherwise, return follow status
         return { Item: { isFollowing: true }, $metadata: {} };
       }
 
@@ -216,6 +240,113 @@ describe('follow-user handler', () => {
       const result = await handler(event);
 
       expect(result.statusCode).toBe(500);
+    });
+  });
+
+  describe('notification creation', () => {
+    it('should create notification when user follows another user', async () => {
+      const event = createMockEvent(
+        JSON.stringify({ userId: testUserId }),
+        `Bearer ${mockJWT}`
+      );
+
+      await handler(event);
+
+      // Find notification creation command
+      const notificationPut = sentCommands.find(cmd =>
+        cmd.constructor.name === 'PutCommand' &&
+        cmd.input.Item?.entityType === 'NOTIFICATION'
+      );
+
+      expect(notificationPut).toBeDefined();
+      expect(notificationPut.input.Item.type).toBe('follow');
+      expect(notificationPut.input.Item.title).toBe('New follower');
+    });
+
+    it('should include correct actor information', async () => {
+      const event = createMockEvent(
+        JSON.stringify({ userId: testUserId }),
+        `Bearer ${mockJWT}`
+      );
+
+      await handler(event);
+
+      const notificationPut = sentCommands.find(cmd =>
+        cmd.constructor.name === 'PutCommand' &&
+        cmd.input.Item?.entityType === 'NOTIFICATION'
+      );
+
+      expect(notificationPut.input.Item.actor).toBeDefined();
+      expect(notificationPut.input.Item.actor.userId).toBe('follower-user-id');
+      expect(notificationPut.input.Item.actor.handle).toBeDefined();
+      expect(notificationPut.input.Item.actor.displayName).toBeDefined();
+    });
+
+    it('should NOT include target (follows are user-to-user)', async () => {
+      const event = createMockEvent(
+        JSON.stringify({ userId: testUserId }),
+        `Bearer ${mockJWT}`
+      );
+
+      await handler(event);
+
+      const notificationPut = sentCommands.find(cmd =>
+        cmd.constructor.name === 'PutCommand' &&
+        cmd.input.Item?.entityType === 'NOTIFICATION'
+      );
+
+      expect(notificationPut.input.Item.target).toBeUndefined();
+    });
+
+    it('should NOT create notification for self-follows', async () => {
+      const event = createMockEvent(
+        JSON.stringify({ userId: 'follower-user-id' }),
+        `Bearer ${mockJWT}`
+      );
+
+      await handler(event);
+
+      // Should not create notification for self-follow
+      const notificationPut = sentCommands.find(cmd =>
+        cmd.constructor.name === 'PutCommand' &&
+        cmd.input.Item?.entityType === 'NOTIFICATION'
+      );
+
+      expect(notificationPut).toBeUndefined();
+    });
+
+    it('should not fail the follow action if notification creation fails', async () => {
+      // Mock DynamoDB to fail on notification creation but succeed on follow
+      mockDynamoClient.send = vi.fn(async (command: any) => {
+        sentCommands.push(command);
+
+        if (command.constructor.name === 'PutCommand') {
+          // Fail if it's a notification, succeed if it's a follow
+          if (command.input.Item?.entityType === 'NOTIFICATION') {
+            throw new Error('Notification creation failed');
+          }
+          return { $metadata: {} };
+        }
+
+        if (command.constructor.name === 'GetCommand') {
+          return { Item: { isFollowing: true }, $metadata: {} };
+        }
+
+        return { $metadata: {} };
+      });
+
+      const event = createMockEvent(
+        JSON.stringify({ userId: testUserId }),
+        `Bearer ${mockJWT}`
+      );
+
+      const result = await handler(event);
+
+      // Follow should still succeed
+      expect(result.statusCode).toBe(200);
+      const body = JSON.parse(result.body);
+      expect(body.success).toBe(true);
+      expect(body.isFollowing).toBe(true);
     });
   });
 });

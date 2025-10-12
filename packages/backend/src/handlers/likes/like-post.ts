@@ -1,5 +1,5 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { LikeService, PostService, ProfileService } from '@social-media-app/dal';
+import { LikeService, PostService, ProfileService, NotificationService } from '@social-media-app/dal';
 import {
   LikePostRequestSchema,
   LikePostResponseSchema,
@@ -75,6 +75,37 @@ export const handler = async (
       postUserId,
       postSK
     );
+
+    // Create notification for post owner (if not self-like)
+    if (decoded.userId !== postUserId) {
+      try {
+        const actorProfile = await profileService.getProfileById(decoded.userId);
+
+        if (actorProfile) {
+          const notificationService = new NotificationService(dynamoClient, tableName);
+          await notificationService.createNotification({
+            userId: postUserId,
+            type: 'like',
+            title: 'New like',
+            message: `${actorProfile.handle} liked your post`,
+            priority: 'normal',
+            actor: {
+              userId: decoded.userId,
+              handle: actorProfile.handle,
+              displayName: actorProfile.fullName,
+              avatarUrl: actorProfile.profilePictureUrl
+            },
+            target: {
+              type: 'post',
+              id: validatedRequest.postId,
+              preview: post.caption?.substring(0, 100)
+            }
+          });
+        }
+      } catch (notificationError) {
+        console.error('Failed to create notification for like:', notificationError);
+      }
+    }
 
     // Validate response
     const validatedResponse: LikePostResponse = LikePostResponseSchema.parse(result);

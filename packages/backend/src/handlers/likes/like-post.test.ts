@@ -80,8 +80,32 @@ beforeEach(() => {
         return { $metadata: {} };
       }
 
-      // Simulate GetCommand for like status check
+      // Simulate GetCommand for profile and like status check
       if (command.constructor.name === 'GetCommand') {
+        // Check if it's a profile lookup (PK starts with USER# and SK is PROFILE)
+        if (command.input?.Key?.PK?.startsWith('USER#') && command.input?.Key?.SK === 'PROFILE') {
+          return {
+            Item: {
+              PK: 'USER#test-user-id',
+              SK: 'PROFILE',
+              id: 'test-user-id',
+              handle: 'testhandle',
+              username: 'testuser',
+              fullName: 'Test User',
+              email: 'test@example.com',
+              profilePictureUrl: 'https://example.com/avatar.jpg',
+              bio: 'Test bio',
+              createdAt: '2024-01-01T00:00:00.000Z',
+              updatedAt: '2024-01-01T00:00:00.000Z',
+              entityType: 'PROFILE',
+              postsCount: 0,
+              followersCount: 0,
+              followingCount: 0
+            },
+            $metadata: {}
+          };
+        }
+        // Otherwise, return like status
         return { Item: { isLiked: true }, $metadata: {} };
       }
 
@@ -398,6 +422,155 @@ describe('like-post handler', () => {
       // Should not attempt to create like if post doesn't exist
       const putCommand = sentCommands.find(cmd => cmd.constructor.name === 'PutCommand');
       expect(putCommand).toBeUndefined();
+    });
+  });
+
+  describe('notification creation', () => {
+    it('should create notification when user likes another user\'s post', async () => {
+      const event = createMockEvent(
+        JSON.stringify({ postId: testPostId }),
+        `Bearer ${mockJWT}`
+      );
+
+      await handler(event);
+
+      // Find notification creation command
+      const notificationPut = sentCommands.find(cmd =>
+        cmd.constructor.name === 'PutCommand' &&
+        cmd.input.Item?.entityType === 'NOTIFICATION'
+      );
+
+      expect(notificationPut).toBeDefined();
+      expect(notificationPut.input.Item.type).toBe('like');
+      expect(notificationPut.input.Item.title).toBe('New like');
+    });
+
+    it('should include correct actor information (userId, handle, displayName, avatarUrl)', async () => {
+      const event = createMockEvent(
+        JSON.stringify({ postId: testPostId }),
+        `Bearer ${mockJWT}`
+      );
+
+      await handler(event);
+
+      const notificationPut = sentCommands.find(cmd =>
+        cmd.constructor.name === 'PutCommand' &&
+        cmd.input.Item?.entityType === 'NOTIFICATION'
+      );
+
+      expect(notificationPut).toBeDefined();
+      expect(notificationPut.input.Item.actor).toBeDefined();
+      expect(notificationPut.input.Item.actor.userId).toBe('test-user-id');
+      expect(notificationPut.input.Item.actor.handle).toBeDefined();
+      expect(notificationPut.input.Item.actor.displayName).toBeDefined();
+    });
+
+    it('should include correct target information (type, id, url, preview)', async () => {
+      const event = createMockEvent(
+        JSON.stringify({ postId: testPostId }),
+        `Bearer ${mockJWT}`
+      );
+
+      await handler(event);
+
+      const notificationPut = sentCommands.find(cmd =>
+        cmd.constructor.name === 'PutCommand' &&
+        cmd.input.Item?.entityType === 'NOTIFICATION'
+      );
+
+      expect(notificationPut.input.Item.target).toBeDefined();
+      expect(notificationPut.input.Item.target.type).toBe('post');
+      expect(notificationPut.input.Item.target.id).toBe(testPostId);
+      expect(notificationPut.input.Item.target.url).toBe(`/post/${testPostId}`);
+    });
+
+    it('should include post preview in notification', async () => {
+      const event = createMockEvent(
+        JSON.stringify({ postId: testPostId }),
+        `Bearer ${mockJWT}`
+      );
+
+      await handler(event);
+
+      const notificationPut = sentCommands.find(cmd =>
+        cmd.constructor.name === 'PutCommand' &&
+        cmd.input.Item?.entityType === 'NOTIFICATION'
+      );
+
+      expect(notificationPut.input.Item.target.preview).toBe('Test post');
+    });
+
+    it('should NOT create notification for self-likes', async () => {
+      // Mock post owned by the same user who is liking
+      mockPostServiceGetPostById.mockResolvedValue({
+        PK: 'USER#test-user-id',
+        SK: 'POST#2024-01-01T00:00:00.000Z#123e4567-e89b-12d3-a456-426614174001',
+        id: testPostId,
+        userId: 'test-user-id',
+        userHandle: 'testuser',
+        imageUrl: 'https://example.com/image.jpg',
+        thumbnailUrl: 'https://example.com/thumb.jpg',
+        caption: 'Test post',
+        tags: [],
+        likesCount: 0,
+        commentsCount: 0,
+        isPublic: true,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        entityType: 'POST',
+        GSI1PK: 'POST#123e4567-e89b-12d3-a456-426614174001',
+        GSI1SK: 'USER#test-user-id'
+      });
+
+      const event = createMockEvent(
+        JSON.stringify({ postId: testPostId }),
+        `Bearer ${mockJWT}`
+      );
+
+      await handler(event);
+
+      // Should not create notification for self-like
+      const notificationPut = sentCommands.find(cmd =>
+        cmd.constructor.name === 'PutCommand' &&
+        cmd.input.Item?.entityType === 'NOTIFICATION'
+      );
+
+      expect(notificationPut).toBeUndefined();
+    });
+
+    it('should not fail the like action if notification creation fails', async () => {
+      // Mock DynamoDB to fail on notification creation but succeed on like
+      mockDynamoClient.send = vi.fn(async (command: any) => {
+        sentCommands.push(command);
+
+        if (command.constructor.name === 'PutCommand') {
+          // Fail if it's a notification, succeed if it's a like
+          if (command.input.Item?.entityType === 'NOTIFICATION') {
+            throw new Error('Notification creation failed');
+          }
+          return { $metadata: {} };
+        }
+
+        if (command.constructor.name === 'GetCommand') {
+          // Return profile or follow status
+          return { Item: { isLiked: true }, $metadata: {} };
+        }
+
+        return { $metadata: {} };
+      });
+
+      const event = createMockEvent(
+        JSON.stringify({ postId: testPostId }),
+        `Bearer ${mockJWT}`
+      );
+
+      const result = await handler(event);
+
+      // Like should still succeed
+      expect(result.statusCode).toBe(200);
+      const body = JSON.parse(result.body);
+      expect(body.success).toBe(true);
+      expect(body.isLiked).toBe(true);
     });
   });
 });

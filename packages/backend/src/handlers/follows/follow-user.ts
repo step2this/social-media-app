@@ -1,5 +1,5 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { FollowService } from '@social-media-app/dal';
+import { FollowService, ProfileService, NotificationService } from '@social-media-app/dal';
 import {
   FollowUserRequestSchema,
   FollowUserResponseSchema,
@@ -48,6 +48,33 @@ export const handler = async (
 
     // Follow the user
     const result = await followService.followUser(decoded.userId, validatedRequest.userId);
+
+    // Create notification for followed user (if not self-follow)
+    if (decoded.userId !== validatedRequest.userId) {
+      try {
+        const profileService = new ProfileService(dynamoClient, tableName);
+        const actorProfile = await profileService.getProfileById(decoded.userId);
+
+        if (actorProfile) {
+          const notificationService = new NotificationService(dynamoClient, tableName);
+          await notificationService.createNotification({
+            userId: validatedRequest.userId,
+            type: 'follow',
+            title: 'New follower',
+            message: `${actorProfile.handle} started following you`,
+            priority: 'normal',
+            actor: {
+              userId: decoded.userId,
+              handle: actorProfile.handle,
+              displayName: actorProfile.fullName,
+              avatarUrl: actorProfile.profilePictureUrl
+            }
+          });
+        }
+      } catch (notificationError) {
+        console.error('Failed to create notification for follow:', notificationError);
+      }
+    }
 
     // Validate response
     const validatedResponse: FollowUserResponse = FollowUserResponseSchema.parse(result);
