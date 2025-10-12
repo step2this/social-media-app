@@ -53,11 +53,22 @@ const createMockDynamoClient = () => {
     const pkValue = command.input.ExpressionAttributeValues?.[':pk'] as string;
     const skPrefix = command.input.ExpressionAttributeValues?.[':sk'] as string;
 
+    // Determine which key fields to use based on IndexName
+    const indexName = (command.input as any).IndexName;
+    const pkField = indexName === 'GSI2' ? 'GSI2PK' : 'PK';
+    const skField = indexName === 'GSI2' ? 'GSI2SK' : 'SK';
+
     // Filter items by PK and SK prefix
     for (const [key, item] of items.entries()) {
-      if (item.PK === pkValue && typeof item.SK === 'string' && item.SK.startsWith(skPrefix)) {
+      if (item[pkField] === pkValue && typeof item[skField] === 'string' && (item[skField] as string).startsWith(skPrefix)) {
         results.push(item);
       }
+    }
+
+    // If Select='COUNT', return Count instead of Items
+    const selectType = (command.input as any).Select;
+    if (selectType === 'COUNT') {
+      return { Count: results.length, $metadata: {} };
     }
 
     return { Items: results, $metadata: {} };
@@ -310,6 +321,116 @@ describe('FollowService', () => {
       vi.spyOn(mockClient, 'send').mockRejectedValueOnce(new Error('DynamoDB error'));
 
       await expect(service.getFollowingList(userId)).rejects.toThrow('DynamoDB error');
+    });
+  });
+
+  describe('getFollowerCount', () => {
+    it('should return 0 when user has no followers', async () => {
+      const userId = 'user-123';
+
+      const result = await service.getFollowerCount(userId);
+
+      expect(result).toBe(0);
+    });
+
+    it('should return correct follower count', async () => {
+      const userId = 'user-456';
+      const followerId1 = 'user-123';
+      const followerId2 = 'user-789';
+      const followerId3 = 'user-abc';
+
+      // Create followers
+      await service.followUser(followerId1, userId);
+      await service.followUser(followerId2, userId);
+      await service.followUser(followerId3, userId);
+
+      // Get follower count
+      const result = await service.getFollowerCount(userId);
+
+      expect(result).toBe(3);
+    });
+
+    it('should only count followers for the specific user', async () => {
+      const userId1 = 'user-456';
+      const userId2 = 'user-999';
+      const followerId1 = 'user-123';
+      const followerId2 = 'user-789';
+
+      // User 123 follows user 456
+      await service.followUser(followerId1, userId1);
+      // User 789 follows user 999
+      await service.followUser(followerId2, userId2);
+
+      // Get follower count for user 456
+      const result = await service.getFollowerCount(userId1);
+
+      expect(result).toBe(1);
+    });
+
+    it('should handle errors gracefully', async () => {
+      const userId = 'user-123';
+
+      // Mock an error
+      vi.spyOn(mockClient, 'send').mockRejectedValueOnce(new Error('DynamoDB error'));
+
+      await expect(service.getFollowerCount(userId)).rejects.toThrow('DynamoDB error');
+    });
+  });
+
+  describe('getAllFollowers', () => {
+    it('should return empty array when user has no followers', async () => {
+      const userId = 'user-123';
+
+      const result = await service.getAllFollowers(userId);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return list of follower IDs', async () => {
+      const userId = 'user-456';
+      const followerId1 = 'user-123';
+      const followerId2 = 'user-789';
+      const followerId3 = 'user-abc';
+
+      // Create followers
+      await service.followUser(followerId1, userId);
+      await service.followUser(followerId2, userId);
+      await service.followUser(followerId3, userId);
+
+      // Get all followers
+      const result = await service.getAllFollowers(userId);
+
+      expect(result).toEqual(
+        expect.arrayContaining([followerId1, followerId2, followerId3])
+      );
+      expect(result).toHaveLength(3);
+    });
+
+    it('should only return followers for the specific user', async () => {
+      const userId1 = 'user-456';
+      const userId2 = 'user-999';
+      const followerId1 = 'user-123';
+      const followerId2 = 'user-789';
+
+      // User 123 follows user 456
+      await service.followUser(followerId1, userId1);
+      // User 789 follows user 999
+      await service.followUser(followerId2, userId2);
+
+      // Get followers for user 456
+      const result = await service.getAllFollowers(userId1);
+
+      expect(result).toEqual([followerId1]);
+      expect(result).not.toContain(followerId2);
+    });
+
+    it('should handle errors gracefully', async () => {
+      const userId = 'user-123';
+
+      // Mock an error
+      vi.spyOn(mockClient, 'send').mockRejectedValueOnce(new Error('DynamoDB error'));
+
+      await expect(service.getAllFollowers(userId)).rejects.toThrow('DynamoDB error');
     });
   });
 });

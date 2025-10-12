@@ -164,4 +164,55 @@ export class FollowService {
       .map((item) => (item as FollowEntity).followeeId)
       .filter((id): id is string => !!id);
   }
+
+  /**
+   * Get the total number of followers for a user
+   * Uses GSI2 to query all users following this user
+   *
+   * @param userId - ID of user to get follower count for
+   * @returns Number of followers
+   */
+  async getFollowerCount(userId: string): Promise<number> {
+    const result = await this.client.send(new QueryCommand({
+      TableName: this.tableName,
+      IndexName: 'GSI2',
+      KeyConditionExpression: 'GSI2PK = :pk AND begins_with(GSI2SK, :sk)',
+      ExpressionAttributeValues: {
+        ':pk': `USER#${userId}`,
+        ':sk': 'FOLLOW#'
+      },
+      Select: 'COUNT'
+    }));
+
+    return result.Count ?? 0;
+  }
+
+  /**
+   * Get all follower user IDs for a user
+   * Used by stream processor for feed fan-out
+   * Uses GSI2 to efficiently query followers
+   *
+   * @param userId - ID of user to get followers for
+   * @returns Array of follower user IDs
+   */
+  async getAllFollowers(userId: string): Promise<string[]> {
+    const result = await this.client.send(new QueryCommand({
+      TableName: this.tableName,
+      IndexName: 'GSI2',
+      KeyConditionExpression: 'GSI2PK = :pk AND begins_with(GSI2SK, :sk)',
+      ExpressionAttributeValues: {
+        ':pk': `USER#${userId}`,
+        ':sk': 'FOLLOW#'
+      }
+    }));
+
+    if (!result.Items || result.Items.length === 0) {
+      return [];
+    }
+
+    // Extract followerId from each follow entity
+    return result.Items
+      .map((item) => (item as FollowEntity).followerId)
+      .filter((id): id is string => !!id);
+  }
 }

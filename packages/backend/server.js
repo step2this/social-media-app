@@ -229,9 +229,9 @@ app.get('/comments', (req, res) => callHandler('commentsGetComments', req, res))
 // Notification routes
 app.get('/notifications', (req, res) => callHandler('notificationsGetNotifications', req, res));
 app.get('/notifications/unread-count', (req, res) => callHandler('notificationsGetUnreadCount', req, res));
-app.put('/notifications/:notificationId/read', (req, res) => callHandler('notificationsMarkRead', req, res));
+app.put('/notifications/:id/read', (req, res) => callHandler('notificationsMarkRead', req, res));
 app.put('/notifications/mark-all-read', (req, res) => callHandler('notificationsMarkAllRead', req, res));
-app.delete('/notifications/:notificationId', (req, res) => callHandler('notificationsDelete', req, res));
+app.delete('/notifications/:id', (req, res) => callHandler('notificationsDelete', req, res));
 
 // Hello endpoint
 app.get('/hello', (req, res) => callHandler('hello', req, res));
@@ -278,10 +278,12 @@ async function startServer() {
       const { handler: followCounterHandler } = await import('./dist/handlers/streams/follow-counter.js');
       const { handler: likeCounterHandler } = await import('./dist/handlers/streams/like-counter.js');
       const { handler: commentCounterHandler } = await import('./dist/handlers/streams/comment-counter.js');
+      const { handler: feedFanoutHandler } = await import('./dist/handlers/streams/feed-fanout.js');
 
       streamProcessor.registerHandler(followCounterHandler);
       streamProcessor.registerHandler(likeCounterHandler);
       streamProcessor.registerHandler(commentCounterHandler);
+      streamProcessor.registerHandler(feedFanoutHandler);
 
       await streamProcessor.start();
       console.log('✅ Stream processor started - profile stats will update automatically');
@@ -325,9 +327,9 @@ async function startServer() {
     console.log(`  GET  /follows/:userId/status`);
     console.log(`  GET  /notifications`);
     console.log(`  GET  /notifications/unread-count`);
-    console.log(`  PUT  /notifications/:notificationId/read`);
+    console.log(`  PUT  /notifications/:id/read`);
     console.log(`  PUT  /notifications/mark-all-read`);
-    console.log(`  DELETE /notifications/:notificationId`);
+    console.log(`  DELETE /notifications/:id`);
     console.log(`  GET  /hello`);
     console.log(`  GET  /health`);
   });
