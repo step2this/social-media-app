@@ -27,7 +27,7 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { FeedService, FollowService, PostService, ProfileService } from '@social-media-app/dal';
 import type { FeedPostItem } from '@social-media-app/shared';
-import { errorResponse, successResponse, verifyAccessToken } from '../../utils/index.js';
+import { errorResponse, successResponse, verifyAccessToken, getJWTConfigFromEnv } from '../../utils/index.js';
 import { createDynamoDBClient, getTableName, createS3Client, getS3BucketName, getCloudFrontDomain } from '../../utils/dynamodb.js';
 
 // Constants
@@ -44,8 +44,8 @@ const cloudFrontDomain = getCloudFrontDomain();
 
 const feedService = new FeedService(dynamoClient, tableName);
 const followService = new FollowService(dynamoClient, tableName);
-const postService = new PostService(dynamoClient, tableName, s3Client, bucketName, cloudFrontDomain);
-const profileService = new ProfileService(dynamoClient, tableName, s3Client, bucketName, cloudFrontDomain);
+const profileService = new ProfileService(dynamoClient, tableName, bucketName, cloudFrontDomain, s3Client);
+const postService = new PostService(dynamoClient, tableName, profileService);
 
 /**
  * UUID validation regex
@@ -174,7 +174,7 @@ export const handler = async (
 ): Promise<APIGatewayProxyResultV2> => {
   try {
     // 1. Validate authentication
-    const userId = event.requestContext.authorizer?.userId as string | undefined;
+    const userId = (event.requestContext as any).authorizer?.userId as string | undefined;
     const authHeader = event.headers?.authorization || event.headers?.Authorization;
 
     // Check for explicitly empty string (validation error)
@@ -201,7 +201,8 @@ export const handler = async (
     // Verify JWT token for defense in depth
     if (authHeader) {
       try {
-        await verifyAccessToken(authHeader.replace('Bearer ', ''));
+        const { secret } = getJWTConfigFromEnv();
+        await verifyAccessToken(authHeader.replace('Bearer ', ''), secret);
       } catch (error) {
         return errorResponse(401, 'Invalid or expired token', {
           message: error instanceof Error ? error.message : 'Token verification failed'

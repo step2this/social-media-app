@@ -2,8 +2,8 @@
 import type { DynamoDBStreamEvent, DynamoDBStreamHandler } from 'aws-lambda';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import pLimit from 'p-limit';
-import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
-import { FeedService, FollowService } from '@social-media-app/dal';
+import { createDynamoDBClient, getTableName, createS3Client, getS3BucketName, getCloudFrontDomain } from '../../utils/dynamodb.js';
+import { FeedService, FollowService, ProfileService } from '@social-media-app/dal';
 
 /**
  * Stream processor for feed fan-out on post creation
@@ -33,9 +33,14 @@ import { FeedService, FollowService } from '@social-media-app/dal';
 // Initialize services at container scope for reuse across warm invocations
 // This reduces cold start time by ~200ms and memory usage by ~30MB
 const dynamoClient = createDynamoDBClient();
+const s3Client = createS3Client();
 const tableName = getTableName();
+const bucketName = getS3BucketName();
+const cloudFrontDomain = getCloudFrontDomain();
+
 const feedService = new FeedService(dynamoClient, tableName);
 const followService = new FollowService(dynamoClient, tableName);
+const profileService = new ProfileService(dynamoClient, tableName, bucketName, cloudFrontDomain, s3Client);
 
 export const handler: DynamoDBStreamHandler = async (
   event: DynamoDBStreamEvent
@@ -93,6 +98,26 @@ export const handler: DynamoDBStreamHandler = async (
       const authorHandle = postData.userHandle as string;
       const createdAt = postData.createdAt as string;
 
+      // Fetch author profile to get full name and profile picture
+      // Posts don't store this, so we need to enrich from profile
+      let authorFullName: string | undefined;
+      let authorProfilePictureUrl: string | undefined;
+
+      try {
+        const authorProfile = await profileService.getProfileById(authorId);
+        if (authorProfile) {
+          authorFullName = authorProfile.fullName;
+          authorProfilePictureUrl = authorProfile.profilePictureUrl;
+        }
+      } catch (error) {
+        console.warn('[FeedFanout] Could not fetch author profile', {
+          authorId,
+          postId,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+        // Continue with undefined values - feed items will still work
+      }
+
       // Get author's follower count
       const followerCount = await followService.getFollowerCount(authorId);
 
@@ -129,8 +154,8 @@ export const handler: DynamoDBStreamHandler = async (
                 postId,
                 authorId,
                 authorHandle,
-                authorFullName: postData.authorFullName as string | undefined,
-                authorProfilePictureUrl: postData.authorProfilePictureUrl as string | undefined,
+                authorFullName,
+                authorProfilePictureUrl,
                 caption: postData.caption as string | undefined,
                 imageUrl: postData.imageUrl as string | undefined,
                 thumbnailUrl: postData.thumbnailUrl as string | undefined,
