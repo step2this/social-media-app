@@ -274,7 +274,7 @@ export class CreatePostRequestBuilder {
     fileType: 'image/jpeg'
   };
 
-  withFileType(fileType: string): CreatePostRequestBuilder {
+  withFileType(fileType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'): CreatePostRequestBuilder {
     this.request.fileType = fileType;
     return this;
   }
@@ -313,7 +313,7 @@ export class PresignedUrlRequestBuilder {
     purpose: 'post-image'
   };
 
-  withFileType(fileType: string): PresignedUrlRequestBuilder {
+  withFileType(fileType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'): PresignedUrlRequestBuilder {
     this.request.fileType = fileType;
     return this;
   }

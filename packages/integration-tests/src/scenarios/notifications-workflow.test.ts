@@ -277,8 +277,8 @@ describe('Notifications Workflow Integration', () => {
       expect(notificationsData.notifications).toBeDefined();
       expect(notificationsData.notifications.length).toBe(1);
 
-      // Verify pagination metadata
-      if (notificationsData.totalCount > 1) {
+      // Verify pagination metadata (with null check for totalCount)
+      if (notificationsData.totalCount && notificationsData.totalCount > 1) {
         expect(notificationsData.hasMore).toBe(true);
         expect(notificationsData.nextCursor).toBeDefined();
       }
@@ -457,7 +457,7 @@ describe('Notifications Workflow Integration', () => {
         { headers: { Authorization: `Bearer ${user1Token}` } }
       );
       const initialCountData = await parseResponse(initialCountResponse, GetUnreadCountResponseSchema);
-      const initialCount = initialCountData.count;
+      const initialCount = initialCountData.count ?? 0;
 
       // Get an unread notification
       const notificationsResponse = await httpClient.get<NotificationsListResponse>(

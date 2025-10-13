@@ -201,8 +201,10 @@ describe('Instagram-Like Read State', () => {
       );
 
       expect(markReadResponse.status).toBe(200);
-      expect(markReadResponse.data.success).toBe(true);
-      expect(markReadResponse.data.markedCount).toBe(2);
+      // Type assertion for response data
+      const markReadData = markReadResponse.data as { success: boolean; markedCount: number };
+      expect(markReadData.success).toBe(true);
+      expect(markReadData.markedCount).toBe(2);
 
       testLogger.info('✅ Marked posts 1 and 2 as read');
 
@@ -244,8 +246,10 @@ describe('Instagram-Like Read State', () => {
       );
 
       expect(markReadResponse.status).toBe(200);
-      expect(markReadResponse.data.success).toBe(true);
-      expect(markReadResponse.data.markedCount).toBe(0); // No posts marked because it doesn't exist
+      // Type assertion for response data
+      const markReadData = markReadResponse.data as { success: boolean; markedCount: number };
+      expect(markReadData.success).toBe(true);
+      expect(markReadData.markedCount).toBe(0); // No posts marked because it doesn't exist
 
       testLogger.info('✅ Non-existent posts handled gracefully');
     });
@@ -260,8 +264,10 @@ describe('Instagram-Like Read State', () => {
       );
 
       expect(markReadResponse.status).toBe(200);
-      expect(markReadResponse.data.success).toBe(true);
-      expect(markReadResponse.data.markedCount).toBe(0);
+      // Type assertion for response data
+      const markReadData = markReadResponse.data as { success: boolean; markedCount: number };
+      expect(markReadData.success).toBe(true);
+      expect(markReadData.markedCount).toBe(0);
 
       testLogger.info('✅ Empty postIds array handled gracefully');
     });
@@ -343,10 +349,6 @@ describe('Instagram-Like Read State', () => {
         postIds: newViewerFeedData.posts.map(p => p.id)
       });
 
-      const newViewerPost1 = newViewerFeedData.posts.find(p => p.id === post1Id);
-      const newViewerPost2 = newViewerFeedData.posts.find(p => p.id === post2Id);
-      const newViewerPost3 = newViewerFeedData.posts.find(p => p.id === post3Id);
-
       // Note: Posts are only fanned out to followers when created, not when following.
       // Since new viewer followed AFTER posts were created, they won't see the posts
       // in their materialized feed unless we have a backfill mechanism.
@@ -354,6 +356,9 @@ describe('Instagram-Like Read State', () => {
       testLogger.info('ℹ️ New follower feed behavior: posts not backfilled after follow');
 
       // Skip assertions for new viewer since backfill isn't implemented
+      // const newViewerPost1 = newViewerFeedData.posts.find(p => p.id === post1Id);
+      // const newViewerPost2 = newViewerFeedData.posts.find(p => p.id === post2Id);
+      // const newViewerPost3 = newViewerFeedData.posts.find(p => p.id === post3Id);
       // expect(newViewerPost1).toBeDefined();
       // expect(newViewerPost2).toBeDefined();
       // expect(newViewerPost3).toBeDefined();

@@ -34,11 +34,11 @@ interface CacheStatusResponse {
  * Lambda handler for cache status endpoint
  * Development-only endpoint for monitoring Redis and Kinesis status
  *
- * @param event - API Gateway proxy event
+ * @param _event - API Gateway proxy event (unused, but required for Lambda signature)
  * @returns API Gateway proxy result with cache status
  */
 export const handler = async (
-  event: APIGatewayProxyEventV2
+  _event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> => {
   try {
     // Only allow in development environment

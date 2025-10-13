@@ -204,6 +204,32 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Dev endpoint: Cache status (only available in development/LocalStack mode)
+if (process.env.NODE_ENV === 'development' || process.env.USE_LOCALSTACK === 'true') {
+  app.get('/dev/cache-status', async (req, res) => {
+    console.log(`📥 ${req.method} ${req.path}`);
+    try {
+      // Dynamically import the cache-status handler
+      const { handler: cacheStatusHandler } = await import('./dist/handlers/dev/cache-status.js');
+
+      // Create a Lambda event (no auth needed for dev endpoint)
+      const event = createLambdaEvent(req);
+
+      // Call the handler
+      const result = await cacheStatusHandler(event);
+
+      // Send Lambda response
+      sendLambdaResponse(res, result);
+    } catch (error) {
+      console.error('Cache status handler error:', error);
+      res.status(500).json({
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+}
+
 // Helper function to safely call handlers
 const callHandler = async (handlerName, req, res) => {
   console.log(`📥 ${req.method} ${req.path}`);
@@ -382,6 +408,9 @@ async function startServer() {
     console.log(`  DELETE /notifications/:id`);
     console.log(`  GET  /hello`);
     console.log(`  GET  /health`);
+    if (process.env.NODE_ENV === 'development' || process.env.USE_LOCALSTACK === 'true') {
+      console.log(`  GET  /dev/cache-status (dev only)`);
+    }
   });
 }
 

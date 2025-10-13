@@ -83,11 +83,19 @@ export class EnvironmentDetector {
     }
 
     try {
-      const response = await fetch(`${this.config.localStackEndpoint}/_localstack/health`, {
-        method: 'GET',
-        timeout: 5000
-      });
-      return response.ok;
+      // Use AbortController for timeout since 'timeout' is not a standard RequestInit property
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      try {
+        const response = await fetch(`${this.config.localStackEndpoint}/_localstack/health`, {
+          method: 'GET',
+          signal: controller.signal
+        });
+        return response.ok;
+      } finally {
+        clearTimeout(timeoutId);
+      }
     } catch {
       return false;
     }
@@ -98,11 +106,19 @@ export class EnvironmentDetector {
    */
   async isApiServerAvailable(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.config.apiBaseUrl}/health`, {
-        method: 'GET',
-        timeout: 5000
-      });
-      return response.ok;
+      // Use AbortController for timeout since 'timeout' is not a standard RequestInit property
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      try {
+        const response = await fetch(`${this.config.apiBaseUrl}/health`, {
+          method: 'GET',
+          signal: controller.signal
+        });
+        return response.ok;
+      } finally {
+        clearTimeout(timeoutId);
+      }
     } catch {
       return false;
     }

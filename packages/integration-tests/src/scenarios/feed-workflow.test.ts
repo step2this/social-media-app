@@ -22,22 +22,19 @@ import {
   UnfollowUserResponseSchema,
   DeletePostResponseSchema,
   FeedResponseSchema,
-  ProfileResponseSchema,
   type RegisterResponse,
   type CreatePostResponse,
   type FollowUserResponse,
   type UnfollowUserResponse,
   type DeletePostResponse,
-  type FeedResponse,
-  type Profile
+  type FeedResponse
 } from '@social-media-app/shared';
 import {
   createLocalStackHttpClient,
   parseResponse,
   environmentDetector,
   testLogger,
-  delay,
-  retryWithBackoff
+  delay
 } from '../utils/index.js';
 import {
   createRegisterRequest,

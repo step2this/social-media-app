@@ -6,7 +6,8 @@ import { useFeedItemAutoRead } from '../hooks/useFeedItemAutoRead';
 import {
   DevMenu,
   DevReadStateDebugger,
-  DevManualMarkButton
+  DevManualMarkButton,
+  DevCacheStatusIndicator
 } from '../components/dev';
 import './HomePage.css';
 
@@ -190,6 +191,10 @@ export const HomePage: React.FC = () => {
 
       {/* Dev Tools Menu (Ctrl+Shift+D) */}
       <DevMenu>
+        {/* Cache and streaming status indicator - placed at top for visibility */}
+        <DevCacheStatusIndicator />
+
+        {/* Feed debugging tools */}
         <DevReadStateDebugger posts={posts} />
         {posts.map((post) => (
           <DevManualMarkButton

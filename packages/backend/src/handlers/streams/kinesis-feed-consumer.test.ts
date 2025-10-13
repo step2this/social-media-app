@@ -1,10 +1,17 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
+import { randomUUID } from 'crypto';
 import type { KinesisStreamEvent, KinesisStreamRecord } from 'aws-lambda';
 import type { FeedEvent } from '@social-media-app/shared';
 
 // Setup module mocks
 vi.mock('@social-media-app/dal');
 vi.mock('../../utils/aws-config.js');
+
+/**
+ * Helper to generate test UUIDs dynamically
+ * Prevents brittle tests with hardcoded values
+ */
+const testUUID = () => randomUUID();
 
 describe('Kinesis Feed Consumer - Handler Tests', () => {
   let handler: any;

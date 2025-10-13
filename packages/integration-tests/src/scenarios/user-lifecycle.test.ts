@@ -16,7 +16,6 @@ import {
   RegisterResponseSchema,
   LoginResponseSchema,
   ProfileResponseSchema,
-  UpdateProfileResponseSchema,
   type RegisterResponse,
   type LoginResponse,
   type Profile,
@@ -167,7 +166,8 @@ describe('User Lifecycle Integration', () => {
       try {
         const handleLookupResponse = await httpClient.get(`/profile/handle/${testUsername}_handle`);
         if (handleLookupResponse.status === 200) {
-          const handleData = handleLookupResponse.data;
+          // Type assertion for response data
+          const handleData = handleLookupResponse.data as { profile: { handle: string } };
           expect(handleData.profile.handle).toBe(`${testUsername}_handle`);
           testLogger.info('✅ Profile retrieval by handle successful');
         } else {
@@ -212,7 +212,8 @@ describe('User Lifecycle Integration', () => {
       const authenticatedProfileResponse = await httpClient.get('/auth/profile');
       expect(authenticatedProfileResponse.status).toBe(200);
 
-      const authenticatedProfile = authenticatedProfileResponse.data.profile;
+      // Type assertion for response data
+      const authenticatedProfile = (authenticatedProfileResponse.data as { profile: { id: string; fullName: string } }).profile;
       expect(authenticatedProfile.id).toBe(userId);
       expect(authenticatedProfile.fullName).toBe('Integration Test User');
 

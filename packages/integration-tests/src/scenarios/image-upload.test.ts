@@ -15,11 +15,9 @@ import {
   GetPresignedUrlResponseSchema,
   CreatePostResponseSchema,
   LoginResponseSchema,
-  RegisterResponseSchema,
   type GetPresignedUrlResponse,
   type CreatePostResponse,
-  type LoginResponse,
-  type RegisterResponse
+  type LoginResponse
 } from '@social-media-app/shared';
 import {
   createLocalStackHttpClient,
@@ -183,7 +181,7 @@ describe('LocalStack Image Upload Integration', () => {
         .build();
 
       const urlResponse = await httpClient.post<GetPresignedUrlResponse>('/profile/upload-url', urlRequest);
-      const urlData = await parseResponse(urlResponse, GetPresignedUrlResponseSchema);
+      await parseResponse(urlResponse, GetPresignedUrlResponseSchema);
 
       // Create post request with file type for image upload
       const postRequest = createPostRequest()
@@ -193,9 +191,9 @@ describe('LocalStack Image Upload Integration', () => {
         .asPublic()
         .build();
 
-      testLogger.debug('Creating post with LocalStack URLs:', {
-        imageUrl: postRequest.imageUrl,
-        thumbnailUrl: postRequest.thumbnailUrl
+      testLogger.debug('Creating post with file type:', {
+        fileType: postRequest.fileType,
+        caption: postRequest.caption
       });
 
       // Act
@@ -239,7 +237,7 @@ describe('LocalStack Image Upload Integration', () => {
         .build();
 
       const urlResponse = await httpClient.post<GetPresignedUrlResponse>('/profile/upload-url', urlRequest);
-      const urlData = await parseResponse(urlResponse, GetPresignedUrlResponseSchema);
+      await parseResponse(urlResponse, GetPresignedUrlResponseSchema);
 
       const postRequest = createPostRequest()
         .withFileType('image/jpeg')
@@ -257,7 +255,8 @@ describe('LocalStack Image Upload Integration', () => {
       expect(getResponse.status).toBe(200);
 
       // Assert: Verify LocalStack URLs are maintained
-      const retrievedPost = getResponse.data.post;
+      // Type assertion for response data structure
+      const retrievedPost = (getResponse.data as { post: { imageUrl?: string; thumbnailUrl?: string } }).post;
 
       expect(retrievedPost.imageUrl).toMatch(/^http:\/\/localhost:4566\/tamafriends-media-local/);
       expect(retrievedPost.thumbnailUrl).toMatch(/^http:\/\/localhost:4566\/tamafriends-media-local/);
@@ -272,11 +271,11 @@ describe('LocalStack Image Upload Integration', () => {
 
   describe('Error Handling', () => {
     it('should handle invalid file types gracefully', async () => {
-      // Arrange
-      const invalidRequest = createPresignedUrlRequest()
-        .withFileType('application/exe') // Invalid file type
-        .forPostImage()
-        .build();
+      // Arrange: Manually create request with invalid file type to test error handling
+      const invalidRequest = {
+        fileType: 'application/exe' as any, // Type assertion needed to test invalid input
+        purpose: 'post-image'
+      };
 
       testLogger.debug('Testing invalid file type handling');
 

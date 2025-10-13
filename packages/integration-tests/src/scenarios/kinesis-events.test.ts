@@ -33,6 +33,7 @@ import {
 import { createTestUser, createTestPost } from '../utils/test-factories.js';
 import { createLocalStackHttpClient } from '../utils/http-client.js';
 import { delay } from '../utils/helpers.js';
+import { waitForCondition, testUUID, isValidUUID } from '../utils/test-helpers.js';
 
 /**
  * Integration tests for Kinesis event publishing
@@ -103,13 +104,17 @@ describe('Kinesis Event Publishing Integration', () => {
    */
   describe('Event Publishing via KinesisEventPublisher', () => {
     test('publishes POST_CREATED event successfully', async () => {
+      const eventId = testUUID();
+      const postId = testUUID();
+      const authorId = testUUID();
+
       const event: PostCreatedEvent = {
-        eventId: '123e4567-e89b-12d3-a456-426614174000',
+        eventId,
         timestamp: new Date().toISOString(),
         eventType: 'POST_CREATED',
         version: '1.0',
-        postId: '223e4567-e89b-12d3-a456-426614174000',
-        authorId: '323e4567-e89b-12d3-a456-426614174000',
+        postId,
+        authorId,
         authorHandle: 'testuser',
         caption: 'Test post for integration',
         isPublic: true,
@@ -119,15 +124,26 @@ describe('Kinesis Event Publishing Integration', () => {
       // Publish event
       await expect(kinesisPublisher.publishEvent(event)).resolves.not.toThrow();
 
-      // Wait for event propagation
-      await delay(1000);
+      // Wait for event to appear in stream
+      await waitForCondition(
+        async () => {
+          try {
+            const retrievedEvent = await getLatestEventFromStream(kinesisClient, streamName);
+            return retrievedEvent.eventType === 'POST_CREATED' && retrievedEvent.postId === postId;
+          } catch {
+            return false;
+          }
+        },
+        { timeout: 5000, label: 'POST_CREATED event in stream' }
+      );
 
       // Retrieve event from stream
       const retrievedEvent = await getLatestEventFromStream(kinesisClient, streamName);
 
       expect(retrievedEvent).toBeDefined();
       expect(retrievedEvent.eventType).toBe('POST_CREATED');
-      expect(retrievedEvent.postId).toBe(event.postId);
+      expect(retrievedEvent.postId).toBe(postId);
+      expect(isValidUUID(retrievedEvent.eventId)).toBe(true);
 
       // Validate schema
       const validationResult = PostCreatedEventSchema.safeParse(retrievedEvent);
@@ -135,17 +151,35 @@ describe('Kinesis Event Publishing Integration', () => {
     });
 
     test('publishes POST_READ event successfully', async () => {
+      const eventId = testUUID();
+      const userId = testUUID();
+      const postId = testUUID();
+
       const event: PostReadEvent = {
-        eventId: '423e4567-e89b-12d3-a456-426614174000',
+        eventId,
         timestamp: new Date().toISOString(),
         eventType: 'POST_READ',
         version: '1.0',
-        userId: '523e4567-e89b-12d3-a456-426614174000',
-        postId: '623e4567-e89b-12d3-a456-426614174000'
+        userId,
+        postId
       };
 
       await expect(kinesisPublisher.publishEvent(event)).resolves.not.toThrow();
-      await delay(1000);
+
+      // Wait for event to appear in stream
+      await waitForCondition(
+        async () => {
+          try {
+            const retrievedEvent = await getLatestEventFromStream(kinesisClient, streamName);
+            return retrievedEvent.eventType === 'POST_READ' &&
+                   retrievedEvent.eventType === 'POST_READ' &&
+                   retrievedEvent.postId === postId;
+          } catch {
+            return false;
+          }
+        },
+        { timeout: 5000, label: 'POST_READ event in stream' }
+      );
 
       const retrievedEvent = await getLatestEventFromStream(kinesisClient, streamName);
 
@@ -154,7 +188,8 @@ describe('Kinesis Event Publishing Integration', () => {
 
       // Type narrowing for discriminated union
       if (retrievedEvent.eventType === 'POST_READ') {
-        expect(retrievedEvent.userId).toBe(event.userId);
+        expect(retrievedEvent.userId).toBe(userId);
+        expect(isValidUUID(retrievedEvent.eventId)).toBe(true);
       }
 
       // Validate schema
@@ -163,18 +198,34 @@ describe('Kinesis Event Publishing Integration', () => {
     });
 
     test('publishes POST_LIKED event successfully', async () => {
+      const eventId = testUUID();
+      const userId = testUUID();
+      const postId = testUUID();
+
       const event: PostLikedEvent = {
-        eventId: '723e4567-e89b-12d3-a456-426614174000',
+        eventId,
         timestamp: new Date().toISOString(),
         eventType: 'POST_LIKED',
         version: '1.0',
-        userId: '823e4567-e89b-12d3-a456-426614174000',
-        postId: '923e4567-e89b-12d3-a456-426614174000',
+        userId,
+        postId,
         liked: true
       };
 
       await expect(kinesisPublisher.publishEvent(event)).resolves.not.toThrow();
-      await delay(1000);
+
+      // Wait for event to appear in stream
+      await waitForCondition(
+        async () => {
+          try {
+            const retrievedEvent = await getLatestEventFromStream(kinesisClient, streamName);
+            return retrievedEvent.eventType === 'POST_LIKED' && retrievedEvent.postId === postId;
+          } catch {
+            return false;
+          }
+        },
+        { timeout: 5000, label: 'POST_LIKED event in stream' }
+      );
 
       const retrievedEvent = await getLatestEventFromStream(kinesisClient, streamName);
 
@@ -184,6 +235,7 @@ describe('Kinesis Event Publishing Integration', () => {
       // Type narrowing for discriminated union
       if (retrievedEvent.eventType === 'POST_LIKED') {
         expect(retrievedEvent.liked).toBe(true);
+        expect(isValidUUID(retrievedEvent.eventId)).toBe(true);
       }
 
       // Validate schema
@@ -248,36 +300,38 @@ describe('Kinesis Event Publishing Integration', () => {
         isPublic: true
       });
 
-      // Wait for event propagation
-      await delay(3000);
+      // Wait for event to appear in stream with polling
+      let postCreatedEvent: PostCreatedEvent | undefined;
 
-      // Find the event in stream
-      const events = await getAllEventsFromStream(kinesisClient, streamName, 1000);
-
-      const postCreatedEvent = events.find(
-        (e): e is PostCreatedEvent =>
-          e.eventType === 'POST_CREATED' && e.postId === postId
+      await waitForCondition(
+        async () => {
+          const events = await getAllEventsFromStream(kinesisClient, streamName, 1000);
+          postCreatedEvent = events.find(
+            (e): e is PostCreatedEvent =>
+              e.eventType === 'POST_CREATED' && e.postId === postId
+          );
+          return postCreatedEvent !== undefined;
+        },
+        { timeout: 10000, label: 'POST_CREATED event from handler' }
       );
 
-      if (postCreatedEvent) {
-        // Verify event properties
-        expect(postCreatedEvent.eventType).toBe('POST_CREATED');
-        expect(postCreatedEvent.version).toBe('1.0');
-        expect(postCreatedEvent.postId).toBe(postId);
-        expect(postCreatedEvent.authorId).toBe(user.userId);
-        expect(postCreatedEvent.authorHandle).toBe(user.handle);
-        expect(postCreatedEvent.caption).toBe(testCaption);
-        expect(postCreatedEvent.isPublic).toBe(true);
-        expect(postCreatedEvent.eventId).toBeDefined();
-        expect(postCreatedEvent.timestamp).toBeDefined();
+      // Event must exist after waitForCondition succeeds
+      expect(postCreatedEvent).toBeDefined();
 
-        // Validate schema
-        const validationResult = PostCreatedEventSchema.safeParse(postCreatedEvent);
-        expect(validationResult.success).toBe(true);
-      } else {
-        // If event not found, this is expected until Phase 2.3 (handler integration)
-        console.warn('POST_CREATED event not found in stream - handlers not yet integrated');
-      }
+      // Verify event properties
+      expect(postCreatedEvent!.eventType).toBe('POST_CREATED');
+      expect(postCreatedEvent!.version).toBe('1.0');
+      expect(postCreatedEvent!.postId).toBe(postId);
+      expect(postCreatedEvent!.authorId).toBe(user.userId);
+      expect(postCreatedEvent!.authorHandle).toBe(user.handle);
+      expect(postCreatedEvent!.caption).toBe(testCaption);
+      expect(postCreatedEvent!.isPublic).toBe(true);
+      expect(isValidUUID(postCreatedEvent!.eventId)).toBe(true);
+      expect(postCreatedEvent!.timestamp).toBeDefined();
+
+      // Validate schema
+      const validationResult = PostCreatedEventSchema.safeParse(postCreatedEvent);
+      expect(validationResult.success).toBe(true);
     }, 30000);
 
     test('POST_READ event published when post is marked as read', async () => {
@@ -298,33 +352,35 @@ describe('Kinesis Event Publishing Integration', () => {
 
       expect(markReadResponse.status).toBe(200);
 
-      // Wait for event propagation
-      await delay(3000);
+      // Wait for event to appear in stream with polling
+      let postReadEvent: PostReadEvent | undefined;
 
-      // Find the event in stream
-      const events = await getAllEventsFromStream(kinesisClient, streamName, 1000);
-
-      const postReadEvent = events.find(
-        (e): e is PostReadEvent =>
-          e.eventType === 'POST_READ' &&
-          e.postId === postId &&
-          e.userId === user.userId
+      await waitForCondition(
+        async () => {
+          const events = await getAllEventsFromStream(kinesisClient, streamName, 1000);
+          postReadEvent = events.find(
+            (e): e is PostReadEvent =>
+              e.eventType === 'POST_READ' &&
+              e.postId === postId &&
+              e.userId === user.userId
+          );
+          return postReadEvent !== undefined;
+        },
+        { timeout: 10000, label: 'POST_READ event from handler' }
       );
 
-      if (postReadEvent) {
-        expect(postReadEvent.eventType).toBe('POST_READ');
-        expect(postReadEvent.version).toBe('1.0');
-        expect(postReadEvent.postId).toBe(postId);
-        expect(postReadEvent.userId).toBe(user.userId);
-        expect(postReadEvent.eventId).toBeDefined();
-        expect(postReadEvent.timestamp).toBeDefined();
+      // Event must exist after waitForCondition succeeds
+      expect(postReadEvent).toBeDefined();
+      expect(postReadEvent!.eventType).toBe('POST_READ');
+      expect(postReadEvent!.version).toBe('1.0');
+      expect(postReadEvent!.postId).toBe(postId);
+      expect(postReadEvent!.userId).toBe(user.userId);
+      expect(isValidUUID(postReadEvent!.eventId)).toBe(true);
+      expect(postReadEvent!.timestamp).toBeDefined();
 
-        // Validate schema
-        const validationResult = PostReadEventSchema.safeParse(postReadEvent);
-        expect(validationResult.success).toBe(true);
-      } else {
-        console.warn('POST_READ event not found in stream - handlers not yet integrated');
-      }
+      // Validate schema
+      const validationResult = PostReadEventSchema.safeParse(postReadEvent);
+      expect(validationResult.success).toBe(true);
     }, 30000);
 
     test('POST_LIKED event published when post is liked', async () => {
@@ -349,34 +405,36 @@ describe('Kinesis Event Publishing Integration', () => {
 
       expect(likeResponse.status).toBe(200);
 
-      // Wait for event propagation
-      await delay(3000);
+      // Wait for event to appear in stream with polling
+      let postLikedEvent: PostLikedEvent | undefined;
 
-      // Find the event in stream
-      const events = await getAllEventsFromStream(kinesisClient, streamName, 1000);
-
-      const postLikedEvent = events.find(
-        (e): e is PostLikedEvent =>
-          e.eventType === 'POST_LIKED' &&
-          e.postId === postId &&
-          e.userId === liker.userId
+      await waitForCondition(
+        async () => {
+          const events = await getAllEventsFromStream(kinesisClient, streamName, 1000);
+          postLikedEvent = events.find(
+            (e): e is PostLikedEvent =>
+              e.eventType === 'POST_LIKED' &&
+              e.postId === postId &&
+              e.userId === liker.userId
+          );
+          return postLikedEvent !== undefined;
+        },
+        { timeout: 10000, label: 'POST_LIKED event from handler' }
       );
 
-      if (postLikedEvent) {
-        expect(postLikedEvent.eventType).toBe('POST_LIKED');
-        expect(postLikedEvent.version).toBe('1.0');
-        expect(postLikedEvent.postId).toBe(postId);
-        expect(postLikedEvent.userId).toBe(liker.userId);
-        expect(postLikedEvent.liked).toBe(true);
-        expect(postLikedEvent.eventId).toBeDefined();
-        expect(postLikedEvent.timestamp).toBeDefined();
+      // Event must exist after waitForCondition succeeds
+      expect(postLikedEvent).toBeDefined();
+      expect(postLikedEvent!.eventType).toBe('POST_LIKED');
+      expect(postLikedEvent!.version).toBe('1.0');
+      expect(postLikedEvent!.postId).toBe(postId);
+      expect(postLikedEvent!.userId).toBe(liker.userId);
+      expect(postLikedEvent!.liked).toBe(true);
+      expect(isValidUUID(postLikedEvent!.eventId)).toBe(true);
+      expect(postLikedEvent!.timestamp).toBeDefined();
 
-        // Validate schema
-        const validationResult = PostLikedEventSchema.safeParse(postLikedEvent);
-        expect(validationResult.success).toBe(true);
-      } else {
-        console.warn('POST_LIKED event not found in stream - handlers not yet integrated');
-      }
+      // Validate schema
+      const validationResult = PostLikedEventSchema.safeParse(postLikedEvent);
+      expect(validationResult.success).toBe(true);
     }, 30000);
 
     test('batch POST_READ events published for multiple posts', async () => {
@@ -402,32 +460,36 @@ describe('Kinesis Event Publishing Integration', () => {
 
       expect(markReadResponse.status).toBe(200);
 
-      // Wait for event propagation
-      await delay(3000);
+      // Wait for events to appear in stream with polling
+      let readEvents: PostReadEvent[] = [];
 
-      // Find the events in stream
-      const events = await getAllEventsFromStream(kinesisClient, streamName, 1000);
-
-      const readEvents = events.filter(
-        (e): e is PostReadEvent =>
-          e.eventType === 'POST_READ' &&
-          e.userId === user.userId &&
-          postIds.includes(e.postId)
+      await waitForCondition(
+        async () => {
+          const events = await getAllEventsFromStream(kinesisClient, streamName, 1000);
+          readEvents = events.filter(
+            (e): e is PostReadEvent =>
+              e.eventType === 'POST_READ' &&
+              e.userId === user.userId &&
+              postIds.includes(e.postId)
+          );
+          // Wait until we have at least some events (handlers may batch them)
+          return readEvents.length > 0;
+        },
+        { timeout: 15000, label: 'batch POST_READ events from handler' }
       );
 
-      if (readEvents.length > 0) {
-        expect(readEvents.length).toBeLessThanOrEqual(postIds.length);
+      // Should have received at least some events
+      expect(readEvents.length).toBeGreaterThan(0);
+      expect(readEvents.length).toBeLessThanOrEqual(postIds.length);
 
-        // Verify each event
-        readEvents.forEach(event => {
-          expect(event.eventType).toBe('POST_READ');
-          expect(event.version).toBe('1.0');
-          expect(event.userId).toBe(user.userId);
-          expect(postIds).toContain(event.postId);
-        });
-      } else {
-        console.warn('Batch POST_READ events not found - handlers not yet integrated');
-      }
+      // Verify each event
+      readEvents.forEach(event => {
+        expect(event.eventType).toBe('POST_READ');
+        expect(event.version).toBe('1.0');
+        expect(event.userId).toBe(user.userId);
+        expect(postIds).toContain(event.postId);
+        expect(isValidUUID(event.eventId)).toBe(true);
+      });
     }, 45000);
   });
 
