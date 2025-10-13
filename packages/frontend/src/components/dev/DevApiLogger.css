@@ -1,0 +1,126 @@
+.dev-api-logger {
+  margin-bottom: var(--spacing-lg);
+}
+
+.dev-api-logger__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.dev-api-logger__header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--tama-pearl-white);
+  margin: 0;
+}
+
+.dev-api-logger__clear-button {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--tama-gray-800);
+  color: var(--tama-pearl-white);
+  border: 1px solid var(--tama-gray-700);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.2s;
+}
+
+.dev-api-logger__clear-button:hover {
+  background: var(--tama-gray-700);
+}
+
+.dev-api-logger__log {
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--tama-gray-800);
+  border-radius: 4px;
+  padding: var(--spacing-sm);
+}
+
+.dev-api-logger__entry {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
+  background: var(--tama-gray-900);
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.dev-api-logger__entry--success {
+  border-left: 4px solid var(--tama-sorrento-green);
+}
+
+.dev-api-logger__entry--error {
+  border-left: 4px solid var(--tama-racing-red);
+}
+
+.dev-api-logger__method-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  min-width: 50px;
+  text-align: center;
+}
+
+.dev-api-logger__method-badge--GET {
+  background: var(--tama-electric-blue);
+  color: white;
+}
+
+.dev-api-logger__method-badge--POST {
+  background: var(--tama-sorrento-green);
+  color: white;
+}
+
+.dev-api-logger__method-badge--PUT {
+  background: var(--tama-rally-yellow);
+  color: var(--tama-gray-900);
+}
+
+.dev-api-logger__method-badge--DELETE {
+  background: var(--tama-racing-red);
+  color: white;
+}
+
+.dev-api-logger__method-badge--PATCH {
+  background: var(--tama-pearl-white);
+  color: var(--tama-gray-900);
+}
+
+.dev-api-logger__endpoint {
+  flex: 1;
+  color: var(--tama-pearl-white);
+  font-family: 'Monaco', 'Courier New', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dev-api-logger__status-code {
+  color: var(--tama-gray-400);
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.dev-api-logger__timestamp {
+  color: var(--tama-gray-400);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  min-width: 70px;
+  text-align: right;
+}
+
+.dev-api-logger__empty {
+  padding: var(--spacing-lg);
+  text-align: center;
+  color: var(--tama-gray-400);
+  font-style: italic;
+  margin: 0;
+}
