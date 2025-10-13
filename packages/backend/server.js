@@ -119,10 +119,39 @@ app.use(cors());
 app.use(express.json());
 
 /**
+ * Authentication middleware - extracts JWT and adds userId to context
+ * Mimics Lambda authorizer behavior for local development
+ */
+app.use(async (req, res, next) => {
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const token = authHeader.replace('Bearer ', '');
+
+      // Import JWT utilities dynamically
+      const { verifyAccessToken, getJWTConfigFromEnv } = await import('./dist/utils/index.js');
+      const { secret } = getJWTConfigFromEnv();
+
+      // Verify token and extract userId
+      const decoded = await verifyAccessToken(token, secret);
+
+      // Store userId in request for Lambda event creation
+      req.authenticatedUserId = decoded.userId;
+    } catch (error) {
+      // Don't fail here - let the handler decide how to handle invalid tokens
+      console.log('⚠️  Invalid or expired token:', error.message);
+    }
+  }
+
+  next();
+});
+
+/**
  * Convert Express request/response to AWS Lambda format and back
  */
 const createLambdaEvent = (req) => {
-  return {
+  const event = {
     requestContext: {
       http: {
         method: req.method,
@@ -135,6 +164,15 @@ const createLambdaEvent = (req) => {
     pathParameters: req.params,
     queryStringParameters: req.query
   };
+
+  // Add authorizer context if user is authenticated
+  if (req.authenticatedUserId) {
+    event.requestContext.authorizer = {
+      userId: req.authenticatedUserId
+    };
+  }
+
+  return event;
 };
 
 const sendLambdaResponse = (res, lambdaResult) => {
@@ -219,6 +257,12 @@ app.get('/likes/:postId', (req, res) => callHandler('likesGetLikeStatus', req, r
 // Follow routes
 app.post('/follows', (req, res) => callHandler('followsFollowUser', req, res));
 app.delete('/follows', (req, res) => callHandler('followsUnfollowUser', req, res));
+// Support RESTful pattern: DELETE /follows/:userId
+app.delete('/follows/:userId', (req, res) => {
+  // Extract userId from path and add to body before calling handler
+  req.rawBody = JSON.stringify({ userId: req.params.userId });
+  callHandler('followsUnfollowUser', req, res);
+});
 app.get('/follows/:userId/status', (req, res) => callHandler('followsGetFollowStatus', req, res));
 
 // Comment routes

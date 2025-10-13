@@ -42,8 +42,9 @@ export const handler: DynamoDBStreamHandler = async (
       }
 
       // Only process POST entities (check Keys SK)
+      // SK format: POST#<timestamp>#<postId>
       const skValue = record.dynamodb?.Keys?.SK?.S;
-      if (skValue !== 'POST') {
+      if (!skValue?.startsWith('POST#')) {
         return;
       }
 
@@ -62,10 +63,10 @@ export const handler: DynamoDBStreamHandler = async (
       // Unmarshall DynamoDB AttributeValue to JS object
       const postData = unmarshall(filteredImage as any);
 
-      // Extract postId
-      const postId = postData.postId as string;
+      // Extract postId (note: Post entity uses 'id' not 'postId')
+      const postId = postData.id as string;
       if (!postId) {
-        console.error('[FeedCleanupPostDelete] Missing postId in deleted post', {
+        console.error('[FeedCleanupPostDelete] Missing id in deleted post', {
           postData
         });
         return;

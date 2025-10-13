@@ -68,8 +68,9 @@ export const handler: DynamoDBStreamHandler = async (
       }
 
       // Only process POST entities (check Keys, not NewImage)
+      // SK format: POST#<timestamp>#<postId>
       const skValue = record.dynamodb?.Keys?.SK?.S;
-      if (skValue !== 'POST') {
+      if (!skValue?.startsWith('POST#')) {
         return;
       }
 
@@ -83,9 +84,10 @@ export const handler: DynamoDBStreamHandler = async (
       const postData = unmarshall(filteredImage as any);
 
       // Validate required fields
-      if (!postData.userId || !postData.postId || !postData.userHandle || !postData.createdAt) {
+      // Note: Post entity uses 'id' not 'postId'
+      if (!postData.userId || !postData.id || !postData.userHandle || !postData.createdAt) {
         console.error('[FeedFanout] Missing required fields in post entity', {
-          postId: postData.postId,
+          id: postData.id,
           userId: postData.userId,
           userHandle: postData.userHandle,
           createdAt: postData.createdAt
@@ -94,7 +96,7 @@ export const handler: DynamoDBStreamHandler = async (
       }
 
       const authorId = postData.userId as string;
-      const postId = postData.postId as string;
+      const postId = postData.id as string;
       const authorHandle = postData.userHandle as string;
       const createdAt = postData.createdAt as string;
 
