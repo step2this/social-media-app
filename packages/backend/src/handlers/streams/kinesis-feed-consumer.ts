@@ -9,6 +9,14 @@ import {
   type PostDeletedEvent
 } from '@social-media-app/shared';
 import { createRedisClient } from '../../utils/aws-config.js';
+import {
+  tracer,
+  addTraceAnnotation,
+  addTraceMetadata,
+  captureTraceError,
+  tracedOperation,
+  traceCacheOperation
+} from '../../utils/index.js';
 
 /**
  * Container scope - initialized once per Lambda warm start
@@ -44,7 +52,11 @@ async function handlePostCreated(event: PostCreatedEvent): Promise<void> {
     createdAt: event.createdAt
   };
 
-  await cacheService!.cachePost(event.postId, cachedPost);
+  await tracedOperation('CachePost', async () => {
+    traceCacheOperation('set', `post:${event.postId}`, false);
+    await cacheService!.cachePost(event.postId, cachedPost);
+  });
+
   console.log('[KinesisFeedConsumer] Cached POST_CREATED', { postId: event.postId });
 }
 
@@ -55,7 +67,11 @@ async function handlePostCreated(event: PostCreatedEvent): Promise<void> {
  * @throws Error if cache operation fails
  */
 async function handlePostRead(event: PostReadEvent): Promise<void> {
-  await cacheService!.markPostAsRead(event.userId, event.postId);
+  await tracedOperation('MarkPostRead', async () => {
+    traceCacheOperation('set', `read:${event.userId}:${event.postId}`, false);
+    await cacheService!.markPostAsRead(event.userId, event.postId);
+  });
+
   console.log('[KinesisFeedConsumer] Processed POST_READ', {
     userId: event.userId,
     postId: event.postId
@@ -68,30 +84,36 @@ async function handlePostRead(event: PostReadEvent): Promise<void> {
  * @param event - The POST_LIKED feed event
  */
 async function handlePostLiked(event: PostLikedEvent): Promise<void> {
-  // Get cached post to update likes count
-  const cachedPost = await cacheService!.getCachedPost(event.postId);
+  await tracedOperation('UpdatePostLikes', async () => {
+    // Get cached post to update likes count
+    const cachedPost = await cacheService!.getCachedPost(event.postId);
+    traceCacheOperation('get', `post:${event.postId}`, !!cachedPost);
 
-  if (cachedPost) {
-    // Update likes count based on liked/unliked
-    const updatedPost: CachedPost = {
-      ...cachedPost,
-      likesCount: event.liked
-        ? (cachedPost.likesCount || 0) + 1
-        : Math.max((cachedPost.likesCount || 0) - 1, 0)
-    };
-    await cacheService!.cachePost(event.postId, updatedPost);
-    console.log('[KinesisFeedConsumer] Updated POST_LIKED', {
-      postId: event.postId,
-      liked: event.liked,
-      newLikesCount: updatedPost.likesCount
-    });
-  } else {
-    // Cache miss is okay - post might not be in cache
-    console.log('[KinesisFeedConsumer] Processed POST_LIKED (cache miss)', {
-      postId: event.postId,
-      liked: event.liked
-    });
-  }
+    if (cachedPost) {
+      // Update likes count based on liked/unliked
+      const updatedPost: CachedPost = {
+        ...cachedPost,
+        likesCount: event.liked
+          ? (cachedPost.likesCount || 0) + 1
+          : Math.max((cachedPost.likesCount || 0) - 1, 0)
+      };
+
+      traceCacheOperation('set', `post:${event.postId}`, false);
+      await cacheService!.cachePost(event.postId, updatedPost);
+
+      console.log('[KinesisFeedConsumer] Updated POST_LIKED', {
+        postId: event.postId,
+        liked: event.liked,
+        newLikesCount: updatedPost.likesCount
+      });
+    } else {
+      // Cache miss is okay - post might not be in cache
+      console.log('[KinesisFeedConsumer] Processed POST_LIKED (cache miss)', {
+        postId: event.postId,
+        liked: event.liked
+      });
+    }
+  });
 }
 
 /**
@@ -101,7 +123,11 @@ async function handlePostLiked(event: PostLikedEvent): Promise<void> {
  * @throws Error if cache operation fails
  */
 async function handlePostDeleted(event: PostDeletedEvent): Promise<void> {
-  await cacheService!.invalidatePost(event.postId);
+  await tracedOperation('InvalidatePost', async () => {
+    traceCacheOperation('delete', `post:${event.postId}`, false);
+    await cacheService!.invalidatePost(event.postId);
+  });
+
   console.log('[KinesisFeedConsumer] Invalidated POST_DELETED', { postId: event.postId });
 }
 
@@ -112,6 +138,11 @@ async function handlePostDeleted(event: PostDeletedEvent): Promise<void> {
  * @throws Error if event type is unknown
  */
 async function processEvent(event: FeedEvent): Promise<void> {
+  // Add event context to trace
+  addTraceAnnotation('eventType', event.eventType);
+  addTraceAnnotation('eventId', event.eventId);
+  addTraceMetadata('event', 'details', event);
+
   switch (event.eventType) {
     case 'POST_CREATED':
       return handlePostCreated(event);
@@ -127,69 +158,69 @@ async function processEvent(event: FeedEvent): Promise<void> {
 }
 
 /**
- * Kinesis consumer Lambda that processes feed events and updates Redis cache
+ * Main Kinesis stream handler
  *
- * Event processing:
- * - POST_CREATED: Cache post metadata for future reads
- * - POST_READ: Remove post from user's unread feed cache
- * - POST_LIKED: Update post likesCount in cache (optional)
- * - POST_DELETED: Invalidate post from all caches
+ * @description Processes feed events from Kinesis stream and updates Redis cache
+ * @trace Captures stream processing with subsegments for each record
  *
- * Error Handling:
- * - Validates events with Zod schema
- * - Handles partial batch failures
- * - Returns failed record IDs for DLQ routing
- * - Logs all errors with context
- *
- * @param event - Kinesis stream event with batch of records
- * @returns Batch item failures for DLQ routing
+ * @param event - The Kinesis stream event
+ * @returns Batch item failures for retry
  */
-export const handler: KinesisStreamHandler = async (event): Promise<KinesisStreamBatchResponse> => {
-  const batchItemFailures: { itemIdentifier: string }[] = [];
+export const handler: KinesisStreamHandler = tracer.captureLambdaHandler(async (event): Promise<KinesisStreamBatchResponse> => {
+  const batchItemFailures: KinesisStreamBatchResponse['batchItemFailures'] = [];
 
-  // Process each record in the batch
+  // Add trace annotations for batch context
+  addTraceAnnotation('operationType', 'KINESIS_FEED_CONSUMER');
+  addTraceAnnotation('recordCount', event.Records.length);
+  addTraceAnnotation('eventSourceArn', event.Records[0]?.eventSourceARN || 'unknown');
+
   for (const record of event.Records) {
+    const sequenceNumber = record.kinesis.sequenceNumber;
+
     try {
-      // 1. Decode base64 data
-      const payload = Buffer.from(record.kinesis.data, 'base64').toString('utf-8');
+      // Decode and validate Kinesis record data
+      const payload = await tracedOperation('DecodeRecord', async () => {
+        const decoded = Buffer.from(record.kinesis.data, 'base64').toString('utf-8');
+        return JSON.parse(decoded);
+      });
 
-      // 2. Parse JSON
-      let feedEvent: any;
-      try {
-        feedEvent = JSON.parse(payload);
-      } catch (jsonError) {
-        console.error('[KinesisFeedConsumer] JSON parsing error', {
-          sequenceNumber: record.kinesis.sequenceNumber,
-          error: jsonError instanceof Error ? jsonError.message : 'Unknown JSON error'
-        });
-        batchItemFailures.push({ itemIdentifier: record.kinesis.sequenceNumber });
-        continue;
-      }
+      // Validate event against schema
+      const feedEvent = await tracedOperation('ValidateEvent', async () => {
+        return FeedEventSchema.parse(payload);
+      });
 
-      // 3. Validate with Zod schema
-      const validationResult = FeedEventSchema.safeParse(feedEvent);
-      if (!validationResult.success) {
-        console.error('[KinesisFeedConsumer] Invalid event schema', {
-          sequenceNumber: record.kinesis.sequenceNumber,
-          error: validationResult.error
-        });
-        batchItemFailures.push({ itemIdentifier: record.kinesis.sequenceNumber });
-        continue;
-      }
+      // Process the event with tracing
+      await tracedOperation(`Process_${feedEvent.eventType}`, async () => {
+        await processEvent(feedEvent);
+      });
 
-      // 4. Process the validated event
-      await processEvent(validationResult.data);
-
+      console.log('[KinesisFeedConsumer] Successfully processed record', {
+        sequenceNumber,
+        eventType: feedEvent.eventType
+      });
     } catch (error) {
-      // Catch any processing errors
-      console.error('[KinesisFeedConsumer] Processing error', {
-        sequenceNumber: record.kinesis.sequenceNumber,
+      console.error('[KinesisFeedConsumer] Failed to process record', {
+        sequenceNumber,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
-      batchItemFailures.push({ itemIdentifier: record.kinesis.sequenceNumber });
+
+      // Capture error in X-Ray trace
+      captureTraceError(error, {
+        operation: 'processKinesisRecord',
+        sequenceNumber,
+        partitionKey: record.kinesis.partitionKey
+      });
+
+      // Track failed records for retry
+      batchItemFailures.push({
+        itemIdentifier: sequenceNumber
+      });
     }
   }
 
-  // Return batch item failures for DLQ routing
+  // Add batch processing results to trace
+  addTraceAnnotation('successCount', event.Records.length - batchItemFailures.length);
+  addTraceAnnotation('failureCount', batchItemFailures.length);
+
   return { batchItemFailures };
-};
+});

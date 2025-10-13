@@ -26,3 +26,6 @@ export * from './notification-service-factory.js';
 
 // AWS configuration utilities
 export * from './aws-config.js';
+
+// X-Ray tracing utilities
+export * from './tracer.js';

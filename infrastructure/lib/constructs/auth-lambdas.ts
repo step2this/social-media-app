@@ -42,6 +42,8 @@ export class AuthLambdas extends Construct {
       timeout: Duration.seconds(30),
       memorySize: 512,
       environment: commonEnv,
+      // Enable X-Ray tracing for distributed tracing
+      tracing: lambda.Tracing.ACTIVE,
       // Point to project root for workspace dependency resolution
       projectRoot: path.join(__dirname, '../../../'),
       depsLockFilePath: path.join(__dirname, '../../../pnpm-lock.yaml'),

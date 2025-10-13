@@ -10,9 +10,11 @@ export { DevReadStateDebugger } from './DevReadStateDebugger';
 export { DevApiLogger } from './DevApiLogger';
 export { DevFeedSourceBadge } from './DevFeedSourceBadge';
 export { DevManualMarkButton } from './DevManualMarkButton';
+export { DevCacheStatusIndicator } from './DevCacheStatusIndicator';
 
 export type { DevMenuProps } from './DevMenu';
 export type { DevReadStateDebuggerProps } from './DevReadStateDebugger';
 export type { DevApiLoggerProps, ApiLogEntry } from './DevApiLogger';
 export type { DevFeedSourceBadgeProps, FeedSource } from './DevFeedSourceBadge';
 export type { DevManualMarkButtonProps } from './DevManualMarkButton';
+export type { DevCacheStatusIndicatorProps } from './DevCacheStatusIndicator';

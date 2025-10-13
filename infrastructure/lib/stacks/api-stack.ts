@@ -5,6 +5,7 @@ import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as apigateway from 'aws-cdk-lib/aws-apigatewayv2';
 import * as apigatewayIntegrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { AuthLambdas } from '../constructs/auth-lambdas.js';
@@ -33,10 +34,32 @@ export class ApiStack extends Stack {
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
 
+    // Create VPC for production environments (required for ElastiCache)
+    let vpc: ec2.IVpc | undefined;
+    if (props.environment === 'prod' || props.environment === 'staging') {
+      vpc = new ec2.Vpc(this, 'AppVpc', {
+        maxAzs: 2, // Multi-AZ requires at least 2 AZs
+        natGateways: 1, // Cost optimization: single NAT gateway
+        subnetConfiguration: [
+          {
+            cidrMask: 24,
+            name: 'private',
+            subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
+          },
+          {
+            cidrMask: 24,
+            name: 'public',
+            subnetType: ec2.SubnetType.PUBLIC
+          }
+        ]
+      });
+    }
+
     // Create Redis cache construct (outputs will be added to this stack)
     const redisCache = new RedisStack(this, 'RedisCache', {
-      environment: props.environment
-      // vpc: props.vpc // Uncomment when VPC is available
+      environment: props.environment,
+      vpc: vpc,
+      alertEmail: props.environment === 'prod' ? process.env.ALERT_EMAIL : undefined
     });
 
     // Store Redis configuration for lambdas (will be used by Feed lambdas in Phase 3.2)
@@ -59,6 +82,7 @@ export class ApiStack extends Stack {
         NODE_ENV: props.environment,
         LOG_LEVEL: props.environment === 'prod' ? 'warn' : 'debug'
       },
+      tracing: lambda.Tracing.ACTIVE, // Enable X-Ray tracing
       projectRoot: path.join(__dirname, '../../../'),
       depsLockFilePath: path.join(__dirname, '../../../pnpm-lock.yaml'),
       bundling: {

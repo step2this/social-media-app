@@ -151,13 +151,39 @@ export const getKinesisStreamName = (): string => {
 
 /**
  * Get Redis endpoint based on environment
+ *
+ * For Multi-AZ deployments, this returns the primary endpoint which automatically
+ * handles failover. The endpoint remains constant even during failover events.
+ *
+ * @returns Redis endpoint string - primary endpoint for replication groups
  */
 export const getRedisEndpoint = (): string => {
   if (isLocalStackEnvironment()) {
     return process.env.REDIS_ENDPOINT || 'localhost';
   }
 
+  // For production/staging, this will be the replication group's primary endpoint
+  // Format: feed-cache-{env}.{id}.cache.amazonaws.com
+  // This endpoint automatically redirects to the current primary node
   return process.env.REDIS_ENDPOINT || 'feed-cache-prod.redis.amazonaws.com';
+};
+
+/**
+ * Get Redis reader endpoint for read-heavy workloads (Multi-AZ only)
+ *
+ * For Multi-AZ deployments, this returns the reader endpoint which load-balances
+ * across all read replicas. Use this for read-only operations to distribute load.
+ *
+ * @returns Redis reader endpoint string or primary endpoint if not Multi-AZ
+ */
+export const getRedisReaderEndpoint = (): string => {
+  if (isLocalStackEnvironment()) {
+    return process.env.REDIS_READER_ENDPOINT || process.env.REDIS_ENDPOINT || 'localhost';
+  }
+
+  // For production/staging with Multi-AZ, use reader endpoint for load distribution
+  // Falls back to primary endpoint if reader endpoint not available
+  return process.env.REDIS_READER_ENDPOINT || getRedisEndpoint();
 };
 
 /**
@@ -168,25 +194,57 @@ export const getRedisPort = (): number => {
 };
 
 /**
- * Get Redis configuration for ioredis
+ * Get Redis configuration for ioredis with Multi-AZ support
+ *
+ * Configured for high availability with automatic failover handling:
+ * - Aggressive reconnection during failover events
+ * - Appropriate timeouts for Multi-AZ deployments
+ * - Connection pooling optimized for Lambda
  */
 export const getRedisConfig = () => {
+  const isProduction = process.env.ENVIRONMENT === 'prod' || process.env.ENVIRONMENT === 'staging';
+
   return {
     host: getRedisEndpoint(),
     port: getRedisPort(),
     password: process.env.REDIS_PASSWORD || undefined,
     tls: process.env.REDIS_TLS_ENABLED === 'true' ? {} : undefined,
-    // Connection pool settings
-    maxRetriesPerRequest: 3,
-    enableOfflineQueue: false,
-    connectTimeout: 10000,
-    // Reconnection strategy
+
+    // Connection pool settings optimized for Lambda
+    maxRetriesPerRequest: isProduction ? 5 : 3, // More retries in production for failover
+    enableOfflineQueue: false, // Fail fast in Lambda environment
+    connectTimeout: isProduction ? 20000 : 10000, // Longer timeout for Multi-AZ failover
+    commandTimeout: 5000, // Command timeout to prevent hanging
+
+    // Enhanced reconnection strategy for Multi-AZ failover
     retryStrategy: (times: number) => {
-      if (times > 3) {
-        return null; // Stop retrying
+      // During failover, ElastiCache takes up to 60 seconds
+      if (isProduction) {
+        if (times > 10) {
+          // After 10 retries (~30 seconds), give up
+          console.error('[Redis] Max reconnection attempts reached');
+          return null;
+        }
+        // Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms, 3000ms...
+        const delay = Math.min(times * times * 100, 3000);
+        console.warn(`[Redis] Reconnection attempt ${times}, delay: ${delay}ms`);
+        return delay;
+      } else {
+        // Development: simpler retry strategy
+        if (times > 3) {
+          return null;
+        }
+        return Math.min(times * 100, 3000);
       }
-      return Math.min(times * 100, 3000);
-    }
+    },
+
+    // Multi-AZ specific settings
+    enableReadyCheck: true, // Verify connection is ready before use
+    lazyConnect: false, // Connect immediately to detect issues early
+    keepAlive: 30000, // Keep connection alive in Lambda
+
+    // Sentinel/Cluster settings (for future enhancement)
+    sentinelRetryStrategy: isProduction ? (times: number) => Math.min(times * 100, 3000) : undefined
   };
 };
 

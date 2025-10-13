@@ -1,0 +1,217 @@
+/**
+ * DevCacheStatusIndicator Component Styles
+ * Real-time cache and streaming status monitoring
+ * Follows DevApiLogger styling patterns with French automotive heritage design
+ */
+
+.dev-cache-status {
+  margin-bottom: var(--spacing-lg);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/**
+ * Header section
+ */
+.dev-cache-status__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.dev-cache-status__header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--tama-pearl-white);
+  margin: 0;
+}
+
+/**
+ * Content container
+ */
+.dev-cache-status__content {
+  background: var(--tama-gray-800);
+  border-radius: 4px;
+  padding: var(--spacing-md);
+  border: 1px solid var(--tama-gray-700);
+}
+
+/**
+ * Section dividers for Redis/Kinesis
+ */
+.dev-cache-status__section {
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--tama-gray-700);
+}
+
+.dev-cache-status__section:last-of-type {
+  border-bottom: none;
+  margin-bottom: var(--spacing-sm);
+  padding-bottom: 0;
+}
+
+/**
+ * Status rows with label/value pairs
+ */
+.dev-cache-status__row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  font-size: 0.875rem;
+}
+
+.dev-cache-status__row:last-child {
+  margin-bottom: 0;
+}
+
+.dev-cache-status__label {
+  font-weight: 600;
+  color: var(--tama-gray-300);
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.dev-cache-status__value {
+  color: var(--tama-pearl-white);
+  font-family: 'Monaco', 'Courier New', monospace;
+  flex: 1;
+}
+
+/**
+ * Success/error state styling
+ */
+.dev-cache-status__value--success {
+  color: var(--tama-sorrento-green);
+}
+
+.dev-cache-status__value--error {
+  color: var(--tama-racing-red);
+}
+
+/**
+ * Latency display
+ */
+.dev-cache-status__latency {
+  color: var(--tama-gray-400);
+  font-size: 0.8125rem;
+}
+
+/**
+ * Stream name styling
+ */
+.dev-cache-status__stream-name {
+  color: var(--tama-electric-blue);
+  font-weight: 500;
+}
+
+/**
+ * Inline error messages
+ */
+.dev-cache-status__error-inline {
+  color: var(--tama-racing-red);
+  font-size: 0.8125rem;
+  font-style: italic;
+  display: block;
+  margin-left: 80px;
+}
+
+/**
+ * Footer with timestamp and environment
+ */
+.dev-cache-status__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--tama-gray-700);
+  margin-top: var(--spacing-sm);
+  font-size: 0.75rem;
+}
+
+.dev-cache-status__timestamp {
+  color: var(--tama-gray-400);
+  font-style: italic;
+}
+
+.dev-cache-status__environment {
+  color: var(--tama-gray-500);
+  text-transform: uppercase;
+  font-weight: 600;
+  background: var(--tama-gray-900);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--tama-gray-700);
+}
+
+/**
+ * Loading state
+ */
+.dev-cache-status__loading {
+  background: var(--tama-gray-800);
+  border-radius: 4px;
+  padding: var(--spacing-lg);
+  text-align: center;
+  border: 1px solid var(--tama-gray-700);
+}
+
+.dev-cache-status__loading p {
+  color: var(--tama-gray-400);
+  font-style: italic;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/**
+ * Error state
+ */
+.dev-cache-status__error {
+  background: var(--tama-gray-800);
+  border-radius: 4px;
+  padding: var(--spacing-md);
+  border: 1px solid var(--tama-racing-red);
+}
+
+.dev-cache-status__error p {
+  color: var(--tama-racing-red);
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.dev-cache-status__error p:first-child {
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+}
+
+.dev-cache-status__error-message {
+  color: var(--tama-gray-300);
+  font-style: italic;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.8125rem;
+}
+
+/**
+ * Responsive adjustments
+ */
+@media (max-width: 480px) {
+  .dev-cache-status__row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-xs);
+  }
+
+  .dev-cache-status__label {
+    min-width: auto;
+  }
+
+  .dev-cache-status__error-inline {
+    margin-left: 0;
+  }
+
+  .dev-cache-status__footer {
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    align-items: flex-start;
+  }
+}

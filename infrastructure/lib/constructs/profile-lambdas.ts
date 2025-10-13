@@ -61,6 +61,7 @@ export class ProfileLambdas extends Construct {
       timeout: Duration.seconds(30),
       memorySize: 512,
       environment: commonEnvironment,
+      tracing: lambda.Tracing.ACTIVE, // Enable X-Ray tracing
       bundling: commonBundling
     });
 
@@ -73,6 +74,7 @@ export class ProfileLambdas extends Construct {
       timeout: Duration.seconds(30),
       memorySize: 512,
       environment: commonEnvironment,
+      tracing: lambda.Tracing.ACTIVE, // Enable X-Ray tracing
       bundling: commonBundling
     });
 
@@ -85,6 +87,7 @@ export class ProfileLambdas extends Construct {
       timeout: Duration.seconds(30),
       memorySize: 512,
       environment: commonEnvironment,
+      tracing: lambda.Tracing.ACTIVE, // Enable X-Ray tracing
       bundling: commonBundling
     });
 
@@ -97,6 +100,7 @@ export class ProfileLambdas extends Construct {
       timeout: Duration.seconds(30),
       memorySize: 512,
       environment: commonEnvironment,
+      tracing: lambda.Tracing.ACTIVE, // Enable X-Ray tracing
       bundling: commonBundling
     });
 
