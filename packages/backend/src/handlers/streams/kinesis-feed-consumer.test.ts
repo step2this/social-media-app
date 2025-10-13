@@ -1,96 +1,106 @@
-import { describe, test, expect, beforeEach, vi, type Mock } from 'vitest';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import type { KinesisStreamEvent, KinesisStreamRecord } from 'aws-lambda';
 import type { FeedEvent } from '@social-media-app/shared';
-import { handler } from './kinesis-feed-consumer.js';
 
-// Mock RedisCacheService
-const mockCachePost = vi.fn();
-const mockMarkPostAsRead = vi.fn();
-const mockInvalidatePost = vi.fn();
-const mockGetCachedPost = vi.fn();
+// Setup module mocks
+vi.mock('@social-media-app/dal');
+vi.mock('../../utils/aws-config.js');
 
-vi.mock('@social-media-app/dal', () => ({
-  RedisCacheService: vi.fn().mockImplementation(() => ({
-    cachePost: mockCachePost,
-    markPostAsRead: mockMarkPostAsRead,
-    invalidatePost: mockInvalidatePost,
-    getCachedPost: mockGetCachedPost
-  }))
-}));
+describe('Kinesis Feed Consumer - Handler Tests', () => {
+  let handler: any;
+  let mockCachePost: any;
+  let mockMarkPostAsRead: any;
+  let mockInvalidatePost: any;
+  let mockGetCachedPost: any;
+  let RedisCacheService: any;
 
-// Mock aws-config
-vi.mock('../../utils/aws-config.js', () => ({
-  createRedisClient: vi.fn().mockReturnValue({})
-}));
+  beforeEach(async () => {
+    // Clear module cache
+    vi.resetModules();
 
-// Suppress console logs during tests
-beforeEach(() => {
-  vi.spyOn(console, 'log').mockImplementation(() => {});
-  vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Setup mock functions
+    mockCachePost = vi.fn().mockResolvedValue(undefined);
+    mockMarkPostAsRead = vi.fn().mockResolvedValue(undefined);
+    mockInvalidatePost = vi.fn().mockResolvedValue(undefined);
+    mockGetCachedPost = vi.fn().mockResolvedValue(null);
 
-  // Reset all mocks
-  mockCachePost.mockReset().mockResolvedValue(undefined);
-  mockMarkPostAsRead.mockReset().mockResolvedValue(undefined);
-  mockInvalidatePost.mockReset().mockResolvedValue(undefined);
-  mockGetCachedPost.mockReset().mockResolvedValue(null);
-});
+    // Mock RedisCacheService
+    const dalMock = await import('@social-media-app/dal');
+    (dalMock as any).RedisCacheService = vi.fn().mockImplementation(() => ({
+      cachePost: mockCachePost,
+      markPostAsRead: mockMarkPostAsRead,
+      invalidatePost: mockInvalidatePost,
+      getCachedPost: mockGetCachedPost
+    }));
 
-/**
- * Helper to create a Kinesis event from feed events
- */
-function createKinesisEvent(events: FeedEvent[]): KinesisStreamEvent {
-  return {
-    Records: events.map((event, i) => ({
+    // Mock createRedisClient
+    const awsConfigMock = await import('../../utils/aws-config.js');
+    (awsConfigMock as any).createRedisClient = vi.fn().mockReturnValue({});
+
+    // Import handler after mocks are set up
+    const module = await import('./kinesis-feed-consumer.js');
+    handler = module.handler;
+
+    // Suppress console logs
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  /**
+   * Helper to create a Kinesis event from feed events
+   */
+  function createKinesisEvent(events: FeedEvent[]): KinesisStreamEvent {
+    return {
+      Records: events.map((event, i) => ({
+        kinesis: {
+          sequenceNumber: `seq-${i}`,
+          data: Buffer.from(JSON.stringify(event)).toString('base64'),
+          partitionKey: event.eventId,
+          approximateArrivalTimestamp: Date.now() / 1000,
+          kinesisSchemaVersion: '1.0'
+        },
+        eventID: `event-${i}`,
+        eventName: 'aws:kinesis:record',
+        eventVersion: '1.0',
+        eventSource: 'aws:kinesis',
+        awsRegion: 'us-east-1',
+        eventSourceARN: 'arn:aws:kinesis:us-east-1:123456789012:stream/feed-stream',
+        invokeIdentityArn: 'arn:aws:iam::123456789012:role/lambda-role'
+      }))
+    };
+  }
+
+  /**
+   * Helper to create a single Kinesis record
+   */
+  function createKinesisRecord(event: any, sequenceNumber: string = 'seq-1'): KinesisStreamRecord {
+    return {
       kinesis: {
-        sequenceNumber: `seq-${i}`,
+        sequenceNumber,
         data: Buffer.from(JSON.stringify(event)).toString('base64'),
-        partitionKey: event.eventId,
+        partitionKey: event.eventId || 'partition-key',
         approximateArrivalTimestamp: Date.now() / 1000,
         kinesisSchemaVersion: '1.0'
       },
-      eventID: `event-${i}`,
+      eventID: 'event-1',
       eventName: 'aws:kinesis:record',
       eventVersion: '1.0',
       eventSource: 'aws:kinesis',
       awsRegion: 'us-east-1',
       eventSourceARN: 'arn:aws:kinesis:us-east-1:123456789012:stream/feed-stream',
       invokeIdentityArn: 'arn:aws:iam::123456789012:role/lambda-role'
-    }))
-  };
-}
+    };
+  }
 
-/**
- * Helper to create a single Kinesis record
- */
-function createKinesisRecord(event: any, sequenceNumber: string = 'seq-1'): KinesisStreamRecord {
-  return {
-    kinesis: {
-      sequenceNumber,
-      data: Buffer.from(JSON.stringify(event)).toString('base64'),
-      partitionKey: event.eventId || 'partition-key',
-      approximateArrivalTimestamp: Date.now() / 1000,
-      kinesisSchemaVersion: '1.0'
-    },
-    eventID: 'event-1',
-    eventName: 'aws:kinesis:record',
-    eventVersion: '1.0',
-    eventSource: 'aws:kinesis',
-    awsRegion: 'us-east-1',
-    eventSourceARN: 'arn:aws:kinesis:us-east-1:123456789012:stream/feed-stream',
-    invokeIdentityArn: 'arn:aws:iam::123456789012:role/lambda-role'
-  };
-}
-
-describe('Kinesis Feed Consumer - Handler Tests', () => {
   test('processes batch of records successfully', async () => {
     const events: FeedEvent[] = [
       {
-        eventId: 'evt-1',
+        eventId: '550e8400-e29b-41d4-a716-446655440001',
         eventType: 'POST_CREATED',
         timestamp: '2025-01-13T10:00:00Z',
-        userId: 'user-123',
-        postId: 'post-456',
-        authorId: 'user-123',
+        version: '1.0',
+        postId: '550e8400-e29b-41d4-a716-446655440002',
+        authorId: '550e8400-e29b-41d4-a716-446655440003',
         authorHandle: 'johndoe',
         caption: 'Test post',
         imageUrl: 'https://example.com/image.jpg',
@@ -98,11 +108,12 @@ describe('Kinesis Feed Consumer - Handler Tests', () => {
         createdAt: '2025-01-13T10:00:00Z'
       },
       {
-        eventId: 'evt-2',
+        eventId: '650e8400-e29b-41d4-a716-446655440004',
         eventType: 'POST_READ',
         timestamp: '2025-01-13T10:01:00Z',
-        userId: 'user-789',
-        postId: 'post-456'
+        version: '1.0',
+        userId: '750e8400-e29b-41d4-a716-446655440005',
+        postId: '550e8400-e29b-41d4-a716-446655440002'
       }
     ];
 
@@ -119,12 +130,12 @@ describe('Kinesis Feed Consumer - Handler Tests', () => {
       Records: [
         createKinesisRecord({ invalid: 'event' }, 'seq-invalid'),
         createKinesisRecord({
-          eventId: 'evt-1',
+          eventId: '550e8400-e29b-41d4-a716-446655440001',
           eventType: 'POST_CREATED',
           timestamp: '2025-01-13T10:00:00Z',
-          userId: 'user-123',
-          postId: 'post-456',
-          authorId: 'user-123',
+          version: '1.0',
+          postId: '550e8400-e29b-41d4-a716-446655440002',
+          authorId: '550e8400-e29b-41d4-a716-446655440003',
           authorHandle: 'johndoe',
           isPublic: true,
           createdAt: '2025-01-13T10:00:00Z'
@@ -204,14 +215,67 @@ describe('Kinesis Feed Consumer - Handler Tests', () => {
 });
 
 describe('Kinesis Feed Consumer - POST_CREATED Processing', () => {
+  let handler: any;
+  let mockCachePost: any;
+  let mockMarkPostAsRead: any;
+  let mockInvalidatePost: any;
+  let mockGetCachedPost: any;
+
+  beforeEach(async () => {
+    vi.resetModules();
+
+    mockCachePost = vi.fn().mockResolvedValue(undefined);
+    mockMarkPostAsRead = vi.fn().mockResolvedValue(undefined);
+    mockInvalidatePost = vi.fn().mockResolvedValue(undefined);
+    mockGetCachedPost = vi.fn().mockResolvedValue(null);
+
+    const dalMock = await import('@social-media-app/dal');
+    (dalMock as any).RedisCacheService = vi.fn().mockImplementation(() => ({
+      cachePost: mockCachePost,
+      markPostAsRead: mockMarkPostAsRead,
+      invalidatePost: mockInvalidatePost,
+      getCachedPost: mockGetCachedPost
+    }));
+
+    const awsConfigMock = await import('../../utils/aws-config.js');
+    (awsConfigMock as any).createRedisClient = vi.fn().mockReturnValue({});
+
+    const module = await import('./kinesis-feed-consumer.js');
+    handler = module.handler;
+
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  function createKinesisEvent(events: FeedEvent[]): KinesisStreamEvent {
+    return {
+      Records: events.map((event, i) => ({
+        kinesis: {
+          sequenceNumber: `seq-${i}`,
+          data: Buffer.from(JSON.stringify(event)).toString('base64'),
+          partitionKey: event.eventId,
+          approximateArrivalTimestamp: Date.now() / 1000,
+          kinesisSchemaVersion: '1.0'
+        },
+        eventID: `event-${i}`,
+        eventName: 'aws:kinesis:record',
+        eventVersion: '1.0',
+        eventSource: 'aws:kinesis',
+        awsRegion: 'us-east-1',
+        eventSourceARN: 'arn:aws:kinesis:us-east-1:123456789012:stream/feed-stream',
+        invokeIdentityArn: 'arn:aws:iam::123456789012:role/lambda-role'
+      }))
+    };
+  }
+
   test('caches post metadata on POST_CREATED event', async () => {
     const event: FeedEvent = {
-      eventId: 'evt-1',
+      eventId: '550e8400-e29b-41d4-a716-446655440001',
       eventType: 'POST_CREATED',
       timestamp: '2025-01-13T10:00:00Z',
-      userId: 'user-123',
-      postId: 'post-456',
-      authorId: 'user-123',
+      version: '1.0',
+      postId: '550e8400-e29b-41d4-a716-446655440002',
+      authorId: '550e8400-e29b-41d4-a716-446655440003',
       authorHandle: 'johndoe',
       caption: 'Test post caption',
       imageUrl: 'https://example.com/image.jpg',
@@ -222,9 +286,9 @@ describe('Kinesis Feed Consumer - POST_CREATED Processing', () => {
     const kinesisEvent = createKinesisEvent([event]);
     await handler(kinesisEvent, {} as any, {} as any);
 
-    expect(mockCachePost).toHaveBeenCalledWith('post-456', {
-      id: 'post-456',
-      authorId: 'user-123',
+    expect(mockCachePost).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-446655440002', {
+      id: '550e8400-e29b-41d4-a716-446655440002',
+      authorId: '550e8400-e29b-41d4-a716-446655440003',
       authorHandle: 'johndoe',
       caption: 'Test post caption',
       imageUrl: 'https://example.com/image.jpg',
@@ -237,12 +301,12 @@ describe('Kinesis Feed Consumer - POST_CREATED Processing', () => {
 
   test('handles missing optional fields (caption, imageUrl)', async () => {
     const event: FeedEvent = {
-      eventId: 'evt-1',
+      eventId: '550e8400-e29b-41d4-a716-446655440001',
       eventType: 'POST_CREATED',
       timestamp: '2025-01-13T10:00:00Z',
-      userId: 'user-123',
-      postId: 'post-456',
-      authorId: 'user-123',
+      version: '1.0',
+      postId: '550e8400-e29b-41d4-a716-446655440002',
+      authorId: '550e8400-e29b-41d4-a716-446655440003',
       authorHandle: 'johndoe',
       isPublic: false,
       createdAt: '2025-01-13T10:00:00Z'
@@ -252,9 +316,9 @@ describe('Kinesis Feed Consumer - POST_CREATED Processing', () => {
     const result = await handler(kinesisEvent, {} as any, {} as any);
 
     expect(result.batchItemFailures).toHaveLength(0);
-    expect(mockCachePost).toHaveBeenCalledWith('post-456', expect.objectContaining({
-      id: 'post-456',
-      authorId: 'user-123',
+    expect(mockCachePost).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-446655440002', expect.objectContaining({
+      id: '550e8400-e29b-41d4-a716-446655440002',
+      authorId: '550e8400-e29b-41d4-a716-446655440003',
       authorHandle: 'johndoe',
       caption: undefined,
       imageUrl: undefined,
@@ -266,12 +330,12 @@ describe('Kinesis Feed Consumer - POST_CREATED Processing', () => {
     mockCachePost.mockRejectedValueOnce(new Error('Redis connection failed'));
 
     const event: FeedEvent = {
-      eventId: 'evt-1',
+      eventId: '550e8400-e29b-41d4-a716-446655440001',
       eventType: 'POST_CREATED',
       timestamp: '2025-01-13T10:00:00Z',
-      userId: 'user-123',
-      postId: 'post-456',
-      authorId: 'user-123',
+      version: '1.0',
+      postId: '550e8400-e29b-41d4-a716-446655440002',
+      authorId: '550e8400-e29b-41d4-a716-446655440003',
       authorHandle: 'johndoe',
       isPublic: true,
       createdAt: '2025-01-13T10:00:00Z'
@@ -290,7 +354,8 @@ describe('Kinesis Feed Consumer - POST_CREATED Processing', () => {
       eventId: 'evt-1',
       eventType: 'POST_CREATED',
       timestamp: '2025-01-13T10:00:00Z',
-      // Missing required fields: userId, postId, authorId, authorHandle, isPublic, createdAt
+      version: '1.0',
+      // Missing required fields
     };
 
     const kinesisEvent = createKinesisEvent([invalidEvent as any]);
@@ -303,22 +368,76 @@ describe('Kinesis Feed Consumer - POST_CREATED Processing', () => {
 });
 
 describe('Kinesis Feed Consumer - POST_READ Processing', () => {
+  let handler: any;
+  let mockCachePost: any;
+  let mockMarkPostAsRead: any;
+  let mockInvalidatePost: any;
+  let mockGetCachedPost: any;
+
+  beforeEach(async () => {
+    vi.resetModules();
+
+    mockCachePost = vi.fn().mockResolvedValue(undefined);
+    mockMarkPostAsRead = vi.fn().mockResolvedValue(undefined);
+    mockInvalidatePost = vi.fn().mockResolvedValue(undefined);
+    mockGetCachedPost = vi.fn().mockResolvedValue(null);
+
+    const dalMock = await import('@social-media-app/dal');
+    (dalMock as any).RedisCacheService = vi.fn().mockImplementation(() => ({
+      cachePost: mockCachePost,
+      markPostAsRead: mockMarkPostAsRead,
+      invalidatePost: mockInvalidatePost,
+      getCachedPost: mockGetCachedPost
+    }));
+
+    const awsConfigMock = await import('../../utils/aws-config.js');
+    (awsConfigMock as any).createRedisClient = vi.fn().mockReturnValue({});
+
+    const module = await import('./kinesis-feed-consumer.js');
+    handler = module.handler;
+
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  function createKinesisEvent(events: FeedEvent[]): KinesisStreamEvent {
+    return {
+      Records: events.map((event, i) => ({
+        kinesis: {
+          sequenceNumber: `seq-${i}`,
+          data: Buffer.from(JSON.stringify(event)).toString('base64'),
+          partitionKey: event.eventId,
+          approximateArrivalTimestamp: Date.now() / 1000,
+          kinesisSchemaVersion: '1.0'
+        },
+        eventID: `event-${i}`,
+        eventName: 'aws:kinesis:record',
+        eventVersion: '1.0',
+        eventSource: 'aws:kinesis',
+        awsRegion: 'us-east-1',
+        eventSourceARN: 'arn:aws:kinesis:us-east-1:123456789012:stream/feed-stream',
+        invokeIdentityArn: 'arn:aws:iam::123456789012:role/lambda-role'
+      }))
+    };
+  }
+
   test('marks post as read for user', async () => {
     const event: FeedEvent = {
-      eventId: 'evt-1',
+      eventId: '550e8400-e29b-41d4-a716-446655440001',
       eventType: 'POST_READ',
       timestamp: '2025-01-13T10:00:00Z',
-      userId: 'user-789',
-      postId: 'post-456'
+      version: '1.0',
+      userId: '550e8400-e29b-41d4-a716-446655440002',
+      postId: '550e8400-e29b-41d4-a716-446655440003'
     };
 
     const kinesisEvent = createKinesisEvent([event]);
     await handler(kinesisEvent, {} as any, {} as any);
 
-    expect(mockMarkPostAsRead).toHaveBeenCalledWith('user-789', 'post-456');
+    expect(mockMarkPostAsRead).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-446655440002', '550e8400-e29b-41d4-a716-446655440003');
     expect(console.log).toHaveBeenCalledWith(
       '[KinesisFeedConsumer] Processed POST_READ',
-      { userId: 'user-789', postId: 'post-456' }
+      { userId: '550e8400-e29b-41d4-a716-446655440002', postId: '550e8400-e29b-41d4-a716-446655440003' }
     );
   });
 
@@ -326,11 +445,12 @@ describe('Kinesis Feed Consumer - POST_READ Processing', () => {
     mockMarkPostAsRead.mockRejectedValueOnce(new Error('Redis error'));
 
     const event: FeedEvent = {
-      eventId: 'evt-1',
+      eventId: '550e8400-e29b-41d4-a716-446655440001',
       eventType: 'POST_READ',
       timestamp: '2025-01-13T10:00:00Z',
-      userId: 'user-789',
-      postId: 'post-456'
+      version: '1.0',
+      userId: '550e8400-e29b-41d4-a716-446655440002',
+      postId: '550e8400-e29b-41d4-a716-446655440003'
     };
 
     const kinesisEvent = createKinesisEvent([event]);
@@ -345,7 +465,8 @@ describe('Kinesis Feed Consumer - POST_READ Processing', () => {
       eventId: 'evt-1',
       eventType: 'POST_READ',
       timestamp: '2025-01-13T10:00:00Z',
-      // Missing required fields: userId, postId
+      version: '1.0',
+      // Missing required fields
     };
 
     const kinesisEvent = createKinesisEvent([invalidEvent as any]);
@@ -357,22 +478,76 @@ describe('Kinesis Feed Consumer - POST_READ Processing', () => {
 });
 
 describe('Kinesis Feed Consumer - POST_DELETED Processing', () => {
+  let handler: any;
+  let mockCachePost: any;
+  let mockMarkPostAsRead: any;
+  let mockInvalidatePost: any;
+  let mockGetCachedPost: any;
+
+  beforeEach(async () => {
+    vi.resetModules();
+
+    mockCachePost = vi.fn().mockResolvedValue(undefined);
+    mockMarkPostAsRead = vi.fn().mockResolvedValue(undefined);
+    mockInvalidatePost = vi.fn().mockResolvedValue(undefined);
+    mockGetCachedPost = vi.fn().mockResolvedValue(null);
+
+    const dalMock = await import('@social-media-app/dal');
+    (dalMock as any).RedisCacheService = vi.fn().mockImplementation(() => ({
+      cachePost: mockCachePost,
+      markPostAsRead: mockMarkPostAsRead,
+      invalidatePost: mockInvalidatePost,
+      getCachedPost: mockGetCachedPost
+    }));
+
+    const awsConfigMock = await import('../../utils/aws-config.js');
+    (awsConfigMock as any).createRedisClient = vi.fn().mockReturnValue({});
+
+    const module = await import('./kinesis-feed-consumer.js');
+    handler = module.handler;
+
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  function createKinesisEvent(events: FeedEvent[]): KinesisStreamEvent {
+    return {
+      Records: events.map((event, i) => ({
+        kinesis: {
+          sequenceNumber: `seq-${i}`,
+          data: Buffer.from(JSON.stringify(event)).toString('base64'),
+          partitionKey: event.eventId,
+          approximateArrivalTimestamp: Date.now() / 1000,
+          kinesisSchemaVersion: '1.0'
+        },
+        eventID: `event-${i}`,
+        eventName: 'aws:kinesis:record',
+        eventVersion: '1.0',
+        eventSource: 'aws:kinesis',
+        awsRegion: 'us-east-1',
+        eventSourceARN: 'arn:aws:kinesis:us-east-1:123456789012:stream/feed-stream',
+        invokeIdentityArn: 'arn:aws:iam::123456789012:role/lambda-role'
+      }))
+    };
+  }
+
   test('invalidates post from cache', async () => {
     const event: FeedEvent = {
-      eventId: 'evt-1',
+      eventId: '550e8400-e29b-41d4-a716-446655440001',
       eventType: 'POST_DELETED',
       timestamp: '2025-01-13T10:00:00Z',
-      userId: 'user-123',
-      postId: 'post-456'
+      version: '1.0',
+      postId: '550e8400-e29b-41d4-a716-446655440002',
+      authorId: '550e8400-e29b-41d4-a716-446655440003'
     };
 
     const kinesisEvent = createKinesisEvent([event]);
     await handler(kinesisEvent, {} as any, {} as any);
 
-    expect(mockInvalidatePost).toHaveBeenCalledWith('post-456');
+    expect(mockInvalidatePost).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-446655440002');
     expect(console.log).toHaveBeenCalledWith(
       '[KinesisFeedConsumer] Invalidated POST_DELETED',
-      { postId: 'post-456' }
+      { postId: '550e8400-e29b-41d4-a716-446655440002' }
     );
   });
 
@@ -380,11 +555,12 @@ describe('Kinesis Feed Consumer - POST_DELETED Processing', () => {
     mockInvalidatePost.mockRejectedValueOnce(new Error('Redis error'));
 
     const event: FeedEvent = {
-      eventId: 'evt-1',
+      eventId: '550e8400-e29b-41d4-a716-446655440001',
       eventType: 'POST_DELETED',
       timestamp: '2025-01-13T10:00:00Z',
-      userId: 'user-123',
-      postId: 'post-456'
+      version: '1.0',
+      postId: '550e8400-e29b-41d4-a716-446655440002',
+      authorId: '550e8400-e29b-41d4-a716-446655440003'
     };
 
     const kinesisEvent = createKinesisEvent([event]);
@@ -399,7 +575,8 @@ describe('Kinesis Feed Consumer - POST_DELETED Processing', () => {
       eventId: 'evt-1',
       eventType: 'POST_DELETED',
       timestamp: '2025-01-13T10:00:00Z',
-      // Missing required fields: userId, postId
+      version: '1.0',
+      // Missing required fields
     };
 
     const kinesisEvent = createKinesisEvent([invalidEvent as any]);
@@ -411,11 +588,64 @@ describe('Kinesis Feed Consumer - POST_DELETED Processing', () => {
 });
 
 describe('Kinesis Feed Consumer - POST_LIKED Processing', () => {
+  let handler: any;
+  let mockCachePost: any;
+  let mockMarkPostAsRead: any;
+  let mockInvalidatePost: any;
+  let mockGetCachedPost: any;
+
+  beforeEach(async () => {
+    vi.resetModules();
+
+    mockCachePost = vi.fn().mockResolvedValue(undefined);
+    mockMarkPostAsRead = vi.fn().mockResolvedValue(undefined);
+    mockInvalidatePost = vi.fn().mockResolvedValue(undefined);
+    mockGetCachedPost = vi.fn().mockResolvedValue(null);
+
+    const dalMock = await import('@social-media-app/dal');
+    (dalMock as any).RedisCacheService = vi.fn().mockImplementation(() => ({
+      cachePost: mockCachePost,
+      markPostAsRead: mockMarkPostAsRead,
+      invalidatePost: mockInvalidatePost,
+      getCachedPost: mockGetCachedPost
+    }));
+
+    const awsConfigMock = await import('../../utils/aws-config.js');
+    (awsConfigMock as any).createRedisClient = vi.fn().mockReturnValue({});
+
+    const module = await import('./kinesis-feed-consumer.js');
+    handler = module.handler;
+
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  function createKinesisEvent(events: FeedEvent[]): KinesisStreamEvent {
+    return {
+      Records: events.map((event, i) => ({
+        kinesis: {
+          sequenceNumber: `seq-${i}`,
+          data: Buffer.from(JSON.stringify(event)).toString('base64'),
+          partitionKey: event.eventId,
+          approximateArrivalTimestamp: Date.now() / 1000,
+          kinesisSchemaVersion: '1.0'
+        },
+        eventID: `event-${i}`,
+        eventName: 'aws:kinesis:record',
+        eventVersion: '1.0',
+        eventSource: 'aws:kinesis',
+        awsRegion: 'us-east-1',
+        eventSourceARN: 'arn:aws:kinesis:us-east-1:123456789012:stream/feed-stream',
+        invokeIdentityArn: 'arn:aws:iam::123456789012:role/lambda-role'
+      }))
+    };
+  }
+
   test('updates post likes count (optional)', async () => {
     // Mock getting cached post
     mockGetCachedPost.mockResolvedValueOnce({
-      id: 'post-456',
-      authorId: 'user-123',
+      id: '550e8400-e29b-41d4-a716-446655440002',
+      authorId: '550e8400-e29b-41d4-a716-446655440003',
       authorHandle: 'johndoe',
       caption: 'Test post',
       imageUrl: 'https://example.com/image.jpg',
@@ -426,19 +656,20 @@ describe('Kinesis Feed Consumer - POST_LIKED Processing', () => {
     });
 
     const event: FeedEvent = {
-      eventId: 'evt-1',
+      eventId: '550e8400-e29b-41d4-a716-446655440001',
       eventType: 'POST_LIKED',
       timestamp: '2025-01-13T10:00:00Z',
-      userId: 'user-789',
-      postId: 'post-456',
-      likedBy: 'user-789'
+      version: '1.0',
+      userId: '550e8400-e29b-41d4-a716-446655440004',
+      postId: '550e8400-e29b-41d4-a716-446655440002',
+      liked: true
     };
 
     const kinesisEvent = createKinesisEvent([event]);
     await handler(kinesisEvent, {} as any, {} as any);
 
-    expect(mockGetCachedPost).toHaveBeenCalledWith('post-456');
-    expect(mockCachePost).toHaveBeenCalledWith('post-456', expect.objectContaining({
+    expect(mockGetCachedPost).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-446655440002');
+    expect(mockCachePost).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-446655440002', expect.objectContaining({
       likesCount: 6 // Incremented from 5
     }));
   });
@@ -447,12 +678,13 @@ describe('Kinesis Feed Consumer - POST_LIKED Processing', () => {
     mockGetCachedPost.mockResolvedValueOnce(null);
 
     const event: FeedEvent = {
-      eventId: 'evt-1',
+      eventId: '550e8400-e29b-41d4-a716-446655440001',
       eventType: 'POST_LIKED',
       timestamp: '2025-01-13T10:00:00Z',
-      userId: 'user-789',
-      postId: 'post-456',
-      likedBy: 'user-789'
+      version: '1.0',
+      userId: '550e8400-e29b-41d4-a716-446655440002',
+      postId: '550e8400-e29b-41d4-a716-446655440003',
+      liked: true
     };
 
     const kinesisEvent = createKinesisEvent([event]);
@@ -465,9 +697,62 @@ describe('Kinesis Feed Consumer - POST_LIKED Processing', () => {
 });
 
 describe('Kinesis Feed Consumer - Error Handling', () => {
+  let handler: any;
+  let mockCachePost: any;
+  let mockMarkPostAsRead: any;
+  let mockInvalidatePost: any;
+  let mockGetCachedPost: any;
+
+  beforeEach(async () => {
+    vi.resetModules();
+
+    mockCachePost = vi.fn().mockResolvedValue(undefined);
+    mockMarkPostAsRead = vi.fn().mockResolvedValue(undefined);
+    mockInvalidatePost = vi.fn().mockResolvedValue(undefined);
+    mockGetCachedPost = vi.fn().mockResolvedValue(null);
+
+    const dalMock = await import('@social-media-app/dal');
+    (dalMock as any).RedisCacheService = vi.fn().mockImplementation(() => ({
+      cachePost: mockCachePost,
+      markPostAsRead: mockMarkPostAsRead,
+      invalidatePost: mockInvalidatePost,
+      getCachedPost: mockGetCachedPost
+    }));
+
+    const awsConfigMock = await import('../../utils/aws-config.js');
+    (awsConfigMock as any).createRedisClient = vi.fn().mockReturnValue({});
+
+    const module = await import('./kinesis-feed-consumer.js');
+    handler = module.handler;
+
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  function createKinesisEvent(events: any[]): KinesisStreamEvent {
+    return {
+      Records: events.map((event, i) => ({
+        kinesis: {
+          sequenceNumber: `seq-${i}`,
+          data: Buffer.from(JSON.stringify(event)).toString('base64'),
+          partitionKey: event.eventId || 'partition-key',
+          approximateArrivalTimestamp: Date.now() / 1000,
+          kinesisSchemaVersion: '1.0'
+        },
+        eventID: `event-${i}`,
+        eventName: 'aws:kinesis:record',
+        eventVersion: '1.0',
+        eventSource: 'aws:kinesis',
+        awsRegion: 'us-east-1',
+        eventSourceARN: 'arn:aws:kinesis:us-east-1:123456789012:stream/feed-stream',
+        invokeIdentityArn: 'arn:aws:iam::123456789012:role/lambda-role'
+      }))
+    };
+  }
+
   test('returns sequence number in batch item failures', async () => {
     const invalidEvent = { invalid: 'data' };
-    const kinesisEvent = createKinesisEvent([invalidEvent as any]);
+    const kinesisEvent = createKinesisEvent([invalidEvent]);
     const result = await handler(kinesisEvent, {} as any, {} as any);
 
     expect(result.batchItemFailures).toHaveLength(1);
@@ -478,22 +763,24 @@ describe('Kinesis Feed Consumer - Error Handling', () => {
     const events = [
       { invalid: 'event' },
       {
-        eventId: 'evt-2',
+        eventId: '550e8400-e29b-41d4-a716-446655440001',
         eventType: 'POST_READ',
         timestamp: '2025-01-13T10:00:00Z',
-        userId: 'user-789',
-        postId: 'post-456'
+        version: '1.0',
+        userId: '550e8400-e29b-41d4-a716-446655440002',
+        postId: '550e8400-e29b-41d4-a716-446655440003'
       },
       {
-        eventId: 'evt-3',
+        eventId: '550e8400-e29b-41d4-a716-446655440004',
         eventType: 'POST_DELETED',
         timestamp: '2025-01-13T10:01:00Z',
-        userId: 'user-123',
-        postId: 'post-789'
+        version: '1.0',
+        postId: '550e8400-e29b-41d4-a716-446655440005',
+        authorId: '550e8400-e29b-41d4-a716-446655440006'
       }
     ];
 
-    const kinesisEvent = createKinesisEvent(events as any);
+    const kinesisEvent = createKinesisEvent(events);
     const result = await handler(kinesisEvent, {} as any, {} as any);
 
     expect(result.batchItemFailures).toHaveLength(1); // Only the invalid event
@@ -503,7 +790,7 @@ describe('Kinesis Feed Consumer - Error Handling', () => {
 
   test('logs errors with full context', async () => {
     const invalidEvent = { invalid: 'event' };
-    const kinesisEvent = createKinesisEvent([invalidEvent as any]);
+    const kinesisEvent = createKinesisEvent([invalidEvent]);
 
     await handler(kinesisEvent, {} as any, {} as any);
 
@@ -523,7 +810,7 @@ describe('Kinesis Feed Consumer - Error Handling', () => {
       timestamp: 'not-a-date'
     };
 
-    const kinesisEvent = createKinesisEvent([malformedEvent as any]);
+    const kinesisEvent = createKinesisEvent([malformedEvent]);
     const result = await handler(kinesisEvent, {} as any, {} as any);
 
     expect(result.batchItemFailures).toHaveLength(1);
@@ -538,11 +825,12 @@ describe('Kinesis Feed Consumer - Error Handling', () => {
       eventId: 'evt-1',
       eventType: 'UNKNOWN_EVENT_TYPE',
       timestamp: '2025-01-13T10:00:00Z',
+      version: '1.0',
       userId: 'user-123',
       postId: 'post-456'
     };
 
-    const kinesisEvent = createKinesisEvent([unknownEvent as any]);
+    const kinesisEvent = createKinesisEvent([unknownEvent]);
     const result = await handler(kinesisEvent, {} as any, {} as any);
 
     expect(result.batchItemFailures).toHaveLength(1);
