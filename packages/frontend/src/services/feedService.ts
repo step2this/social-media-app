@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import type { FeedResponse, PostGridResponse } from '@social-media-app/shared';
+import type { FeedResponse, PostGridResponse, MarkFeedItemsAsReadResponse } from '@social-media-app/shared';
 
 /**
  * Feed service for frontend API calls
@@ -40,6 +40,22 @@ export const feedService = {
 
     const response = await apiClient.get<FeedResponse>(
       `/feed/following?${params.toString()}`
+    );
+    return response;
+  },
+
+  /**
+   * Mark posts as read (Instagram-like behavior)
+   * Posts marked as read will not appear in future feed requests
+   *
+   * @param postIds - Array of post IDs to mark as read (max 50)
+   * @returns Response with success status and count of marked posts
+   * @throws {Error} Network errors, authentication errors, validation errors
+   */
+  async markPostsAsRead(postIds: string[]): Promise<MarkFeedItemsAsReadResponse> {
+    const response = await apiClient.post<MarkFeedItemsAsReadResponse>(
+      '/feed/read',
+      { postIds }
     );
     return response;
   }
