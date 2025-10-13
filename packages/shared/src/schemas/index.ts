@@ -9,3 +9,4 @@ export * from './like.schema.js';
 export * from './follow.schema.js';
 export * from './comment.schema.js';
 export * from './notification.schema.js';
+export * from './kinesis-events.schema.js';
