@@ -43,7 +43,7 @@ const kinesisPublisher = new KinesisEventPublisher(kinesisClient, streamName);
  * @description Creates a new social media post with image upload capabilities
  * @trace Captures full request lifecycle with subsegments for each operation
  */
-export const handler = tracer.captureLambdaHandler(async (
+export const handler = async (
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> => {
   try {
@@ -86,7 +86,6 @@ export const handler = tracer.captureLambdaHandler(async (
 
     // Add user context to traces
     addTraceAnnotation('userId', decoded.userId);
-    addTraceAnnotation('userRole', decoded.role || 'user');
 
     // Initialize dependencies with X-Ray instrumentation
     const dynamoClient = tracer.captureAWSv3Client(createDynamoDBClient());
@@ -249,4 +248,4 @@ export const handler = tracer.captureLambdaHandler(async (
       errorContext
     );
   }
-});
+};

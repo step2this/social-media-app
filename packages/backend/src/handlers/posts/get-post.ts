@@ -26,7 +26,7 @@ import { z } from 'zod';
  * @description Retrieves a single post with its metadata
  * @trace Captures post retrieval operations with DynamoDB query tracing
  */
-export const handler = tracer.captureLambdaHandler(async (
+export const handler = async (
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> => {
   try {
@@ -76,10 +76,10 @@ export const handler = tracer.captureLambdaHandler(async (
     // Add post metadata to traces
     addTraceMetadata('post', 'retrieved', {
       id: post.id,
-      authorId: post.authorId,
+      userId: post.userId,
       createdAt: post.createdAt
     });
-    addTraceAnnotation('authorId', post.authorId);
+    addTraceAnnotation('userId', post.userId);
 
     // Validate response
     const validatedResponse = await tracedOperation('ValidateResponse', async () => {
@@ -105,4 +105,4 @@ export const handler = tracer.captureLambdaHandler(async (
     addTraceAnnotation('errorType', 'internal_server_error');
     return errorResponse(500, 'Internal server error');
   }
-});
+};

@@ -10,7 +10,6 @@ import {
 } from '@social-media-app/shared';
 import { createRedisClient } from '../../utils/aws-config.js';
 import {
-  tracer,
   addTraceAnnotation,
   addTraceMetadata,
   captureTraceError,
@@ -166,7 +165,7 @@ async function processEvent(event: FeedEvent): Promise<void> {
  * @param event - The Kinesis stream event
  * @returns Batch item failures for retry
  */
-export const handler: KinesisStreamHandler = tracer.captureLambdaHandler(async (event): Promise<KinesisStreamBatchResponse> => {
+export const handler: KinesisStreamHandler = async (event): Promise<KinesisStreamBatchResponse> => {
   const batchItemFailures: KinesisStreamBatchResponse['batchItemFailures'] = [];
 
   // Add trace annotations for batch context
@@ -223,4 +222,4 @@ export const handler: KinesisStreamHandler = tracer.captureLambdaHandler(async (
   addTraceAnnotation('failureCount', batchItemFailures.length);
 
   return { batchItemFailures };
-});
+};

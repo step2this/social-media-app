@@ -115,7 +115,7 @@ export const captureTraceError = (error: Error | unknown, context?: Record<strin
     if (context) {
       tracer.putMetadata('errorContext', context);
     }
-    tracer.addError(error instanceof Error ? error : new Error(String(error)));
+    tracer.addErrorAsMetadata(error instanceof Error ? error : new Error(String(error)));
   }
 };
 
@@ -236,7 +236,7 @@ export const traceDynamoDBOperation = (
     tracer.putAnnotation('dynamodb.operation', operation);
     tracer.putAnnotation('dynamodb.table', tableName);
     if (details) {
-      tracer.putMetadata('dynamodb', operation.toLowerCase(), details);
+      tracer.putMetadata(operation.toLowerCase(), details, 'dynamodb');
     }
   }
 };
