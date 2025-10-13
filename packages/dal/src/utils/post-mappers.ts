@@ -13,6 +13,8 @@ export interface PostEntity {
   readonly SK: string;
   readonly GSI1PK: string;
   readonly GSI1SK: string;
+  readonly GSI4PK?: string;  // GSI4 for efficient user post queries
+  readonly GSI4SK?: string;  // GSI4 sort key with timestamp for ordering
   readonly id: string;
   readonly userId: string;
   readonly userHandle: string;

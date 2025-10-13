@@ -29,6 +29,7 @@ interface MockDynamoCommand {
 const createMockProfileService = () => ({
   incrementPostsCount: vi.fn(),
   decrementPostsCount: vi.fn(),
+  resetPostsCount: vi.fn(),
   getProfileByHandle: vi.fn(),
   getProfileById: vi.fn(),
   updateProfile: vi.fn(),
@@ -47,6 +48,7 @@ const createMockFollowService = () => ({
 const createMockDynamoClient = () => {
   const items = new Map<string, Record<string, unknown>>();
   const gsi1Items = new Map<string, Record<string, unknown>[]>();
+  const gsi4Items = new Map<string, Record<string, unknown>[]>();
 
   const updateGSI1 = (item: Record<string, unknown>) => {
     const gsi1Key = item.GSI1PK as string;
@@ -55,6 +57,16 @@ const createMockDynamoClient = () => {
         gsi1Items.set(gsi1Key, []);
       }
       gsi1Items.get(gsi1Key)!.push(item);
+    }
+  };
+
+  const updateGSI4 = (item: Record<string, unknown>) => {
+    const gsi4Key = item.GSI4PK as string;
+    if (gsi4Key) {
+      if (!gsi4Items.has(gsi4Key)) {
+        gsi4Items.set(gsi4Key, []);
+      }
+      gsi4Items.get(gsi4Key)!.push(item);
     }
   };
 
@@ -69,6 +81,7 @@ const createMockDynamoClient = () => {
 
     items.set(key, item);
     updateGSI1(item);
+    updateGSI4(item);
     return { $metadata: {} };
   };
 
@@ -79,6 +92,13 @@ const createMockDynamoClient = () => {
     if (IndexName === 'GSI1' && KeyConditionExpression === 'GSI1PK = :pk') {
       const pk = ExpressionAttributeValues?.[':pk'] as string;
       results = gsi1Items.get(pk) || [];
+    } else if (IndexName === 'GSI4' && KeyConditionExpression === 'GSI4PK = :pk') {
+      const pk = ExpressionAttributeValues?.[':pk'] as string;
+      const skPrefix = ExpressionAttributeValues?.[':skPrefix'] as string;
+      results = (gsi4Items.get(pk) || []).filter(item => {
+        const itemSK = item.GSI4SK as string;
+        return !skPrefix || itemSK.startsWith(skPrefix);
+      });
     } else if (KeyConditionExpression?.includes('PK = :pk')) {
       const pk = ExpressionAttributeValues?.[':pk'] as string;
       const skPrefix = ExpressionAttributeValues?.[':skPrefix'] as string;
@@ -152,6 +172,7 @@ const createMockDynamoClient = () => {
   const handleDeleteCommand = (command: MockDynamoCommand) => {
     const { Key } = command.input;
     const key = `${Key!.PK}#${Key!.SK}`;
+    const item = items.get(key);
     items.delete(key);
 
     // Remove from GSI1
@@ -163,6 +184,21 @@ const createMockDynamoClient = () => {
           gsi1Items.delete(gsiKey);
         }
         break;
+      }
+    }
+
+    // Remove from GSI4
+    if (item && item.GSI4PK) {
+      const gsi4Key = item.GSI4PK as string;
+      const gsi4ItemsList = gsi4Items.get(gsi4Key);
+      if (gsi4ItemsList) {
+        const index = gsi4ItemsList.findIndex(i => `${i.PK}#${i.SK}` === key);
+        if (index !== -1) {
+          gsi4ItemsList.splice(index, 1);
+          if (gsi4ItemsList.length === 0) {
+            gsi4Items.delete(gsi4Key);
+          }
+        }
       }
     }
 
@@ -832,6 +868,184 @@ describe('PostService', () => {
 
       await expect(postService.getFollowingFeedPosts(userId, mockFollowService, 24))
         .rejects.toThrow('Database error');
+    });
+  });
+
+  describe('deleteAllUserPosts - GSI4 Optimization', () => {
+    it('should delete all user posts using GSI4 query', async () => {
+      const userId = 'user123';
+
+      // Create multiple posts with GSI4 attributes
+      const posts: PostEntity[] = [
+        {
+          PK: `USER#${userId}`,
+          SK: `POST#2025-01-01T10:00:00.000Z#post1`,
+          GSI1PK: `POST#post1`,
+          GSI1SK: `USER#${userId}`,
+          GSI4PK: `USER#${userId}`,
+          GSI4SK: `POST#2025-01-01T10:00:00.000Z#post1`,
+          id: 'post1',
+          userId,
+          userHandle: 'testuser',
+          imageUrl: 'https://example.com/image1.jpg',
+          thumbnailUrl: 'https://example.com/thumb1.jpg',
+          caption: 'Post 1',
+          tags: [],
+          likesCount: 0,
+          commentsCount: 0,
+          isPublic: true,
+          createdAt: '2025-01-01T10:00:00.000Z',
+          updatedAt: '2025-01-01T10:00:00.000Z',
+          entityType: 'POST'
+        },
+        {
+          PK: `USER#${userId}`,
+          SK: `POST#2025-01-02T10:00:00.000Z#post2`,
+          GSI1PK: `POST#post2`,
+          GSI1SK: `USER#${userId}`,
+          GSI4PK: `USER#${userId}`,
+          GSI4SK: `POST#2025-01-02T10:00:00.000Z#post2`,
+          id: 'post2',
+          userId,
+          userHandle: 'testuser',
+          imageUrl: 'https://example.com/image2.jpg',
+          thumbnailUrl: 'https://example.com/thumb2.jpg',
+          caption: 'Post 2',
+          tags: [],
+          likesCount: 5,
+          commentsCount: 2,
+          isPublic: false,
+          createdAt: '2025-01-02T10:00:00.000Z',
+          updatedAt: '2025-01-02T10:00:00.000Z',
+          entityType: 'POST'
+        },
+        {
+          PK: `USER#${userId}`,
+          SK: `POST#2025-01-03T10:00:00.000Z#post3`,
+          GSI1PK: `POST#post3`,
+          GSI1SK: `USER#${userId}`,
+          GSI4PK: `USER#${userId}`,
+          GSI4SK: `POST#2025-01-03T10:00:00.000Z#post3`,
+          id: 'post3',
+          userId,
+          userHandle: 'testuser',
+          imageUrl: 'https://example.com/image3.jpg',
+          thumbnailUrl: 'https://example.com/thumb3.jpg',
+          caption: 'Post 3',
+          tags: ['test', 'gsi4'],
+          likesCount: 10,
+          commentsCount: 5,
+          isPublic: true,
+          createdAt: '2025-01-03T10:00:00.000Z',
+          updatedAt: '2025-01-03T10:00:00.000Z',
+          entityType: 'POST'
+        }
+      ];
+
+      // Add posts to mock database
+      posts.forEach(post => {
+        mockDynamoClient._getItems().set(`${post.PK}#${post.SK}`, post);
+      });
+
+      // Call deleteAllUserPosts
+      const deletedCount = await postService.deleteAllUserPosts(userId);
+
+      // Verify results
+      expect(deletedCount).toBe(3);
+
+      // Verify all posts were deleted
+      posts.forEach(post => {
+        const key = `${post.PK}#${post.SK}`;
+        expect(mockDynamoClient._getItems().has(key)).toBe(false);
+      });
+
+      // Verify resetPostsCount was called
+      expect(mockProfileService.resetPostsCount).toHaveBeenCalledWith(userId);
+    });
+
+    it('should handle pagination when deleting many posts', async () => {
+      const userId = 'user456';
+
+      // Create 30 posts (more than the batch size of 25)
+      const posts: PostEntity[] = [];
+      for (let i = 1; i <= 30; i++) {
+        const post: PostEntity = {
+          PK: `USER#${userId}`,
+          SK: `POST#2025-01-${String(i).padStart(2, '0')}T10:00:00.000Z#post${i}`,
+          GSI1PK: `POST#post${i}`,
+          GSI1SK: `USER#${userId}`,
+          GSI4PK: `USER#${userId}`,
+          GSI4SK: `POST#2025-01-${String(i).padStart(2, '0')}T10:00:00.000Z#post${i}`,
+          id: `post${i}`,
+          userId,
+          userHandle: 'testuser',
+          imageUrl: `https://example.com/image${i}.jpg`,
+          thumbnailUrl: `https://example.com/thumb${i}.jpg`,
+          caption: `Post ${i}`,
+          tags: [],
+          likesCount: 0,
+          commentsCount: 0,
+          isPublic: true,
+          createdAt: `2025-01-${String(i).padStart(2, '0')}T10:00:00.000Z`,
+          updatedAt: `2025-01-${String(i).padStart(2, '0')}T10:00:00.000Z`,
+          entityType: 'POST'
+        };
+        posts.push(post);
+        mockDynamoClient._getItems().set(`${post.PK}#${post.SK}`, post);
+      }
+
+      // Call deleteAllUserPosts
+      const deletedCount = await postService.deleteAllUserPosts(userId);
+
+      // Verify all 30 posts were deleted
+      expect(deletedCount).toBe(30);
+
+      // Verify all posts were deleted from the database
+      posts.forEach(post => {
+        const key = `${post.PK}#${post.SK}`;
+        expect(mockDynamoClient._getItems().has(key)).toBe(false);
+      });
+
+      // Verify resetPostsCount was called once
+      expect(mockProfileService.resetPostsCount).toHaveBeenCalledWith(userId);
+    });
+
+    it('should return 0 when user has no posts', async () => {
+      const userId = 'user-no-posts';
+
+      // Call deleteAllUserPosts for a user with no posts
+      const deletedCount = await postService.deleteAllUserPosts(userId);
+
+      // Verify results
+      expect(deletedCount).toBe(0);
+
+      // Verify resetPostsCount was NOT called when no posts exist
+      expect(mockProfileService.resetPostsCount).not.toHaveBeenCalled();
+    });
+
+    it('should set GSI4 attributes when creating a post', async () => {
+      const userId = 'user789';
+      const userHandle = 'testuser789';
+      const request: CreatePostRequest = {
+        caption: 'Test post with GSI4',
+        tags: ['test', 'gsi4'],
+        isPublic: true
+      };
+      const imageUrl = 'https://example.com/test.jpg';
+      const thumbnailUrl = 'https://example.com/test-thumb.jpg';
+
+      const result = await postService.createPost(userId, userHandle, request, imageUrl, thumbnailUrl);
+
+      // Get the created post from mock database
+      const items = Array.from(mockDynamoClient._getItems().values());
+      const createdPost = items.find(item => item.id === result.id) as PostEntity;
+
+      // Verify GSI4 attributes were set
+      expect(createdPost.GSI4PK).toBe(`USER#${userId}`);
+      expect(createdPost.GSI4SK).toMatch(/^POST#\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z#/);
+
+      // Verify GSI4SK matches the SK pattern for chronological ordering
+      expect(createdPost.GSI4SK).toBe(createdPost.SK);
     });
   });
 });

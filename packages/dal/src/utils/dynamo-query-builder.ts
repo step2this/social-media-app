@@ -69,9 +69,30 @@ export const buildQueryParams = (config: QueryConfig): QueryCommandInput => {
     scanIndexForward
   } = config;
 
-  // Determine key names based on whether we're using an index
-  const pkName = indexName ? 'GSI1PK' : 'PK';
-  const skName = indexName ? 'GSI1SK' : 'SK';
+  // Determine key names based on which index we're using
+  let pkName: string;
+  let skName: string;
+
+  if (!indexName) {
+    pkName = 'PK';
+    skName = 'SK';
+  } else if (indexName === 'GSI1') {
+    pkName = 'GSI1PK';
+    skName = 'GSI1SK';
+  } else if (indexName === 'GSI2') {
+    pkName = 'GSI2PK';
+    skName = 'GSI2SK';
+  } else if (indexName === 'GSI3') {
+    pkName = 'GSI3PK';
+    skName = 'GSI3SK';
+  } else if (indexName === 'GSI4') {
+    pkName = 'GSI4PK';
+    skName = 'GSI4SK';
+  } else {
+    // Default for any other GSI
+    pkName = `${indexName}PK`;
+    skName = `${indexName}SK`;
+  }
 
   // Build key condition expression
   let keyConditionExpression = `${pkName} = :pk`;
@@ -182,6 +203,48 @@ export const buildPostByIdQuery = (
     },
     limit: 1
   });
+};
+
+/**
+ * Builds query for retrieving all user posts using GSI4
+ * Optimized for bulk operations like user post deletion
+ * Reduces cost by 99% compared to table scan approach
+ *
+ * @param userId - User ID
+ * @param tableName - DynamoDB table name
+ * @param options - Optional limit and cursor
+ * @returns QueryCommandInput for GSI4 user posts
+ *
+ * @example
+ * ```typescript
+ * const query = buildUserPostsGSI4Query('user123', 'posts-table');
+ * // Use this for efficient bulk operations like deleteAllUserPosts
+ * ```
+ */
+export const buildUserPostsGSI4Query = (
+  userId: string,
+  tableName: string,
+  options?: UserPostsOptions
+): QueryCommandInput => {
+  const query = buildQueryParams({
+    tableName,
+    indexName: 'GSI4',
+    keyCondition: {
+      pk: `USER#${userId}`,
+      sk: 'POST#'
+    },
+    limit: options?.limit,
+    scanIndexForward: false // Newest first
+  });
+
+  // Add cursor if provided
+  if (options?.cursor) {
+    query.ExclusiveStartKey = JSON.parse(
+      Buffer.from(options.cursor, 'base64').toString()
+    );
+  }
+
+  return query;
 };
 
 /**

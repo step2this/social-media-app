@@ -318,6 +318,24 @@ export class ProfileService {
   }
 
   /**
+   * Reset posts count to zero
+   * Used when bulk deleting all user posts
+   */
+  async resetPostsCount(userId: string): Promise<void> {
+    await this.dynamoClient.send(new UpdateCommand({
+      TableName: this.tableName,
+      Key: {
+        PK: `USER#${userId}`,
+        SK: 'PROFILE'
+      },
+      UpdateExpression: 'SET postsCount = :zero',
+      ExpressionAttributeValues: {
+        ':zero': 0
+      }
+    }));
+  }
+
+  /**
    * Get base URL for file storage based on environment configuration
    * Uses environment-config utility for consistent URL generation
    * Priority: CloudFront > LocalStack > AWS S3
