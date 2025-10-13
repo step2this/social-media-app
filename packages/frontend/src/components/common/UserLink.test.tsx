@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { UserLink } from './UserLink.js';
 
 // Helper to render with router
-const renderWithRouter = (component: React.ReactElement) => {
+const renderWithRouter = (component: React.ReactElement<any>) => {
   return render(<MemoryRouter>{component}</MemoryRouter>);
 };
 

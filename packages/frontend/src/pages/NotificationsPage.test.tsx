@@ -21,7 +21,7 @@ vi.mock('react-router-dom', async () => {
 /**
  * Helper function to render components with router context
  */
-const renderWithRouter = (component: React.ReactElement) => {
+const renderWithRouter = (component: React.ReactElement<any>) => {
   return render(
     <BrowserRouter>
       {component}

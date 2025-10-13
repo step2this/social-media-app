@@ -14,7 +14,7 @@ vi.mock('../../services/commentService', () => ({
 }));
 
 // Helper to render with router
-const renderWithRouter = (component: React.ReactElement) => {
+const renderWithRouter = (component: React.ReactElement<any>) => {
   return render(<MemoryRouter>{component}</MemoryRouter>);
 };
 
