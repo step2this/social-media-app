@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useActionState } from 'react';
+import { flushSync } from 'react-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import type { LoginRequest } from '@social-media-app/shared';
 
@@ -7,25 +9,81 @@ interface LoginFormProps {
   onSwitchToRegister?: () => void;
 }
 
+interface LoginFormActionState {
+  success?: boolean;
+  error?: string;
+}
+
+const initialActionState: LoginFormActionState = {};
+
 export const LoginForm: React.FC<LoginFormProps> = ({
   onSuccess,
   onSwitchToRegister
 }) => {
-  const { login, isLoading, error, clearError } = useAuth();
+  const { login } = useAuth();
   const [formData, setFormData] = useState<LoginRequest>({
     email: '',
     password: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [displayError, setDisplayError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Action function for login
+  const loginAction = useCallback(async (
+    _prevState: LoginFormActionState,
+    _formData: FormData
+  ): Promise<LoginFormActionState> => {
+    // eslint-disable-next-line no-console
+    console.log('📝 LoginForm: Form submitted with data:', {
+      email: formData.email,
+      hasPassword: !!formData.password,
+      passwordLength: formData.password.length
+    });
+
+    // eslint-disable-next-line no-console
+    console.log('🚀 LoginForm: Calling login function...');
+    try {
+      const result = await login(formData);
+      // eslint-disable-next-line no-console
+      console.log('✅ LoginForm: Login successful!', result);
+
+      setIsSubmitting(false);
+
+      // Call success callback
+      onSuccess?.();
+
+      return { success: true };
+    } catch (error: unknown) {
+      setIsSubmitting(false);
+
+      // Error is handled by the hook and stored in the error state
+      // eslint-disable-next-line no-console
+      console.error('❌ LoginForm: Login failed:', error);
+      // eslint-disable-next-line no-console
+      console.error('Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        status: (error as { status?: number })?.status,
+        code: (error as { code?: string })?.code
+      });
+
+      const errorMsg = error instanceof Error ? error.message : 'Login failed. Please try again.';
+      setDisplayError(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+  }, [formData, login, onSuccess]);
+
+  const [actionState, formAction] = useActionState(loginAction, initialActionState);
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    try {
-      await login(formData);
-      onSuccess?.();
-    } catch {
-      // Error is handled by the hook and stored in the error state
-    }
+    flushSync(() => {
+      setIsSubmitting(true);
+    });
+
+    const formDataObj = new FormData();
+    formAction(formDataObj);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,8 +91,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     setFormData(prev => ({ ...prev, [name]: value }));
 
     // Clear error when user starts typing
-    if (error) {
-      clearError();
+    if (displayError) {
+      setDisplayError(null);
     }
   };
 
@@ -80,19 +138,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           />
         </div>
 
-        {error && (
+        {(displayError || actionState.error) && (
           <div className="tama-alert tama-alert--error" role="alert">
-            {error}
+            {displayError || actionState.error}
           </div>
         )}
 
         <div className="modal-actions modal-actions--automotive">
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isSubmitting}
             className="tama-btn tama-btn--automotive tama-btn--racing-red"
           >
-            {isLoading ? '🐣 Signing in...' : '🌟 Sign In'}
+            {isSubmitting ? '🐣 Signing in...' : '🌟 Sign In'}
           </button>
         </div>
       </form>

@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useActionState } from 'react';
+import { flushSync } from 'react-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import type { RegisterRequest } from '@social-media-app/shared';
 
@@ -7,21 +9,33 @@ interface RegisterFormProps {
   onSwitchToLogin?: () => void;
 }
 
+interface RegisterFormActionState {
+  success?: boolean;
+  error?: string;
+}
+
+const initialActionState: RegisterFormActionState = {};
+
 export const RegisterForm: React.FC<RegisterFormProps> = ({
   onSuccess,
   onSwitchToLogin
 }) => {
-  const { register, isLoading, error, clearError } = useAuth();
+  const { register } = useAuth();
   const [formData, setFormData] = useState<RegisterRequest>({
     email: '',
     password: '',
     username: ''
   });
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [displayError, setDisplayError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  // Action function for registration
+  const registerAction = useCallback(async (
+    _prevState: RegisterFormActionState,
+    _formData: FormData
+  ): Promise<RegisterFormActionState> => {
+    // eslint-disable-next-line no-console
     console.log('📝 RegisterForm: Form submitted with data:', {
       email: formData.email,
       username: formData.username,
@@ -31,25 +45,62 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
     // Check password confirmation
     if (formData.password !== confirmPassword) {
+      // eslint-disable-next-line no-console
       console.warn('❌ RegisterForm: Password confirmation failed');
-      return; // Error shown in UI
+      setIsSubmitting(false);
+      const errorMsg = 'Passwords do not match';
+      setDisplayError(errorMsg);
+      return { success: false, error: errorMsg };
     }
 
+    // eslint-disable-next-line no-console
     console.log('🚀 RegisterForm: Calling register function...');
     try {
       const result = await register(formData);
+      // eslint-disable-next-line no-console
       console.log('✅ RegisterForm: Registration successful!', result);
+
+      setIsSubmitting(false);
+
+      // Call success callback
       onSuccess?.();
-    } catch (error) {
+
+      return { success: true };
+    } catch (error: unknown) {
+      setIsSubmitting(false);
+
       // Error is handled by the hook and stored in the error state
+      // eslint-disable-next-line no-console
       console.error('❌ RegisterForm: Registration failed:', error);
+      // eslint-disable-next-line no-console
       console.error('Error details:', {
-        name: (error as any)?.name,
-        message: (error as any)?.message,
-        status: (error as any)?.status,
-        code: (error as any)?.code
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        status: (error as { status?: number })?.status,
+        code: (error as { code?: string })?.code
       });
+
+      const errorMsg = error instanceof Error ? error.message : 'Registration failed. Please try again.';
+      setDisplayError(errorMsg);
+      return { success: false, error: errorMsg };
     }
+  }, [formData, confirmPassword, register, onSuccess]);
+
+  const [actionState, formAction] = useActionState(registerAction, initialActionState);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!passwordsMatch) {
+      return;
+    }
+
+    flushSync(() => {
+      setIsSubmitting(true);
+    });
+
+    const formDataObj = new FormData();
+    formAction(formDataObj);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,8 +108,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     setFormData(prev => ({ ...prev, [name]: value }));
 
     // Clear error when user starts typing
-    if (error) {
-      clearError();
+    if (displayError) {
+      setDisplayError(null);
     }
   };
 
@@ -66,8 +117,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     setConfirmPassword(e.target.value);
 
     // Clear error when user starts typing
-    if (error) {
-      clearError();
+    if (displayError) {
+      setDisplayError(null);
     }
   };
 
@@ -161,16 +212,17 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           )}
         </div>
 
-        {error && (
+        {(displayError || actionState.error) && (
           <div className="tama-alert tama-alert--error" role="alert">
-            {error}
-            {(error.includes('email already exists') || error.includes('username already exists')) && (
+            {displayError || actionState.error}
+            {((displayError || actionState.error)?.includes('email already exists') ||
+              (displayError || actionState.error)?.includes('username already exists')) && (
               <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
                 <p>
                   <strong>Development tip:</strong> You can clear mock data by running:
                 </p>
                 <code style={{ display: 'block', padding: 'var(--space-2)', background: 'var(--tama-gray-100)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)' }}>
-                  fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/dev/reset-mock-data`, {'{ method: \'DELETE\' }'})
+                  fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/dev/reset-mock-data', {'{ method: \'DELETE\' }'})
                 </code>
                 <p>in your browser console, or refresh the page to start fresh.</p>
               </div>
@@ -181,10 +233,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         <div className="modal-actions modal-actions--automotive">
           <button
             type="submit"
-            disabled={isLoading || !passwordsMatch}
+            disabled={isSubmitting || !passwordsMatch}
             className="tama-btn tama-btn--automotive tama-btn--racing-red"
           >
-            {isLoading ? '🐣 Creating account...' : '🎉 Start Pet Journey'}
+            {isSubmitting ? '🐣 Creating account...' : '🎉 Start Pet Journey'}
           </button>
         </div>
       </form>
