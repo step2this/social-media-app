@@ -40,6 +40,7 @@
     "local:stop": "docker-compose -f docker-compose.local.yml down",
     "local:status": "docker-compose -f docker-compose.local.yml ps && curl -s http://localhost:4566/_localstack/health | jq .",
     "local:logs": "docker-compose -f docker-compose.local.yml logs -f",
+    "local:logs:redis": "docker-compose -f docker-compose.local.yml logs -f redis",
     "local:restart": "pnpm local:stop && pnpm local:start",
     "switch:localstack": "cp .env.local .env && echo '🔧 Switched to LocalStack mode'",
     "switch:mocks": "cp .env.mocks .env && echo '🎭 Switched to MSW mock mode'",

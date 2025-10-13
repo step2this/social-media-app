@@ -147,3 +147,44 @@ export const getKinesisStreamName = (): string => {
 
   return process.env.KINESIS_STREAM_NAME || `feed-events-${env}`;
 };
+
+/**
+ * Get Redis endpoint based on environment
+ */
+export const getRedisEndpoint = (): string => {
+  if (isLocalStackEnvironment()) {
+    return process.env.REDIS_ENDPOINT || 'localhost';
+  }
+
+  return process.env.REDIS_ENDPOINT || 'feed-cache-prod.redis.amazonaws.com';
+};
+
+/**
+ * Get Redis port
+ */
+export const getRedisPort = (): number => {
+  return parseInt(process.env.REDIS_PORT || '6379', 10);
+};
+
+/**
+ * Get Redis configuration for ioredis
+ */
+export const getRedisConfig = () => {
+  return {
+    host: getRedisEndpoint(),
+    port: getRedisPort(),
+    password: process.env.REDIS_PASSWORD || undefined,
+    tls: process.env.REDIS_TLS_ENABLED === 'true' ? {} : undefined,
+    // Connection pool settings
+    maxRetriesPerRequest: 3,
+    enableOfflineQueue: false,
+    connectTimeout: 10000,
+    // Reconnection strategy
+    retryStrategy: (times: number) => {
+      if (times > 3) {
+        return null; // Stop retrying
+      }
+      return Math.min(times * 100, 3000);
+    }
+  };
+};

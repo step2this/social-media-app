@@ -31,6 +31,11 @@ const kinesisStack = new KinesisStack(app, `${stackPrefix}-Kinesis`, {
   description: 'Kinesis Data Streams for event sourcing and real-time processing'
 });
 
+// Create Redis Stack for feed caching
+// Note: RedisStack is a Construct that will be added to a parent stack
+// For now, we're adding it to the API stack for simplicity
+// In production, you might want to create a dedicated Stack for it
+
 // Create Media Stack with S3 and CloudFront for user content
 const mediaStack = new MediaStack(app, `${stackPrefix}-Media`, {
   env: {

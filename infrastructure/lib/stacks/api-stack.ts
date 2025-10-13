@@ -14,6 +14,7 @@ import { FollowLambdas } from '../constructs/follow-lambdas.js';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as kinesis from 'aws-cdk-lib/aws-kinesis';
 import { DynamoEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
+import { RedisStack } from './redis-stack.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,6 +32,20 @@ export class ApiStack extends Stack {
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
+
+    // Create Redis cache construct (outputs will be added to this stack)
+    const redisCache = new RedisStack(this, 'RedisCache', {
+      environment: props.environment
+      // vpc: props.vpc // Uncomment when VPC is available
+    });
+
+    // Store Redis configuration for lambdas (will be used by Feed lambdas in Phase 3.2)
+    const redisEndpoint = redisCache.cacheEndpoint;
+    const redisPort = redisCache.cachePort.toString();
+
+    // TODO: Pass redisEndpoint and redisPort to Feed lambdas when they are created
+    // For now, we're just creating the infrastructure
+    console.log(`Redis cache configured at ${redisEndpoint}:${redisPort}`);
 
     // Create Lambda function for Hello endpoint
     const helloLambda = new NodejsFunction(this, 'HelloFunction', {
