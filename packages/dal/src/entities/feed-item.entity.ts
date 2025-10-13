@@ -41,6 +41,10 @@ export interface FeedItemEntity {
   // User context (calculated at write time)
   isLiked: boolean;                // Was post liked when feed item created
 
+  // Instagram-like read state (NEVER show same post twice)
+  isRead?: boolean;                // Default: false/undefined (unread)
+  readAt?: string;                 // ISO timestamp when marked as read
+
   // Metadata
   createdAt: string;               // Post creation time (ISO)
   feedItemCreatedAt: string;       // Feed item materialization time (ISO)

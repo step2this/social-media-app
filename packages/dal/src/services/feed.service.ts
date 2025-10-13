@@ -3,7 +3,8 @@ import {
   PutCommand,
   QueryCommand,
   ScanCommand,
-  BatchWriteCommand
+  BatchWriteCommand,
+  UpdateCommand
 } from '@aws-sdk/lib-dynamodb';
 import type { FeedPostItem } from '@social-media-app/shared';
 import { UUIDField } from '@social-media-app/shared';
@@ -11,14 +12,6 @@ import { z } from 'zod';
 import type { FeedItemEntity } from '../entities/feed-item.entity.js';
 import { createFeedItemKeys } from '../entities/feed-item.entity.js';
 import { mapEntityToFeedPostItem } from '../utils/feed-item-mappers.js';
-
-/**
- * Retry configuration options
- */
-interface RetryOptions {
-  readonly maxRetries: number;
-  readonly backoffMs: number;
-}
 
 /**
  * Paginated result with cursor
@@ -35,35 +28,6 @@ interface BatchResult {
   readonly successCount: number;
   readonly failedIndices: number[];
 }
-
-/**
- * Higher-order function: Executes an async operation with exponential backoff retry
- *
- * @param fn - Async function to execute
- * @param options - Retry configuration
- * @returns Promise with the result of fn
- */
-const withRetry = async <T>(
-  fn: () => Promise<T>,
-  options: RetryOptions
-): Promise<T> => {
-  let lastError: Error | undefined;
-
-  for (let attempt = 0; attempt <= options.maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-
-      if (attempt < options.maxRetries) {
-        const backoffMs = Math.pow(2, attempt) * options.backoffMs;
-        await new Promise(resolve => setTimeout(resolve, backoffMs));
-      }
-    }
-  }
-
-  throw lastError ?? new Error('Retry failed with unknown error');
-};
 
 /**
  * Async generator: Paginate through all results
@@ -541,7 +505,7 @@ export class FeedService {
       const processedCount = unprocessed.length - (result.UnprocessedItems?.[this.tableName]?.length ?? 0);
       successCount += processedCount;
 
-      unprocessed = result.UnprocessedItems?.[this.tableName] ?? [];
+      unprocessed = (result.UnprocessedItems?.[this.tableName] as typeof requests) ?? [];
 
       if (unprocessed.length > 0 && retry < maxRetries - 1) {
         await sleep(Math.pow(2, retry) * 100);
@@ -614,9 +578,12 @@ export class FeedService {
       const result = await this.dynamoClient.send(new QueryCommand({
         TableName: this.tableName,
         KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
+        // Instagram-like behavior: Filter out read posts (only show unread)
+        FilterExpression: 'attribute_not_exists(isRead) OR isRead = :false',
         ExpressionAttributeValues: {
           ':pk': `USER#${params.userId}`,
-          ':skPrefix': 'FEED#'
+          ':skPrefix': 'FEED#',
+          ':false': false
         },
         ScanIndexForward: false, // Sort descending (latest first)
         Limit: limit,
@@ -641,6 +608,123 @@ export class FeedService {
     } catch (error) {
       throw new Error(`Failed to get feed items: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Mark feed items as read (Instagram-like behavior)
+   *
+   * Updates feed items to set isRead=true and readAt timestamp.
+   * Once marked as read, posts will NEVER appear in the feed again.
+   *
+   * This implements Instagram-like behavior where users never see
+   * the same post twice, even if caches are lost or feed is repopulated.
+   *
+   * @param params - Parameters including userId and postIds to mark as read
+   * @returns Count of successfully updated items
+   *
+   * @example
+   * ```typescript
+   * const { updatedCount } = await feedService.markFeedItemsAsRead({
+   *   userId: 'user-123',
+   *   postIds: ['post-456', 'post-789']
+   * });
+   * console.log(`Marked ${updatedCount} posts as read`);
+   * ```
+   */
+  async markFeedItemsAsRead(params: {
+    userId: string;
+    postIds: string[];
+  }): Promise<{ updatedCount: number }> {
+    // Validate inputs
+    try {
+      UUIDField.parse(params.userId);
+      params.postIds.forEach(postId => UUIDField.parse(postId));
+    } catch (error) {
+      throw new Error(`Invalid UUID provided: ${error instanceof z.ZodError ? error.message : 'UUID validation failed'}`);
+    }
+
+    // Handle empty array
+    if (params.postIds.length === 0) {
+      return { updatedCount: 0 };
+    }
+
+    const readAt = new Date().toISOString();
+    const postIdSet = new Set(params.postIds);
+    const itemsToUpdate: Array<{ PK: string; SK: string }> = [];
+
+    // Find all feed items matching the postIds
+    // We need to paginate through the user's feed to find all matching items
+    let exclusiveStartKey: Record<string, unknown> | undefined;
+
+    do {
+      try {
+        const queryResult = await this.dynamoClient.send(new QueryCommand({
+          TableName: this.tableName,
+          KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
+          ExpressionAttributeValues: {
+            ':pk': `USER#${params.userId}`,
+            ':skPrefix': 'FEED#'
+          },
+          ProjectionExpression: 'PK, SK, postId',
+          ExclusiveStartKey: exclusiveStartKey
+        }));
+
+        // Filter items that match our postIds
+        if (queryResult.Items) {
+          for (const item of queryResult.Items) {
+            if (item.postId && postIdSet.has(item.postId as string)) {
+              itemsToUpdate.push({
+                PK: item.PK as string,
+                SK: item.SK as string
+              });
+            }
+          }
+        }
+
+        exclusiveStartKey = queryResult.LastEvaluatedKey;
+
+        // Stop early if we've found all posts
+        if (itemsToUpdate.length >= params.postIds.length) {
+          break;
+        }
+      } catch (error) {
+        console.error('[FeedService] Failed to query feed items', {
+          userId: params.userId,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+        break;
+      }
+    } while (exclusiveStartKey);
+
+    // Update all found items
+    let updatedCount = 0;
+    for (const item of itemsToUpdate) {
+      try {
+        await this.dynamoClient.send(new UpdateCommand({
+          TableName: this.tableName,
+          Key: {
+            PK: item.PK,
+            SK: item.SK
+          },
+          UpdateExpression: 'SET isRead = :isRead, readAt = :readAt',
+          ExpressionAttributeValues: {
+            ':isRead': true,
+            ':readAt': readAt
+          }
+        }));
+
+        updatedCount++;
+      } catch (error) {
+        // Log but don't throw - partial failures are acceptable
+        console.error('[FeedService] Failed to update feed item', {
+          userId: params.userId,
+          item,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    return { updatedCount };
   }
 
   /**

@@ -16,6 +16,7 @@ interface MockDynamoCommand {
     readonly ExpressionAttributeValues?: Record<string, unknown>;
     readonly ExpressionAttributeNames?: Record<string, unknown>;
     readonly FilterExpression?: string;
+    readonly UpdateExpression?: string;
     readonly Limit?: number;
     readonly ScanIndexForward?: boolean;
     readonly ExclusiveStartKey?: Record<string, unknown>;
@@ -73,6 +74,14 @@ const createMockDynamoClient = () => {
     if (FilterExpression?.includes('postId = :postId')) {
       const postId = ExpressionAttributeValues?.[':postId'] as string;
       results = results.filter(item => item.postId === postId);
+    }
+
+    // Filter for unread items (Instagram-like behavior)
+    if (FilterExpression?.includes('isRead')) {
+      if (FilterExpression.includes('attribute_not_exists(isRead)') ||
+          FilterExpression.includes('isRead = :false')) {
+        results = results.filter(item => !item.isRead || item.isRead === false);
+      }
     }
 
     // Sort by SK - descending by default (newest first)
@@ -150,6 +159,39 @@ const createMockDynamoClient = () => {
     };
   };
 
+  const handleUpdateCommand = (command: MockDynamoCommand) => {
+    const { Key, UpdateExpression, ExpressionAttributeValues } = command.input;
+
+    if (!Key) {
+      throw new Error('Key is required for UpdateCommand');
+    }
+
+    const itemKey = `${Key.PK}#${Key.SK}`;
+    const item = items.get(itemKey);
+
+    if (!item) {
+      // Item doesn't exist - return without error (like DynamoDB)
+      return { $metadata: {}, Attributes: {} };
+    }
+
+    // Parse UpdateExpression and apply updates
+    if (UpdateExpression && ExpressionAttributeValues) {
+      // Handle SET operations
+      if (UpdateExpression.includes('SET')) {
+        if (UpdateExpression.includes('isRead') && ExpressionAttributeValues[':isRead'] !== undefined) {
+          item.isRead = ExpressionAttributeValues[':isRead'] as boolean;
+        }
+        if (UpdateExpression.includes('readAt') && ExpressionAttributeValues[':readAt']) {
+          item.readAt = ExpressionAttributeValues[':readAt'] as string;
+        }
+      }
+
+      items.set(itemKey, item);
+    }
+
+    return { $metadata: {}, Attributes: item };
+  };
+
   return {
     send: vi.fn().mockImplementation((command: MockDynamoCommand) => {
       switch (command.constructor.name) {
@@ -161,6 +203,8 @@ const createMockDynamoClient = () => {
           return Promise.resolve(handleScanCommand(command));
         case 'BatchWriteCommand':
           return Promise.resolve(handleBatchWriteCommand(command));
+        case 'UpdateCommand':
+          return Promise.resolve(handleUpdateCommand(command));
         default:
           return Promise.reject(new Error(`Unknown command: ${command.constructor.name}`));
       }
@@ -837,6 +881,267 @@ describe('FeedService', () => {
         call => call[0].constructor.name === 'BatchWriteCommand'
       );
       expect(batchWriteCalls.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('markFeedItemsAsRead (Instagram-like behavior)', () => {
+    const userId = '123e4567-e89b-12d3-a456-426614174000';
+    const postId1 = '223e4567-e89b-12d3-a456-426614174001';
+    const postId2 = '223e4567-e89b-12d3-a456-426614174002';
+
+    beforeEach(async () => {
+      // Setup: Create feed items
+      await feedService.writeFeedItem({
+        userId,
+        postId: postId1,
+        authorId: '323e4567-e89b-12d3-a456-426614174002',
+        authorHandle: 'author1',
+        isLiked: false,
+        createdAt: '2025-10-12T10:00:00.000Z'
+      });
+
+      await feedService.writeFeedItem({
+        userId,
+        postId: postId2,
+        authorId: '423e4567-e89b-12d3-a456-426614174003',
+        authorHandle: 'author2',
+        isLiked: false,
+        createdAt: '2025-10-12T11:00:00.000Z'
+      });
+    });
+
+    it('should mark single feed item as read with readAt timestamp', async () => {
+      const beforeMark = new Date().toISOString();
+
+      const result = await feedService.markFeedItemsAsRead({
+        userId,
+        postIds: [postId1]
+      });
+
+      const afterMark = new Date().toISOString();
+
+      expect(result.updatedCount).toBe(1);
+
+      // Verify UpdateCommand was called with correct parameters
+      const updateCalls = mockDynamoClient.send.mock.calls.filter(
+        call => call[0].constructor.name === 'UpdateCommand'
+      );
+      expect(updateCalls.length).toBe(1);
+
+      const updateCommand = updateCalls[0][0];
+      expect(updateCommand.input.UpdateExpression).toContain('isRead');
+      expect(updateCommand.input.UpdateExpression).toContain('readAt');
+      expect(updateCommand.input.ExpressionAttributeValues?.[':isRead']).toBe(true);
+
+      const readAtValue = updateCommand.input.ExpressionAttributeValues?.[':readAt'] as string;
+      expect(readAtValue).toBeDefined();
+      expect(readAtValue >= beforeMark).toBe(true);
+      expect(readAtValue <= afterMark).toBe(true);
+    });
+
+    it('should mark multiple feed items as read', async () => {
+      const result = await feedService.markFeedItemsAsRead({
+        userId,
+        postIds: [postId1, postId2]
+      });
+
+      expect(result.updatedCount).toBe(2);
+
+      const updateCalls = mockDynamoClient.send.mock.calls.filter(
+        call => call[0].constructor.name === 'UpdateCommand'
+      );
+      expect(updateCalls.length).toBe(2);
+    });
+
+    it('should handle marking non-existent posts gracefully', async () => {
+      const fakePostId = '999e4567-e89b-12d3-a456-426614174999';
+
+      const result = await feedService.markFeedItemsAsRead({
+        userId,
+        postIds: [fakePostId]
+      });
+
+      expect(result.updatedCount).toBe(0);
+    });
+
+    it('should handle empty postIds array', async () => {
+      const result = await feedService.markFeedItemsAsRead({
+        userId,
+        postIds: []
+      });
+
+      expect(result.updatedCount).toBe(0);
+
+      const updateCalls = mockDynamoClient.send.mock.calls.filter(
+        call => call[0].constructor.name === 'UpdateCommand'
+      );
+      expect(updateCalls.length).toBe(0);
+    });
+
+    it('should only update feed items for the specified user', async () => {
+      const anotherUserId = '999e4567-e89b-12d3-a456-426614174999';
+
+      // Create feed item for another user with same postId
+      await feedService.writeFeedItem({
+        userId: anotherUserId,
+        postId: postId1,
+        authorId: '323e4567-e89b-12d3-a456-426614174002',
+        authorHandle: 'author1',
+        isLiked: false,
+        createdAt: '2025-10-12T10:00:00.000Z'
+      });
+
+      // Mark as read for first user
+      const result = await feedService.markFeedItemsAsRead({
+        userId,
+        postIds: [postId1]
+      });
+
+      expect(result.updatedCount).toBe(1);
+
+      // Verify only the specified user's item was updated
+      const updateCalls = mockDynamoClient.send.mock.calls.filter(
+        call => call[0].constructor.name === 'UpdateCommand'
+      );
+      expect(updateCalls.length).toBe(1);
+
+      const updateCommand = updateCalls[0][0];
+      expect(updateCommand.input.Key?.PK).toBe(`USER#${userId}`);
+    });
+  });
+
+  describe('getMaterializedFeedItems (Instagram-like filtering)', () => {
+    const userId = '123e4567-e89b-12d3-a456-426614174000';
+    const unreadPostId = '223e4567-e89b-12d3-a456-426614174001';
+    const readPostId = '223e4567-e89b-12d3-a456-426614174002';
+
+    beforeEach(async () => {
+      // Create an unread post
+      await feedService.writeFeedItem({
+        userId,
+        postId: unreadPostId,
+        authorId: '323e4567-e89b-12d3-a456-426614174002',
+        authorHandle: 'author1',
+        isLiked: false,
+        createdAt: '2025-10-12T10:00:00.000Z'
+      });
+
+      // Create a read post
+      await feedService.writeFeedItem({
+        userId,
+        postId: readPostId,
+        authorId: '423e4567-e89b-12d3-a456-426614174003',
+        authorHandle: 'author2',
+        isLiked: false,
+        createdAt: '2025-10-12T11:00:00.000Z'
+      });
+
+      // Mark second post as read
+      await feedService.markFeedItemsAsRead({
+        userId,
+        postIds: [readPostId]
+      });
+    });
+
+    it('should only return unread feed items', async () => {
+      const result = await feedService.getMaterializedFeedItems({
+        userId,
+        limit: 20
+      });
+
+      expect(result.items.length).toBe(1);
+      expect(result.items[0].id).toBe(unreadPostId);
+      expect(result.items.find(item => item.id === readPostId)).toBeUndefined();
+    });
+
+    it('should filter with FilterExpression for isRead=false', async () => {
+      await feedService.getMaterializedFeedItems({
+        userId,
+        limit: 20
+      });
+
+      const queryCalls = mockDynamoClient.send.mock.calls.filter(
+        call => call[0].constructor.name === 'QueryCommand'
+      );
+
+      expect(queryCalls.length).toBeGreaterThan(0);
+
+      const queryCommand = queryCalls[queryCalls.length - 1][0];
+      expect(queryCommand.input.FilterExpression).toContain('isRead');
+      expect(
+        queryCommand.input.FilterExpression?.includes('attribute_not_exists(isRead)') ||
+        queryCommand.input.FilterExpression?.includes('isRead = :false')
+      ).toBe(true);
+    });
+
+    it('should return all unread posts when no limit specified', async () => {
+      // Create more unread posts
+      await feedService.writeFeedItem({
+        userId,
+        postId: '323e4567-e89b-12d3-a456-426614174004',
+        authorId: '323e4567-e89b-12d3-a456-426614174002',
+        authorHandle: 'author1',
+        isLiked: false,
+        createdAt: '2025-10-12T12:00:00.000Z'
+      });
+
+      const result = await feedService.getMaterializedFeedItems({
+        userId
+      });
+
+      // Should return 2 unread posts (unreadPostId + newly created)
+      // readPostId should be filtered out
+      expect(result.items.length).toBe(2);
+      expect(result.items.every(item => item.id !== readPostId)).toBe(true);
+    });
+
+    it('should handle empty feed gracefully', async () => {
+      const emptyUserId = '999e4567-e89b-12d3-a456-426614174999';
+
+      const result = await feedService.getMaterializedFeedItems({
+        userId: emptyUserId,
+        limit: 20
+      });
+
+      expect(result.items.length).toBe(0);
+      expect(result.nextCursor).toBeUndefined();
+    });
+
+    it('should support pagination with unread filtering', async () => {
+      // Create many unread posts
+      for (let i = 0; i < 15; i++) {
+        const paddedNum = String(i).padStart(2, '0');
+        await feedService.writeFeedItem({
+          userId,
+          postId: `${paddedNum}3e4567-e89b-12d3-a456-4266141740${paddedNum}`,
+          authorId: '323e4567-e89b-12d3-a456-426614174002',
+          authorHandle: 'author1',
+          isLiked: false,
+          createdAt: `2025-10-12T${paddedNum}:00:00.000Z`
+        });
+      }
+
+      // First page
+      const page1 = await feedService.getMaterializedFeedItems({
+        userId,
+        limit: 10
+      });
+
+      expect(page1.items.length).toBe(10);
+      expect(page1.nextCursor).toBeDefined();
+
+      // Second page
+      const page2 = await feedService.getMaterializedFeedItems({
+        userId,
+        limit: 10,
+        cursor: page1.nextCursor
+      });
+
+      expect(page2.items.length).toBeGreaterThan(0);
+
+      // Verify no read posts in either page
+      const allPageItems = [...page1.items, ...page2.items];
+      expect(allPageItems.every(item => item.id !== readPostId)).toBe(true);
     });
   });
 });
