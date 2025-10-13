@@ -1,4 +1,5 @@
-import { useState, useCallback, FormEvent, ChangeEvent } from 'react';
+import { useState, useCallback, FormEvent, ChangeEvent, useActionState } from 'react';
+import { flushSync } from 'react-dom';
 import { commentService } from '../../services/commentService';
 import type { Comment } from '@social-media-app/shared';
 import './CommentForm.css';
@@ -11,6 +12,13 @@ interface CommentFormProps {
 const MAX_COMMENT_LENGTH = 500;
 const WARNING_THRESHOLD = 450;
 
+interface CommentFormActionState {
+  success?: boolean;
+  error?: string;
+}
+
+const initialActionState: CommentFormActionState = {};
+
 /**
  * CommentForm component for creating comments on posts
  * Features character counter, validation, and error handling
@@ -18,12 +26,51 @@ const WARNING_THRESHOLD = 450;
 export const CommentForm = ({ postId, onCommentCreated }: CommentFormProps) => {
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [displayError, setDisplayError] = useState<string | null>(null);
 
   // Don't render if missing postId
   if (!postId) {
     return null;
   }
+
+  // Action function for comment submission
+  const createCommentAction = useCallback(async (
+    prevState: CommentFormActionState,
+    _formData: FormData
+  ): Promise<CommentFormActionState> => {
+    const trimmedContent = content.trim();
+
+    if (!trimmedContent || trimmedContent.length === 0 || trimmedContent.length > MAX_COMMENT_LENGTH) {
+      setIsSubmitting(false);
+      const errorMsg = 'Please enter a valid comment';
+      setDisplayError(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+
+    try {
+      const response = await commentService.createComment(postId, trimmedContent);
+
+      // Clear input on success
+      setContent('');
+      setIsSubmitting(false);
+      setDisplayError(null);
+
+      // Call callback if provided
+      if (onCommentCreated) {
+        onCommentCreated(response.comment);
+      }
+
+      return { success: true };
+    } catch (err) {
+      setIsSubmitting(false);
+      console.error('Failed to create comment:', err);
+      const errorMsg = 'Failed to post comment. Please try again.';
+      setDisplayError(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+  }, [postId, content, onCommentCreated]);
+
+  const [actionState, formAction, isPending] = useActionState(createCommentAction, initialActionState);
 
   const charCount = content.length;
   const isOverLimit = charCount > MAX_COMMENT_LENGTH;
@@ -37,41 +84,28 @@ export const CommentForm = ({ postId, onCommentCreated }: CommentFormProps) => {
   const handleChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
     // Clear error when user starts typing again
-    if (error) {
-      setError(null);
+    if (displayError) {
+      setDisplayError(null);
     }
-  }, [error]);
+  }, [displayError]);
 
   /**
    * Handle form submission
    */
-  const handleSubmit = useCallback(async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = useCallback((e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!isValid || isSubmitting) {
       return;
     }
 
-    setIsSubmitting(true);
-    setError(null);
+    flushSync(() => {
+      setIsSubmitting(true);
+    });
 
-    try {
-      const response = await commentService.createComment(postId, trimmedContent);
-
-      // Clear input on success
-      setContent('');
-
-      // Call callback if provided
-      if (onCommentCreated) {
-        onCommentCreated(response.comment);
-      }
-    } catch (err) {
-      setError('Failed to post comment. Please try again.');
-      console.error('Failed to create comment:', err);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [postId, trimmedContent, isValid, isSubmitting, onCommentCreated]);
+    const formDataObj = new FormData();
+    formAction(formDataObj);
+  }, [isValid, isSubmitting, formAction]);
 
   const counterClasses = [
     'comment-form__counter',
@@ -110,13 +144,13 @@ export const CommentForm = ({ postId, onCommentCreated }: CommentFormProps) => {
         </div>
       </div>
 
-      {error && (
+      {displayError && (
         <div
           className="comment-form__error"
           data-testid="comment-form-error"
           role="alert"
         >
-          {error}
+          {displayError}
         </div>
       )}
 
