@@ -8,6 +8,7 @@ export * from './services/comment.service.js';
 export * from './services/notification.service.js';
 export * from './services/feed.service.js';
 export * from './services/kinesis-event-publisher.service.js';
+export * from './services/redis-cache.service.js';
 
 // Entity types and utilities
 export * from './entities/index.js';

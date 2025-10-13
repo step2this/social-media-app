@@ -3,7 +3,7 @@
  * @module services/redis-cache
  */
 
-import Redis, { type Redis as RedisClient } from 'ioredis';
+import type { Redis as RedisClient } from 'ioredis';
 
 /**
  * Cached post metadata structure
