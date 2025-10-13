@@ -5,6 +5,7 @@ import { MaterialIcon } from '../common/MaterialIcon';
 import { useLike } from '../../hooks/useLike';
 import { UserLink } from '../common/UserLink';
 import { FollowButton } from '../common/FollowButton';
+import { DevFeedSourceBadge, type FeedSource } from '../dev';
 import './PostCard.css';
 
 export interface PostCardProps {
@@ -13,6 +14,8 @@ export interface PostCardProps {
   showComments?: boolean;
   compact?: boolean;
   variant?: 'feed' | 'detail';
+  showDevBadge?: boolean;
+  feedSource?: FeedSource;
 }
 
 /**
@@ -26,7 +29,9 @@ export const PostCard: React.FC<PostCardProps> = ({
   currentUserId,
   showComments = false,
   compact = false,
-  variant = 'feed'
+  variant = 'feed',
+  showDevBadge = false,
+  feedSource = 'materialized'
 }) => {
   const navigate = useNavigate();
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -61,6 +66,9 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   return (
     <article className={cardClasses} data-testid="post-card">
+      {/* Dev Badge (if enabled) */}
+      {showDevBadge && <DevFeedSourceBadge feedSource={feedSource} />}
+
       {/* Post Image */}
       <div className="post-card__image-container">
         {!imageLoaded && (

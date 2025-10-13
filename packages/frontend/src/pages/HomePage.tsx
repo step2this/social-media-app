@@ -3,6 +3,11 @@ import type { FeedPostItem } from '@social-media-app/shared';
 import { feedService } from '../services/feedService';
 import { PostCard } from '../components/posts/PostCard';
 import { useFeedItemAutoRead } from '../hooks/useFeedItemAutoRead';
+import {
+  DevMenu,
+  DevReadStateDebugger,
+  DevManualMarkButton
+} from '../components/dev';
 import './HomePage.css';
 
 /**
@@ -182,6 +187,18 @@ export const HomePage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Dev Tools Menu (Ctrl+Shift+D) */}
+      <DevMenu>
+        <DevReadStateDebugger posts={posts} />
+        {posts.map((post) => (
+          <DevManualMarkButton
+            key={post.id}
+            post={post}
+            onMarkComplete={() => loadInitialPosts()}
+          />
+        ))}
+      </DevMenu>
     </div>
   );
 };
