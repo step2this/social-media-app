@@ -11,32 +11,25 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { randomUUID } from 'crypto';
 import {
-  RegisterResponseSchema,
-  CreatePostResponseSchema,
   LikePostResponseSchema,
   UnlikePostResponseSchema,
   GetPostLikeStatusResponseSchema,
-  PostResponseSchema,
-  type RegisterResponse,
-  type CreatePostResponse,
   type LikePostResponse,
   type UnlikePostResponse,
-  type GetPostLikeStatusResponse,
-  type Post
+  type GetPostLikeStatusResponse
 } from '@social-media-app/shared';
 import {
   createLocalStackHttpClient,
   parseResponse,
-  testEnvironment,
-  environmentDetector,
-  testLogger
+  testLogger,
+  ensureServicesReady,
+  createTestUsers,
+  createTestPost,
+  authHeader,
+  expectUnauthorized,
+  expectValidationError
 } from '../utils/index.js';
-import {
-  createRegisterRequest,
-  createPostRequest
-} from '../fixtures/index.js';
 
 describe('Likes Workflow Integration', () => {
   const httpClient = createLocalStackHttpClient();
@@ -52,66 +45,23 @@ describe('Likes Workflow Integration', () => {
     testLogger.info('Starting Likes Workflow Integration Tests');
 
     // Wait for services to be ready
-    await environmentDetector.waitForServices(30000);
-
-    // Verify environment configuration
-    const serviceUrls = environmentDetector.getServiceUrls();
-    testLogger.debug('Service URLs:', serviceUrls);
-
-    // Verify services are available
-    const localStackReady = await environmentDetector.isLocalStackAvailable();
-    const apiReady = await environmentDetector.isApiServerAvailable();
-
-    if (!localStackReady) {
-      throw new Error('LocalStack is not available. Please start LocalStack before running integration tests.');
-    }
-
-    if (!apiReady) {
-      throw new Error('API server is not available. Please start the backend server before running integration tests.');
-    }
-
-    testLogger.info('All required services are ready');
+    await ensureServicesReady();
 
     // Setup: Create two test users and a post
-    const uniqueId1 = randomUUID().slice(0, 8);
-    const uniqueId2 = randomUUID().slice(0, 8);
-
-    // Register user 1
-    const user1RegisterRequest = createRegisterRequest()
-      .withEmail(`likes-test-user1-${uniqueId1}@tamafriends.local`)
-      .withUsername(`likesuser1_${uniqueId1}`)
-      .withPassword('TestPassword123!')
-      .build();
-
-    const user1RegisterResponse = await httpClient.post<RegisterResponse>('/auth/register', user1RegisterRequest);
-    const user1RegisterData = await parseResponse(user1RegisterResponse, RegisterResponseSchema);
-    user1Token = user1RegisterData.tokens!.accessToken;
-    user1Id = user1RegisterData.user.id;
-
-    // Register user 2
-    const user2RegisterRequest = createRegisterRequest()
-      .withEmail(`likes-test-user2-${uniqueId2}@tamafriends.local`)
-      .withUsername(`likesuser2_${uniqueId2}`)
-      .withPassword('TestPassword123!')
-      .build();
-
-    const user2RegisterResponse = await httpClient.post<RegisterResponse>('/auth/register', user2RegisterRequest);
-    const user2RegisterData = await parseResponse(user2RegisterResponse, RegisterResponseSchema);
-    user2Token = user2RegisterData.tokens!.accessToken;
-    user2Id = user2RegisterData.user.id;
+    const [user1, user2] = await createTestUsers(httpClient, {
+      prefix: 'likes-test',
+      count: 2
+    });
+    user1Token = user1.token;
+    user1Id = user1.userId;
+    user2Token = user2.token;
+    user2Id = user2.userId;
 
     // Create a test post
-    const postRequest = createPostRequest()
-      .withCaption('Test post for likes integration')
-      .build();
-
-    const createPostResponse = await httpClient.post<CreatePostResponse>(
-      '/posts',
-      postRequest,
-      { headers: { Authorization: `Bearer ${user1Token}` } }
-    );
-    const createPostData = await parseResponse(createPostResponse, CreatePostResponseSchema);
-    testPostId = createPostData.post.id;
+    const { postId } = await createTestPost(httpClient, user1.token, {
+      caption: 'Test post for likes integration'
+    });
+    testPostId = postId;
 
     testLogger.info('Setup complete', { user1Id, user2Id, testPostId });
   }, 30000);
@@ -127,7 +77,7 @@ describe('Likes Workflow Integration', () => {
       const likeResponse = await httpClient.post<LikePostResponse>(
         '/likes',
         { postId: testPostId },
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const likeData = await parseResponse(likeResponse, LikePostResponseSchema);
@@ -145,7 +95,7 @@ describe('Likes Workflow Integration', () => {
       const likeResponse = await httpClient.post<LikePostResponse>(
         '/likes',
         { postId: testPostId },
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const likeData = await parseResponse(likeResponse, LikePostResponseSchema);
@@ -159,7 +109,7 @@ describe('Likes Workflow Integration', () => {
 
       const statusResponse = await httpClient.get<GetPostLikeStatusResponse>(
         `/likes/${testPostId}`,
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const statusData = await parseResponse(statusResponse, GetPostLikeStatusResponseSchema);
@@ -173,7 +123,7 @@ describe('Likes Workflow Integration', () => {
       const unlikeResponse = await httpClient.delete<UnlikePostResponse>(
         '/likes',
         { postId: testPostId },
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const unlikeData = await parseResponse(unlikeResponse, UnlikePostResponseSchema);
@@ -189,7 +139,7 @@ describe('Likes Workflow Integration', () => {
       const unlikeResponse = await httpClient.delete<UnlikePostResponse>(
         '/likes',
         { postId: testPostId },
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const unlikeData = await parseResponse(unlikeResponse, UnlikePostResponseSchema);
@@ -207,7 +157,7 @@ describe('Likes Workflow Integration', () => {
       const user1LikeResponse = await httpClient.post<LikePostResponse>(
         '/likes',
         { postId: testPostId },
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
       const user1LikeData = await parseResponse(user1LikeResponse, LikePostResponseSchema);
       expect(user1LikeData.isLiked).toBe(true);
@@ -216,7 +166,7 @@ describe('Likes Workflow Integration', () => {
       const user2LikeResponse = await httpClient.post<LikePostResponse>(
         '/likes',
         { postId: testPostId },
-        { headers: { Authorization: `Bearer ${user2Token}` } }
+        authHeader(user2Token)
       );
       const user2LikeData = await parseResponse(user2LikeResponse, LikePostResponseSchema);
       expect(user2LikeData.isLiked).toBe(true);
@@ -224,14 +174,14 @@ describe('Likes Workflow Integration', () => {
       // Verify both users see they liked it
       const user1StatusResponse = await httpClient.get<GetPostLikeStatusResponse>(
         `/likes/${testPostId}`,
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
       const user1Status = await parseResponse(user1StatusResponse, GetPostLikeStatusResponseSchema);
       expect(user1Status.isLiked).toBe(true);
 
       const user2StatusResponse = await httpClient.get<GetPostLikeStatusResponse>(
         `/likes/${testPostId}`,
-        { headers: { Authorization: `Bearer ${user2Token}` } }
+        authHeader(user2Token)
       );
       const user2Status = await parseResponse(user2StatusResponse, GetPostLikeStatusResponseSchema);
       expect(user2Status.isLiked).toBe(true);
@@ -242,27 +192,21 @@ describe('Likes Workflow Integration', () => {
     it('should return 401 when liking without authentication', async () => {
       testLogger.debug('Testing unauthorized like attempt');
 
-      try {
+      await expectUnauthorized(async () => {
         await httpClient.post<LikePostResponse>('/likes', { postId: testPostId });
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.status).toBe(401);
-      }
+      });
     });
 
     it('should return 400 when liking with invalid postId', async () => {
       testLogger.debug('Testing like with invalid postId');
 
-      try {
+      await expectValidationError(async () => {
         await httpClient.post<LikePostResponse>(
           '/likes',
           { postId: 'not-a-uuid' },
-          { headers: { Authorization: `Bearer ${user1Token}` } }
+          authHeader(user1Token)
         );
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.status).toBe(400);
-      }
+      });
     });
   });
 });

@@ -12,15 +12,17 @@ import { randomUUID } from 'crypto';
 import type {
   RegisterResponse,
   CreatePostResponse,
-  Post
+  Post,
+  Profile
 } from '@social-media-app/shared';
 import {
   RegisterResponseSchema,
-  CreatePostResponseSchema
+  CreatePostResponseSchema,
+  ProfileResponseSchema
 } from '@social-media-app/shared';
 import type { HttpClient } from './http-client.js';
 import { parseResponse } from './http-client.js';
-import { delay } from './helpers.js';
+import { delay, authHeader } from './helpers.js';
 import {
   createRegisterRequest,
   createPostRequest
@@ -33,7 +35,7 @@ import {
  * @property userId - Unique user identifier (UUID)
  * @property email - User's email address
  * @property username - User's username
- * @property handle - User's handle (optional, retrieve via profile endpoint)
+ * @property handle - User's handle (fetched from profile endpoint)
  */
 export interface TestUser {
   token: string;
@@ -105,11 +107,12 @@ export interface CreateTestUsersOptions {
  * 2. Builds registration request with builder pattern
  * 3. POSTs to /auth/register endpoint
  * 4. Parses and validates response with Zod schema
- * 5. Extracts token and userId for subsequent requests
+ * 5. Fetches user profile to retrieve handle
+ * 6. Returns token, userId, and handle for subsequent requests
  *
  * @param httpClient - HTTP client instance for making API calls
  * @param options - Optional configuration for user creation
- * @returns TestUser object with token and user metadata
+ * @returns TestUser object with token, user metadata, and handle
  *
  * @example
  * ```typescript
@@ -117,6 +120,7 @@ export interface CreateTestUsersOptions {
  *   prefix: 'likes-test'
  * });
  * // Result: user.email = 'likes-test-user-abc123@tamafriends.local'
+ * // Result: user.handle = 'likestestuser_abc123'
  * ```
  *
  * @example
@@ -128,8 +132,9 @@ export interface CreateTestUsersOptions {
  * ```
  */
 export async function createTestUser(
+  // eslint-disable-next-line functional/prefer-immutable-types
   httpClient: HttpClient,
-  options: CreateTestUserOptions = {}
+  options: Readonly<CreateTestUserOptions> = {}
 ): Promise<TestUser> {
   const {
     prefix = 'test',
@@ -165,11 +170,20 @@ export async function createTestUser(
   const token = registerData.tokens!.accessToken;
   const userId = registerData.user.id;
 
+  // Fetch profile to get handle
+  const profileResponse = await httpClient.get<{ profile: Profile }>(
+    '/profile/me',
+    authHeader(token)
+  );
+  const profileData = await parseResponse(profileResponse, ProfileResponseSchema);
+  const handle = profileData.profile.handle;
+
   return {
     token,
     userId,
     email,
-    username
+    username,
+    handle
   };
 }
 
@@ -208,9 +222,10 @@ export async function createTestUser(
  * ```
  */
 export async function createTestPost(
+  // eslint-disable-next-line functional/prefer-immutable-types
   httpClient: HttpClient,
   token: string,
-  options: CreateTestPostOptions = {}
+  options: Readonly<CreateTestPostOptions> = {}
 ): Promise<TestPost> {
   const {
     caption = 'Test post caption',
@@ -219,19 +234,16 @@ export async function createTestPost(
     waitForStreams = false
   } = options;
 
-  // Build post request using builder pattern
-  let postRequestBuilder = createPostRequest()
+  // Build post request using builder pattern with visibility
+  const postRequestBuilder = createPostRequest()
     .withCaption(caption)
     .withTags(tags);
 
-  // Set visibility
-  if (isPublic) {
-    postRequestBuilder = postRequestBuilder.asPublic();
-  } else {
-    postRequestBuilder = postRequestBuilder.asPrivate();
-  }
-
-  const postRequest = postRequestBuilder.build();
+  // Set visibility and build request
+  const postRequest = (isPublic
+    ? postRequestBuilder.asPublic()
+    : postRequestBuilder.asPrivate()
+  ).build();
 
   // Create post via API with authorization
   const createPostResponse = await httpClient.post<CreatePostResponse>(
@@ -248,9 +260,18 @@ export async function createTestPost(
     await delay(3000);
   }
 
+  // Extract post data - schema validation ensures correct shape
+  const post: Post = {
+    ...createPostData.post,
+    tags: createPostData.post.tags ?? [],
+    likesCount: createPostData.post.likesCount ?? 0,
+    commentsCount: createPostData.post.commentsCount ?? 0,
+    isPublic: createPostData.post.isPublic ?? true
+  };
+
   return {
-    postId: createPostData.post.id,
-    post: createPostData.post
+    postId: post.id,
+    post
   };
 }
 
@@ -284,8 +305,9 @@ export async function createTestPost(
  * ```
  */
 export async function createTestUsers(
+  // eslint-disable-next-line functional/prefer-immutable-types
   httpClient: HttpClient,
-  options: CreateTestUsersOptions
+  options: Readonly<CreateTestUsersOptions>
 ): Promise<TestUser[]> {
   const { prefix = 'test', count, password = 'TestPassword123!' } = options;
 
@@ -319,10 +341,11 @@ export async function createTestUsers(
  * ```
  */
 export async function createTestPosts(
+  // eslint-disable-next-line functional/prefer-immutable-types
   httpClient: HttpClient,
   token: string,
   count: number,
-  options: CreateTestPostOptions = {}
+  options: Readonly<CreateTestPostOptions> = {}
 ): Promise<TestPost[]> {
   // Create array of promises for parallel execution
   const postPromises = Array.from({ length: count }, (_, index) =>

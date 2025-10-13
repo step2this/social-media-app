@@ -122,7 +122,8 @@ describe('Example 4: Real Integration Test', () => {
     expect(loginResponse.status).toBe(200);
 
     // 3. Set auth token
-    const { accessToken } = loginResponse.data.tokens;
+    const loginData = loginResponse.data as any;
+    const { accessToken } = loginData.tokens;
     testContext.httpClient.setAuthToken(accessToken);
 
     // 4. Get profile

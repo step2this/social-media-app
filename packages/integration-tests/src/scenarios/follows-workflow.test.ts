@@ -11,15 +11,10 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { randomUUID } from 'crypto';
 import {
-  RegisterResponseSchema,
-  ProfileResponseSchema,
   FollowUserResponseSchema,
   UnfollowUserResponseSchema,
   GetFollowStatusResponseSchema,
-  type RegisterResponse,
-  type Profile,
   type FollowUserResponse,
   type UnfollowUserResponse,
   type GetFollowStatusResponse
@@ -27,13 +22,14 @@ import {
 import {
   createLocalStackHttpClient,
   parseResponse,
-  testEnvironment,
-  environmentDetector,
-  testLogger
+  testLogger,
+  ensureServicesReady,
+  createTestUsers,
+  createTestUser,
+  authHeader,
+  expectUnauthorized,
+  expectValidationError
 } from '../utils/index.js';
-import {
-  createRegisterRequest
-} from '../fixtures/index.js';
 
 describe('Follows Workflow Integration', () => {
   const httpClient = createLocalStackHttpClient();
@@ -41,102 +37,28 @@ describe('Follows Workflow Integration', () => {
   // Test users
   let user1Token: string;
   let user1Id: string;
-  let user1Handle: string;
   let user2Token: string;
   let user2Id: string;
-  let user2Handle: string;
   let user3Token: string;
   let user3Id: string;
-  let user3Handle: string;
 
   beforeAll(async () => {
     testLogger.info('Starting Follows Workflow Integration Tests');
 
     // Wait for services to be ready
-    await environmentDetector.waitForServices(30000);
-
-    // Verify environment configuration
-    const serviceUrls = environmentDetector.getServiceUrls();
-    testLogger.debug('Service URLs:', serviceUrls);
-
-    // Verify services are available
-    const localStackReady = await environmentDetector.isLocalStackAvailable();
-    const apiReady = await environmentDetector.isApiServerAvailable();
-
-    if (!localStackReady) {
-      throw new Error('LocalStack is not available. Please start LocalStack before running integration tests.');
-    }
-
-    if (!apiReady) {
-      throw new Error('API server is not available. Please start the backend server before running integration tests.');
-    }
-
-    testLogger.info('All required services are ready');
+    await ensureServicesReady();
 
     // Setup: Create three test users
-    const uniqueId1 = randomUUID().slice(0, 8);
-    const uniqueId2 = randomUUID().slice(0, 8);
-    const uniqueId3 = randomUUID().slice(0, 8);
-
-    // Register user 1
-    const user1RegisterRequest = createRegisterRequest()
-      .withEmail(`follow-test-user1-${uniqueId1}@tamafriends.local`)
-      .withUsername(`followuser1_${uniqueId1}`)
-      .withPassword('TestPassword123!')
-      .build();
-
-    const user1RegisterResponse = await httpClient.post<RegisterResponse>('/auth/register', user1RegisterRequest);
-    const user1RegisterData = await parseResponse(user1RegisterResponse, RegisterResponseSchema);
-    user1Token = user1RegisterData.tokens!.accessToken;
-    user1Id = user1RegisterData.user.id;
-
-    // Get user 1 profile to get handle
-    const user1ProfileResponse = await httpClient.get<{ profile: Profile }>(
-      '/profile/me',
-      { headers: { Authorization: `Bearer ${user1Token}` } }
-    );
-    const user1ProfileData = await parseResponse(user1ProfileResponse, ProfileResponseSchema);
-    user1Handle = user1ProfileData.profile.handle;
-
-    // Register user 2
-    const user2RegisterRequest = createRegisterRequest()
-      .withEmail(`follow-test-user2-${uniqueId2}@tamafriends.local`)
-      .withUsername(`followuser2_${uniqueId2}`)
-      .withPassword('TestPassword123!')
-      .build();
-
-    const user2RegisterResponse = await httpClient.post<RegisterResponse>('/auth/register', user2RegisterRequest);
-    const user2RegisterData = await parseResponse(user2RegisterResponse, RegisterResponseSchema);
-    user2Token = user2RegisterData.tokens!.accessToken;
-    user2Id = user2RegisterData.user.id;
-
-    // Get user 2 profile to get handle
-    const user2ProfileResponse = await httpClient.get<{ profile: Profile }>(
-      '/profile/me',
-      { headers: { Authorization: `Bearer ${user2Token}` } }
-    );
-    const user2ProfileData = await parseResponse(user2ProfileResponse, ProfileResponseSchema);
-    user2Handle = user2ProfileData.profile.handle;
-
-    // Register user 3
-    const user3RegisterRequest = createRegisterRequest()
-      .withEmail(`follow-test-user3-${uniqueId3}@tamafriends.local`)
-      .withUsername(`followuser3_${uniqueId3}`)
-      .withPassword('TestPassword123!')
-      .build();
-
-    const user3RegisterResponse = await httpClient.post<RegisterResponse>('/auth/register', user3RegisterRequest);
-    const user3RegisterData = await parseResponse(user3RegisterResponse, RegisterResponseSchema);
-    user3Token = user3RegisterData.tokens!.accessToken;
-    user3Id = user3RegisterData.user.id;
-
-    // Get user 3 profile to get handle
-    const user3ProfileResponse = await httpClient.get<{ profile: Profile }>(
-      '/profile/me',
-      { headers: { Authorization: `Bearer ${user3Token}` } }
-    );
-    const user3ProfileData = await parseResponse(user3ProfileResponse, ProfileResponseSchema);
-    user3Handle = user3ProfileData.profile.handle;
+    const [user1, user2, user3] = await createTestUsers(httpClient, {
+      prefix: 'follow-test',
+      count: 3
+    });
+    user1Token = user1.token;
+    user1Id = user1.userId;
+    user2Token = user2.token;
+    user2Id = user2.userId;
+    user3Token = user3.token;
+    user3Id = user3.userId;
 
     testLogger.info('Setup complete', { user1Id, user2Id, user3Id });
   }, 30000);
@@ -152,7 +74,7 @@ describe('Follows Workflow Integration', () => {
       const followResponse = await httpClient.post<FollowUserResponse>(
         '/follows',
         { userId: user2Id },
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const followData = await parseResponse(followResponse, FollowUserResponseSchema);
@@ -171,7 +93,7 @@ describe('Follows Workflow Integration', () => {
       const followResponse = await httpClient.post<FollowUserResponse>(
         '/follows',
         { userId: user2Id },
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const followData = await parseResponse(followResponse, FollowUserResponseSchema);
@@ -185,7 +107,7 @@ describe('Follows Workflow Integration', () => {
 
       const statusResponse = await httpClient.get<GetFollowStatusResponse>(
         `/follows/${user2Id}/status`,
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const statusData = await parseResponse(statusResponse, GetFollowStatusResponseSchema);
@@ -199,7 +121,7 @@ describe('Follows Workflow Integration', () => {
       const unfollowResponse = await httpClient.delete<UnfollowUserResponse>(
         '/follows',
         { userId: user2Id },
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const unfollowData = await parseResponse(unfollowResponse, UnfollowUserResponseSchema);
@@ -215,7 +137,7 @@ describe('Follows Workflow Integration', () => {
       const unfollowResponse = await httpClient.delete<UnfollowUserResponse>(
         '/follows',
         { userId: user2Id },
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const unfollowData = await parseResponse(unfollowResponse, UnfollowUserResponseSchema);
@@ -233,7 +155,7 @@ describe('Follows Workflow Integration', () => {
       const user1FollowsUser2Response = await httpClient.post<FollowUserResponse>(
         '/follows',
         { userId: user2Id },
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
       const user1FollowsUser2Data = await parseResponse(user1FollowsUser2Response, FollowUserResponseSchema);
       expect(user1FollowsUser2Data.isFollowing).toBe(true);
@@ -242,7 +164,7 @@ describe('Follows Workflow Integration', () => {
       const user2FollowsUser1Response = await httpClient.post<FollowUserResponse>(
         '/follows',
         { userId: user1Id },
-        { headers: { Authorization: `Bearer ${user2Token}` } }
+        authHeader(user2Token)
       );
       const user2FollowsUser1Data = await parseResponse(user2FollowsUser1Response, FollowUserResponseSchema);
       expect(user2FollowsUser1Data.isFollowing).toBe(true);
@@ -250,14 +172,14 @@ describe('Follows Workflow Integration', () => {
       // Verify mutual follow status
       const user1StatusResponse = await httpClient.get<GetFollowStatusResponse>(
         `/follows/${user2Id}/status`,
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
       const user1Status = await parseResponse(user1StatusResponse, GetFollowStatusResponseSchema);
       expect(user1Status.isFollowing).toBe(true);
 
       const user2StatusResponse = await httpClient.get<GetFollowStatusResponse>(
         `/follows/${user1Id}/status`,
-        { headers: { Authorization: `Bearer ${user2Token}` } }
+        authHeader(user2Token)
       );
       const user2Status = await parseResponse(user2StatusResponse, GetFollowStatusResponseSchema);
       expect(user2Status.isFollowing).toBe(true);
@@ -270,7 +192,7 @@ describe('Follows Workflow Integration', () => {
       const user3FollowsUser2Response = await httpClient.post<FollowUserResponse>(
         '/follows',
         { userId: user2Id },
-        { headers: { Authorization: `Bearer ${user3Token}` } }
+        authHeader(user3Token)
       );
       const user3FollowsUser2Data = await parseResponse(user3FollowsUser2Response, FollowUserResponseSchema);
       expect(user3FollowsUser2Data.isFollowing).toBe(true);
@@ -278,7 +200,7 @@ describe('Follows Workflow Integration', () => {
       // Verify User 3's follow status
       const user3StatusResponse = await httpClient.get<GetFollowStatusResponse>(
         `/follows/${user2Id}/status`,
-        { headers: { Authorization: `Bearer ${user3Token}` } }
+        authHeader(user3Token)
       );
       const user3Status = await parseResponse(user3StatusResponse, GetFollowStatusResponseSchema);
       expect(user3Status.isFollowing).toBe(true);
@@ -288,49 +210,33 @@ describe('Follows Workflow Integration', () => {
   describe('Error Handling', () => {
     it('should return 401 when following without authentication', async () => {
       testLogger.debug('Testing unauthorized follow attempt');
-
-      try {
+      await expectUnauthorized(async () => {
         await httpClient.post<FollowUserResponse>('/follows', { userId: user2Id });
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.status).toBe(401);
-      }
+      });
     });
 
     it('should return 400 when following with invalid userId', async () => {
       testLogger.debug('Testing follow with invalid userId');
-
-      try {
+      await expectValidationError(async () => {
         await httpClient.post<FollowUserResponse>(
           '/follows',
           { userId: 'not-a-uuid' },
-          { headers: { Authorization: `Bearer ${user1Token}` } }
+          authHeader(user1Token)
         );
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.status).toBe(400);
-      }
+      });
     });
 
     it('should return false when checking follow status for user not followed', async () => {
       testLogger.debug('Testing follow status for unfollowed user');
 
       // Create a new user that nobody follows
-      const uniqueId = randomUUID().slice(0, 8);
-      const newUserRegisterRequest = createRegisterRequest()
-        .withEmail(`follow-test-new-${uniqueId}@tamafriends.local`)
-        .withUsername(`newuser_${uniqueId}`)
-        .withPassword('TestPassword123!')
-        .build();
-
-      const newUserRegisterResponse = await httpClient.post<RegisterResponse>('/auth/register', newUserRegisterRequest);
-      const newUserRegisterData = await parseResponse(newUserRegisterResponse, RegisterResponseSchema);
-      const newUserId = newUserRegisterData.user.id;
+      const newUser = await createTestUser(httpClient, { prefix: 'follow-test-new' });
+      const newUserId = newUser.userId;
 
       // Check if user 1 follows new user (should be false)
       const statusResponse = await httpClient.get<GetFollowStatusResponse>(
         `/follows/${newUserId}/status`,
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const statusData = await parseResponse(statusResponse, GetFollowStatusResponseSchema);

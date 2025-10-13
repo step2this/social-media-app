@@ -12,16 +12,11 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { randomUUID } from 'crypto';
 import {
-  RegisterResponseSchema,
-  CreatePostResponseSchema,
   CreateCommentResponseSchema,
   DeleteCommentResponseSchema,
   CommentsListResponseSchema,
   PostResponseSchema,
-  type RegisterResponse,
-  type CreatePostResponse,
   type CreateCommentResponse,
   type DeleteCommentResponse,
   type CommentsListResponse,
@@ -30,14 +25,16 @@ import {
 import {
   createLocalStackHttpClient,
   parseResponse,
-  environmentDetector,
   testLogger,
-  delay
+  delay,
+  ensureServicesReady,
+  createTestUsers,
+  createTestPost,
+  authHeader,
+  expectUnauthorized,
+  expectValidationError,
+  STREAM_DELAY
 } from '../utils/index.js';
-import {
-  createRegisterRequest,
-  createPostRequest
-} from '../fixtures/index.js';
 
 describe('Comments Workflow Integration', () => {
   const httpClient = createLocalStackHttpClient();
@@ -54,67 +51,24 @@ describe('Comments Workflow Integration', () => {
   beforeAll(async () => {
     testLogger.info('Starting Comments Workflow Integration Tests');
 
-    // Wait for services to be ready
-    await environmentDetector.waitForServices(30000);
+    // Service readiness check
+    await ensureServicesReady();
 
-    // Verify environment configuration
-    const serviceUrls = environmentDetector.getServiceUrls();
-    testLogger.debug('Service URLs:', serviceUrls);
-
-    // Verify services are available
-    const localStackReady = await environmentDetector.isLocalStackAvailable();
-    const apiReady = await environmentDetector.isApiServerAvailable();
-
-    if (!localStackReady) {
-      throw new Error('LocalStack is not available. Please start LocalStack before running integration tests.');
-    }
-
-    if (!apiReady) {
-      throw new Error('API server is not available. Please start the backend server before running integration tests.');
-    }
-
-    testLogger.info('All required services are ready');
-
-    // Setup: Create two test users and a post
-    const uniqueId1 = randomUUID().slice(0, 8);
-    const uniqueId2 = randomUUID().slice(0, 8);
-
-    // Register user 1
-    const user1RegisterRequest = createRegisterRequest()
-      .withEmail(`comments-test-user1-${uniqueId1}@tamafriends.local`)
-      .withUsername(`commentsuser1_${uniqueId1}`)
-      .withPassword('TestPassword123!')
-      .build();
-
-    const user1RegisterResponse = await httpClient.post<RegisterResponse>('/auth/register', user1RegisterRequest);
-    const user1RegisterData = await parseResponse(user1RegisterResponse, RegisterResponseSchema);
-    user1Token = user1RegisterData.tokens!.accessToken;
-    user1Id = user1RegisterData.user.id;
-
-    // Register user 2
-    const user2RegisterRequest = createRegisterRequest()
-      .withEmail(`comments-test-user2-${uniqueId2}@tamafriends.local`)
-      .withUsername(`commentsuser2_${uniqueId2}`)
-      .withPassword('TestPassword123!')
-      .build();
-
-    const user2RegisterResponse = await httpClient.post<RegisterResponse>('/auth/register', user2RegisterRequest);
-    const user2RegisterData = await parseResponse(user2RegisterResponse, RegisterResponseSchema);
-    user2Token = user2RegisterData.tokens!.accessToken;
-    user2Id = user2RegisterData.user.id;
+    // Create two test users
+    const [user1, user2] = await createTestUsers(httpClient, {
+      prefix: 'comments-test',
+      count: 2
+    });
+    user1Token = user1.token;
+    user1Id = user1.userId;
+    user2Token = user2.token;
+    user2Id = user2.userId;
 
     // Create a test post
-    const postRequest = createPostRequest()
-      .withCaption('Test post for comments integration')
-      .build();
-
-    const createPostResponse = await httpClient.post<CreatePostResponse>(
-      '/posts',
-      postRequest,
-      { headers: { Authorization: `Bearer ${user1Token}` } }
-    );
-    const createPostData = await parseResponse(createPostResponse, CreatePostResponseSchema);
-    testPostId = createPostData.post.id;
+    const { postId } = await createTestPost(httpClient, user1.token, {
+      caption: 'Test post for comments integration'
+    });
+    testPostId = postId;
 
     testLogger.info('Setup complete', { user1Id, user2Id, testPostId });
   }, 30000);
@@ -130,7 +84,7 @@ describe('Comments Workflow Integration', () => {
       const createResponse = await httpClient.post<CreateCommentResponse>(
         '/comments',
         { postId: testPostId, content: 'This is a great post!' },
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const createData = await parseResponse(createResponse, CreateCommentResponseSchema);
@@ -154,7 +108,7 @@ describe('Comments Workflow Integration', () => {
       const createResponse = await httpClient.post<CreateCommentResponse>(
         '/comments',
         { postId: testPostId, content: 'I agree, amazing content!' },
-        { headers: { Authorization: `Bearer ${user2Token}` } }
+        authHeader(user2Token)
       );
 
       const createData = await parseResponse(createResponse, CreateCommentResponseSchema);
@@ -239,17 +193,9 @@ describe('Comments Workflow Integration', () => {
       testLogger.debug('Testing get comments for post with no comments');
 
       // Create new post without comments
-      const postRequest = createPostRequest()
-        .withCaption('Post without comments')
-        .build();
-
-      const createPostResponse = await httpClient.post<CreatePostResponse>(
-        '/posts',
-        postRequest,
-        { headers: { Authorization: `Bearer ${user1Token}` } }
-      );
-      const createPostData = await parseResponse(createPostResponse, CreatePostResponseSchema);
-      const emptyPostId = createPostData.post.id;
+      const { postId: emptyPostId } = await createTestPost(httpClient, user1Token, {
+        caption: 'Post without comments'
+      });
 
       // Get comments
       const getResponse = await httpClient.get<CommentsListResponse>(
@@ -269,16 +215,13 @@ describe('Comments Workflow Integration', () => {
     it('should reject empty comment content', async () => {
       testLogger.debug('Testing empty comment content validation');
 
-      try {
+      await expectValidationError(async () => {
         await httpClient.post<CreateCommentResponse>(
           '/comments',
           { postId: testPostId, content: '' },
-          { headers: { Authorization: `Bearer ${user1Token}` } }
+          authHeader(user1Token)
         );
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.status).toBe(400);
-      }
+      });
     });
 
     it('should reject comment exceeding 500 characters', async () => {
@@ -286,16 +229,13 @@ describe('Comments Workflow Integration', () => {
 
       const longContent = 'a'.repeat(501);
 
-      try {
+      await expectValidationError(async () => {
         await httpClient.post<CreateCommentResponse>(
           '/comments',
           { postId: testPostId, content: longContent },
-          { headers: { Authorization: `Bearer ${user1Token}` } }
+          authHeader(user1Token)
         );
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.status).toBe(400);
-      }
+      });
     });
 
     it('should trim whitespace from comment content', async () => {
@@ -304,7 +244,7 @@ describe('Comments Workflow Integration', () => {
       const createResponse = await httpClient.post<CreateCommentResponse>(
         '/comments',
         { postId: testPostId, content: '  hello  ' },
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const createData = await parseResponse(createResponse, CreateCommentResponseSchema);
@@ -315,31 +255,25 @@ describe('Comments Workflow Integration', () => {
     it('should reject comment with only whitespace', async () => {
       testLogger.debug('Testing whitespace-only comment validation');
 
-      try {
+      await expectValidationError(async () => {
         await httpClient.post<CreateCommentResponse>(
           '/comments',
           { postId: testPostId, content: '   ' },
-          { headers: { Authorization: `Bearer ${user1Token}` } }
+          authHeader(user1Token)
         );
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.status).toBe(400);
-      }
+      });
     });
 
     it('should reject comment with invalid postId', async () => {
       testLogger.debug('Testing invalid postId validation');
 
-      try {
+      await expectValidationError(async () => {
         await httpClient.post<CreateCommentResponse>(
           '/comments',
           { postId: 'not-a-uuid', content: 'Test comment' },
-          { headers: { Authorization: `Bearer ${user1Token}` } }
+          authHeader(user1Token)
         );
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.status).toBe(400);
-      }
+      });
     });
   });
 
@@ -350,7 +284,7 @@ describe('Comments Workflow Integration', () => {
       const deleteResponse = await httpClient.delete<DeleteCommentResponse>(
         '/comments',
         { commentId: comment1Id },
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const deleteData = await parseResponse(deleteResponse, DeleteCommentResponseSchema);
@@ -365,7 +299,7 @@ describe('Comments Workflow Integration', () => {
         await httpClient.delete<DeleteCommentResponse>(
           '/comments',
           { commentId: comment2Id },
-          { headers: { Authorization: `Bearer ${user1Token}` } }
+          authHeader(user1Token)
         );
         expect.fail('Should have thrown an error');
       } catch (error: any) {
@@ -380,7 +314,7 @@ describe('Comments Workflow Integration', () => {
       const deleteResponse = await httpClient.delete<DeleteCommentResponse>(
         '/comments',
         { commentId: comment1Id },
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const deleteData = await parseResponse(deleteResponse, DeleteCommentResponseSchema);
@@ -415,16 +349,13 @@ describe('Comments Workflow Integration', () => {
     it('should return 400 when deleting with invalid commentId', async () => {
       testLogger.debug('Testing delete with invalid commentId');
 
-      try {
+      await expectValidationError(async () => {
         await httpClient.delete<DeleteCommentResponse>(
           '/comments',
           { commentId: 'not-a-uuid' },
-          { headers: { Authorization: `Bearer ${user1Token}` } }
+          authHeader(user1Token)
         );
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.status).toBe(400);
-      }
+      });
     });
   });
 
@@ -436,17 +367,17 @@ describe('Comments Workflow Integration', () => {
       await httpClient.post<CreateCommentResponse>(
         '/comments',
         { postId: testPostId, content: 'Testing count increment' },
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       // Wait for stream processor to update the count
       testLogger.info('Waiting 3 seconds for stream processor to update commentsCount');
-      await delay(3000);
+      await delay(STREAM_DELAY);
 
       // Get post and verify commentsCount increased
       const getPostResponse = await httpClient.get<PostResponse>(
         `/posts/${testPostId}`,
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const postData = await parseResponse(getPostResponse, PostResponseSchema);
@@ -461,7 +392,7 @@ describe('Comments Workflow Integration', () => {
       // Get initial count
       const initialPostResponse = await httpClient.get<PostResponse>(
         `/posts/${testPostId}`,
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
       const initialPostData = await parseResponse(initialPostResponse, PostResponseSchema);
       const initialCount = initialPostData.post.commentsCount ?? 0;
@@ -470,17 +401,17 @@ describe('Comments Workflow Integration', () => {
       await httpClient.delete<DeleteCommentResponse>(
         '/comments',
         { commentId: comment2Id },
-        { headers: { Authorization: `Bearer ${user2Token}` } }
+        authHeader(user2Token)
       );
 
       // Wait for stream processor to update the count
       testLogger.info('Waiting 3 seconds for stream processor to update commentsCount');
-      await delay(3000);
+      await delay(STREAM_DELAY);
 
       // Get post and verify commentsCount decreased
       const finalPostResponse = await httpClient.get<PostResponse>(
         `/posts/${testPostId}`,
-        { headers: { Authorization: `Bearer ${user1Token}` } }
+        authHeader(user1Token)
       );
 
       const finalPostData = await parseResponse(finalPostResponse, PostResponseSchema);
@@ -494,29 +425,23 @@ describe('Comments Workflow Integration', () => {
     it('should require authentication for creating comments', async () => {
       testLogger.debug('Testing authentication requirement for create');
 
-      try {
+      await expectUnauthorized(async () => {
         await httpClient.post<CreateCommentResponse>(
           '/comments',
           { postId: testPostId, content: 'Unauthorized comment' }
         );
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.status).toBe(401);
-      }
+      });
     });
 
     it('should require authentication for deleting comments', async () => {
       testLogger.debug('Testing authentication requirement for delete');
 
-      try {
+      await expectUnauthorized(async () => {
         await httpClient.delete<DeleteCommentResponse>(
           '/comments',
           { commentId: comment1Id }
         );
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.status).toBe(401);
-      }
+      });
     });
 
     it('should allow unauthenticated access to get comments', async () => {
@@ -536,31 +461,25 @@ describe('Comments Workflow Integration', () => {
     it('should reject invalid Bearer token', async () => {
       testLogger.debug('Testing invalid Bearer token');
 
-      try {
+      await expectUnauthorized(async () => {
         await httpClient.post<CreateCommentResponse>(
           '/comments',
           { postId: testPostId, content: 'Test comment' },
           { headers: { Authorization: 'Bearer invalid-token' } }
         );
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.status).toBe(401);
-      }
+      });
     });
 
     it('should reject malformed Authorization header', async () => {
       testLogger.debug('Testing malformed Authorization header');
 
-      try {
+      await expectUnauthorized(async () => {
         await httpClient.post<CreateCommentResponse>(
           '/comments',
           { postId: testPostId, content: 'Test comment' },
           { headers: { Authorization: 'NotBearer token' } }
         );
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.status).toBe(401);
-      }
+      });
     });
   });
 });

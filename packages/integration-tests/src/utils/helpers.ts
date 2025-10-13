@@ -3,6 +3,16 @@
  */
 
 /**
+ * Standard stream processing delay for LocalStack DynamoDB Streams
+ * Use this constant instead of magic numbers throughout tests
+ *
+ * @example
+ * // Wait for stream processor to update counts
+ * await delay(STREAM_DELAY);
+ */
+export const STREAM_DELAY = 3000;
+
+/**
  * Delay execution for a specified number of milliseconds
  * Useful for waiting for eventual consistency in stream processors
  *
@@ -12,10 +22,28 @@
  * @example
  * // Wait for stream processor to update counts
  * await delay(3000);
+ * // Or use the constant:
+ * await delay(STREAM_DELAY);
  */
-export const delay = (ms: number): Promise<void> => {
-  return new Promise(resolve => setTimeout(resolve, ms));
-};
+export const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Build authorization header object for HTTP requests
+ * Eliminates repetitive inline header construction
+ *
+ * @param token - JWT access token
+ * @returns Header object with Authorization Bearer token
+ *
+ * @example
+ * const response = await httpClient.post(
+ *   '/posts',
+ *   postData,
+ *   authHeader(userToken)
+ * );
+ */
+export const authHeader = (token: string): { headers: { Authorization: string } } => ({
+  headers: { Authorization: `Bearer ${token}` }
+});
 
 /**
  * Retry a function with exponential backoff
