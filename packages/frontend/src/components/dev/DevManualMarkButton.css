@@ -1,0 +1,67 @@
+.dev-manual-mark-button {
+  margin-bottom: var(--spacing-sm);
+}
+
+.dev-manual-mark-button__btn {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--tama-electric-blue);
+  color: var(--tama-pearl-white);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  transition: background 0.2s;
+}
+
+.dev-manual-mark-button__btn:hover:not(:disabled) {
+  background: var(--tama-navy-blue);
+}
+
+.dev-manual-mark-button__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dev-manual-mark-button__btn--pending {
+  background: var(--tama-gray-700);
+}
+
+.dev-manual-mark-button__spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--tama-pearl-white);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dev-manual-mark-button__message {
+  display: block;
+  margin-top: var(--spacing-xs);
+  font-size: 0.8125rem;
+  padding: var(--spacing-xs);
+  border-radius: 3px;
+}
+
+.dev-manual-mark-button__message--success {
+  background: rgba(45, 90, 61, 0.2);
+  color: var(--tama-sorrento-green);
+}
+
+.dev-manual-mark-button__message--error {
+  background: rgba(220, 20, 60, 0.2);
+  color: var(--tama-racing-red);
+}
