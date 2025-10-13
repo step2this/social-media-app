@@ -70,13 +70,11 @@ export const handlers = [
   }),
 
   // Health check endpoint
-  http.get(`${API_BASE_URL}/health`, () => {
-    return HttpResponse.json({
+  http.get(`${API_BASE_URL}/health`, () => HttpResponse.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
       service: 'social-media-app-mock-api'
-    });
-  }),
+    })),
 
   // Catch-all for unhandled endpoints
   http.all(`${API_BASE_URL}/*`, ({ request }) => {

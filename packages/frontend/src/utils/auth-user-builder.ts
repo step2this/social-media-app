@@ -14,12 +14,10 @@ import type { User } from '@social-media-app/shared';
  * @param user - The user object to normalize
  * @returns User object with guaranteed timestamps
  */
-export const ensureUserTimestamps = (user: Partial<User> & Pick<User, 'createdAt'>): User => {
-  return {
+export const ensureUserTimestamps = (user: Partial<User> & Pick<User, 'createdAt'>): User => ({
     ...user,
     updatedAt: user.updatedAt || user.createdAt,
-  } as User;
-};
+  } as User);
 
 /**
  * Builds a complete user object with fallback values for missing fields
@@ -28,12 +26,10 @@ export const ensureUserTimestamps = (user: Partial<User> & Pick<User, 'createdAt
  * @param userData - Raw user data from API response
  * @returns Complete User object with fallbacks applied
  */
-export const buildUserWithFallbacks = (userData: any): User => {
-  return {
+export const buildUserWithFallbacks = (userData: any): User => ({
     ...userData,
     updatedAt: userData.updatedAt || userData.createdAt,
-  };
-};
+  });
 
 /**
  * Extracts User fields from a Profile response object
@@ -42,13 +38,11 @@ export const buildUserWithFallbacks = (userData: any): User => {
  * @param profile - Profile object from API response
  * @returns User object with only User-specific fields
  */
-export const extractUserFromProfile = (profile: any): User => {
-  return {
+export const extractUserFromProfile = (profile: any): User => ({
     id: profile.id,
     email: profile.email,
     username: profile.username,
     emailVerified: profile.emailVerified,
     createdAt: profile.createdAt,
     updatedAt: profile.updatedAt,
-  };
-};
+  });

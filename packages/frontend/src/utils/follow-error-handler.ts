@@ -20,9 +20,7 @@ export interface FollowErrorContext {
  */
 export const createFollowErrorMessage = (
   customMessage?: string
-): string => {
-  return customMessage ?? 'Failed to follow user';
-};
+): string => customMessage ?? 'Failed to follow user';
 
 /**
  * Creates default error message for unfollow operation
@@ -32,9 +30,7 @@ export const createFollowErrorMessage = (
  */
 export const createUnfollowErrorMessage = (
   customMessage?: string
-): string => {
-  return customMessage ?? 'Failed to unfollow user';
-};
+): string => customMessage ?? 'Failed to unfollow user';
 
 /**
  * Creates default error message for fetch status operation
@@ -44,9 +40,7 @@ export const createUnfollowErrorMessage = (
  */
 export const createFetchStatusErrorMessage = (
   customMessage?: string
-): string => {
-  return customMessage ?? 'Failed to fetch follow status';
-};
+): string => customMessage ?? 'Failed to fetch follow status';
 
 /**
  * Extracts error message from various error types

@@ -173,9 +173,7 @@ export const buildRequestBody = (data?: unknown): string | undefined => {
  * @param response - Fetch Response object
  * @returns Parsed JSON data
  */
-export const parseResponseJson = async <T>(response: Response): Promise<T> => {
-  return await response.json();
-};
+export const parseResponseJson = async <T>(response: Response): Promise<T> => await response.json();
 
 /**
  * Validate data with Zod schema
@@ -186,18 +184,14 @@ export const parseResponseJson = async <T>(response: Response): Promise<T> => {
 export const validateWithSchema = <T>(
   schema: { parse: (data: unknown) => T },
   data: unknown
-): T => {
-  return schema.parse(data);
-};
+): T => schema.parse(data);
 
 /**
  * Convert ZodError to ValidationError
  * @param zodError - Zod validation error
  * @returns ValidationError instance
  */
-export const createZodValidationError = (zodError: any): ValidationError => {
-  return new ValidationError('Request validation failed', zodError.issues);
-};
+export const createZodValidationError = (zodError: any): ValidationError => new ValidationError('Request validation failed', zodError.issues);
 
 /**
  * Classify HTTP error based on status code
@@ -253,9 +247,7 @@ export const classifyNetworkError = (error: unknown, endpoint: string): NetworkE
  * @param config - Retry configuration
  * @returns True if should retry
  */
-export const shouldRetryError = (error: unknown, config: RetryConfig): boolean => {
-  return config.retryCondition(error);
-};
+export const shouldRetryError = (error: unknown, config: RetryConfig): boolean => config.retryCondition(error);
 
 /**
  * Extract error message from error data
@@ -263,17 +255,13 @@ export const shouldRetryError = (error: unknown, config: RetryConfig): boolean =
  * @param fallback - Fallback message
  * @returns Error message string
  */
-export const extractErrorMessage = (data: any, fallback: string): string => {
-  return data.error || data.message || fallback;
-};
+export const extractErrorMessage = (data: any, fallback: string): string => data.error || data.message || fallback;
 
 /**
  * Safely get and parse auth-storage from localStorage
  * @returns Parsed auth storage or null
  */
-export const safeGetAuthStorage = (): Record<string, any> | null => {
-  return parseAuthStorage('auth-storage');
-};
+export const safeGetAuthStorage = (): Record<string, any> | null => parseAuthStorage('auth-storage');
 
 /**
  * Get specific token from storage
@@ -341,21 +329,17 @@ type SendRequestFn = <T>(
  * @param method - HTTP method name
  * @returns Function that performs the HTTP request
  */
-export const createHttpMethod = (method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE') => {
-  return <T>(
+export const createHttpMethod = (method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE') => <T>(
     sendRequest: SendRequestFn,
     retryConfig: RetryConfig
   ) => {
     // GET method doesn't accept data
     if (method === 'GET') {
-      return async (endpoint: string, includeAuth: boolean = true): Promise<T> => {
-        return sendRequest<T>(endpoint, { method }, retryConfig, includeAuth);
-      };
+      return async (endpoint: string, includeAuth: boolean = true): Promise<T> => sendRequest<T>(endpoint, { method }, retryConfig, includeAuth);
     }
 
     // Other methods accept optional data
-    return async (endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
-      return sendRequest<T>(
+    return async (endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => sendRequest<T>(
         endpoint,
         {
           method,
@@ -364,9 +348,7 @@ export const createHttpMethod = (method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DEL
         retryConfig,
         includeAuth
       );
-    };
   };
-};
 
 /**
  * Configuration for auth method factory
@@ -388,9 +370,7 @@ interface AuthMethodConfig<TReq, TRes> {
  * @param config - Configuration for the auth method
  * @returns Async function that performs the authenticated request
  */
-export const createAuthMethod = <TReq, TRes>(config: AuthMethodConfig<TReq, TRes>) => {
-  return (sendRequest: SendRequestFn, tokenStorage: TokenStorage, retryConfig: RetryConfig) => {
-    return async (request: TReq): Promise<TRes> => {
+export const createAuthMethod = <TReq, TRes>(config: AuthMethodConfig<TReq, TRes>) => (sendRequest: SendRequestFn, tokenStorage: TokenStorage, retryConfig: RetryConfig) => async (request: TReq): Promise<TRes> => {
       try {
         // Validate request
         const validatedRequest = validateWithSchema(config.requestSchema, request);
@@ -429,8 +409,6 @@ export const createAuthMethod = <TReq, TRes>(config: AuthMethodConfig<TReq, TRes
         throw error;
       }
     };
-  };
-};
 
 /**
  * Token storage interface
@@ -619,9 +597,7 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
     /**
      * Health check endpoint
      */
-    healthCheck: async (): Promise<{ status: string; timestamp: string; service: string }> => {
-      return sendRequest('/health', { method: 'GET' });
-    },
+    healthCheck: async (): Promise<{ status: string; timestamp: string; service: string }> => sendRequest('/health', { method: 'GET' }),
 
     /**
      * Development utilities (only available in development mode)
@@ -630,41 +606,27 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
       /**
        * Clear all mock data (users and tokens)
        */
-      clearMockData: async (): Promise<{ message: string; cleared: { users: number; tokens: number } }> => {
-        return sendRequest('/dev/reset-mock-data', { method: 'DELETE' });
-      },
+      clearMockData: async (): Promise<{ message: string; cleared: { users: number; tokens: number } }> => sendRequest('/dev/reset-mock-data', { method: 'DELETE' }),
 
       /**
        * List all mock users
        */
-      listMockUsers: async (): Promise<{ users: Array<{ id: string; email: string; username: string; fullName?: string; createdAt: string }>; count: number }> => {
-        return sendRequest('/dev/users', { method: 'GET' });
-      }
+      listMockUsers: async (): Promise<{ users: Array<{ id: string; email: string; username: string; fullName?: string; createdAt: string }>; count: number }> => sendRequest('/dev/users', { method: 'GET' })
     } : undefined,
 
     /**
      * Generic HTTP methods with automatic token injection
      * Generated using createHttpMethod factory to eliminate duplication
      */
-    get: (async <T>(endpoint: string, includeAuth: boolean = true): Promise<T> => {
-      return sendRequest<T>(endpoint, { method: 'GET' }, defaultRetryConfig, includeAuth);
-    }) as <T>(endpoint: string, includeAuth?: boolean) => Promise<T>,
+    get: (async <T>(endpoint: string, includeAuth: boolean = true): Promise<T> => sendRequest<T>(endpoint, { method: 'GET' }, defaultRetryConfig, includeAuth)) as <T>(endpoint: string, includeAuth?: boolean) => Promise<T>,
 
-    post: (async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
-      return sendRequest<T>(endpoint, { method: 'POST', body: buildRequestBody(data) }, defaultRetryConfig, includeAuth);
-    }) as <T>(endpoint: string, data?: unknown, includeAuth?: boolean) => Promise<T>,
+    post: (async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => sendRequest<T>(endpoint, { method: 'POST', body: buildRequestBody(data) }, defaultRetryConfig, includeAuth)) as <T>(endpoint: string, data?: unknown, includeAuth?: boolean) => Promise<T>,
 
-    put: (async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
-      return sendRequest<T>(endpoint, { method: 'PUT', body: buildRequestBody(data) }, defaultRetryConfig, includeAuth);
-    }) as <T>(endpoint: string, data?: unknown, includeAuth?: boolean) => Promise<T>,
+    put: (async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => sendRequest<T>(endpoint, { method: 'PUT', body: buildRequestBody(data) }, defaultRetryConfig, includeAuth)) as <T>(endpoint: string, data?: unknown, includeAuth?: boolean) => Promise<T>,
 
-    patch: (async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
-      return sendRequest<T>(endpoint, { method: 'PATCH', body: buildRequestBody(data) }, defaultRetryConfig, includeAuth);
-    }) as <T>(endpoint: string, data?: unknown, includeAuth?: boolean) => Promise<T>,
+    patch: (async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => sendRequest<T>(endpoint, { method: 'PATCH', body: buildRequestBody(data) }, defaultRetryConfig, includeAuth)) as <T>(endpoint: string, data?: unknown, includeAuth?: boolean) => Promise<T>,
 
-    delete: (async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => {
-      return sendRequest<T>(endpoint, { method: 'DELETE', body: buildRequestBody(data) }, defaultRetryConfig, includeAuth);
-    }) as <T>(endpoint: string, data?: unknown, includeAuth?: boolean) => Promise<T>,
+    delete: (async <T>(endpoint: string, data?: unknown, includeAuth: boolean = true): Promise<T> => sendRequest<T>(endpoint, { method: 'DELETE', body: buildRequestBody(data) }, defaultRetryConfig, includeAuth)) as <T>(endpoint: string, data?: unknown, includeAuth?: boolean) => Promise<T>,
 
     /**
      * Authentication API methods

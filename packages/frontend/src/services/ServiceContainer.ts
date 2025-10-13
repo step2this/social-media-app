@@ -38,6 +38,4 @@ export class ServiceContainer implements IServiceContainer {
 export const createServiceContainer = (
   navigate: NavigateFunction,
   authHook: AuthHookResult
-): IServiceContainer => {
-  return ServiceContainer.create(navigate, authHook);
-};
+): IServiceContainer => ServiceContainer.create(navigate, authHook);

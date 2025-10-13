@@ -28,9 +28,7 @@ export interface ImageDimensions {
  * // Later: revokeImagePreview(url);
  * ```
  */
-export const createImagePreview = (file: File): string => {
-  return URL.createObjectURL(file);
-};
+export const createImagePreview = (file: File): string => URL.createObjectURL(file);
 
 /**
  * Revokes a blob URL created by createImagePreview.
@@ -121,8 +119,7 @@ export const formatFileSize = (bytes: number): string => {
  * console.log(`Image is ${width}x${height}`);
  * ```
  */
-export const getImageDimensions = (file: File): Promise<ImageDimensions> => {
-  return new Promise((resolve, reject) => {
+export const getImageDimensions = (file: File): Promise<ImageDimensions> => new Promise((resolve, reject) => {
     const img = new Image();
 
     img.addEventListener('load', () => {
@@ -138,4 +135,3 @@ export const getImageDimensions = (file: File): Promise<ImageDimensions> => {
 
     img.src = URL.createObjectURL(file);
   });
-};

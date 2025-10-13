@@ -16,7 +16,7 @@ import {
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // Mock data storage
-let mockPosts: Post[] = [];
+const mockPosts: Post[] = [];
 let postIdCounter = 1;
 
 // Helper to generate mock post

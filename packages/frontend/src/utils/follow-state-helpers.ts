@@ -3,7 +3,7 @@
  * Pure functions for managing follow state calculations and transformations
  */
 
-import { UseFollowOptions } from '../hooks/useFollow.js';
+import type { UseFollowOptions } from '../hooks/useFollow.js';
 
 /**
  * Follow state representation
@@ -46,9 +46,7 @@ export const incrementFollowersCount = (count: number): number => {
  * @param count - Current followers count
  * @returns Decremented count (minimum 0)
  */
-export const decrementFollowersCount = (count: number): number => {
-  return Math.max(0, count - 1);
-};
+export const decrementFollowersCount = (count: number): number => Math.max(0, count - 1);
 
 /**
  * Calculates optimistic state after follow action
@@ -59,13 +57,11 @@ export const decrementFollowersCount = (count: number): number => {
  */
 export const calculateOptimisticFollowState = (
   currentState: FollowState
-): FollowState => {
-  return {
+): FollowState => ({
     isFollowing: true,
     followersCount: incrementFollowersCount(currentState.followersCount),
     followingCount: currentState.followingCount,
-  };
-};
+  });
 
 /**
  * Calculates optimistic state after unfollow action
@@ -76,13 +72,11 @@ export const calculateOptimisticFollowState = (
  */
 export const calculateOptimisticUnfollowState = (
   currentState: FollowState
-): FollowState => {
-  return {
+): FollowState => ({
     isFollowing: false,
     followersCount: decrementFollowersCount(currentState.followersCount),
     followingCount: currentState.followingCount,
-  };
-};
+  });
 
 /**
  * Creates immutable snapshot of current state for rollback
@@ -92,13 +86,11 @@ export const calculateOptimisticUnfollowState = (
  */
 export const createStateSnapshot = (
   currentState: FollowState
-): FollowStateSnapshot => {
-  return {
+): FollowStateSnapshot => ({
     isFollowing: currentState.isFollowing,
     followersCount: currentState.followersCount,
     followingCount: currentState.followingCount,
-  };
-};
+  });
 
 /**
  * Determines if follow action should be allowed
@@ -107,9 +99,7 @@ export const createStateSnapshot = (
  * @param isFollowing - Current following status
  * @returns True if follow action should proceed
  */
-export const shouldAllowFollow = (isFollowing: boolean): boolean => {
-  return !isFollowing;
-};
+export const shouldAllowFollow = (isFollowing: boolean): boolean => !isFollowing;
 
 /**
  * Determines if unfollow action should be allowed
@@ -118,9 +108,7 @@ export const shouldAllowFollow = (isFollowing: boolean): boolean => {
  * @param isFollowing - Current following status
  * @returns True if unfollow action should proceed
  */
-export const shouldAllowUnfollow = (isFollowing: boolean): boolean => {
-  return isFollowing;
-};
+export const shouldAllowUnfollow = (isFollowing: boolean): boolean => isFollowing;
 
 /**
  * Checks if initial follow values were explicitly provided
@@ -131,6 +119,4 @@ export const shouldAllowUnfollow = (isFollowing: boolean): boolean => {
  */
 export const hasInitialFollowValues = (
   options: UseFollowOptions
-): boolean => {
-  return options.initialIsFollowing !== undefined;
-};
+): boolean => options.initialIsFollowing !== undefined;

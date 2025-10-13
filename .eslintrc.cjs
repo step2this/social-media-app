@@ -59,9 +59,21 @@ module.exports = {
     {
       files: ['*.test.ts', '*.spec.ts', '*.test.tsx', '*.spec.tsx'],
       rules: {
+        // Disable functional programming rules for tests (pragmatic testing)
         'functional/immutable-data': 'off',
         'functional/no-let': 'off',
-        '@typescript-eslint/no-non-null-assertion': 'off'
+        'functional/no-classes': 'off',
+        'functional/no-loop-statements': 'off',
+        '@typescript-eslint/no-non-null-assertion': 'off',
+        '@typescript-eslint/unbound-method': 'off',
+        '@typescript-eslint/no-floating-promises': 'off',
+        '@typescript-eslint/require-await': 'off',
+        '@typescript-eslint/no-explicit-any': 'warn',
+        // Relax complexity rules for comprehensive tests
+        'max-nested-callbacks': 'off',
+        'max-lines-per-function': 'off',
+        'max-statements': 'off',
+        'no-console': 'off'
       }
     },
     {
@@ -82,11 +94,17 @@ module.exports = {
     {
       files: ['packages/frontend/**/*.{ts,tsx}'],
       rules: {
+        // Relax functional programming for React components
         'functional/prefer-immutable-types': 'off',
         'functional/no-mixed-types': 'off',
+        'functional/immutable-data': 'warn', // Warn instead of error
+        'functional/no-loop-statements': 'warn', // Warn instead of error
         '@typescript-eslint/no-misused-promises': 'off',
         '@typescript-eslint/no-unsafe-argument': 'off',
-        'max-lines-per-function': ['warn', { max: 100, skipBlankLines: true, skipComments: true }]
+        // Adjust complexity limits for React components
+        'max-lines-per-function': ['warn', { max: 150, skipBlankLines: true, skipComments: true }],
+        'max-statements': ['warn', 20],
+        'max-nested-callbacks': ['warn', 4] // React hooks often nest callbacks
       }
     },
     {

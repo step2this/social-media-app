@@ -14,9 +14,7 @@ import { buildUserWithFallbacks } from './auth-user-builder.js';
  * @param response - The API response to check
  * @returns True if response has tokens object
  */
-export const hasTokensInResponse = (response: RegisterResponse): boolean => {
-  return !!(response.tokens);
-};
+export const hasTokensInResponse = (response: RegisterResponse): boolean => !!(response.tokens);
 
 /**
  * Determines if user should be automatically logged in after registration
@@ -25,9 +23,7 @@ export const hasTokensInResponse = (response: RegisterResponse): boolean => {
  * @param response - Registration API response
  * @returns True if auto-login should occur
  */
-export const shouldAutoLogin = (response: RegisterResponse): boolean => {
-  return hasTokensInResponse(response);
-};
+export const shouldAutoLogin = (response: RegisterResponse): boolean => hasTokensInResponse(response);
 
 /**
  * Processes registration response and returns structured result

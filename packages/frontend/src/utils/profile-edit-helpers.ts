@@ -67,12 +67,10 @@ export const validateProfileForm = (formData: ProfileFormData): ProfileValidatio
  * // formData = { fullName: 'John Doe', bio: 'Software developer' }
  * ```
  */
-export const initializeProfileFormData = (profile: Profile): ProfileFormData => {
-  return {
+export const initializeProfileFormData = (profile: Profile): ProfileFormData => ({
     fullName: (profile.fullName || '').trim(),
     bio: (profile.bio || '').trim(),
-  };
-};
+  });
 
 /**
  * Builds a profile update request from form data.
@@ -87,12 +85,10 @@ export const initializeProfileFormData = (profile: Profile): ProfileFormData => 
  * await profileService.updateProfile(request);
  * ```
  */
-export const buildProfileUpdateRequest = (formData: ProfileFormData): ProfileUpdateRequest => {
-  return {
+export const buildProfileUpdateRequest = (formData: ProfileFormData): ProfileUpdateRequest => ({
     fullName: formData.fullName.trim(),
     bio: formData.bio.trim(),
-  };
-};
+  });
 
 /**
  * Clears a specific validation error from the errors object.
@@ -112,12 +108,10 @@ export const buildProfileUpdateRequest = (formData: ProfileFormData): ProfileUpd
 export const clearValidationError = (
   errors: ProfileValidationErrors,
   field: keyof ProfileValidationErrors
-): ProfileValidationErrors => {
-  return {
+): ProfileValidationErrors => ({
     ...errors,
     [field]: '',
-  };
-};
+  });
 
 /**
  * Determines if the profile form should be submitted.
@@ -157,9 +151,7 @@ export const shouldSubmitProfileForm = (formData: ProfileFormData): boolean => {
 export const formatProfileValidationError = (
   errors: ProfileValidationErrors,
   field: keyof ProfileValidationErrors
-): string => {
-  return errors[field] || '';
-};
+): string => errors[field] || '';
 
 /**
  * Checks if the profile form is valid (no validation errors).
@@ -174,12 +166,10 @@ export const formatProfileValidationError = (
  * }
  * ```
  */
-export const isProfileFormValid = (errors: ProfileValidationErrors): boolean => {
-  return Object.keys(errors).filter((key) => {
+export const isProfileFormValid = (errors: ProfileValidationErrors): boolean => Object.keys(errors).filter((key) => {
     const errorKey = key as keyof ProfileValidationErrors;
-    return errors[errorKey] && errors[errorKey]!.length > 0;
+    return errors[errorKey] && errors[errorKey].length > 0;
   }).length === 0;
-};
 
 /**
  * Checks if the profile form data has changes compared to the original profile.

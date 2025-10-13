@@ -56,9 +56,7 @@ export const parseTags = (tagsString: string, maxTags: number = DEFAULT_MAX_TAGS
  * formatTagsDisplay(['single']); // 'single'
  * ```
  */
-export const formatTagsDisplay = (tags: string[]): string => {
-  return tags.join(', ');
-};
+export const formatTagsDisplay = (tags: string[]): string => tags.join(', ');
 
 /**
  * Normalizes a tags input string by parsing and reformatting it.

@@ -21,13 +21,11 @@ vi.mock('react-router-dom', async () => {
 /**
  * Helper function to render components with router context
  */
-const renderWithRouter = (component: React.ReactElement<any>) => {
-  return render(
+const renderWithRouter = (component: React.ReactElement<any>) => render(
     <BrowserRouter>
       {component}
     </BrowserRouter>
   );
-};
 
 /**
  * Helper function to create mock notifications
@@ -222,7 +220,7 @@ describe('NotificationsPage', () => {
       });
 
       const notificationItem = screen.getByText(/john doe liked your post/i).closest('.notification-item');
-      fireEvent.click(notificationItem!);
+      fireEvent.click(notificationItem);
 
       // Should still navigate even if mark as read fails
       await waitFor(() => {
@@ -649,7 +647,7 @@ describe('NotificationsPage', () => {
       });
 
       const notificationItem = screen.getByText(/john doe liked your post/i).closest('.notification-item');
-      fireEvent.click(notificationItem!);
+      fireEvent.click(notificationItem);
 
       await waitFor(() => {
         expect(notificationService.markAsRead).toHaveBeenCalledWith('notif-1');
@@ -677,7 +675,7 @@ describe('NotificationsPage', () => {
       });
 
       const notificationItem = screen.getByText(/john doe liked your post/i).closest('.notification-item');
-      fireEvent.click(notificationItem!);
+      fireEvent.click(notificationItem);
 
       await waitFor(() => {
         expect(document.querySelector('.notification-item__unread-dot')).not.toBeInTheDocument();
@@ -701,7 +699,7 @@ describe('NotificationsPage', () => {
       });
 
       const notificationItem = screen.getByText(/john doe liked your post/i).closest('.notification-item');
-      fireEvent.click(notificationItem!);
+      fireEvent.click(notificationItem);
 
       expect(notificationService.markAsRead).not.toHaveBeenCalled();
     });
@@ -918,7 +916,7 @@ describe('NotificationsPage', () => {
       });
 
       const notificationItem = screen.getByText(/john doe liked your post/i).closest('.notification-item');
-      fireEvent.click(notificationItem!);
+      fireEvent.click(notificationItem);
 
       await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith('/post/123');
@@ -949,7 +947,7 @@ describe('NotificationsPage', () => {
       });
 
       const notificationItem = screen.getByText(/john doe liked your post/i).closest('.notification-item');
-      fireEvent.click(notificationItem!);
+      fireEvent.click(notificationItem);
 
       expect(mockNavigate).not.toHaveBeenCalled();
     });
@@ -1239,7 +1237,7 @@ describe('NotificationsPage', () => {
 
       // Click notification
       const notificationItem = screen.getByText(/john doe liked your post/i).closest('.notification-item');
-      fireEvent.click(notificationItem!);
+      fireEvent.click(notificationItem);
 
       // Should mark as read and navigate
       await waitFor(() => {

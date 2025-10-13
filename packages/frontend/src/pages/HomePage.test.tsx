@@ -53,13 +53,11 @@ const mockFeedPosts: FeedPostItem[] = [
   }
 ];
 
-const renderHomePage = () => {
-  return render(
+const renderHomePage = () => render(
     <BrowserRouter>
       <HomePage />
     </BrowserRouter>
   );
-};
 
 describe('HomePage', () => {
   beforeEach(() => {
