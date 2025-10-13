@@ -1,4 +1,4 @@
-import type { KinesisStreamHandler, KinesisStreamRecord, KinesisStreamBatchResponse } from 'aws-lambda';
+import type { KinesisStreamHandler, KinesisStreamBatchResponse } from 'aws-lambda';
 import { RedisCacheService, type CachedPost } from '@social-media-app/dal';
 import {
   FeedEventSchema,
