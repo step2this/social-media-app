@@ -1,4 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
+import { useActionState } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { CreatePostRequestSchema, type CreatePostRequest } from '@social-media-app/shared';
@@ -28,6 +30,13 @@ interface FormErrors {
   general?: string;
 }
 
+interface CreatePostActionState {
+  success?: boolean;
+  error?: string;
+}
+
+const initialActionState: CreatePostActionState = {};
+
 export const CreatePostPage: React.FC = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,9 +50,78 @@ export const CreatePostPage: React.FC = () => {
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<FormErrors>({});
+  const [validationErrors, setValidationErrors] = useState<FormErrors>({});
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Validation function (defined early for use in action)
+  const validateForm = useCallback((): boolean => {
+    const newErrors: FormErrors = {};
+
+    // Validate image
+    if (!selectedFile) {
+      newErrors.image = 'Image is required';
+    }
+
+    // Validate caption
+    const captionValidation = validateCaptionLength(formData.caption);
+    if (!captionValidation.isValid) {
+      newErrors.caption = captionValidation.error;
+    }
+
+    // Validate tags
+    const tagsValidation = validateTags(formData.tags);
+    if (!tagsValidation.isValid) {
+      newErrors.tags = tagsValidation.error;
+    }
+
+    setValidationErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [selectedFile, formData]);
+
+  // Action function for form submission
+  const createPostAction = useCallback(async (
+    prevState: CreatePostActionState,
+    _formData: FormData
+  ): Promise<CreatePostActionState> => {
+    // Validation using existing function
+    if (!validateForm() || !selectedFile) {
+      setIsSubmitting(false);
+      return { success: false, error: 'Please fix validation errors' };
+    }
+
+    try {
+      // Build request using utility function
+      const requestData = buildCreatePostRequest(formData, selectedFile.type);
+
+      // Validate with schema
+      const validatedData = CreatePostRequestSchema.parse(requestData);
+
+      // Create post
+      const createdPost = await postService.createPost(validatedData, selectedFile);
+
+      // Navigate to the new post detail page on success
+      navigate(`/post/${createdPost.id}`);
+      setIsSubmitting(false);
+      return { success: true };
+    } catch (error) {
+      console.error('Error creating post:', error);
+
+      setIsSubmitting(false);
+
+      if (error instanceof z.ZodError) {
+        return { success: false, error: 'Invalid request data' };
+      } else if (error instanceof Error) {
+        if (error.message.includes('Network')) {
+          return { success: false, error: 'Network error. Please try again.' };
+        }
+        return { success: false, error: 'Failed to create post. Please try again.' };
+      }
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }, [validateForm, selectedFile, formData, navigate]);
+
+  const [actionState, formAction, isPending] = useActionState(createPostAction, initialActionState);
 
   // Handle form input changes
   const handleInputChange = useCallback(
@@ -51,15 +129,15 @@ export const CreatePostPage: React.FC = () => {
       setFormData((prev) => ({ ...prev, [field]: value }));
 
       // Clear related errors
-      if (errors[field as keyof FormErrors]) {
-        setErrors((prev) => ({ ...prev, [field]: undefined }));
+      if (validationErrors[field as keyof FormErrors]) {
+        setValidationErrors((prev) => ({ ...prev, [field]: undefined }));
       }
 
       // Live validation for caption length
       if (field === 'caption' && typeof value === 'string') {
         const validation = validateCaptionLength(value);
         if (!validation.isValid) {
-          setErrors((prev) => ({ ...prev, caption: validation.error }));
+          setValidationErrors((prev) => ({ ...prev, caption: validation.error }));
         }
       }
 
@@ -67,13 +145,13 @@ export const CreatePostPage: React.FC = () => {
       if (field === 'tags' && typeof value === 'string') {
         const validation = validateTags(value);
         if (!validation.isValid) {
-          setErrors((prev) => ({ ...prev, tags: validation.error }));
+          setValidationErrors((prev) => ({ ...prev, tags: validation.error }));
         } else {
-          setErrors((prev) => ({ ...prev, tags: undefined }));
+          setValidationErrors((prev) => ({ ...prev, tags: undefined }));
         }
       }
     },
-    [errors]
+    [validationErrors]
   );
 
   // Handle file selection
@@ -81,12 +159,12 @@ export const CreatePostPage: React.FC = () => {
     // Validate file using utility function
     const validation = validateImageFile(file);
     if (!validation.isValid) {
-      setErrors((prev) => ({ ...prev, image: validation.error }));
+      setValidationErrors((prev) => ({ ...prev, image: validation.error }));
       return;
     }
 
     setSelectedFile(file);
-    setErrors((prev) => ({ ...prev, image: undefined }));
+    setValidationErrors((prev) => ({ ...prev, image: undefined }));
 
     // Create preview URL using utility function
     const url = createImagePreview(file);
@@ -144,76 +222,6 @@ export const CreatePostPage: React.FC = () => {
     }
   }, [previewUrl]);
 
-  // Validate form
-  const validateForm = useCallback((): boolean => {
-    const newErrors: FormErrors = {};
-
-    // Validate image
-    if (!selectedFile) {
-      newErrors.image = 'Image is required';
-    }
-
-    // Validate caption
-    const captionValidation = validateCaptionLength(formData.caption);
-    if (!captionValidation.isValid) {
-      newErrors.caption = captionValidation.error;
-    }
-
-    // Validate tags
-    const tagsValidation = validateTags(formData.tags);
-    if (!tagsValidation.isValid) {
-      newErrors.tags = tagsValidation.error;
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [selectedFile, formData]);
-
-  // Handle form submission
-  const handleSubmit = useCallback(
-    async (event: React.FormEvent) => {
-      event.preventDefault();
-
-      if (!validateForm() || !selectedFile) {
-        return;
-      }
-
-      setIsLoading(true);
-      setErrors({});
-
-      try {
-        // Build request using utility function
-        const requestData = buildCreatePostRequest(formData, selectedFile.type);
-
-        // Validate with schema
-        const validatedData = CreatePostRequestSchema.parse(requestData);
-
-        // Create post
-        const createdPost = await postService.createPost(validatedData, selectedFile);
-
-        // Navigate to the new post detail page on success
-        navigate(`/post/${createdPost.id}`);
-      } catch (error) {
-        console.error('Error creating post:', error);
-
-        if (error instanceof z.ZodError) {
-          setErrors({ general: 'Invalid request data' });
-        } else if (error instanceof Error) {
-          if (error.message.includes('Network')) {
-            setErrors({ general: 'Network error. Please try again.' });
-          } else {
-            setErrors({ general: 'Failed to create post. Please try again.' });
-          }
-        } else {
-          setErrors({ general: 'An unexpected error occurred' });
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [validateForm, selectedFile, formData, navigate]
-  );
-
   // Handle tags normalization on blur
   const handleTagsBlur = useCallback(
     (event: React.FocusEvent<HTMLInputElement>) => {
@@ -238,7 +246,14 @@ export const CreatePostPage: React.FC = () => {
         <form
           className="create-post-form retro-card"
           data-testid="create-post-form"
-          onSubmit={handleSubmit}
+          onSubmit={(e) => {
+            e.preventDefault();
+            flushSync(() => {
+              setIsSubmitting(true);
+            });
+            const formDataObj = new FormData(e.currentTarget);
+            formAction(formDataObj);
+          }}
           role="form"
           aria-label="Create post"
         >
@@ -293,9 +308,9 @@ export const CreatePostPage: React.FC = () => {
               />
             </div>
 
-            {errors.image && (
+            {validationErrors.image && (
               <div className="error-message" role="alert" aria-live="polite">
-                {errors.image}
+                {validationErrors.image}
               </div>
             )}
           </div>
@@ -315,9 +330,9 @@ export const CreatePostPage: React.FC = () => {
               aria-label="Post caption"
             />
             <div className="character-count">{formData.caption.length} / 500</div>
-            {errors.caption && (
+            {validationErrors.caption && (
               <div className="error-message" role="alert" aria-live="polite">
-                {errors.caption}
+                {validationErrors.caption}
               </div>
             )}
           </div>
@@ -340,9 +355,9 @@ export const CreatePostPage: React.FC = () => {
             <div className="form-hint">
               Separate tags with commas. Do not include # symbol.
             </div>
-            {errors.tags && (
+            {validationErrors.tags && (
               <div className="error-message" role="alert" aria-live="polite">
-                {errors.tags}
+                {validationErrors.tags}
               </div>
             )}
           </div>
@@ -373,13 +388,13 @@ export const CreatePostPage: React.FC = () => {
           </div>
 
           {/* General errors */}
-          {errors.general && (
+          {(validationErrors.general || actionState.error) && (
             <div
               className="error-message error-message--general"
               role="alert"
               aria-live="polite"
             >
-              {errors.general}
+              {validationErrors.general || actionState.error}
             </div>
           )}
 
@@ -387,9 +402,9 @@ export const CreatePostPage: React.FC = () => {
           <button
             type="submit"
             className="tama-btn tama-btn--automotive tama-btn--racing-red submit-btn"
-            disabled={isLoading}
+            disabled={isSubmitting}
           >
-            {isLoading ? 'Creating Post...' : 'Create Post'}
+            {isSubmitting ? 'Creating Post...' : 'Create Post'}
           </button>
         </form>
       </div>
