@@ -17,7 +17,7 @@ vi.mock('../../services/profileService', () => ({
 
 const mockUseAuth = useAuth as MockedFunction<typeof useAuth>;
 
-const renderWithRouter = (component: React.ReactElement) => {
+const renderWithRouter = (component: React.ReactElement<any>) => {
   return render(
     <BrowserRouter>
       {component}

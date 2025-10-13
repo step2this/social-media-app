@@ -48,7 +48,7 @@ describe('PostCard', () => {
     isLiked: false
   };
 
-  const renderWithRouter = (component: React.ReactElement) => {
+  const renderWithRouter = (component: React.ReactElement<any>) => {
     return render(<BrowserRouter>{component}</BrowserRouter>);
   };
 

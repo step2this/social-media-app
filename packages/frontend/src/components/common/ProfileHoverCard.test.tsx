@@ -48,7 +48,7 @@ vi.mock('../../hooks/useAuth.js', () => ({
   }))
 }));
 
-const renderWithRouter = (component: React.ReactElement) => {
+const renderWithRouter = (component: React.ReactElement<any>) => {
   return render(<MemoryRouter>{component}</MemoryRouter>);
 };
 

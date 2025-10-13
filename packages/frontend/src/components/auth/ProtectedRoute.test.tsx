@@ -24,7 +24,7 @@ vi.mock('react-router-dom', async () => {
 
 const TestComponent = () => <div data-testid="protected-content">Protected Content</div>;
 
-const renderWithRouter = (component: React.ReactElement) => {
+const renderWithRouter = (component: React.ReactElement<any>) => {
   return render(
     <BrowserRouter>
       {component}

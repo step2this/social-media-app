@@ -35,7 +35,7 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
  * This makes testing components with services incredibly easy
  */
 export const renderWithServices = (
-  ui: ReactElement,
+  ui: ReactElement<any>,
   options: CustomRenderOptions = {}
 ): RenderResult & { services: IServiceContainer } => {
   const {
@@ -92,7 +92,7 @@ export const TestRenders: any = {
   /**
    * Render component for guest (unauthenticated) user
    */
-  asGuest: (ui: ReactElement, options?: Omit<CustomRenderOptions, 'services'>) =>
+  asGuest: (ui: ReactElement<any>, options?: Omit<CustomRenderOptions, 'services'>) =>
     renderWithServices(ui, {
       services: TestScenarios.guestUser(),
       ...options,
@@ -101,7 +101,7 @@ export const TestRenders: any = {
   /**
    * Render component for authenticated user
    */
-  asAuthenticatedUser: (ui: ReactElement, options?: Omit<CustomRenderOptions, 'services'>) =>
+  asAuthenticatedUser: (ui: ReactElement<any>, options?: Omit<CustomRenderOptions, 'services'>) =>
     renderWithServices(ui, {
       services: TestScenarios.authenticatedUser(),
       ...options,
@@ -110,7 +110,7 @@ export const TestRenders: any = {
   /**
    * Render component during authentication loading
    */
-  duringAuthentication: (ui: ReactElement, options?: Omit<CustomRenderOptions, 'services'>) =>
+  duringAuthentication: (ui: ReactElement<any>, options?: Omit<CustomRenderOptions, 'services'>) =>
     renderWithServices(ui, {
       services: TestScenarios.authenticatingUser(),
       ...options,
@@ -119,7 +119,7 @@ export const TestRenders: any = {
   /**
    * Render component with authentication error
    */
-  withAuthError: (ui: ReactElement, error?: string, options?: Omit<CustomRenderOptions, 'services'>) =>
+  withAuthError: (ui: ReactElement<any>, error?: string, options?: Omit<CustomRenderOptions, 'services'>) =>
     renderWithServices(ui, {
       services: TestScenarios.authenticationError(error),
       ...options,
@@ -128,7 +128,7 @@ export const TestRenders: any = {
   /**
    * Render component with login modal open
    */
-  withLoginModal: (ui: ReactElement, options?: Omit<CustomRenderOptions, 'services'>) =>
+  withLoginModal: (ui: ReactElement<any>, options?: Omit<CustomRenderOptions, 'services'>) =>
     renderWithServices(ui, {
       services: TestScenarios.loginModalOpen(),
       ...options,
@@ -137,7 +137,7 @@ export const TestRenders: any = {
   /**
    * Render component with register modal open
    */
-  withRegisterModal: (ui: ReactElement, options?: Omit<CustomRenderOptions, 'services'>) =>
+  withRegisterModal: (ui: ReactElement<any>, options?: Omit<CustomRenderOptions, 'services'>) =>
     renderWithServices(ui, {
       services: TestScenarios.registerModalOpen(),
       ...options,
