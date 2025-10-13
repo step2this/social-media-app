@@ -12,6 +12,7 @@ import { z } from 'zod';
 import type { FeedItemEntity } from '../entities/feed-item.entity.js';
 import { createFeedItemKeys } from '../entities/feed-item.entity.js';
 import { mapEntityToFeedPostItem } from '../utils/feed-item-mappers.js';
+import { RedisCacheService, type CachedPost, type CachedFeedResult } from './redis-cache.service.js';
 
 /**
  * Paginated result with cursor
@@ -160,9 +161,63 @@ export class FeedService {
 
   constructor(
     private readonly dynamoClient: DynamoDBDocumentClient,
-    tableName: string
+    tableName: string,
+    private readonly cacheService?: RedisCacheService
   ) {
     this.tableName = tableName;
+  }
+
+  /**
+   * Convert FeedPostItem to CachedPost format
+   *
+   * @param post - Feed post item
+   * @returns Cached post format for Redis
+   */
+  private feedPostToCachedPost(post: FeedPostItem): CachedPost {
+    return {
+      id: post.id,
+      authorId: post.authorId,
+      authorHandle: post.authorHandle,
+      caption: post.caption,
+      imageUrl: post.imageUrl,
+      isPublic: true, // Assume public for now, could be enhanced
+      likesCount: post.likesCount ?? 0,
+      commentsCount: post.commentsCount ?? 0,
+      createdAt: post.createdAt
+    };
+  }
+
+  /**
+   * Convert CachedFeedResult to paginated response format
+   *
+   * @param cached - Cached feed result from Redis
+   * @returns Paginated feed response
+   */
+  private convertCachedToResponse(cached: CachedFeedResult): {
+    items: FeedPostItem[];
+    nextCursor?: string;
+  } {
+    const items = cached.posts.map(post => ({
+      id: post.id,
+      userId: post.authorId,
+      userHandle: post.authorHandle,
+      authorId: post.authorId,
+      authorHandle: post.authorHandle,
+      authorFullName: undefined, // Not cached, would need to fetch from profile
+      authorProfilePictureUrl: undefined, // Not cached, would need to fetch from profile
+      imageUrl: post.imageUrl ?? '', // Provide empty string if missing
+      caption: post.caption,
+      likesCount: post.likesCount,
+      commentsCount: post.commentsCount,
+      createdAt: post.createdAt,
+      isLiked: false, // Default, would need user-specific data
+      source: 'materialized' as const // Items from cache are materialized
+    }));
+
+    return {
+      items,
+      nextCursor: cached.nextCursor
+    };
   }
 
   /**
@@ -525,6 +580,7 @@ export class FeedService {
    *
    * Returns feed items sorted by post creation time (newest first).
    * Uses cursor-based pagination for efficient large result sets.
+   * Implements cache-aside pattern with Redis for improved performance.
    *
    * @param params - Query parameters
    * @returns Paginated feed items with cursor
@@ -562,6 +618,28 @@ export class FeedService {
     // Apply limit constraints (default 20, max 100)
     const limit = Math.min(params.limit ?? 20, 100);
 
+    // 1. Try cache (if available)
+    if (this.cacheService) {
+      try {
+        const cached = await this.cacheService.getUnreadFeed(params.userId, limit, params.cursor);
+        if (cached.posts.length > 0) {
+          console.log('[FeedService] Cache HIT for materialized feed', {
+            userId: params.userId,
+            count: cached.posts.length
+          });
+          return this.convertCachedToResponse(cached);
+        }
+        console.log('[FeedService] Cache MISS for materialized feed', { userId: params.userId });
+      } catch (error) {
+        console.warn('[FeedService] Cache read failure (non-blocking)', {
+          operation: 'getMaterializedFeedItems',
+          userId: params.userId,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    // 2. Cache miss or disabled: query DynamoDB
     // Decode cursor if provided
     let exclusiveStartKey: Record<string, unknown> | undefined;
     if (params.cursor) {
@@ -599,6 +677,25 @@ export class FeedService {
       let nextCursor: string | undefined;
       if (result.LastEvaluatedKey) {
         nextCursor = Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64');
+      }
+
+      // 3. Cache the results (best-effort)
+      if (this.cacheService && items.length > 0) {
+        try {
+          await this.cacheService.cachePosts(
+            items.map(post => this.feedPostToCachedPost(post))
+          );
+          console.log('[FeedService] Cached feed posts', {
+            userId: params.userId,
+            count: items.length
+          });
+        } catch (error) {
+          console.warn('[FeedService] Cache write failure (non-blocking)', {
+            operation: 'getMaterializedFeedItems',
+            userId: params.userId,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
       }
 
       return {

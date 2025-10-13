@@ -2,6 +2,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { S3Client } from '@aws-sdk/client-s3';
 import { KinesisClient } from '@aws-sdk/client-kinesis';
+import Redis from 'ioredis';
 import { loadEnvironmentSync } from './env.js';
 
 // Load environment variables for local development
@@ -187,4 +188,25 @@ export const getRedisConfig = () => {
       return Math.min(times * 100, 3000);
     }
   };
+};
+
+/**
+ * Create Redis client with environment-aware configuration
+ *
+ * @returns Redis client instance configured for the current environment
+ * @throws Error if Redis configuration is invalid
+ *
+ * @example
+ * ```typescript
+ * try {
+ *   const redisClient = createRedisClient();
+ *   const cacheService = new RedisCacheService(redisClient);
+ * } catch (error) {
+ *   console.warn('Redis initialization failed, cache disabled', error);
+ * }
+ * ```
+ */
+export const createRedisClient = (): Redis => {
+  const config = getRedisConfig();
+  return new Redis(config);
 };

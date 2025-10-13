@@ -14,6 +14,27 @@ import {
 } from '../../utils/dynamodb.js';
 import { z } from 'zod';
 
+// Initialize services at container scope for Lambda warm starts
+const dynamoClient = createDynamoDBClient();
+const s3Client = createS3Client();
+const tableName = getTableName();
+const s3BucketName = getS3BucketName();
+const cloudFrontDomain = getCloudFrontDomain();
+
+// Note: Redis cache initialization omitted here as this handler uses direct PostService
+// For cached feeds, use the get-feed.ts handler which implements materialized + cache strategy
+
+const profileService = new ProfileService(
+  dynamoClient,
+  tableName,
+  s3BucketName,
+  cloudFrontDomain,
+  s3Client
+);
+
+const postService = new PostService(dynamoClient, tableName, profileService);
+const followService = new FollowService(dynamoClient, tableName);
+
 /**
  * Handler to get following feed posts (home page)
  * Returns posts from users that the authenticated user follows
@@ -54,24 +75,6 @@ export const handler = async (
       limit,
       cursor
     };
-
-    // Initialize dependencies
-    const dynamoClient = createDynamoDBClient();
-    const s3Client = createS3Client();
-    const tableName = getTableName();
-    const s3BucketName = getS3BucketName();
-    const cloudFrontDomain = getCloudFrontDomain();
-
-    const profileService = new ProfileService(
-      dynamoClient,
-      tableName,
-      s3BucketName,
-      cloudFrontDomain,
-      s3Client
-    );
-
-    const postService = new PostService(dynamoClient, tableName, profileService);
-    const followService = new FollowService(dynamoClient, tableName);
 
     // Get following feed posts
     const feedData = await postService.getFollowingFeedPosts(

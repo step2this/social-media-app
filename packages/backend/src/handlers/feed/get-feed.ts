@@ -25,10 +25,11 @@
  */
 
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { FeedService, FollowService, PostService, ProfileService } from '@social-media-app/dal';
+import { FeedService, FollowService, PostService, ProfileService, RedisCacheService } from '@social-media-app/dal';
 import type { FeedPostItem } from '@social-media-app/shared';
 import { errorResponse, successResponse, verifyAccessToken, getJWTConfigFromEnv } from '../../utils/index.js';
 import { createDynamoDBClient, getTableName, createS3Client, getS3BucketName, getCloudFrontDomain } from '../../utils/dynamodb.js';
+import { createRedisClient } from '../../utils/aws-config.js';
 
 // Constants
 const DEFAULT_LIMIT = 20;
@@ -42,7 +43,19 @@ const tableName = getTableName();
 const bucketName = getS3BucketName();
 const cloudFrontDomain = getCloudFrontDomain();
 
-const feedService = new FeedService(dynamoClient, tableName);
+// Initialize Redis cache (best-effort, non-blocking)
+let redisCache: RedisCacheService | undefined;
+try {
+  const redisClient = createRedisClient();
+  redisCache = new RedisCacheService(redisClient);
+  console.log('[GetFeed] Redis cache initialized successfully');
+} catch (error) {
+  console.warn('[GetFeed] Redis initialization failed, cache disabled', {
+    error: error instanceof Error ? error.message : 'Unknown error'
+  });
+}
+
+const feedService = new FeedService(dynamoClient, tableName, redisCache);
 const followService = new FollowService(dynamoClient, tableName);
 const profileService = new ProfileService(dynamoClient, tableName, bucketName, cloudFrontDomain, s3Client);
 const postService = new PostService(dynamoClient, tableName, profileService);

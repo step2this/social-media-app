@@ -1,9 +1,11 @@
 import { Construct } from 'constructs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as kinesis from 'aws-cdk-lib/aws-kinesis';
 interface LikeLambdasProps {
     environment: string;
     table: dynamodb.Table;
+    kinesisStream?: kinesis.Stream;
 }
 export declare class LikeLambdas extends Construct {
     readonly likePost: NodejsFunction;

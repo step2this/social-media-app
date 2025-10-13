@@ -18,8 +18,7 @@ const databaseStack = new DatabaseStack(app, `${stackPrefix}-Database`, {
     description: 'Database stack with DynamoDB table'
 });
 // Create Kinesis Stack for event streaming and event sourcing
-// TODO: Wire into API stack for Lambda event sources (Phase 2.2)
-new KinesisStack(app, `${stackPrefix}-Kinesis`, {
+const kinesisStack = new KinesisStack(app, `${stackPrefix}-Kinesis`, {
     env: {
         account: process.env.CDK_DEFAULT_ACCOUNT,
         region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
@@ -27,6 +26,10 @@ new KinesisStack(app, `${stackPrefix}-Kinesis`, {
     environment,
     description: 'Kinesis Data Streams for event sourcing and real-time processing'
 });
+// Create Redis Stack for feed caching
+// Note: RedisStack is a Construct that will be added to a parent stack
+// For now, we're adding it to the API stack for simplicity
+// In production, you might want to create a dedicated Stack for it
 // Create Media Stack with S3 and CloudFront for user content
 const mediaStack = new MediaStack(app, `${stackPrefix}-Media`, {
     env: {
@@ -46,10 +49,12 @@ const apiStack = new ApiStack(app, `${stackPrefix}-Api`, {
     table: databaseStack.table,
     mediaBucket: mediaStack.mediaBucket,
     cloudFrontDomain: mediaStack.distributionDomainName,
+    kinesisStream: kinesisStack.feedEventsStream,
     description: 'API stack with Lambda functions and API Gateway'
 });
 apiStack.addDependency(databaseStack);
 apiStack.addDependency(mediaStack);
+apiStack.addDependency(kinesisStack);
 // Create Frontend Stack with S3 and CloudFront
 const frontendStack = new FrontendStack(app, `${stackPrefix}-Frontend`, {
     env: {
