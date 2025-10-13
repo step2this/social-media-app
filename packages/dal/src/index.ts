@@ -7,6 +7,7 @@ export * from './services/follow.service.js';
 export * from './services/comment.service.js';
 export * from './services/notification.service.js';
 export * from './services/feed.service.js';
+export * from './services/kinesis-event-publisher.service.js';
 
 // Entity types and utilities
 export * from './entities/index.js';
