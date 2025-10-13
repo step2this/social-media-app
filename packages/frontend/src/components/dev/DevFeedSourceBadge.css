@@ -1,0 +1,26 @@
+.dev-feed-source-badge {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+  z-index: 10;
+  pointer-events: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dev-feed-source-badge--materialized {
+  background: var(--tama-electric-blue);
+  color: var(--tama-pearl-white);
+}
+
+.dev-feed-source-badge--query-time {
+  background: var(--tama-rally-yellow);
+  color: var(--tama-gray-900);
+}
