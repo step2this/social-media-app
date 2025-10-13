@@ -2,7 +2,28 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { FeedPostItem } from '@social-media-app/shared';
 import { feedService } from '../services/feedService';
 import { PostCard } from '../components/posts/PostCard';
+import { useFeedItemAutoRead } from '../hooks/useFeedItemAutoRead';
 import './HomePage.css';
+
+/**
+ * Wrapper component for PostCard with auto-read functionality
+ * Handles Instagram-like behavior where posts are marked as read after viewing
+ */
+interface FeedItemWrapperProps {
+  post: FeedPostItem;
+}
+
+const FeedItemWrapper: React.FC<FeedItemWrapperProps> = ({ post }) => {
+  // Attach auto-read ref to enable Instagram-like read tracking
+  // The hook handles the intersection observer and API call internally
+  const elementRef = useFeedItemAutoRead(post.id);
+
+  return (
+    <div ref={elementRef} className="home-page__post-wrapper">
+      <PostCard post={post} compact={true} />
+    </div>
+  );
+};
 
 /**
  * Home page - displays posts from followed users with infinite scroll
@@ -138,7 +159,7 @@ export const HomePage: React.FC = () => {
         {/* Vertical feed of posts */}
         <div className="home-page__feed">
           {posts.map((post) => (
-            <PostCard key={post.id} post={post} compact={true} />
+            <FeedItemWrapper key={post.id} post={post} />
           ))}
         </div>
 
