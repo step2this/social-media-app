@@ -1,0 +1,126 @@
+/**
+ * DevMenu Component Styles
+ * Hidden developer menu accessible via Ctrl+Shift+D
+ * Uses BEM methodology: .dev-menu__element--modifier
+ * French automotive heritage design system colors
+ */
+
+.dev-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+}
+
+/**
+ * Backdrop overlay - semi-transparent dark background
+ */
+.dev-menu__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+/**
+ * Slide-in panel from right side
+ * Dark background with slide-in animation
+ */
+.dev-menu__panel {
+  position: relative;
+  width: 400px;
+  background: var(--tama-gray-900);
+  color: var(--tama-pearl-white);
+  box-shadow: var(--tama-depth-shadow);
+  overflow-y: auto;
+  animation: slideInRight 0.3s ease-out;
+}
+
+/**
+ * Slide-in animation from right
+ */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/**
+ * Header with title and close button
+ */
+.dev-menu__header {
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--tama-gray-700);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  background: var(--tama-gray-900);
+  z-index: 10;
+}
+
+.dev-menu__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--tama-pearl-white);
+  margin: 0;
+}
+
+/**
+ * Close button - large X icon
+ */
+.dev-menu__close-button {
+  background: transparent;
+  border: none;
+  color: var(--tama-pearl-white);
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--border-radius-sm);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.dev-menu__close-button:hover {
+  background-color: var(--tama-gray-800);
+  color: var(--tama-racing-red);
+}
+
+.dev-menu__close-button:focus {
+  outline: 2px solid var(--tama-electric-blue);
+  outline-offset: 2px;
+}
+
+/**
+ * Content area for developer tools
+ */
+.dev-menu__content {
+  padding: var(--spacing-lg);
+}
+
+/**
+ * Responsive adjustments for smaller screens
+ */
+@media (max-width: 768px) {
+  .dev-menu__panel {
+    width: 100%;
+    max-width: 400px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dev-menu__panel {
+    width: 100%;
+  }
+}

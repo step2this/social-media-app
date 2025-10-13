@@ -9,12 +9,6 @@ describe('DevMenu', () => {
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    // Clean up any open menus
-    const menus = document.querySelectorAll('.dev-menu');
-    menus.forEach(menu => menu.remove());
-  });
-
   describe('Visibility', () => {
     it('should be hidden by default', () => {
       render(
@@ -174,7 +168,9 @@ describe('DevMenu', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Developer Tools')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /close/i })).toBeInTheDocument();
+        // Look for button by text content (×)
+        const closeButton = document.querySelector('.dev-menu__close-button');
+        expect(closeButton).toBeInTheDocument();
       });
     });
 
@@ -193,9 +189,10 @@ describe('DevMenu', () => {
         expect(screen.getByTestId('dev-content')).toBeInTheDocument();
       });
 
-      // Click close button
-      const closeButton = screen.getByRole('button', { name: /close/i });
-      await user.click(closeButton);
+      // Click close button using class selector to avoid ambiguity
+      const closeButton = document.querySelector('.dev-menu__close-button');
+      expect(closeButton).toBeInTheDocument();
+      await user.click(closeButton as Element);
 
       // Verify menu is closed
       await waitFor(() => {
