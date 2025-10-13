@@ -21,21 +21,6 @@ const databaseStack = new DatabaseStack(app, `${stackPrefix}-Database`, {
   description: 'Database stack with DynamoDB table'
 });
 
-// Create Kinesis Stack for event streaming and event sourcing
-const kinesisStack = new KinesisStack(app, `${stackPrefix}-Kinesis`, {
-  env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
-  },
-  environment,
-  description: 'Kinesis Data Streams for event sourcing and real-time processing'
-});
-
-// Create Redis Stack for feed caching
-// Note: RedisStack is a Construct that will be added to a parent stack
-// For now, we're adding it to the API stack for simplicity
-// In production, you might want to create a dedicated Stack for it
-
 // Create Media Stack with S3 and CloudFront for user content
 const mediaStack = new MediaStack(app, `${stackPrefix}-Media`, {
   env: {
@@ -46,7 +31,28 @@ const mediaStack = new MediaStack(app, `${stackPrefix}-Media`, {
   description: 'Media stack with S3 and CloudFront for user content'
 });
 
-// Create API Stack with Lambda functions
+// Define Redis configuration for local development
+// In production, this would come from the ApiStack's Redis construct
+const redisEndpoint = environment === 'local' ? 'localhost' : 'redis-cache-endpoint';
+const redisPort = 6379;
+
+// Create Kinesis Stack with consumer Lambda
+// This now includes the Kinesis stream AND the consumer Lambda
+const kinesisStack = new KinesisStack(app, `${stackPrefix}-Kinesis`, {
+  env: {
+    account: process.env.CDK_DEFAULT_ACCOUNT,
+    region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
+  },
+  environment,
+  table: databaseStack.table,
+  redisEndpoint: redisEndpoint,
+  redisPort: redisPort,
+  description: 'Kinesis Data Streams with consumer Lambda for event processing'
+});
+
+kinesisStack.addDependency(databaseStack);
+
+// Create API Stack with Lambda functions (includes Redis)
 const apiStack = new ApiStack(app, `${stackPrefix}-Api`, {
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
