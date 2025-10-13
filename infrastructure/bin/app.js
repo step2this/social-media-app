@@ -4,6 +4,7 @@ import { DatabaseStack } from '../lib/stacks/database-stack.js';
 import { MediaStack } from '../lib/stacks/media-stack.js';
 import { ApiStack } from '../lib/stacks/api-stack.js';
 import { FrontendStack } from '../lib/stacks/frontend-stack.js';
+import { KinesisStack } from '../lib/stacks/kinesis-stack.js';
 const app = new App();
 const environment = app.node.tryGetContext('environment') || 'dev';
 const stackPrefix = `SocialMediaApp-${environment}`;
@@ -15,6 +16,16 @@ const databaseStack = new DatabaseStack(app, `${stackPrefix}-Database`, {
     },
     environment,
     description: 'Database stack with DynamoDB table'
+});
+// Create Kinesis Stack for event streaming and event sourcing
+// TODO: Wire into API stack for Lambda event sources (Phase 2.2)
+new KinesisStack(app, `${stackPrefix}-Kinesis`, {
+    env: {
+        account: process.env.CDK_DEFAULT_ACCOUNT,
+        region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
+    },
+    environment,
+    description: 'Kinesis Data Streams for event sourcing and real-time processing'
 });
 // Create Media Stack with S3 and CloudFront for user content
 const mediaStack = new MediaStack(app, `${stackPrefix}-Media`, {

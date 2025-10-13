@@ -15,6 +15,7 @@ export declare class ProfileLambdas extends Construct {
     readonly createPost: NodejsFunction;
     readonly getUserPosts: NodejsFunction;
     readonly deletePost: NodejsFunction;
+    readonly getFeed: NodejsFunction;
     constructor(scope: Construct, id: string, props: ProfileLambdasProps);
 }
 export {};
