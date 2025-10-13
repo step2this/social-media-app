@@ -61,18 +61,28 @@ const isValidUUID = (value: string): boolean => {
 
 /**
  * Parse and validate limit parameter
+ * Returns error message if invalid, otherwise returns the limit
  */
-const parseLimit = (limitParam?: string): number => {
+const parseLimit = (limitParam?: string): { limit?: number; error?: string } => {
   if (!limitParam) {
-    return DEFAULT_LIMIT;
+    return { limit: DEFAULT_LIMIT };
   }
 
   const parsed = parseInt(limitParam, 10);
-  if (isNaN(parsed) || parsed <= 0) {
-    return DEFAULT_LIMIT;
+
+  if (isNaN(parsed)) {
+    return { error: 'Limit must be a valid number' };
   }
 
-  return Math.min(parsed, MAX_LIMIT);
+  if (parsed <= 0) {
+    return { error: 'Limit must be positive' };
+  }
+
+  if (parsed > MAX_LIMIT) {
+    return { error: `Limit cannot exceed ${MAX_LIMIT}` };
+  }
+
+  return { limit: parsed };
 };
 
 /**
@@ -211,7 +221,13 @@ export const handler = async (
     }
 
     // 2. Parse pagination parameters
-    const limit = parseLimit(event.queryStringParameters?.limit);
+    const limitResult = parseLimit(event.queryStringParameters?.limit);
+    if (limitResult.error) {
+      return errorResponse(400, 'Invalid pagination parameters', {
+        message: limitResult.error
+      });
+    }
+    const limit = limitResult.limit!;
     const cursor = event.queryStringParameters?.cursor;
 
     // 3. Fetch materialized feed items
@@ -242,6 +258,7 @@ export const handler = async (
       posts: mergedItems,
       hasMore: !!materializedResult.nextCursor || celebrityItems.length >= limit,
       ...(materializedResult.nextCursor && { nextCursor: materializedResult.nextCursor }),
+      totalCount: mergedItems.length,
       source: feedSource
     };
 
