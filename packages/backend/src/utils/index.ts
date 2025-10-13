@@ -23,3 +23,6 @@ export * from './error-handler.js';
 
 // Service factory helpers
 export * from './notification-service-factory.js';
+
+// AWS configuration utilities
+export * from './aws-config.js';

@@ -12,6 +12,7 @@ import { ProfileLambdas } from '../constructs/profile-lambdas.js';
 import { LikeLambdas } from '../constructs/like-lambdas.js';
 import { FollowLambdas } from '../constructs/follow-lambdas.js';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as kinesis from 'aws-cdk-lib/aws-kinesis';
 import { DynamoEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -22,6 +23,7 @@ interface ApiStackProps extends StackProps {
   table: dynamodb.Table;
   mediaBucket: s3.Bucket;
   cloudFrontDomain: string;
+  kinesisStream: kinesis.Stream;
 }
 
 export class ApiStack extends Stack {
@@ -63,13 +65,15 @@ export class ApiStack extends Stack {
       environment: props.environment,
       table: props.table,
       mediaBucket: props.mediaBucket,
-      cloudFrontDomain: props.cloudFrontDomain
+      cloudFrontDomain: props.cloudFrontDomain,
+      kinesisStream: props.kinesisStream
     });
 
     // Create like Lambda functions
     const likeLambdas = new LikeLambdas(this, 'LikeLambdas', {
       environment: props.environment,
-      table: props.table
+      table: props.table,
+      kinesisStream: props.kinesisStream
     });
 
     // Wire up DynamoDB Stream to Like Counter Lambda
@@ -304,6 +308,16 @@ export class ApiStack extends Stack {
       integration: new apigatewayIntegrations.HttpLambdaIntegration(
         'GetFeedIntegration',
         profileLambdas.getFeed
+      )
+    });
+
+    // Mark posts as read
+    httpApi.addRoutes({
+      path: '/feed/read',
+      methods: [apigateway.HttpMethod.POST],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'MarkReadIntegration',
+        profileLambdas.markRead
       )
     });
 

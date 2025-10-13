@@ -3,6 +3,7 @@ import { Duration } from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as kinesis from 'aws-cdk-lib/aws-kinesis';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -12,6 +13,7 @@ const __dirname = path.dirname(__filename);
 interface LikeLambdasProps {
   environment: string;
   table: dynamodb.Table;
+  kinesisStream?: kinesis.Stream;
 }
 
 export class LikeLambdas extends Construct {
@@ -28,7 +30,8 @@ export class LikeLambdas extends Construct {
       LOG_LEVEL: props.environment === 'prod' ? 'warn' : 'debug',
       TABLE_NAME: props.table.tableName,
       JWT_SECRET: process.env.JWT_SECRET || 'development-secret-change-in-production',
-      JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'development-refresh-secret-change-in-production'
+      JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'development-refresh-secret-change-in-production',
+      ...(props.kinesisStream && { KINESIS_STREAM_NAME: props.kinesisStream.streamName })
     };
 
     const commonBundling = {
@@ -96,5 +99,10 @@ export class LikeLambdas extends Construct {
 
     // Grant stream processor permission to read from DynamoDB Streams
     props.table.grantStreamRead(this.likeCounter);
+
+    // Grant Kinesis permissions
+    if (props.kinesisStream) {
+      props.kinesisStream.grantWrite(this.likePost);
+    }
   }
 }

@@ -1,8 +1,9 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { PostService, ProfileService } from '@social-media-app/dal';
+import { PostService, ProfileService, KinesisEventPublisher } from '@social-media-app/dal';
 import {
   DeletePostResponseSchema,
-  type DeletePostResponse
+  type DeletePostResponse,
+  type PostDeletedEvent
 } from '@social-media-app/shared';
 import { errorResponse, successResponse, verifyAccessToken, getJWTConfigFromEnv } from '../../utils/index.js';
 import {
@@ -12,7 +13,14 @@ import {
   getS3BucketName,
   getCloudFrontDomain
 } from '../../utils/dynamodb.js';
+import { createKinesisClient, getKinesisStreamName } from '../../utils/aws-config.js';
+import { randomUUID } from 'crypto';
 import { z } from 'zod';
+
+// Initialize Kinesis publisher at container scope for warm start optimization
+const kinesisClient = createKinesisClient();
+const streamName = getKinesisStreamName();
+const kinesisPublisher = new KinesisEventPublisher(kinesisClient, streamName);
 
 /**
  * Handler to delete a post
@@ -64,6 +72,33 @@ export const handler = async (
 
     if (!deleted) {
       return errorResponse(404, 'Post not found or unauthorized');
+    }
+
+    // Publish POST_DELETED event to Kinesis
+    try {
+      const postDeletedEvent: PostDeletedEvent = {
+        eventId: randomUUID(),
+        timestamp: new Date().toISOString(),
+        eventType: 'POST_DELETED',
+        version: '1.0',
+        postId,
+        authorId: decoded.userId
+      };
+
+      await kinesisPublisher.publishEvent(postDeletedEvent);
+
+      console.log('[DeletePost] Published POST_DELETED event', {
+        postId,
+        eventId: postDeletedEvent.eventId,
+        authorId: decoded.userId
+      });
+    } catch (error) {
+      // Log error but don't fail the request
+      // The post was deleted successfully in DynamoDB
+      console.error('[DeletePost] Failed to publish Kinesis event (non-blocking)', {
+        postId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
 
     // Validate response

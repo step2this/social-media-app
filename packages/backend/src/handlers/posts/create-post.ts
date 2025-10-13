@@ -1,9 +1,10 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { PostService, ProfileService } from '@social-media-app/dal';
+import { PostService, ProfileService, KinesisEventPublisher } from '@social-media-app/dal';
 import {
   CreatePostRequestSchema,
   CreatePostResponseSchema,
-  type CreatePostResponse
+  type CreatePostResponse,
+  type PostCreatedEvent
 } from '@social-media-app/shared';
 import { errorResponse, enhancedErrorResponse, successResponse, verifyAccessToken, getJWTConfigFromEnv } from '../../utils/index.js';
 import {
@@ -13,7 +14,14 @@ import {
   getS3BucketName,
   getCloudFrontDomain
 } from '../../utils/dynamodb.js';
+import { createKinesisClient, getKinesisStreamName } from '../../utils/aws-config.js';
+import { randomUUID } from 'crypto';
 import { z } from 'zod';
+
+// Initialize Kinesis publisher at container scope for warm start optimization
+const kinesisClient = createKinesisClient();
+const streamName = getKinesisStreamName();
+const kinesisPublisher = new KinesisEventPublisher(kinesisClient, streamName);
 
 /**
  * Handler to create a new post
@@ -87,6 +95,37 @@ export const handler = async (
       imageUploadData.publicUrl,
       imageUploadData.thumbnailUrl || imageUploadData.publicUrl
     );
+
+    // Publish POST_CREATED event to Kinesis
+    try {
+      const postCreatedEvent: PostCreatedEvent = {
+        eventId: randomUUID(),
+        timestamp: new Date().toISOString(),
+        eventType: 'POST_CREATED',
+        version: '1.0',
+        postId: post.id,
+        authorId: decoded.userId,
+        authorHandle: userProfile.handle,
+        caption: post.caption,
+        imageUrl: post.imageUrl,
+        isPublic: post.isPublic ?? true,
+        createdAt: post.createdAt
+      };
+
+      await kinesisPublisher.publishEvent(postCreatedEvent);
+
+      console.log('[CreatePost] Published POST_CREATED event', {
+        postId: post.id,
+        eventId: postCreatedEvent.eventId
+      });
+    } catch (error) {
+      // Log error but don't fail the request
+      // The post was created successfully in DynamoDB
+      console.error('[CreatePost] Failed to publish Kinesis event (non-blocking)', {
+        postId: post.id,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
 
     // Validate response
     const response: CreatePostResponse = {

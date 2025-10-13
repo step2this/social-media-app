@@ -1,13 +1,21 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { LikeService, PostService, ProfileService, NotificationService } from '@social-media-app/dal';
+import { LikeService, PostService, ProfileService, NotificationService, KinesisEventPublisher } from '@social-media-app/dal';
 import {
   LikePostRequestSchema,
   LikePostResponseSchema,
-  type LikePostResponse
+  type LikePostResponse,
+  type PostLikedEvent
 } from '@social-media-app/shared';
 import { errorResponse, successResponse, verifyAccessToken, getJWTConfigFromEnv } from '../../utils/index.js';
 import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
+import { createKinesisClient, getKinesisStreamName } from '../../utils/aws-config.js';
+import { randomUUID } from 'crypto';
 import { z } from 'zod';
+
+// Initialize Kinesis publisher at container scope for warm start optimization
+const kinesisClient = createKinesisClient();
+const streamName = getKinesisStreamName();
+const kinesisPublisher = new KinesisEventPublisher(kinesisClient, streamName);
 
 /**
  * Handler to like a post
@@ -75,6 +83,35 @@ export const handler = async (
       postUserId,
       postSK
     );
+
+    // Publish POST_LIKED event to Kinesis
+    try {
+      const likeEvent: PostLikedEvent = {
+        eventId: randomUUID(),
+        timestamp: new Date().toISOString(),
+        eventType: 'POST_LIKED',
+        version: '1.0',
+        userId: decoded.userId,
+        postId: validatedRequest.postId,
+        liked: true
+      };
+
+      await kinesisPublisher.publishEvent(likeEvent);
+
+      console.log('[LikePost] Published POST_LIKED event', {
+        postId: validatedRequest.postId,
+        userId: decoded.userId,
+        liked: true
+      });
+    } catch (error) {
+      // Log error but don't fail the request
+      // The like was created successfully in DynamoDB
+      console.error('[LikePost] Failed to publish Kinesis event (non-blocking)', {
+        postId: validatedRequest.postId,
+        userId: decoded.userId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
 
     // Create notification for post owner (if not self-like)
     if (decoded.userId !== postUserId) {

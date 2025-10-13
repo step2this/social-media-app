@@ -4,6 +4,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as kinesis from 'aws-cdk-lib/aws-kinesis';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -15,6 +16,7 @@ interface ProfileLambdasProps {
   table: dynamodb.Table;
   mediaBucket: s3.Bucket;
   cloudFrontDomain: string;
+  kinesisStream?: kinesis.Stream;
 }
 
 export class ProfileLambdas extends Construct {
@@ -25,6 +27,7 @@ export class ProfileLambdas extends Construct {
   public readonly getUserPosts: NodejsFunction;
   public readonly deletePost: NodejsFunction;
   public readonly getFeed: NodejsFunction;
+  public readonly markRead: NodejsFunction;
 
   constructor(scope: Construct, id: string, props: ProfileLambdasProps) {
     super(scope, id);
@@ -36,7 +39,8 @@ export class ProfileLambdas extends Construct {
       MEDIA_BUCKET_NAME: props.mediaBucket.bucketName,
       CLOUDFRONT_DOMAIN: props.cloudFrontDomain,
       JWT_SECRET: process.env.JWT_SECRET || 'development-secret-change-in-production',
-      JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'development-refresh-secret-change-in-production'
+      JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'development-refresh-secret-change-in-production',
+      ...(props.kinesisStream && { KINESIS_STREAM_NAME: props.kinesisStream.streamName })
     };
 
     const commonBundling = {
@@ -132,6 +136,18 @@ export class ProfileLambdas extends Construct {
       bundling: commonBundling
     });
 
+    // Mark Read Lambda
+    this.markRead = new NodejsFunction(this, 'MarkReadFunction', {
+      functionName: `social-media-app-mark-read-${props.environment}`,
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../../packages/backend/src/handlers/feed/mark-read.ts'),
+      handler: 'handler',
+      timeout: Duration.seconds(10),
+      memorySize: 256,
+      environment: commonEnvironment,
+      bundling: commonBundling
+    });
+
     // Grant DynamoDB permissions
     props.table.grantReadData(this.getProfile);
     props.table.grantReadData(this.getUserPosts);
@@ -140,9 +156,16 @@ export class ProfileLambdas extends Construct {
     props.table.grantReadWriteData(this.deletePost);
     props.table.grantReadData(this.getUploadUrl);
     props.table.grantReadData(this.getFeed);
+    props.table.grantReadWriteData(this.markRead);
 
     // Grant S3 permissions
     props.mediaBucket.grantPut(this.getUploadUrl);
     props.mediaBucket.grantPut(this.createPost);
+
+    // Grant Kinesis permissions
+    if (props.kinesisStream) {
+      props.kinesisStream.grantWrite(this.createPost);
+      props.kinesisStream.grantWrite(this.markRead);
+    }
   }
 }

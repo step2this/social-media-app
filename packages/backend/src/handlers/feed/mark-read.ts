@@ -22,10 +22,12 @@
  */
 
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { FeedService } from '@social-media-app/dal';
-import { MarkFeedItemsAsReadRequestSchema } from '@social-media-app/shared';
+import { FeedService, KinesisEventPublisher } from '@social-media-app/dal';
+import { MarkFeedItemsAsReadRequestSchema, type PostReadEvent } from '@social-media-app/shared';
 import { errorResponse, successResponse, authenticateRequest } from '../../utils/index.js';
 import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
+import { createKinesisClient, getKinesisStreamName } from '../../utils/aws-config.js';
+import { randomUUID } from 'crypto';
 
 // Constants
 const MAX_POST_IDS = 50; // Maximum posts to mark as read per request
@@ -34,6 +36,11 @@ const MAX_POST_IDS = 50; // Maximum posts to mark as read per request
 const dynamoClient = createDynamoDBClient();
 const tableName = getTableName();
 const feedService = new FeedService(dynamoClient, tableName);
+
+// Initialize Kinesis publisher for event streaming
+const kinesisClient = createKinesisClient();
+const streamName = getKinesisStreamName();
+const kinesisPublisher = new KinesisEventPublisher(kinesisClient, streamName);
 
 /**
  * Handler for POST /feed/read
@@ -96,7 +103,34 @@ export const handler = async (
       postIds
     });
 
-    // 7. Return success response
+    // 7. Publish POST_READ events to Kinesis
+    try {
+      const readEvents: PostReadEvent[] = postIds.map(postId => ({
+        eventId: randomUUID(),
+        timestamp: new Date().toISOString(),
+        eventType: 'POST_READ',
+        version: '1.0',
+        userId,
+        postId
+      }));
+
+      const batchResult = await kinesisPublisher.publishEventsBatch(readEvents);
+
+      console.log('[MarkRead] Published POST_READ events', {
+        successCount: batchResult.successCount,
+        failedCount: batchResult.failedCount
+      });
+    } catch (error) {
+      // Log error but don't fail the request
+      // The posts were marked as read successfully in DynamoDB
+      console.error('[MarkRead] Failed to publish Kinesis events (non-blocking)', {
+        userId,
+        postCount: postIds.length,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+
+    // 8. Return success response
     return successResponse(200, {
       success: true,
       markedCount: result.updatedCount

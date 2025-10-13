@@ -1,6 +1,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { S3Client } from '@aws-sdk/client-s3';
+import { KinesisClient } from '@aws-sdk/client-kinesis';
 import { loadEnvironmentSync } from './env.js';
 
 // Load environment variables for local development
@@ -119,4 +120,30 @@ export const getCloudFrontDomain = (): string | undefined => {
   }
 
   return process.env.CLOUDFRONT_DOMAIN;
+};
+
+/**
+ * Create Kinesis client with environment-aware configuration
+ */
+export const createKinesisClient = (): KinesisClient => {
+  const config = getAWSConfig();
+
+  return new KinesisClient({
+    ...config,
+    maxAttempts: 3
+  });
+};
+
+/**
+ * Get Kinesis stream name based on environment
+ */
+export const getKinesisStreamName = (): string => {
+  const env = process.env.NODE_ENV || 'development';
+  const useLocalStack = process.env.USE_LOCALSTACK === 'true';
+
+  if (useLocalStack) {
+    return 'feed-events-local';
+  }
+
+  return process.env.KINESIS_STREAM_NAME || `feed-events-${env}`;
 };

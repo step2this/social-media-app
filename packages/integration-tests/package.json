@@ -12,8 +12,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@social-media-app/shared": "workspace:*",
+    "@aws-sdk/client-kinesis": "^3.908.0",
     "@social-media-app/dal": "workspace:*",
+    "@social-media-app/shared": "workspace:*",
     "zod": "^3.22.4"
   },
   "devDependencies": {
