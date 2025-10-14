@@ -135,6 +135,7 @@ export const handler = async (
             target: {
               type: 'post',
               id: validatedRequest.postId,
+              url: `/post/${validatedRequest.postId}`,
               preview: post.caption?.substring(0, 100)
             }
           });

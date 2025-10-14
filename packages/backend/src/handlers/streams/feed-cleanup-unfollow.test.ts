@@ -16,19 +16,9 @@ const mockFeedService = vi.hoisted(() => ({
   deleteFeedItemsForUser: vi.fn(),
 }));
 
-const mockLogger = vi.hoisted(() => ({
-  info: vi.fn(),
-  error: vi.fn(),
-  debug: vi.fn(),
-}));
-
 // Mock dependencies
 vi.mock('@social-media-app/dal', () => ({
   FeedService: vi.fn(() => mockFeedService),
-}));
-
-vi.mock('../../utils/logger.js', () => ({
-  logger: mockLogger,
 }));
 
 /**
@@ -84,9 +74,19 @@ function createStreamEvent(records: DynamoDBRecord[]): DynamoDBStreamEvent {
 }
 
 describe('feed-cleanup-unfollow', () => {
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockFeedService.deleteFeedItemsForUser.mockResolvedValue({ deletedCount: 0 });
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 
   describe('Event Filtering', () => {
@@ -98,17 +98,17 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#follower-123' },
           SK: { S: 'FOLLOW#following-456#2025-10-12T10:00:00Z' },
-          followerId: { S: 'follower-123' },
-          followingId: { S: 'following-456' },
+          userId: { S: 'follower-123' },
+          authorId: { S: 'following-456' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith(
-        'follower-123',
-        'following-456'
-      );
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({
+        userId: 'follower-123',
+        authorId: 'following-456'
+      });
       expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledTimes(1);
     });
 
@@ -204,8 +204,8 @@ describe('feed-cleanup-unfollow', () => {
           {
             PK: { S: 'USER#follower-1' },
             SK: { S: 'FOLLOW#following-a#2025-01-01T00:00:00Z' },
-            followerId: { S: 'follower-1' },
-            followingId: { S: 'following-a' },
+            userId: { S: 'follower-1' },
+            authorId: { S: 'following-a' },
           }
         ),
         createStreamRecord(
@@ -215,8 +215,8 @@ describe('feed-cleanup-unfollow', () => {
           {
             PK: { S: 'USER#follower-2' },
             SK: { S: 'FOLLOW#following-b#2025-01-02T00:00:00Z' },
-            followerId: { S: 'follower-2' },
-            followingId: { S: 'following-b' },
+            userId: { S: 'follower-2' },
+            authorId: { S: 'following-b' },
           }
         ),
         createStreamRecord(
@@ -226,8 +226,8 @@ describe('feed-cleanup-unfollow', () => {
           {
             PK: { S: 'USER#follower-3' },
             SK: { S: 'FOLLOW#following-c#2025-01-03T00:00:00Z' },
-            followerId: { S: 'follower-3' },
-            followingId: { S: 'following-c' },
+            userId: { S: 'follower-3' },
+            authorId: { S: 'following-c' },
           }
         ),
       ];
@@ -235,9 +235,9 @@ describe('feed-cleanup-unfollow', () => {
       await handler(createStreamEvent(records));
 
       expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledTimes(3);
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenNthCalledWith(1, 'follower-1', 'following-a');
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenNthCalledWith(2, 'follower-2', 'following-b');
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenNthCalledWith(3, 'follower-3', 'following-c');
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenNthCalledWith(1, { userId: 'follower-1', authorId: 'following-a' });
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenNthCalledWith(2, { userId: 'follower-2', authorId: 'following-b' });
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenNthCalledWith(3, { userId: 'follower-3', authorId: 'following-c' });
     });
 
     it('should filter mixed event types correctly', async () => {
@@ -250,8 +250,8 @@ describe('feed-cleanup-unfollow', () => {
           {
             PK: { S: 'USER#follower-2' },
             SK: { S: 'FOLLOW#following-b#2025-01-02T00:00:00Z' },
-            followerId: { S: 'follower-2' },
-            followingId: { S: 'following-b' },
+            userId: { S: 'follower-2' },
+            authorId: { S: 'following-b' },
           }
         ),
         createStreamRecord('MODIFY', 'USER#follower-3', 'FOLLOW#following-c#2025-01-03T00:00:00Z'),
@@ -261,7 +261,7 @@ describe('feed-cleanup-unfollow', () => {
       await handler(createStreamEvent(records));
 
       expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledTimes(1);
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith('follower-2', 'following-b');
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({ userId: 'follower-2', authorId: 'following-b' });
     });
   });
 
@@ -274,14 +274,14 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#alice' },
           SK: { S: 'FOLLOW#bob#2025-10-12T10:00:00Z' },
-          followerId: { S: 'alice' },
-          followingId: { S: 'bob' },
+          userId: { S: 'alice' },
+          authorId: { S: 'bob' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith('alice', 'bob');
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({ userId: 'alice', authorId: 'bob' });
     });
 
     it('should extract followerId from PK correctly', async () => {
@@ -292,17 +292,17 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#unique-follower-id' },
           SK: { S: 'FOLLOW#some-following#2025-10-12T10:00:00Z' },
-          followerId: { S: 'unique-follower-id' },
-          followingId: { S: 'some-following' },
+          userId: { S: 'unique-follower-id' },
+          authorId: { S: 'some-following' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith(
-        'unique-follower-id',
-        'some-following'
-      );
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({
+        userId: 'unique-follower-id',
+        authorId: 'some-following'
+      });
     });
 
     it('should extract followingId from SK correctly', async () => {
@@ -313,17 +313,17 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#follower-123' },
           SK: { S: 'FOLLOW#unique-following-id#2025-10-12T10:00:00Z' },
-          followerId: { S: 'follower-123' },
-          followingId: { S: 'unique-following-id' },
+          userId: { S: 'follower-123' },
+          authorId: { S: 'unique-following-id' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith(
-        'follower-123',
-        'unique-following-id'
-      );
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({
+        userId: 'follower-123',
+        authorId: 'unique-following-id'
+      });
     });
 
     it('should handle SK format: FOLLOW#<userId>#<timestamp>', async () => {
@@ -334,14 +334,14 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#user-a' },
           SK: { S: 'FOLLOW#user-b#2025-10-12T15:30:45.123Z' },
-          followerId: { S: 'user-a' },
-          followingId: { S: 'user-b' },
+          userId: { S: 'user-a' },
+          authorId: { S: 'user-b' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith('user-a', 'user-b');
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({ userId: 'user-a', authorId: 'user-b' });
     });
 
     it('should log deletion statistics (deletedCount)', async () => {
@@ -354,18 +354,18 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#active-follower' },
           SK: { S: 'FOLLOW#popular-user#2025-10-12T10:00:00Z' },
-          followerId: { S: 'active-follower' },
-          followingId: { S: 'popular-user' },
+          userId: { S: 'active-follower' },
+          authorId: { S: 'popular-user' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Deleted feed items for unfollow',
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        '[FeedCleanupUnfollow] Cleaned up feed items',
         expect.objectContaining({
-          userId: 'active-follower',
-          authorId: 'popular-user',
+          followerId: 'active-follower',
+          followingId: 'popular-user',
           deletedCount: 25,
         })
       );
@@ -381,25 +381,25 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#follower' },
           SK: { S: 'FOLLOW#following#2025-10-12T10:00:00Z' },
-          followerId: { S: 'follower' },
-          followingId: { S: 'following' },
+          userId: { S: 'follower' },
+          authorId: { S: 'following' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith('follower', 'following');
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Deleted feed items for unfollow',
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({ userId: 'follower', authorId: 'following' });
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        '[FeedCleanupUnfollow] Cleaned up feed items',
         expect.objectContaining({
-          userId: 'follower',
-          authorId: 'following',
+          followerId: 'follower',
+          followingId: 'following',
           deletedCount: 0,
         })
       );
     });
 
-    it('should handle missing followerId gracefully', async () => {
+    it('should extract followerId from PK even when missing from OldImage', async () => {
       const record = createStreamRecord(
         'REMOVE',
         'USER#follower-123',
@@ -407,21 +407,20 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#follower-123' },
           SK: { S: 'FOLLOW#following-456#2025-10-12T10:00:00Z' },
-          // Missing followerId field
-          followingId: { S: 'following-456' },
+          // Missing followerId field in OldImage (handler extracts from Keys)
+          authorId: { S: 'following-456' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsForUser).not.toHaveBeenCalled();
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Missing followerId or followingId in unfollow record',
-        expect.any(Object)
-      );
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({
+        userId: 'follower-123',
+        authorId: 'following-456'
+      });
     });
 
-    it('should handle missing followingId gracefully', async () => {
+    it('should extract followingId from SK even when missing from OldImage', async () => {
       const record = createStreamRecord(
         'REMOVE',
         'USER#follower-123',
@@ -429,34 +428,36 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#follower-123' },
           SK: { S: 'FOLLOW#following-456#2025-10-12T10:00:00Z' },
-          followerId: { S: 'follower-123' },
-          // Missing followingId field
+          userId: { S: 'follower-123' },
+          // Missing followingId field in OldImage (handler extracts from Keys)
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsForUser).not.toHaveBeenCalled();
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Missing followerId or followingId in unfollow record',
-        expect.any(Object)
-      );
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({
+        userId: 'follower-123',
+        authorId: 'following-456'
+      });
     });
 
-    it('should handle malformed OldImage gracefully', async () => {
+    it('should work without OldImage (extracts from Keys only)', async () => {
       const record = createStreamRecord(
         'REMOVE',
         'USER#follower-123',
         'FOLLOW#following-456#2025-10-12T10:00:00Z'
       );
-      // No OldImage provided
+      // No OldImage provided (handler doesn't need it)
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsForUser).not.toHaveBeenCalled();
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({
+        userId: 'follower-123',
+        authorId: 'following-456'
+      });
     });
 
-    it('should handle SK with multiple hash separators', async () => {
+    it('should extract only first segment when SK has multiple hash separators', async () => {
       const record = createStreamRecord(
         'REMOVE',
         'USER#follower',
@@ -464,17 +465,18 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#follower' },
           SK: { S: 'FOLLOW#user-with-hash#in-name#2025-10-12T10:00:00Z' },
-          followerId: { S: 'follower' },
-          followingId: { S: 'user-with-hash#in-name' },
+          userId: { S: 'follower' },
+          authorId: { S: 'user-with-hash#in-name' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith(
-        'follower',
-        'user-with-hash#in-name'
-      );
+      // Handler uses split('#')[1] which extracts only first segment after FOLLOW#
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({
+        userId: 'follower',
+        authorId: 'user-with-hash'
+      });
     });
   });
 
@@ -492,8 +494,8 @@ describe('feed-cleanup-unfollow', () => {
           {
             PK: { S: 'USER#follower-1' },
             SK: { S: 'FOLLOW#following-1#2025-10-12T10:00:00Z' },
-            followerId: { S: 'follower-1' },
-            followingId: { S: 'following-1' },
+            userId: { S: 'follower-1' },
+            authorId: { S: 'following-1' },
           }
         ),
         createStreamRecord(
@@ -503,8 +505,8 @@ describe('feed-cleanup-unfollow', () => {
           {
             PK: { S: 'USER#follower-2' },
             SK: { S: 'FOLLOW#following-2#2025-10-12T10:00:00Z' },
-            followerId: { S: 'follower-2' },
-            followingId: { S: 'following-2' },
+            userId: { S: 'follower-2' },
+            authorId: { S: 'following-2' },
           }
         ),
       ];
@@ -512,19 +514,19 @@ describe('feed-cleanup-unfollow', () => {
       await handler(createStreamEvent(records));
 
       expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledTimes(2);
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Error deleting feed items for unfollow',
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[FeedCleanupUnfollow] Error processing stream record:',
         expect.objectContaining({
-          userId: 'follower-1',
-          authorId: 'following-1',
-          error: expect.any(Error),
+          error: 'Service error',
+          eventId: 'test-event-id',
+          eventName: 'REMOVE'
         })
       );
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Deleted feed items for unfollow',
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        '[FeedCleanupUnfollow] Cleaned up feed items',
         expect.objectContaining({
-          userId: 'follower-2',
-          authorId: 'following-2',
+          followerId: 'follower-2',
+          followingId: 'following-2',
           deletedCount: 5,
         })
       );
@@ -540,13 +542,13 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#error-follower' },
           SK: { S: 'FOLLOW#error-following#2025-10-12T10:00:00Z' },
-          followerId: { S: 'error-follower' },
-          followingId: { S: 'error-following' },
+          userId: { S: 'error-follower' },
+          authorId: { S: 'error-following' },
         }
       );
 
       await expect(handler(createStreamEvent([record]))).resolves.not.toThrow();
-      expect(mockLogger.error).toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalled();
     });
 
     it('should log errors with context', async () => {
@@ -560,22 +562,19 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#context-follower' },
           SK: { S: 'FOLLOW#context-following#2025-10-12T10:00:00Z' },
-          followerId: { S: 'context-follower' },
-          followingId: { S: 'context-following' },
+          userId: { S: 'context-follower' },
+          authorId: { S: 'context-following' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Error deleting feed items for unfollow',
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[FeedCleanupUnfollow] Error processing stream record:',
         expect.objectContaining({
-          userId: 'context-follower',
-          authorId: 'context-following',
-          error,
-          record: expect.objectContaining({
-            eventName: 'REMOVE',
-          }),
+          error: 'Database connection failed',
+          eventId: 'test-event-id',
+          eventName: 'REMOVE'
         })
       );
     });
@@ -592,18 +591,18 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#timeout-follower' },
           SK: { S: 'FOLLOW#timeout-following#2025-10-12T10:00:00Z' },
-          followerId: { S: 'timeout-follower' },
-          followingId: { S: 'timeout-following' },
+          userId: { S: 'timeout-follower' },
+          authorId: { S: 'timeout-following' },
         }
       );
 
       await expect(handler(createStreamEvent([record]))).resolves.not.toThrow();
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Error deleting feed items for unfollow',
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[FeedCleanupUnfollow] Error processing stream record:',
         expect.objectContaining({
-          userId: 'timeout-follower',
-          authorId: 'timeout-following',
-          error: timeoutError,
+          error: 'Request timeout',
+          eventId: 'test-event-id',
+          eventName: 'REMOVE'
         })
       );
     });
@@ -620,18 +619,18 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#invalid' },
           SK: { S: 'FOLLOW#invalid#2025-10-12T10:00:00Z' },
-          followerId: { S: 'invalid' },
-          followingId: { S: 'invalid' },
+          userId: { S: 'invalid' },
+          authorId: { S: 'invalid' },
         }
       );
 
       await expect(handler(createStreamEvent([record]))).resolves.not.toThrow();
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Error deleting feed items for unfollow',
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[FeedCleanupUnfollow] Error processing stream record:',
         expect.objectContaining({
-          userId: 'invalid',
-          authorId: 'invalid',
-          error: validationError,
+          error: 'Invalid userId format',
+          eventId: 'test-event-id',
+          eventName: 'REMOVE'
         })
       );
     });
@@ -650,8 +649,8 @@ describe('feed-cleanup-unfollow', () => {
           {
             PK: { S: 'USER#success-1' },
             SK: { S: 'FOLLOW#author-1#2025-10-12T10:00:00Z' },
-            followerId: { S: 'success-1' },
-            followingId: { S: 'author-1' },
+            userId: { S: 'success-1' },
+            authorId: { S: 'author-1' },
           }
         ),
         createStreamRecord(
@@ -661,8 +660,8 @@ describe('feed-cleanup-unfollow', () => {
           {
             PK: { S: 'USER#failure' },
             SK: { S: 'FOLLOW#author-2#2025-10-12T10:00:00Z' },
-            followerId: { S: 'failure' },
-            followingId: { S: 'author-2' },
+            userId: { S: 'failure' },
+            authorId: { S: 'author-2' },
           }
         ),
         createStreamRecord(
@@ -672,16 +671,16 @@ describe('feed-cleanup-unfollow', () => {
           {
             PK: { S: 'USER#success-2' },
             SK: { S: 'FOLLOW#author-3#2025-10-12T10:00:00Z' },
-            followerId: { S: 'success-2' },
-            followingId: { S: 'author-3' },
+            userId: { S: 'success-2' },
+            authorId: { S: 'author-3' },
           }
         ),
       ];
 
       await expect(handler(createStreamEvent(records))).resolves.not.toThrow();
       expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledTimes(3);
-      expect(mockLogger.info).toHaveBeenCalledTimes(2); // Two successes
-      expect(mockLogger.error).toHaveBeenCalledTimes(1); // One failure
+      expect(consoleLogSpy).toHaveBeenCalledTimes(2); // Two successes
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(1); // One failure
     });
   });
 
@@ -694,17 +693,17 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#integration-follower' },
           SK: { S: 'FOLLOW#integration-author#2025-10-12T10:00:00Z' },
-          followerId: { S: 'integration-follower' },
-          followingId: { S: 'integration-author' },
+          userId: { S: 'integration-follower' },
+          authorId: { S: 'integration-author' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith(
-        'integration-follower',
-        'integration-author'
-      );
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({
+        userId: 'integration-follower',
+        authorId: 'integration-author'
+      });
       expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledTimes(1);
     });
 
@@ -720,13 +719,13 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#service-error-follower' },
           SK: { S: 'FOLLOW#service-error-author#2025-10-12T10:00:00Z' },
-          followerId: { S: 'service-error-follower' },
-          followingId: { S: 'service-error-author' },
+          userId: { S: 'service-error-follower' },
+          authorId: { S: 'service-error-author' },
         }
       );
 
       await expect(handler(createStreamEvent([record]))).resolves.not.toThrow();
-      expect(mockLogger.error).toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalled();
     });
 
     it('should process service response correctly', async () => {
@@ -742,18 +741,18 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#response-test-follower' },
           SK: { S: 'FOLLOW#response-test-author#2025-10-12T10:00:00Z' },
-          followerId: { S: 'response-test-follower' },
-          followingId: { S: 'response-test-author' },
+          userId: { S: 'response-test-follower' },
+          authorId: { S: 'response-test-author' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Deleted feed items for unfollow',
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        '[FeedCleanupUnfollow] Cleaned up feed items',
         expect.objectContaining({
-          userId: 'response-test-follower',
-          authorId: 'response-test-author',
+          followerId: 'response-test-follower',
+          followingId: 'response-test-author',
           deletedCount: 35,
         })
       );
@@ -773,8 +772,8 @@ describe('feed-cleanup-unfollow', () => {
           {
             PK: { S: 'USER#concurrent-1' },
             SK: { S: 'FOLLOW#author-1#2025-10-12T10:00:00Z' },
-            followerId: { S: 'concurrent-1' },
-            followingId: { S: 'author-1' },
+            userId: { S: 'concurrent-1' },
+            authorId: { S: 'author-1' },
           }
         ),
         createStreamRecord(
@@ -784,8 +783,8 @@ describe('feed-cleanup-unfollow', () => {
           {
             PK: { S: 'USER#concurrent-2' },
             SK: { S: 'FOLLOW#author-2#2025-10-12T10:00:00Z' },
-            followerId: { S: 'concurrent-2' },
-            followingId: { S: 'author-2' },
+            userId: { S: 'concurrent-2' },
+            authorId: { S: 'author-2' },
           }
         ),
         createStreamRecord(
@@ -795,8 +794,8 @@ describe('feed-cleanup-unfollow', () => {
           {
             PK: { S: 'USER#concurrent-3' },
             SK: { S: 'FOLLOW#author-3#2025-10-12T10:00:00Z' },
-            followerId: { S: 'concurrent-3' },
-            followingId: { S: 'author-3' },
+            userId: { S: 'concurrent-3' },
+            authorId: { S: 'author-3' },
           }
         ),
       ];
@@ -804,7 +803,7 @@ describe('feed-cleanup-unfollow', () => {
       await handler(createStreamEvent(records));
 
       expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledTimes(3);
-      expect(mockLogger.info).toHaveBeenCalledTimes(3);
+      expect(consoleLogSpy).toHaveBeenCalledTimes(3);
     });
 
     it('should maintain correct parameter order (userId, authorId)', async () => {
@@ -815,16 +814,15 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#the-follower' },
           SK: { S: 'FOLLOW#the-author#2025-10-12T10:00:00Z' },
-          followerId: { S: 'the-follower' },
-          followingId: { S: 'the-author' },
+          userId: { S: 'the-follower' },
+          authorId: { S: 'the-author' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
       const call = mockFeedService.deleteFeedItemsForUser.mock.calls[0];
-      expect(call[0]).toBe('the-follower'); // First param is userId (follower)
-      expect(call[1]).toBe('the-author'); // Second param is authorId (following)
+      expect(call[0]).toEqual({ userId: 'the-follower', authorId: 'the-author' });
     });
   });
 
@@ -878,14 +876,14 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: `USER#${longUserId}` },
           SK: { S: 'FOLLOW#following-123#2025-10-12T10:00:00Z' },
-          followerId: { S: longUserId },
-          followingId: { S: 'following-123' },
+          userId: { S: longUserId },
+          authorId: { S: 'following-123' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith(longUserId, 'following-123');
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({ userId: longUserId, authorId: 'following-123' });
     });
 
     it('should handle special characters in userId', async () => {
@@ -897,14 +895,14 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: `USER#${specialUserId}` },
           SK: { S: 'FOLLOW#following-456#2025-10-12T10:00:00Z' },
-          followerId: { S: specialUserId },
-          followingId: { S: 'following-456' },
+          userId: { S: specialUserId },
+          authorId: { S: 'following-456' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith(specialUserId, 'following-456');
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({ userId: specialUserId, authorId: 'following-456' });
     });
 
     it('should handle SK without timestamp', async () => {
@@ -915,14 +913,14 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#follower-123' },
           SK: { S: 'FOLLOW#following-456' },
-          followerId: { S: 'follower-123' },
-          followingId: { S: 'following-456' },
+          userId: { S: 'follower-123' },
+          authorId: { S: 'following-456' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith('follower-123', 'following-456');
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({ userId: 'follower-123', authorId: 'following-456' });
     });
 
     it('should handle numeric user IDs', async () => {
@@ -933,14 +931,14 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: 'USER#123456' },
           SK: { S: 'FOLLOW#789012#2025-10-12T10:00:00Z' },
-          followerId: { S: '123456' },
-          followingId: { S: '789012' },
+          userId: { S: '123456' },
+          authorId: { S: '789012' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith('123456', '789012');
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({ userId: '123456', authorId: '789012' });
     });
 
     it('should handle UUID-format user IDs', async () => {
@@ -953,14 +951,14 @@ describe('feed-cleanup-unfollow', () => {
         {
           PK: { S: `USER#${uuidFollower}` },
           SK: { S: `FOLLOW#${uuidFollowing}#2025-10-12T10:00:00Z` },
-          followerId: { S: uuidFollower },
-          followingId: { S: uuidFollowing },
+          userId: { S: uuidFollower },
+          authorId: { S: uuidFollowing },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith(uuidFollower, uuidFollowing);
+      expect(mockFeedService.deleteFeedItemsForUser).toHaveBeenCalledWith({ userId: uuidFollower, authorId: uuidFollowing });
     });
   });
 });

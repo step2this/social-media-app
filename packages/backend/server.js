@@ -39,6 +39,7 @@ async function loadHandlers() {
       { name: 'postsGetPost', path: './dist/handlers/posts/get-post.js' },
       { name: 'feedGetFeed', path: './dist/handlers/feed/get-feed.js' },
       { name: 'feedGetFollowingFeed', path: './dist/handlers/feed/get-following-feed.js' },
+      { name: 'feedGetExploreFeed', path: './dist/handlers/feed/get-explore-feed.js' },
       { name: 'feedMarkRead', path: './dist/handlers/feed/mark-read.js' },
       { name: 'likesLikePost', path: './dist/handlers/likes/like-post.js' },
       { name: 'likesUnlikePost', path: './dist/handlers/likes/unlike-post.js' },
@@ -275,6 +276,7 @@ app.get('/posts/:postId', (req, res) => callHandler('postsGetPost', req, res));
 // Feed routes
 app.get('/feed', (req, res) => callHandler('feedGetFeed', req, res));
 app.get('/feed/following', (req, res) => callHandler('feedGetFollowingFeed', req, res));
+app.get('/feed/explore', (req, res) => callHandler('feedGetExploreFeed', req, res));
 app.post('/feed/read', (req, res) => callHandler('feedMarkRead', req, res));
 
 // Like routes

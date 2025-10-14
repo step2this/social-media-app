@@ -16,19 +16,9 @@ const mockFeedService = vi.hoisted(() => ({
   deleteFeedItemsByPost: vi.fn(),
 }));
 
-const mockLogger = vi.hoisted(() => ({
-  info: vi.fn(),
-  error: vi.fn(),
-  debug: vi.fn(),
-}));
-
 // Mock dependencies
 vi.mock('@social-media-app/dal', () => ({
   FeedService: vi.fn(() => mockFeedService),
-}));
-
-vi.mock('../../utils/logger.js', () => ({
-  logger: mockLogger,
 }));
 
 /**
@@ -84,9 +74,19 @@ function createStreamEvent(records: DynamoDBRecord[]): DynamoDBStreamEvent {
 }
 
 describe('feed-cleanup-post-delete', () => {
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockFeedService.deleteFeedItemsByPost.mockResolvedValue({ deletedCount: 0 });
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 
   describe('Event Filtering', () => {
@@ -98,7 +98,7 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: 'POST#post-123' },
           SK: { S: 'POST' },
-          postId: { S: 'post-123' },
+          id: { S: 'post-123' },
           userId: { S: 'author-456' },
           content: { S: 'Test post content' },
         }
@@ -106,7 +106,7 @@ describe('feed-cleanup-post-delete', () => {
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledWith('post-123');
+      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledWith({ postId: 'post-123' });
       expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledTimes(1);
     });
 
@@ -118,7 +118,7 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: 'POST#post-123' },
           SK: { S: 'POST' },
-          postId: { S: 'post-123' },
+          id: { S: 'post-123' },
         }
       );
 
@@ -135,7 +135,7 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: 'POST#post-123' },
           SK: { S: 'POST' },
-          postId: { S: 'post-123' },
+          id: { S: 'post-123' },
         }
       );
 
@@ -187,7 +187,7 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: 'USER#author-123' },
           SK: { S: 'POST#2025-01-01T00:00:00Z#post-456' },
-          postId: { S: 'post-456' },
+          id: { S: 'post-456' },
         }
       );
 
@@ -205,7 +205,7 @@ describe('feed-cleanup-post-delete', () => {
           {
             PK: { S: 'POST#post-1' },
             SK: { S: 'POST' },
-            postId: { S: 'post-1' },
+            id: { S: 'post-1' },
           }
         ),
         createStreamRecord(
@@ -215,7 +215,7 @@ describe('feed-cleanup-post-delete', () => {
           {
             PK: { S: 'POST#post-2' },
             SK: { S: 'POST' },
-            postId: { S: 'post-2' },
+            id: { S: 'post-2' },
           }
         ),
         createStreamRecord(
@@ -225,7 +225,7 @@ describe('feed-cleanup-post-delete', () => {
           {
             PK: { S: 'POST#post-3' },
             SK: { S: 'POST' },
-            postId: { S: 'post-3' },
+            id: { S: 'post-3' },
           }
         ),
       ];
@@ -233,9 +233,9 @@ describe('feed-cleanup-post-delete', () => {
       await handler(createStreamEvent(records));
 
       expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledTimes(3);
-      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenNthCalledWith(1, 'post-1');
-      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenNthCalledWith(2, 'post-2');
-      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenNthCalledWith(3, 'post-3');
+      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenNthCalledWith(1, { postId: 'post-1' });
+      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenNthCalledWith(2, { postId: 'post-2' });
+      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenNthCalledWith(3, { postId: 'post-3' });
     });
 
     it('should filter mixed event types correctly', async () => {
@@ -248,7 +248,7 @@ describe('feed-cleanup-post-delete', () => {
           {
             PK: { S: 'POST#post-2' },
             SK: { S: 'POST' },
-            postId: { S: 'post-2' },
+            id: { S: 'post-2' },
           }
         ),
         createStreamRecord('MODIFY', 'POST#post-3', 'POST'),
@@ -258,7 +258,7 @@ describe('feed-cleanup-post-delete', () => {
       await handler(createStreamEvent(records));
 
       expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledTimes(1);
-      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledWith('post-2');
+      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledWith({ postId: 'post-2' });
     });
   });
 
@@ -271,7 +271,7 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: 'POST#post-abc-123' },
           SK: { S: 'POST' },
-          postId: { S: 'post-abc-123' },
+          id: { S: 'post-abc-123' },
           userId: { S: 'author-789' },
           content: { S: 'Content to be deleted' },
         }
@@ -279,7 +279,7 @@ describe('feed-cleanup-post-delete', () => {
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledWith('post-abc-123');
+      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledWith({ postId: 'post-abc-123' });
     });
 
     it('should extract postId from deleted post entity', async () => {
@@ -290,14 +290,14 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: 'POST#unique-post-id' },
           SK: { S: 'POST' },
-          postId: { S: 'unique-post-id' },
+          id: { S: 'unique-post-id' },
           userId: { S: 'user-123' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledWith('unique-post-id');
+      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledWith({ postId: 'unique-post-id' });
     });
 
     it('should handle posts with no feed items (no followers)', async () => {
@@ -310,15 +310,15 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: 'POST#lonely-post' },
           SK: { S: 'POST' },
-          postId: { S: 'lonely-post' },
+          id: { S: 'lonely-post' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledWith('lonely-post');
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Deleted feed items for post',
+      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledWith({ postId: 'lonely-post' });
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        '[FeedCleanupPostDelete] Cleaned up feed items',
         expect.objectContaining({
           postId: 'lonely-post',
           deletedCount: 0,
@@ -336,14 +336,14 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: 'POST#popular-post' },
           SK: { S: 'POST' },
-          postId: { S: 'popular-post' },
+          id: { S: 'popular-post' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Deleted feed items for post',
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        '[FeedCleanupPostDelete] Cleaned up feed items',
         expect.objectContaining({
           postId: 'popular-post',
           deletedCount: 42,
@@ -366,8 +366,8 @@ describe('feed-cleanup-post-delete', () => {
       await handler(createStreamEvent([record]));
 
       expect(mockFeedService.deleteFeedItemsByPost).not.toHaveBeenCalled();
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Missing postId in deleted post record',
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[FeedCleanupPostDelete] Missing id in deleted post',
         expect.any(Object)
       );
     });
@@ -396,7 +396,7 @@ describe('feed-cleanup-post-delete', () => {
           {
             PK: { S: 'POST#failing-post' },
             SK: { S: 'POST' },
-            postId: { S: 'failing-post' },
+            id: { S: 'failing-post' },
           }
         ),
         createStreamRecord(
@@ -406,7 +406,7 @@ describe('feed-cleanup-post-delete', () => {
           {
             PK: { S: 'POST#success-post' },
             SK: { S: 'POST' },
-            postId: { S: 'success-post' },
+            id: { S: 'success-post' },
           }
         ),
       ];
@@ -414,15 +414,16 @@ describe('feed-cleanup-post-delete', () => {
       await handler(createStreamEvent(records));
 
       expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledTimes(2);
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Error deleting feed items for post',
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[FeedCleanupPostDelete] Error processing stream record:',
         expect.objectContaining({
-          postId: 'failing-post',
-          error: expect.any(Error),
+          error: 'Service error',
+          eventId: 'test-event-id',
+          eventName: 'REMOVE'
         })
       );
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Deleted feed items for post',
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        '[FeedCleanupPostDelete] Cleaned up feed items',
         expect.objectContaining({
           postId: 'success-post',
           deletedCount: 5,
@@ -440,12 +441,12 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: 'POST#error-post' },
           SK: { S: 'POST' },
-          postId: { S: 'error-post' },
+          id: { S: 'error-post' },
         }
       );
 
       await expect(handler(createStreamEvent([record]))).resolves.not.toThrow();
-      expect(mockLogger.error).toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalled();
     });
 
     it('should log errors with context', async () => {
@@ -459,21 +460,19 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: 'POST#context-post' },
           SK: { S: 'POST' },
-          postId: { S: 'context-post' },
+          id: { S: 'context-post' },
           userId: { S: 'author-999' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Error deleting feed items for post',
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[FeedCleanupPostDelete] Error processing stream record:',
         expect.objectContaining({
-          postId: 'context-post',
-          error,
-          record: expect.objectContaining({
-            eventName: 'REMOVE',
-          }),
+          error: 'Database connection failed',
+          eventId: 'test-event-id',
+          eventName: 'REMOVE'
         })
       );
     });
@@ -490,16 +489,17 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: 'POST#timeout-post' },
           SK: { S: 'POST' },
-          postId: { S: 'timeout-post' },
+          id: { S: 'timeout-post' },
         }
       );
 
       await expect(handler(createStreamEvent([record]))).resolves.not.toThrow();
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Error deleting feed items for post',
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[FeedCleanupPostDelete] Error processing stream record:',
         expect.objectContaining({
-          postId: 'timeout-post',
-          error: timeoutError,
+          error: 'Request timeout',
+          eventId: 'test-event-id',
+          eventName: 'REMOVE'
         })
       );
     });
@@ -516,16 +516,17 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: 'POST#invalid' },
           SK: { S: 'POST' },
-          postId: { S: 'invalid' },
+          id: { S: 'invalid' },
         }
       );
 
       await expect(handler(createStreamEvent([record]))).resolves.not.toThrow();
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Error deleting feed items for post',
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[FeedCleanupPostDelete] Error processing stream record:',
         expect.objectContaining({
-          postId: 'invalid',
-          error: validationError,
+          error: 'Invalid postId format',
+          eventId: 'test-event-id',
+          eventName: 'REMOVE'
         })
       );
     });
@@ -540,13 +541,13 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: 'POST#integration-test-post' },
           SK: { S: 'POST' },
-          postId: { S: 'integration-test-post' },
+          id: { S: 'integration-test-post' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledWith('integration-test-post');
+      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledWith({ postId: 'integration-test-post' });
       expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledTimes(1);
     });
 
@@ -562,12 +563,12 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: 'POST#service-error-post' },
           SK: { S: 'POST' },
-          postId: { S: 'service-error-post' },
+          id: { S: 'service-error-post' },
         }
       );
 
       await expect(handler(createStreamEvent([record]))).resolves.not.toThrow();
-      expect(mockLogger.error).toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalled();
     });
 
     it('should process service response correctly', async () => {
@@ -583,14 +584,14 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: 'POST#response-test-post' },
           SK: { S: 'POST' },
-          postId: { S: 'response-test-post' },
+          id: { S: 'response-test-post' },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Deleted feed items for post',
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        '[FeedCleanupPostDelete] Cleaned up feed items',
         expect.objectContaining({
           postId: 'response-test-post',
           deletedCount: 15,
@@ -612,7 +613,7 @@ describe('feed-cleanup-post-delete', () => {
           {
             PK: { S: 'POST#concurrent-1' },
             SK: { S: 'POST' },
-            postId: { S: 'concurrent-1' },
+            id: { S: 'concurrent-1' },
           }
         ),
         createStreamRecord(
@@ -622,7 +623,7 @@ describe('feed-cleanup-post-delete', () => {
           {
             PK: { S: 'POST#concurrent-2' },
             SK: { S: 'POST' },
-            postId: { S: 'concurrent-2' },
+            id: { S: 'concurrent-2' },
           }
         ),
         createStreamRecord(
@@ -632,7 +633,7 @@ describe('feed-cleanup-post-delete', () => {
           {
             PK: { S: 'POST#concurrent-3' },
             SK: { S: 'POST' },
-            postId: { S: 'concurrent-3' },
+            id: { S: 'concurrent-3' },
           }
         ),
       ];
@@ -640,7 +641,7 @@ describe('feed-cleanup-post-delete', () => {
       await handler(createStreamEvent(records));
 
       expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledTimes(3);
-      expect(mockLogger.info).toHaveBeenCalledTimes(3);
+      expect(consoleLogSpy).toHaveBeenCalledTimes(3);
     });
   });
 
@@ -694,13 +695,13 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: `POST#${longPostId}` },
           SK: { S: 'POST' },
-          postId: { S: longPostId },
+          id: { S: longPostId },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledWith(longPostId);
+      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledWith({ postId: longPostId });
     });
 
     it('should handle special characters in postId', async () => {
@@ -712,13 +713,13 @@ describe('feed-cleanup-post-delete', () => {
         {
           PK: { S: `POST#${specialPostId}` },
           SK: { S: 'POST' },
-          postId: { S: specialPostId },
+          id: { S: specialPostId },
         }
       );
 
       await handler(createStreamEvent([record]));
 
-      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledWith(specialPostId);
+      expect(mockFeedService.deleteFeedItemsByPost).toHaveBeenCalledWith({ postId: specialPostId });
     });
   });
 });

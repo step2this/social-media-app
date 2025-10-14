@@ -6,7 +6,8 @@ import type { FeedResponse, PostGridResponse, MarkFeedItemsAsReadResponse } from
  */
 export const feedService = {
   /**
-   * Get feed/explore posts (all public posts from all users)
+   * Get explore feed posts (all public posts from all users)
+   * No authentication required - shows all public content
    */
   async getFeedPosts(
     limit: number = 24,
@@ -19,7 +20,7 @@ export const feedService = {
     }
 
     const response = await apiClient.get<PostGridResponse>(
-      `/feed?${params.toString()}`
+      `/feed/explore?${params.toString()}`
     );
     return response;
   },

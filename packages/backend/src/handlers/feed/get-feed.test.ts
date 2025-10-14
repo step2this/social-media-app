@@ -61,6 +61,12 @@ vi.mock('../../utils/dynamodb.js', () => ({
   getCloudFrontDomain: vi.fn(() => 'https://d123.cloudfront.net')
 }));
 
+vi.mock('../../utils/aws-config.js', () => ({
+  createRedisClient: vi.fn(() => {
+    throw new Error('Redis not available in test environment');
+  })
+}));
+
 // Mock DAL services
 vi.mock('@social-media-app/dal', () => ({
   FeedService: vi.fn().mockImplementation(() => ({
@@ -73,7 +79,8 @@ vi.mock('@social-media-app/dal', () => ({
   PostService: vi.fn().mockImplementation(() => ({
     getUserPosts: mockGetUserPosts
   })),
-  ProfileService: vi.fn().mockImplementation(() => ({}))
+  ProfileService: vi.fn().mockImplementation(() => ({})),
+  RedisCacheService: vi.fn().mockImplementation(() => ({}))
 }));
 
 /**
@@ -221,13 +228,13 @@ describe('get-feed', () => {
       expect(body.error).toContain('invalid');
     });
 
-    it('should return 400 if userId is empty string', async () => {
+    it('should return 401 if userId is empty string (no auth header)', async () => {
       const { handler } = await import('./get-feed.js');
       const event = createEvent('');
 
       const response = await handler(event);
 
-      expect(response.statusCode).toBe(400);
+      expect(response.statusCode).toBe(401);
       const body = JSON.parse(response.body);
       expect(body.error).toBeTruthy();
     });
@@ -339,17 +346,17 @@ describe('get-feed', () => {
       });
     });
 
-    it('should cap limit at 100 maximum', async () => {
+    it('should reject limit exceeding 100 maximum', async () => {
       const { handler } = await import('./get-feed.js');
       const event = createEvent(TEST_USER_ID, { limit: '500' });
 
-      await handler(event);
+      const response = await handler(event);
 
-      expect(mockGetMaterializedFeedItems).toHaveBeenCalledWith({
-        userId: TEST_USER_ID,
-        limit: 100,
-        cursor: undefined
-      });
+      expect(response.statusCode).toBe(400);
+      const body = JSON.parse(response.body);
+      expect(body.error).toBe('Invalid pagination parameters');
+      expect(body.details.message).toContain('Limit cannot exceed 100');
+      expect(mockGetMaterializedFeedItems).not.toHaveBeenCalled();
     });
 
     it('should handle FeedService errors gracefully', async () => {
@@ -1192,19 +1199,19 @@ describe('get-feed', () => {
       expect(body.posts || body.items).toEqual([]);
     });
 
-    it('should handle extremely large limit values', async () => {
+    it('should reject extremely large limit values', async () => {
       const { handler } = await import('./get-feed.js');
 
       const event = createEvent(TEST_USER_ID, { limit: '999999' });
 
-      await handler(event);
+      const response = await handler(event);
 
-      // Should cap at 100
-      expect(mockGetMaterializedFeedItems).toHaveBeenCalledWith({
-        userId: TEST_USER_ID,
-        limit: 100,
-        cursor: undefined
-      });
+      // Should reject with 400 error
+      expect(response.statusCode).toBe(400);
+      const body = JSON.parse(response.body);
+      expect(body.error).toBe('Invalid pagination parameters');
+      expect(body.details.message).toContain('Limit cannot exceed 100');
+      expect(mockGetMaterializedFeedItems).not.toHaveBeenCalled();
     });
 
     it('should handle invalid cursor values', async () => {

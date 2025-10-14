@@ -21,6 +21,8 @@ interface PostEntity {
   SK: string;
   GSI1PK: string;
   GSI1SK: string;
+  GSI3PK?: string; // For global explore feed (public posts only)
+  GSI3SK?: string; // For chronological sorting
   id: string;
   userId: string;
   userHandle: string;
@@ -84,6 +86,11 @@ export async function seedPosts(
         SK: `POST#${createdAt}#${postId}`,
         GSI1PK: `POST#${postId}`,
         GSI1SK: `USER#${user.id}`,
+        // GSI3: Global explore feed index (public posts only)
+        ...(isPublic && {
+          GSI3PK: 'POSTS',
+          GSI3SK: `${createdAt}#${postId}`
+        }),
         id: postId,
         userId: user.id,
         userHandle: user.handle,

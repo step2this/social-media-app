@@ -23,18 +23,31 @@ vi.mock('../../utils/aws-config.js', () => ({
   getCloudFrontDomain: () => 'test.cloudfront.net',
 }));
 
-vi.mock('../../utils/index.js', () => ({
-  errorResponse: (statusCode: number, message: string) => ({
-    statusCode,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ error: { message } }),
-  }),
-  successResponse: (statusCode: number, data: any) => ({
-    statusCode,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  }),
-}));
+vi.mock('../../utils/index.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    errorResponse: (statusCode: number, message: string) => ({
+      statusCode,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: { message } }),
+    }),
+    successResponse: (statusCode: number, data: any) => ({
+      statusCode,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }),
+    tracer: {
+      captureAWSv3Client: vi.fn((client) => client)
+    },
+    addTraceAnnotation: vi.fn(),
+    addTraceMetadata: vi.fn(),
+    captureTraceError: vi.fn(),
+    tracedOperation: vi.fn(async (name, fn) => await fn()),
+    traceKinesisPublish: vi.fn(),
+    traceDynamoDBOperation: vi.fn()
+  };
+});
 
 describe('get-post handler', () => {
   let mockPostService: any;

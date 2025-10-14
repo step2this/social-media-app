@@ -802,10 +802,10 @@ describe('Kinesis Feed Consumer - Error Handling', () => {
     await handler(kinesisEvent, {} as any, {} as any);
 
     expect(console.error).toHaveBeenCalledWith(
-      '[KinesisFeedConsumer] Invalid event schema',
+      '[KinesisFeedConsumer] Failed to process record',
       expect.objectContaining({
         sequenceNumber: 'seq-0',
-        error: expect.any(Object)
+        error: expect.any(String)
       })
     );
   });

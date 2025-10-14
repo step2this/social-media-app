@@ -8,7 +8,10 @@ import * as jwtUtils from '../../utils/jwt.js';
 // Mock dependencies
 vi.mock('@social-media-app/dal', () => ({
   PostService: vi.fn(),
-  ProfileService: vi.fn()
+  ProfileService: vi.fn(),
+  KinesisEventPublisher: vi.fn(() => ({
+    publishEvent: vi.fn().mockResolvedValue(undefined)
+  }))
 }));
 
 vi.mock('../../utils/dynamodb.js', () => ({
@@ -23,6 +26,27 @@ vi.mock('../../utils/jwt.js', () => ({
   verifyAccessToken: vi.fn(),
   getJWTConfigFromEnv: vi.fn()
 }));
+
+vi.mock('../../utils/aws-config.js', () => ({
+  createKinesisClient: vi.fn(() => ({})),
+  getKinesisStreamName: vi.fn(() => 'test-stream')
+}));
+
+vi.mock('../../utils/index.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    tracer: {
+      captureAWSv3Client: vi.fn((client) => client)
+    },
+    addTraceAnnotation: vi.fn(),
+    addTraceMetadata: vi.fn(),
+    captureTraceError: vi.fn(),
+    tracedOperation: vi.fn(async (name, fn) => await fn()),
+    traceKinesisPublish: vi.fn(),
+    traceDynamoDBOperation: vi.fn()
+  };
+});
 
 const MockPostService = PostService as vi.MockedClass<typeof PostService>;
 const MockProfileService = ProfileService as vi.MockedClass<typeof ProfileService>;

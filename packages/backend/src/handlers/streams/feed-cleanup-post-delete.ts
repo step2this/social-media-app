@@ -42,9 +42,10 @@ export const handler: DynamoDBStreamHandler = async (
       }
 
       // Only process POST entities (check Keys SK)
-      // SK format: POST#<timestamp>#<postId>
+      // SK must be exactly 'POST' (primary post entity)
+      // Ignore timeline copies with SK='POST#<timestamp>#<postId>'
       const skValue = record.dynamodb?.Keys?.SK?.S;
-      if (!skValue?.startsWith('POST#')) {
+      if (skValue !== 'POST') {
         return;
       }
 

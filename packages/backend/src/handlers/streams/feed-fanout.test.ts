@@ -59,7 +59,10 @@ const { mockDynamoClient, mockFeedService, mockFollowService, mockProfileService
 // Mock AWS SDK and services
 vi.mock('../../utils/dynamodb.js', () => ({
   createDynamoDBClient: vi.fn(() => mockDynamoClient),
-  getTableName: vi.fn(() => 'test-table')
+  createS3Client: vi.fn(() => ({})),
+  getTableName: vi.fn(() => 'test-table'),
+  getS3BucketName: vi.fn(() => 'test-bucket'),
+  getCloudFrontDomain: vi.fn(() => 'test.cloudfront.net')
 }));
 
 vi.mock('@social-media-app/dal', () => ({
@@ -109,13 +112,13 @@ const createPostInsertRecord = (
   awsRegion: 'us-east-1',
   dynamodb: {
     Keys: {
-      PK: { S: `POST#${postData.postId}` },
-      SK: { S: 'POST' }
+      PK: { S: `USER#${postData.userId}` },
+      SK: { S: `POST#${postData.createdAt}#${postData.postId}` }
     },
     NewImage: {
       PK: { S: `USER#${postData.userId}` },
       SK: { S: `POST#${postData.createdAt}#${postData.postId}` },
-      postId: { S: postData.postId },
+      id: { S: postData.postId },
       userId: { S: postData.userId },
       userHandle: { S: postData.userHandle },
       caption: postData.caption ? { S: postData.caption } : undefined,
@@ -902,13 +905,13 @@ describe('feed-fanout stream processor', () => {
             awsRegion: 'us-east-1',
             dynamodb: {
               Keys: {
-                PK: { S: 'POST#post-123' },
-                SK: { S: 'POST' }
+                PK: { S: 'USER#author-123' },
+                SK: { S: 'POST#2025-10-12T10:00:00.000Z#post-123' }
               },
               NewImage: {
                 PK: { S: 'USER#author-123' },
                 SK: { S: 'POST#2025-10-12T10:00:00.000Z#post-123' },
-                postId: { S: 'post-123' }
+                id: { S: 'post-123' }
                 // Missing userId, userHandle, createdAt
               },
               SequenceNumber: '123',
