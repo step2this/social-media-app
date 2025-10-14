@@ -10,13 +10,26 @@ describe('DevMenu', () => {
   });
 
   describe('Visibility', () => {
-    it('should be hidden by default', () => {
+    it('should show FAB button by default', () => {
       render(
         <DevMenu>
           <div data-testid="dev-content">Dev Tools</div>
         </DevMenu>
       );
 
+      // FAB button should always be visible
+      expect(screen.getByRole('button', { name: /toggle developer tools/i })).toBeInTheDocument();
+      expect(screen.getByText('🛠️')).toBeInTheDocument();
+    });
+
+    it('should hide menu panel by default', () => {
+      render(
+        <DevMenu>
+          <div data-testid="dev-content">Dev Tools</div>
+        </DevMenu>
+      );
+
+      // Menu panel should be hidden
       expect(screen.queryByTestId('dev-content')).not.toBeInTheDocument();
       expect(screen.queryByText('Developer Tools')).not.toBeInTheDocument();
     });
@@ -100,6 +113,52 @@ describe('DevMenu', () => {
       // Verify menu is now visible
       await waitFor(() => {
         expect(screen.getByTestId('dev-content')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('FAB Button Interaction', () => {
+    it('should open menu on FAB button click', async () => {
+      const user = userEvent.setup();
+      render(
+        <DevMenu>
+          <div data-testid="dev-content">Dev Tools</div>
+        </DevMenu>
+      );
+
+      // Verify menu is initially closed
+      expect(screen.queryByTestId('dev-content')).not.toBeInTheDocument();
+
+      // Click FAB button
+      const fabButton = screen.getByRole('button', { name: /toggle developer tools/i });
+      await user.click(fabButton);
+
+      // Verify menu is now visible
+      await waitFor(() => {
+        expect(screen.getByTestId('dev-content')).toBeInTheDocument();
+        expect(screen.getByText('Developer Tools')).toBeInTheDocument();
+      });
+    });
+
+    it('should close menu on FAB button click when open', async () => {
+      const user = userEvent.setup();
+      render(
+        <DevMenu>
+          <div data-testid="dev-content">Dev Tools</div>
+        </DevMenu>
+      );
+
+      // Open menu via FAB
+      const fabButton = screen.getByRole('button', { name: /toggle developer tools/i });
+      await user.click(fabButton);
+      await waitFor(() => {
+        expect(screen.getByTestId('dev-content')).toBeInTheDocument();
+      });
+
+      // Click FAB again to close
+      await user.click(fabButton);
+      await waitFor(() => {
+        expect(screen.queryByTestId('dev-content')).not.toBeInTheDocument();
       });
     });
   });

@@ -13,11 +13,13 @@ export interface DevMenuProps {
 }
 
 /**
- * Hidden developer menu accessible via Ctrl+Shift+D (or Cmd+Shift+D on Mac)
+ * Developer menu with visible floating action button (FAB) and keyboard shortcuts
  *
  * Provides a slide-in panel from the right side with debugging tools.
- * Includes backdrop overlay that closes menu on click.
- * Supports Escape key to close.
+ * - **FAB**: Always-visible button in bottom-right corner (🛠️)
+ * - **Keyboard**: Ctrl+Shift+D (or Cmd+Shift+D on Mac)
+ * - **Escape**: Close menu when open
+ * - **Backdrop**: Click outside to close
  *
  * @example
  * ```tsx
@@ -89,44 +91,54 @@ export const DevMenu: React.FC<DevMenuProps> = ({ children }) => {
     }
   }, [closeMenu]);
 
-  // Don't render anything if menu is closed
-  if (!isOpen) {
-    return null;
-  }
+  return (
+    <>
+      {/* Floating Action Button - Always visible */}
+      <button
+        className="dev-menu__fab"
+        onClick={toggleMenu}
+        aria-label="Toggle developer tools"
+        title="Developer Tools (Ctrl+Shift+D)"
+        type="button"
+      >
+        🛠️
+      </button>
 
-  // Render menu using portal to ensure it's on top of everything
-  return createPortal(
-    <div className="dev-menu">
-      {/* Backdrop overlay */}
-      <div
-        className="dev-menu__backdrop"
-        onClick={handleBackdropClick}
-        role="button"
-        tabIndex={-1}
-        aria-label="Close developer menu"
-      />
-
-      {/* Slide-in panel */}
-      <aside className="dev-menu__panel">
-        {/* Header with title and close button */}
-        <header className="dev-menu__header">
-          <h2 className="dev-menu__title">Developer Tools</h2>
-          <button
-            className="dev-menu__close-button"
-            onClick={closeMenu}
+      {/* Slide-in menu panel (only when open) */}
+      {isOpen && createPortal(
+        <div className="dev-menu">
+          {/* Backdrop overlay */}
+          <div
+            className="dev-menu__backdrop"
+            onClick={handleBackdropClick}
+            role="button"
+            tabIndex={-1}
             aria-label="Close developer menu"
-            type="button"
-          >
-            ×
-          </button>
-        </header>
+          />
 
-        {/* Content area for dev tools */}
-        <div className="dev-menu__content">
-          {children}
-        </div>
-      </aside>
-    </div>,
-    document.body
+          {/* Slide-in panel */}
+          <aside className="dev-menu__panel">
+            {/* Header with title and close button */}
+            <header className="dev-menu__header">
+              <h2 className="dev-menu__title">Developer Tools</h2>
+              <button
+                className="dev-menu__close-button"
+                onClick={closeMenu}
+                aria-label="Close developer menu"
+                type="button"
+              >
+                ×
+              </button>
+            </header>
+
+            {/* Content area for dev tools */}
+            <div className="dev-menu__content">
+              {children}
+            </div>
+          </aside>
+        </div>,
+        document.body
+      )}
+    </>
   );
 };

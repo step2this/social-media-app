@@ -1,10 +1,52 @@
 /**
  * DevMenu Component Styles
- * Hidden developer menu accessible via Ctrl+Shift+D
+ * Developer menu accessible via Ctrl+Shift+D or FAB button
  * Uses BEM methodology: .dev-menu__element--modifier
  * French automotive heritage design system colors
  */
 
+/**
+ * Floating Action Button (FAB) - Always visible dev tools toggle
+ * Positioned in bottom-right corner, follows Material Design FAB pattern
+ */
+.dev-menu__fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--tama-racing-red);
+  color: var(--tama-pearl-white);
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  z-index: 9998; /* Below menu (9999) but above content */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dev-menu__fab:hover {
+  background: var(--tama-electric-blue);
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.dev-menu__fab:active {
+  transform: scale(0.95);
+}
+
+.dev-menu__fab:focus {
+  outline: 2px solid var(--tama-pearl-white);
+  outline-offset: 2px;
+}
+
+/**
+ * Slide-in menu overlay container
+ */
 .dev-menu {
   position: fixed;
   inset: 0;
