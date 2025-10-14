@@ -22,7 +22,7 @@ describe('feedService', () => {
 
       const result = await feedService.getFeedPosts();
 
-      expect(apiClient.get).toHaveBeenCalledWith('/feed?limit=24');
+      expect(apiClient.get).toHaveBeenCalledWith('/feed/explore?limit=24');
       expect(result).toEqual(mockResponse);
     });
 
@@ -37,7 +37,7 @@ describe('feedService', () => {
 
       const result = await feedService.getFeedPosts(12, 'cursor-123');
 
-      expect(apiClient.get).toHaveBeenCalledWith('/feed?limit=12&cursor=cursor-123');
+      expect(apiClient.get).toHaveBeenCalledWith('/feed/explore?limit=12&cursor=cursor-123');
       expect(result).toEqual(mockResponse);
     });
   });
