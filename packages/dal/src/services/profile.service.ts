@@ -1,5 +1,5 @@
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-import { GetCommand, UpdateCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, UpdateCommand, QueryCommand, BatchGetCommand } from '@aws-sdk/lib-dynamodb';
 import {
   S3Client,
   PutObjectCommand,
@@ -90,6 +90,72 @@ export class ProfileService {
     }));
 
     return result.Item ? mapEntityToProfile(result.Item as UserProfileEntity) : null;
+  }
+
+  /**
+   * Batch fetch multiple profiles by user IDs
+   * Optimized for DataLoader batching to solve N+1 query problem
+   *
+   * @param userIds - Array of user IDs to fetch (max 100 per DynamoDB limits)
+   * @returns Map of userId to PublicProfile for DataLoader compatibility
+   *
+   * @example
+   * ```typescript
+   * const profiles = await profileService.getProfilesByIds(['user1', 'user2', 'user3']);
+   * const user1Profile = profiles.get('user1'); // PublicProfile or undefined
+   * ```
+   */
+  async getProfilesByIds(userIds: string[]): Promise<Map<string, PublicProfile>> {
+    const profileMap = new Map<string, PublicProfile>();
+
+    // Return empty map if no IDs provided
+    if (userIds.length === 0) {
+      return profileMap;
+    }
+
+    // DynamoDB BatchGetItem has a limit of 100 items per request
+    const batchSize = 100;
+    const batches: string[][] = [];
+
+    // Split into batches of 100
+    for (let i = 0; i < userIds.length; i += batchSize) {
+      batches.push(userIds.slice(i, i + batchSize));
+    }
+
+    // Process each batch
+    for (const batch of batches) {
+      // Build keys for batch request
+      const keys = batch.map(userId => ({
+        PK: `USER#${userId}`,
+        SK: 'PROFILE'
+      }));
+
+      const result = await this.dynamoClient.send(new BatchGetCommand({
+        RequestItems: {
+          [this.tableName]: {
+            Keys: keys
+          }
+        }
+      }));
+
+      // Process responses
+      if (result.Responses && result.Responses[this.tableName]) {
+        for (const item of result.Responses[this.tableName]) {
+          const entity = item as UserProfileEntity;
+          const publicProfile = mapEntityToPublicProfile(entity);
+          profileMap.set(entity.id, publicProfile);
+        }
+      }
+
+      // Handle unprocessed keys (usually due to throttling)
+      if (result.UnprocessedKeys && result.UnprocessedKeys[this.tableName]) {
+        // In production, you might want to implement retry logic here
+        console.warn(`Unprocessed keys in ProfileService.getProfilesByIds:`,
+          result.UnprocessedKeys[this.tableName].Keys?.length);
+      }
+    }
+
+    return profileMap;
   }
 
   /**

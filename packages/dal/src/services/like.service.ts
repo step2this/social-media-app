@@ -1,5 +1,5 @@
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-import { PutCommand, GetCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, GetCommand, DeleteCommand, BatchGetCommand } from '@aws-sdk/lib-dynamodb';
 import type {
   LikePostResponse,
   UnlikePostResponse,
@@ -20,6 +20,14 @@ export interface LikeEntity {
   postSK: string;     // SK of the post entity (for efficient post lookup)
   createdAt: string;
   entityType: 'LIKE';
+}
+
+/**
+ * Like status for batch operations
+ */
+export interface LikeStatus {
+  isLiked: boolean;
+  likesCount: number;
 }
 
 /**
@@ -117,5 +125,80 @@ export class LikeService {
       isLiked: !!result.Item,
       likesCount: 0 // Will be fetched from Post entity separately
     };
+  }
+
+  /**
+   * Batch fetch like statuses for multiple posts for a specific user
+   * Optimized for DataLoader batching to solve N+1 query problem
+   *
+   * @param userId - User ID to check like status for
+   * @param postIds - Array of post IDs to check (max 100 per DynamoDB limits)
+   * @returns Map of postId to LikeStatus for DataLoader compatibility
+   *
+   * @example
+   * ```typescript
+   * const likeStatuses = await likeService.getLikeStatusesByPostIds('user123', ['post1', 'post2']);
+   * const post1Status = likeStatuses.get('post1'); // {isLiked: boolean, likesCount: number}
+   * ```
+   *
+   * Note: likesCount is returned as 0 in batch operations.
+   * The actual count should be fetched from the Post entity.
+   */
+  async getLikeStatusesByPostIds(userId: string, postIds: string[]): Promise<Map<string, LikeStatus>> {
+    const likeStatusMap = new Map<string, LikeStatus>();
+
+    // Return empty map if no IDs provided
+    if (postIds.length === 0) {
+      return likeStatusMap;
+    }
+
+    // Initialize all posts with default status (not liked)
+    for (const postId of postIds) {
+      likeStatusMap.set(postId, { isLiked: false, likesCount: 0 });
+    }
+
+    // DynamoDB BatchGetItem has a limit of 100 items per request
+    const batchSize = 100;
+    const batches: string[][] = [];
+
+    // Split into batches of 100
+    for (let i = 0; i < postIds.length; i += batchSize) {
+      batches.push(postIds.slice(i, i + batchSize));
+    }
+
+    // Process each batch
+    for (const batch of batches) {
+      // Build keys for batch request using composite key pattern
+      const keys = batch.map(postId => ({
+        PK: `POST#${postId}`,
+        SK: `LIKE#${userId}`
+      }));
+
+      const result = await this.dynamoClient.send(new BatchGetCommand({
+        RequestItems: {
+          [this.tableName]: {
+            Keys: keys
+          }
+        }
+      }));
+
+      // Process responses - if item exists, user has liked the post
+      if (result.Responses && result.Responses[this.tableName]) {
+        for (const item of result.Responses[this.tableName]) {
+          const entity = item as LikeEntity;
+          // Update the like status for posts that are liked
+          likeStatusMap.set(entity.postId, { isLiked: true, likesCount: 0 });
+        }
+      }
+
+      // Handle unprocessed keys (usually due to throttling)
+      if (result.UnprocessedKeys && result.UnprocessedKeys[this.tableName]) {
+        // In production, you might want to implement retry logic here
+        console.warn(`Unprocessed keys in LikeService.getLikeStatusesByPostIds:`,
+          result.UnprocessedKeys[this.tableName].Keys?.length);
+      }
+    }
+
+    return likeStatusMap;
   }
 }

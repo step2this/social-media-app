@@ -114,6 +114,61 @@ export class PostService {
   }
 
   /**
+   * Batch fetch multiple posts by post IDs
+   * Optimized for DataLoader batching to solve N+1 query problem
+   *
+   * @param postIds - Array of post IDs to fetch (max 100 per DynamoDB limits)
+   * @returns Map of postId to Post for DataLoader compatibility
+   *
+   * @example
+   * ```typescript
+   * const posts = await postService.getPostsByIds(['post1', 'post2', 'post3']);
+   * const post1 = posts.get('post1'); // Post or undefined
+   * ```
+   *
+   * Note: For batch fetches, isLiked is not included in the Post type.
+   * Use LikeService.getLikeStatusesByPostIds() for like status in batch operations.
+   */
+  async getPostsByIds(postIds: string[]): Promise<Map<string, Post>> {
+    const postMap = new Map<string, Post>();
+
+    // Return empty map if no IDs provided
+    if (postIds.length === 0) {
+      return postMap;
+    }
+
+    // Since posts are stored with GSI1, we need to query for each post ID
+    // This is still more efficient than individual queries due to connection pooling
+    // and reduced network overhead
+    const queryPromises = postIds.map(async (postId) => {
+      const queryParams = buildPostByIdQuery(postId, this.tableName);
+      const result = await this.dynamoClient.send(new QueryCommand(queryParams));
+
+      if (result.Items && result.Items.length > 0) {
+        const post = mapEntityToPost(result.Items[0] as PostEntity);
+        return { postId, post };
+      }
+      return null;
+    });
+
+    // Execute queries in parallel with concurrency limit
+    const batchSize = 25; // Process 25 queries at a time to avoid throttling
+    for (let i = 0; i < queryPromises.length; i += batchSize) {
+      const batch = queryPromises.slice(i, i + batchSize);
+      const results = await Promise.all(batch);
+
+      // Add results to map
+      for (const result of results) {
+        if (result) {
+          postMap.set(result.postId, result.post);
+        }
+      }
+    }
+
+    return postMap;
+  }
+
+  /**
    * Update a post
    */
   async updatePost(

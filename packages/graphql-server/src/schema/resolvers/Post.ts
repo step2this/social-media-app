@@ -1,21 +1,54 @@
 /**
- * Post Type Resolvers
+ * Post Field Resolvers
  *
- * Implements field resolvers for the Post type.
- * Handles relationships to author, comments, and like information.
+ * Implements field-level resolvers for the Post type.
+ * Handles computed/relational fields that require additional data fetching.
+ *
+ * Uses DataLoaders to solve N+1 query problem by batching and caching requests.
  */
 
-// import type { PostResolvers } from '../generated/types.js';
+import type { PostResolvers } from '../generated/types.js';
 
 /**
  * Post field resolvers
  *
- * Will include:
- * - author: Profile!
- * - comments(limit: Int, cursor: String): CommentConnection
- * - likesCount: Int!
- * - isLiked: Boolean!
+ * Implements:
+ * - author: Resolve post author profile from userId (batched via DataLoader)
+ * - isLiked: Whether the current user has liked this post (batched via DataLoader)
  */
-export const Post = {
-  // Post field resolvers will be implemented here
+export const Post: PostResolvers = {
+  /**
+   * Resolve author profile for a post
+   *
+   * Uses context.loaders.profileLoader to batch multiple author requests
+   * into a single database call, solving the N+1 query problem.
+   *
+   * Returns null if author profile not found (deleted user)
+   */
+  author: async (parent, _args, context) => {
+    // Use DataLoader to batch profile requests
+    const profile = await context.loaders.profileLoader.load(parent.userId);
+    return profile;
+  },
+
+  /**
+   * Check if the current authenticated user has liked this post
+   *
+   * Uses context.loaders.likeStatusLoader to batch multiple like status requests
+   * into a single database call, solving the N+1 query problem.
+   *
+   * Returns null if user is not authenticated
+   */
+  isLiked: async (parent, _args, context) => {
+    // Cannot check like status without authentication
+    if (!context.userId) {
+      return null;
+    }
+
+    // Use DataLoader to batch like status requests
+    const status = await context.loaders.likeStatusLoader.load(parent.id);
+
+    // Return isLiked boolean from status object (or null if status not found)
+    return status?.isLiked ?? null;
+  },
 };
