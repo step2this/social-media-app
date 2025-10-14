@@ -7,8 +7,10 @@ import {
   DevMenu,
   DevReadStateDebugger,
   DevManualMarkButton,
-  DevCacheStatusIndicator
+  DevCacheStatusIndicator,
+  DevKinesisMonitor
 } from '../components/dev';
+import { useAuthStore } from '../stores/authStore';
 import './HomePage.css';
 
 /**
@@ -41,6 +43,9 @@ export const HomePage: React.FC = () => {
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
+
+  // Get current user from auth store
+  const user = useAuthStore((state) => state.user);
 
   // Ref for intersection observer
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -194,8 +199,11 @@ export const HomePage: React.FC = () => {
         {/* Cache and streaming status indicator - placed at top for visibility */}
         <DevCacheStatusIndicator />
 
+        {/* Kinesis stream monitoring */}
+        <DevKinesisMonitor />
+
         {/* Feed debugging tools */}
-        <DevReadStateDebugger posts={posts} />
+        <DevReadStateDebugger posts={posts} currentUserId={user?.id} />
         {posts.map((post) => (
           <DevManualMarkButton
             key={post.id}

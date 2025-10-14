@@ -7,6 +7,18 @@
   font-weight: 600;
   margin-bottom: var(--spacing-md);
   color: var(--tama-pearl-white);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.dev-read-state-debugger__user-badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  background: var(--tama-electric-blue);
+  color: var(--tama-pearl-white);
+  border-radius: 12px;
+  font-weight: 500;
 }
 
 .dev-read-state-debugger__table {
@@ -33,6 +45,24 @@
 
 .dev-read-state-debugger__row:hover {
   background: var(--tama-gray-800);
+}
+
+.dev-read-state-debugger__row--own-post {
+  background: rgba(var(--tama-electric-blue-rgb, 59, 130, 246), 0.1);
+}
+
+.dev-read-state-debugger__row--own-post:hover {
+  background: rgba(var(--tama-electric-blue-rgb, 59, 130, 246), 0.15);
+}
+
+.dev-read-state-debugger__own-badge {
+  margin-left: var(--spacing-xs);
+  font-size: 0.625rem;
+  padding: 2px 6px;
+  background: var(--tama-rally-yellow);
+  color: var(--tama-gray-900);
+  border-radius: 8px;
+  font-weight: 700;
 }
 
 .dev-read-state-debugger__cell {

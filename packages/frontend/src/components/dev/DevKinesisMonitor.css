@@ -1,0 +1,175 @@
+/**
+ * DevKinesisMonitor Component Styles
+ * Real-time Kinesis stream monitoring for development
+ */
+
+.dev-kinesis-monitor {
+  padding: var(--spacing-md);
+  background: var(--tama-gray-800);
+  border-radius: var(--border-radius-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.dev-kinesis-monitor__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--tama-gray-700);
+}
+
+.dev-kinesis-monitor__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--tama-pearl-white);
+  margin: 0;
+}
+
+.dev-kinesis-monitor__controls {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.dev-kinesis-monitor__auto-refresh {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: 0.875rem;
+  color: var(--tama-gray-300);
+  cursor: pointer;
+}
+
+.dev-kinesis-monitor__auto-refresh input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.dev-kinesis-monitor__refresh-btn {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--tama-electric-blue);
+  color: var(--tama-pearl-white);
+  border: none;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.dev-kinesis-monitor__refresh-btn:hover:not(:disabled) {
+  background: var(--tama-racing-red);
+}
+
+.dev-kinesis-monitor__refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dev-kinesis-monitor__meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: var(--tama-gray-400);
+  margin-bottom: var(--spacing-md);
+}
+
+.dev-kinesis-monitor__stream-name strong {
+  color: var(--tama-pearl-white);
+}
+
+.dev-kinesis-monitor__error {
+  padding: var(--spacing-sm);
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid var(--tama-racing-red);
+  border-radius: var(--border-radius-sm);
+  color: var(--tama-racing-red);
+  font-size: 0.875rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.dev-kinesis-monitor__filters {
+  margin-bottom: var(--spacing-md);
+}
+
+.dev-kinesis-monitor__filters label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 0.875rem;
+  color: var(--tama-gray-300);
+}
+
+.dev-kinesis-monitor__filter-select {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--tama-gray-900);
+  color: var(--tama-pearl-white);
+  border: 1px solid var(--tama-gray-700);
+  border-radius: var(--border-radius-sm);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.dev-kinesis-monitor__loading,
+.dev-kinesis-monitor__empty {
+  padding: var(--spacing-lg);
+  text-align: center;
+  color: var(--tama-gray-400);
+  font-size: 0.875rem;
+}
+
+.dev-kinesis-monitor__records {
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.dev-kinesis-monitor__record {
+  padding: var(--spacing-sm);
+  background: var(--tama-gray-900);
+  border: 1px solid var(--tama-gray-700);
+  border-radius: var(--border-radius-sm);
+  font-size: 0.875rem;
+}
+
+.dev-kinesis-monitor__record-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-xs);
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 1px solid var(--tama-gray-800);
+}
+
+.dev-kinesis-monitor__event-type {
+  font-weight: 600;
+  color: var(--tama-electric-blue);
+}
+
+.dev-kinesis-monitor__timestamp {
+  color: var(--tama-gray-400);
+  font-size: 0.8125rem;
+}
+
+.dev-kinesis-monitor__record-data {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.dev-kinesis-monitor__data-row {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.dev-kinesis-monitor__label {
+  color: var(--tama-gray-400);
+  min-width: 80px;
+}
+
+.dev-kinesis-monitor__value {
+  color: var(--tama-pearl-white);
+  font-family: 'Courier New', monospace;
+  font-size: 0.8125rem;
+}

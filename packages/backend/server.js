@@ -229,6 +229,30 @@ if (process.env.NODE_ENV === 'development' || process.env.USE_LOCALSTACK === 'tr
       });
     }
   });
+
+  // Dev endpoint: Kinesis records monitoring
+  app.get('/dev/kinesis-records', async (req, res) => {
+    console.log(`📥 ${req.method} ${req.path}`);
+    try {
+      // Dynamically import the kinesis-records handler
+      const { handler: kinesisRecordsHandler } = await import('./dist/handlers/dev/get-kinesis-records.js');
+
+      // Create a Lambda event (no auth needed for dev endpoint)
+      const event = createLambdaEvent(req);
+
+      // Call the handler
+      const result = await kinesisRecordsHandler(event);
+
+      // Send Lambda response
+      sendLambdaResponse(res, result);
+    } catch (error) {
+      console.error('Kinesis records handler error:', error);
+      res.status(500).json({
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
 }
 
 // Helper function to safely call handlers
