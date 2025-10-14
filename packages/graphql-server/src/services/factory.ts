@@ -24,12 +24,17 @@ import {
   LikeService,
   FollowService,
   CommentService,
+  createDefaultAuthService,
 } from '@social-media-app/dal';
 import {
   createS3Client,
   getS3BucketName,
   getCloudFrontDomain,
 } from '@social-media-app/aws-utils';
+import {
+  generateAccessToken,
+  generateRefreshToken,
+} from '@social-media-app/auth-utils';
 
 /**
  * Services interface
@@ -41,6 +46,7 @@ export interface Services {
   likeService: LikeService;
   followService: FollowService;
   commentService: CommentService;
+  authService: ReturnType<typeof createDefaultAuthService>;
 }
 
 /**
@@ -112,6 +118,20 @@ export function createServices(
   const commentService = new CommentService(dynamoClient, tableName);
 
   /**
+   * Create AuthService with JWT provider
+   * AuthService handles user registration, login, and token management
+   */
+  const authService = createDefaultAuthService(
+    dynamoClient,
+    tableName,
+    {
+      generateAccessToken,
+      generateRefreshToken,
+      verifyRefreshToken: async () => null, // Not used in GraphQL context
+    }
+  );
+
+  /**
    * Return all services as a cohesive unit
    * These services will be available via context.services in all resolvers
    */
@@ -121,5 +141,6 @@ export function createServices(
     likeService,
     followService,
     commentService,
+    authService,
   };
 }

@@ -125,6 +125,7 @@ describe('Service Factory', () => {
       // Type check - Services interface should have all service properties
       const serviceKeys = Object.keys(services).sort();
       expect(serviceKeys).toEqual([
+        'authService',
         'commentService',
         'followService',
         'likeService',
