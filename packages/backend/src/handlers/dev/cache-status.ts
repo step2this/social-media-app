@@ -1,8 +1,9 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { DescribeStreamCommand } from '@aws-sdk/client-kinesis';
+import Redis from 'ioredis';
 import { successResponse, errorResponse } from '../../utils/index.js';
 import {
-  createRedisClient,
+  getRedisConfig,
   createKinesisClient,
   getKinesisStreamName,
   isLocalStackEnvironment
@@ -67,7 +68,17 @@ export const handler = async (
     // Check Redis connection and get stats
     let redisClient;
     try {
-      redisClient = createRedisClient();
+      // Create Redis client with enableOfflineQueue=true for dev endpoint
+      // This allows graceful failure instead of throwing immediately
+      const redisConfig = getRedisConfig();
+      redisClient = new Redis({
+        ...redisConfig,
+        enableOfflineQueue: true, // Allow offline queue for dev status checks
+        lazyConnect: true // Don't connect immediately
+      });
+
+      // Attempt connection
+      await redisClient.connect();
 
       // Test connection with PING command and measure latency
       const startTime = Date.now();
@@ -95,11 +106,16 @@ export const handler = async (
     } catch (error) {
       response.redis.connected = false;
       response.redis.error = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[dev/cache-status] Redis connection failed:', error);
+      console.warn('[dev/cache-status] Redis connection failed (this is OK in dev):', error);
     } finally {
-      // Clean up Redis connection
+      // Clean up Redis connection - gracefully handle disconnected client
       if (redisClient) {
-        await redisClient.quit();
+        try {
+          await redisClient.quit();
+        } catch (quitError) {
+          // Ignore quit errors if already disconnected
+          console.warn('[dev/cache-status] Redis quit failed (already disconnected)');
+        }
       }
     }
 

@@ -84,8 +84,16 @@ aws --endpoint-url=http://localhost:4566 --region us-east-1 dynamodb create-tabl
     --billing-mode PAY_PER_REQUEST \
     || echo "Table already exists"
 
+# Create Kinesis stream for feed events
+echo "🌊 Creating Kinesis stream..."
+aws --endpoint-url=http://localhost:4566 --region us-east-1 kinesis create-stream \
+    --stream-name feed-events-local \
+    --shard-count 1 \
+    || echo "Kinesis stream already exists"
+
 echo "✅ TamaFriends LocalStack initialization complete!"
 echo "🌐 LocalStack Dashboard: http://localhost:4566"
 echo "📊 Health Check: http://localhost:4566/_localstack/health"
 echo "📦 S3 Bucket: tamafriends-media-local"
 echo "🗄️  DynamoDB Table: tamafriends-local"
+echo "🌊 Kinesis Stream: feed-events-local"
