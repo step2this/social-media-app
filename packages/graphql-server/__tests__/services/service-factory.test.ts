@@ -61,6 +61,8 @@ describe('Service Factory', () => {
       expect(services).toHaveProperty('likeService');
       expect(services).toHaveProperty('followService');
       expect(services).toHaveProperty('commentService');
+      expect(services).toHaveProperty('feedService');
+      expect(services).toHaveProperty('authService');
     });
 
     it('should pass correct dependencies to ProfileService', () => {
@@ -127,6 +129,7 @@ describe('Service Factory', () => {
       expect(serviceKeys).toEqual([
         'authService',
         'commentService',
+        'feedService',
         'followService',
         'likeService',
         'postService',

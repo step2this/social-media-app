@@ -24,6 +24,7 @@ import {
   LikeService,
   FollowService,
   CommentService,
+  FeedService,
   createDefaultAuthService,
 } from '@social-media-app/dal';
 import {
@@ -46,6 +47,7 @@ export interface Services {
   likeService: LikeService;
   followService: FollowService;
   commentService: CommentService;
+  feedService: FeedService;
   authService: ReturnType<typeof createDefaultAuthService>;
 }
 
@@ -116,6 +118,7 @@ export function createServices(
   const likeService = new LikeService(dynamoClient, tableName);
   const followService = new FollowService(dynamoClient, tableName);
   const commentService = new CommentService(dynamoClient, tableName);
+  const feedService = new FeedService(dynamoClient, tableName);
 
   /**
    * Create AuthService with JWT provider
@@ -141,6 +144,7 @@ export function createServices(
     likeService,
     followService,
     commentService,
+    feedService,
     authService,
   };
 }

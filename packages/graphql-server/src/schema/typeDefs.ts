@@ -294,14 +294,14 @@ export const typeDefs = `
   }
 
   type LikeStatus {
-    postId: ID!
     isLiked: Boolean!
+    likesCount: Int!
   }
 
   type FollowStatus {
-    userId: ID!
     isFollowing: Boolean!
-    isFollowedBy: Boolean!
+    followersCount: Int!
+    followingCount: Int!
   }
 
   type LogoutResponse {

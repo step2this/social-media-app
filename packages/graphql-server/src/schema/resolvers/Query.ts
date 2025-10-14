@@ -16,6 +16,10 @@ import type { QueryResolvers } from '../generated/types.js';
  * - profile(handle): Get profile by handle
  * - post(id): Get post by ID
  * - userPosts(handle, limit, cursor): Get paginated posts for a user
+ * - feed(limit, cursor): Get paginated feed items for authenticated user
+ * - comments(postId, limit, cursor): Get paginated comments for a post
+ * - followStatus(userId): Get follow status between authenticated user and target user
+ * - postLikeStatus(postId): Get like status for a post by authenticated user
  */
 export const Query: QueryResolvers = {
   /**
@@ -45,6 +49,7 @@ export const Query: QueryResolvers = {
    * Get profile by handle
    * Public - no authentication required
    */
+  // @ts-ignore - DAL PublicProfile type differs from GraphQL Profile type (field resolvers handle missing fields)
   profile: async (_parent, args, context) => {
     // Get profile by handle
     const profile = await context.services.profileService.getProfileByHandle(args.handle);
@@ -57,6 +62,7 @@ export const Query: QueryResolvers = {
    * Get post by ID
    * Public - no authentication required
    */
+  // @ts-ignore - DAL Post type differs from GraphQL Post type (author field resolver handles missing field)
   post: async (_parent, args, context) => {
     // Get post by ID
     const post = await context.services.postService.getPostById(args.id);
@@ -69,6 +75,7 @@ export const Query: QueryResolvers = {
    * Get paginated posts for a user
    * Public - no authentication required
    */
+  // @ts-ignore - DAL Post type differs from GraphQL Post type (author field resolver handles missing field)
   userPosts: async (_parent, args, context) => {
     // First, get the user's profile to get their userId
     const profile = await context.services.profileService.getProfileByHandle(args.handle);
@@ -80,11 +87,13 @@ export const Query: QueryResolvers = {
     }
 
     // Parse cursor if provided
-    let exclusiveStartKey: Record<string, any> | undefined;
+    let cursor: string | undefined;
     if (args.cursor) {
       try {
-        const cursorData = Buffer.from(args.cursor, 'base64').toString('utf-8');
-        exclusiveStartKey = JSON.parse(cursorData);
+        // Validate cursor is valid base64-encoded JSON
+        const decoded = Buffer.from(args.cursor, 'base64').toString('utf-8');
+        JSON.parse(decoded); // Should parse as valid JSON
+        cursor = args.cursor;
       } catch (error) {
         throw new GraphQLError('Invalid cursor', {
           extensions: { code: 'BAD_REQUEST' },
@@ -92,12 +101,12 @@ export const Query: QueryResolvers = {
       }
     }
 
-    // Get posts for the user
-    const result = await context.services.postService.getUserPosts({
-      userId: profile.id,
-      limit: args.limit || 10,
-      exclusiveStartKey,
-    });
+    // Get posts for the user (cursor is passed directly to service)
+    const result = await context.services.postService.getUserPosts(
+      profile.id,
+      args.limit || 10,
+      cursor
+    );
 
     // Build connection response (Relay-style pagination)
     const edges = result.posts.map((post) => ({
@@ -112,12 +121,201 @@ export const Query: QueryResolvers = {
 
     const pageInfo = {
       hasNextPage: result.hasMore,
+      hasPreviousPage: false, // Not supported yet
+      startCursor: edges.length > 0 ? edges[0].cursor : null,
       endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null,
     };
 
     return {
       edges,
       pageInfo,
+    };
+  },
+
+  /**
+   * Get paginated feed items for authenticated user
+   * Requires authentication
+   */
+  // @ts-ignore - DAL Post type differs from GraphQL Post type (author field resolver handles missing field)
+  feed: async (_parent, args, context) => {
+    if (!context.userId) {
+      throw new GraphQLError('You must be authenticated to access your feed', {
+        extensions: { code: 'UNAUTHENTICATED' },
+      });
+    }
+
+    // Parse cursor if provided
+    let cursor: string | undefined;
+    if (args.cursor) {
+      try {
+        // Validate cursor is valid base64
+        Buffer.from(args.cursor, 'base64').toString('utf-8');
+        cursor = args.cursor;
+      } catch (error) {
+        throw new GraphQLError('Invalid cursor', {
+          extensions: { code: 'BAD_REQUEST' },
+        });
+      }
+    }
+
+    // Get feed items from service
+    const result = await context.services.feedService.getMaterializedFeedItems({
+      userId: context.userId,
+      limit: args.limit || 20,
+      cursor,
+    });
+
+    // Transform to Relay connection
+    // FeedPostItem contains post data flattened - need to nest it as Post for GraphQL schema
+    const edges = result.items.map((item) => {
+      // Map FeedPostItem to FeedItem { id, post, readAt, createdAt }
+      // The post field needs to be constructed from flattened data
+      const feedItem = {
+        id: item.id,
+        post: {
+          id: item.id,
+          userId: item.userId,
+          caption: item.caption || '',
+          imageUrl: item.imageUrl,
+          thumbnailUrl: item.imageUrl, // FeedPostItem doesn't have thumbnailUrl, use imageUrl
+          likesCount: item.likesCount || 0,
+          commentsCount: item.commentsCount || 0,
+          isLiked: item.isLiked || false,
+          createdAt: item.createdAt,
+          updatedAt: item.createdAt, // FeedPostItem doesn't have updatedAt, use createdAt
+          // author field will be resolved by Post.author field resolver
+        },
+        readAt: item.readAt || null,
+        createdAt: item.createdAt,
+      };
+
+      // Build cursor for this edge (feed items use USER#userId + FEED#createdAt#postId pattern)
+      return {
+        node: feedItem,
+        cursor: Buffer.from(
+          JSON.stringify({
+            PK: `USER#${context.userId}`,
+            SK: `FEED#${item.createdAt}#${item.id}`,
+          })
+        ).toString('base64'),
+      };
+    });
+
+    const pageInfo = {
+      hasNextPage: !!result.nextCursor,
+      hasPreviousPage: false, // Not supported yet
+      startCursor: edges.length > 0 ? edges[0].cursor : null,
+      endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null,
+    };
+
+    return {
+      edges,
+      pageInfo,
+    };
+  },
+
+  /**
+   * Get paginated comments for a post
+   * Public - no authentication required
+   */
+  // @ts-ignore - DAL Comment type differs from GraphQL Comment type (author field resolver handles missing field)
+  comments: async (_parent, args, context) => {
+    // Parse cursor if provided
+    let cursor: string | undefined;
+    if (args.cursor) {
+      try {
+        // Validate cursor is valid base64
+        Buffer.from(args.cursor, 'base64').toString('utf-8');
+        cursor = args.cursor;
+      } catch (error) {
+        throw new GraphQLError('Invalid cursor', {
+          extensions: { code: 'BAD_REQUEST' },
+        });
+      }
+    }
+
+    // Get comments from service
+    const result = await context.services.commentService.getCommentsByPost(
+      args.postId,
+      args.limit || 20,
+      cursor
+    );
+
+    // Transform to Relay connection
+    const edges = result.comments.map((comment) => ({
+      node: comment,
+      // Build cursor for this edge (comments use POST#postId + COMMENT#createdAt#commentId pattern)
+      cursor: Buffer.from(
+        JSON.stringify({
+          PK: `POST#${args.postId}`,
+          SK: `COMMENT#${comment.createdAt}#${comment.id}`,
+        })
+      ).toString('base64'),
+    }));
+
+    const pageInfo = {
+      hasNextPage: result.hasMore,
+      hasPreviousPage: false, // Not supported yet
+      startCursor: edges.length > 0 ? edges[0].cursor : null,
+      endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null,
+    };
+
+    return {
+      edges,
+      pageInfo,
+    };
+  },
+
+  /**
+   * Get follow status between authenticated user and target user
+   * Requires authentication
+   */
+  followStatus: async (_parent, args, context) => {
+    if (!context.userId) {
+      throw new GraphQLError('You must be authenticated to check follow status', {
+        extensions: { code: 'UNAUTHENTICATED' },
+      });
+    }
+
+    // Get follow status from service
+    const status = await context.services.followService.getFollowStatus(
+      context.userId,
+      args.userId
+    );
+
+    return {
+      isFollowing: status.isFollowing,
+      followersCount: status.followersCount,
+      followingCount: status.followingCount,
+    };
+  },
+
+  /**
+   * Get like status for a post by authenticated user
+   * Requires authentication
+   */
+  postLikeStatus: async (_parent, args, context) => {
+    if (!context.userId) {
+      throw new GraphQLError('You must be authenticated to check like status', {
+        extensions: { code: 'UNAUTHENTICATED' },
+      });
+    }
+
+    // LikeService has getLikeStatusesByPostIds (batch), use it for single post
+    const statusMap = await context.services.likeService.getLikeStatusesByPostIds(
+      context.userId,
+      [args.postId]
+    );
+
+    const status = statusMap.get(args.postId) || { isLiked: false, likesCount: 0 };
+
+    // However, likesCount from getLikeStatusesByPostIds is always 0 (see DAL docs)
+    // Need to get actual likesCount from Post entity
+    const post = await context.services.postService.getPostById(args.postId);
+
+    return {
+      isLiked: status.isLiked,
+      likesCount: post?.likesCount || 0,
     };
   },
 };

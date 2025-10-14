@@ -462,15 +462,12 @@ describe('Query Resolvers', () => {
         {} as any
       );
 
-      // Verify cursor was decoded and passed to service
-      expect(getUserPostsSpy).toHaveBeenCalledWith({
-        userId: 'user-123',
-        limit: 10,
-        exclusiveStartKey: {
-          PK: 'USER#user-123',
-          SK: 'POST#2024-01-01T00:00:00.000Z#post-1',
-        },
-      });
+      // Verify cursor was passed as-is (base64 string) to service
+      expect(getUserPostsSpy).toHaveBeenCalledWith(
+        'user-123',  // userId
+        10,          // limit
+        cursor       // cursor as base64 string
+      );
 
       expect(result.edges).toHaveLength(1);
       expect(result.edges[0].node.id).toBe('post-2');
@@ -541,11 +538,11 @@ describe('Query Resolvers', () => {
       await Query.userPosts({}, { handle: 'testuser' }, mockContext, {} as any);
 
       // Verify default limit is 10
-      expect(getUserPostsSpy).toHaveBeenCalledWith({
-        userId: 'user-123',
-        limit: 10,
-        exclusiveStartKey: undefined,
-      });
+      expect(getUserPostsSpy).toHaveBeenCalledWith(
+        'user-123',  // userId
+        10,          // limit
+        undefined    // cursor
+      );
     });
   });
 });
