@@ -2,14 +2,23 @@
   margin-bottom: var(--spacing-lg);
 }
 
+.dev-read-state-debugger__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--tama-gray-700);
+}
+
 .dev-read-state-debugger__title {
   font-size: 1rem;
   font-weight: 600;
-  margin-bottom: var(--spacing-md);
   color: var(--tama-pearl-white);
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  margin: 0;
 }
 
 .dev-read-state-debugger__user-badge {
@@ -19,6 +28,60 @@
   color: var(--tama-pearl-white);
   border-radius: 12px;
   font-weight: 500;
+}
+
+.dev-read-state-debugger__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.dev-read-state-debugger__stats {
+  display: flex;
+  gap: var(--spacing-sm);
+  font-size: 0.875rem;
+}
+
+.dev-read-state-debugger__stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--border-radius-sm);
+  font-weight: 600;
+}
+
+.dev-read-state-debugger__stat--read {
+  color: var(--tama-sorrento-green);
+  background: rgba(var(--tama-sorrento-green-rgb, 34, 197, 94), 0.1);
+}
+
+.dev-read-state-debugger__stat--unread {
+  color: var(--tama-rally-yellow);
+  background: rgba(var(--tama-rally-yellow-rgb, 250, 204, 21), 0.1);
+}
+
+.dev-read-state-debugger__toggle {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--tama-gray-800);
+  color: var(--tama-pearl-white);
+  border: 1px solid var(--tama-gray-700);
+  border-radius: var(--border-radius-sm);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.dev-read-state-debugger__toggle:hover {
+  background: var(--tama-gray-700);
+  border-color: var(--tama-electric-blue);
+}
+
+.dev-read-state-debugger__toggle--active {
+  background: var(--tama-electric-blue);
+  border-color: var(--tama-electric-blue);
+  color: var(--tama-pearl-white);
 }
 
 .dev-read-state-debugger__table {

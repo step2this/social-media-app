@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { FeedPostItem } from '@social-media-app/shared';
 import './DevReadStateDebugger.css';
 
@@ -36,6 +37,15 @@ function formatTimestamp(dateString: string): string {
  * @returns React component
  */
 export function DevReadStateDebugger({ posts, currentUserId }: DevReadStateDebuggerProps) {
+  const [hideRead, setHideRead] = useState(false);
+
+  // Filter posts based on hideRead toggle
+  const displayedPosts = hideRead ? posts.filter((post) => !post.isRead) : posts;
+
+  // Count read/unread posts
+  const readCount = posts.filter((post) => post.isRead).length;
+  const unreadCount = posts.filter((post) => !post.isRead).length;
+
   if (posts.length === 0) {
     return (
       <div className="dev-read-state-debugger">
@@ -47,15 +57,42 @@ export function DevReadStateDebugger({ posts, currentUserId }: DevReadStateDebug
 
   return (
     <div className="dev-read-state-debugger">
-      <h3 className="dev-read-state-debugger__title">
-        Read State Debugger
-        {currentUserId && (
-          <span className="dev-read-state-debugger__user-badge">
-            User: {currentUserId.slice(0, 8)}...
-          </span>
-        )}
-      </h3>
-      <table className="dev-read-state-debugger__table" role="table">
+      <div className="dev-read-state-debugger__header">
+        <h3 className="dev-read-state-debugger__title">
+          Read State Debugger
+          {currentUserId && (
+            <span className="dev-read-state-debugger__user-badge">
+              User: {currentUserId.slice(0, 8)}...
+            </span>
+          )}
+        </h3>
+        <div className="dev-read-state-debugger__controls">
+          <div className="dev-read-state-debugger__stats">
+            <span className="dev-read-state-debugger__stat dev-read-state-debugger__stat--read">
+              ✓ {readCount}
+            </span>
+            <span className="dev-read-state-debugger__stat dev-read-state-debugger__stat--unread">
+              ○ {unreadCount}
+            </span>
+          </div>
+          <button
+            onClick={() => setHideRead(!hideRead)}
+            className={`dev-read-state-debugger__toggle ${
+              hideRead ? 'dev-read-state-debugger__toggle--active' : ''
+            }`}
+            type="button"
+          >
+            {hideRead ? '👁️ Show Read' : '🙈 Hide Read'}
+          </button>
+        </div>
+      </div>
+
+      {displayedPosts.length === 0 ? (
+        <p className="dev-read-state-debugger__empty">
+          All posts are read! Toggle "Show Read" to see them.
+        </p>
+      ) : (
+        <table className="dev-read-state-debugger__table" role="table">
         <thead className="dev-read-state-debugger__header">
           <tr>
             <th className="dev-read-state-debugger__header-cell">Status</th>
@@ -65,7 +102,7 @@ export function DevReadStateDebugger({ posts, currentUserId }: DevReadStateDebug
           </tr>
         </thead>
         <tbody>
-          {posts.map((post) => {
+          {displayedPosts.map((post) => {
             const isOwnPost = currentUserId && post.userId === currentUserId;
             return (
               <tr
@@ -115,6 +152,7 @@ export function DevReadStateDebugger({ posts, currentUserId }: DevReadStateDebug
           })}
         </tbody>
       </table>
+      )}
     </div>
   );
 }
