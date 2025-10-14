@@ -41,10 +41,20 @@ describe('GraphQL Integration - Core Workflows', () => {
     mockPostService = new PostService({} as any, 'test-table', mockProfileService);
     mockLikeService = new LikeService({} as any, 'test-table');
 
+    const mockCommentService = new CommentService({} as any, 'test-table');
+    const mockFollowService = new FollowService({} as any, 'test-table');
+
     mockContext = {
       userId: 'test-user-123',
       dynamoClient: {} as any,
       tableName: 'test-table',
+      services: {
+        profileService: mockProfileService,
+        postService: mockPostService,
+        likeService: mockLikeService,
+        commentService: mockCommentService,
+        followService: mockFollowService,
+      },
       loaders: createLoaders({
         profileService: mockProfileService,
         postService: mockPostService,
@@ -56,6 +66,13 @@ describe('GraphQL Integration - Core Workflows', () => {
       userId: null,
       dynamoClient: {} as any,
       tableName: 'test-table',
+      services: {
+        profileService: mockProfileService,
+        postService: mockPostService,
+        likeService: mockLikeService,
+        commentService: mockCommentService,
+        followService: mockFollowService,
+      },
       loaders: createLoaders({
         profileService: mockProfileService,
         postService: mockPostService,

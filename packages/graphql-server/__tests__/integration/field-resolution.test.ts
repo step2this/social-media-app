@@ -13,7 +13,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ApolloServer } from '@apollo/server';
 import { createApolloServer } from '../../src/server.js';
-import { PostService, ProfileService, LikeService, FollowService } from '@social-media-app/dal';
+import { PostService, ProfileService, LikeService, FollowService, CommentService } from '@social-media-app/dal';
 import { createLoaders } from '../../src/dataloaders/index.js';
 import type { GraphQLContext } from '../../src/context.js';
 import type { Post, PublicProfile } from '@social-media-app/shared';
@@ -34,11 +34,20 @@ describe('GraphQL Integration - Field Resolution', () => {
     mockProfileService = new ProfileService({} as any, 'test-table', 'test-bucket', 'test-domain', {} as any);
     mockPostService = new PostService({} as any, 'test-table', mockProfileService);
     mockLikeService = new LikeService({} as any, 'test-table');
+    const mockCommentService = new CommentService({} as any, 'test-table');
+    const mockFollowService = new FollowService({} as any, 'test-table');
 
     mockContext = {
       userId: 'test-user-123',
       dynamoClient: {} as any,
       tableName: 'test-table',
+      services: {
+        profileService: mockProfileService,
+        postService: mockPostService,
+        likeService: mockLikeService,
+        commentService: mockCommentService,
+        followService: mockFollowService,
+      },
       loaders: createLoaders({
         profileService: mockProfileService,
         postService: mockPostService,
@@ -50,6 +59,13 @@ describe('GraphQL Integration - Field Resolution', () => {
       userId: null,
       dynamoClient: {} as any,
       tableName: 'test-table',
+      services: {
+        profileService: mockProfileService,
+        postService: mockPostService,
+        likeService: mockLikeService,
+        commentService: mockCommentService,
+        followService: mockFollowService,
+      },
       loaders: createLoaders({
         profileService: mockProfileService,
         postService: mockPostService,

@@ -2,9 +2,8 @@ import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { createDynamoDBClient, getTableName } from '@social-media-app/aws-utils';
 import { verifyAccessToken, extractTokenFromHeader, getJWTConfigFromEnv } from '@social-media-app/auth-utils';
-import { createS3Client, getS3BucketName, getCloudFrontDomain } from '@social-media-app/aws-utils';
-import { ProfileService, PostService, LikeService } from '@social-media-app/dal';
 import { createLoaders, type DataLoaders } from './dataloaders/index.js';
+import { createServices, type Services } from './services/factory.js';
 
 /**
  * GraphQL Context
@@ -17,6 +16,9 @@ export interface GraphQLContext {
   // AWS Clients
   dynamoClient: DynamoDBDocumentClient;
   tableName: string;
+
+  // DAL Services (dependency injection - eliminates instantiation duplication)
+  services: Services;
 
   // DataLoaders for batching and caching queries (solves N+1 problem)
   loaders: DataLoaders;
@@ -48,28 +50,15 @@ export async function createContext(
     }
   }
 
-  // Initialize S3 client and configuration
-  const s3Client = createS3Client();
-  const s3BucketName = getS3BucketName();
-  const cloudFrontDomain = getCloudFrontDomain();
-
-  // Initialize DAL services (per-request instances for proper isolation)
-  const profileService = new ProfileService(
-    dynamoClient,
-    tableName,
-    s3BucketName,
-    cloudFrontDomain,
-    s3Client
-  );
-  const postService = new PostService(dynamoClient, tableName, profileService);
-  const likeService = new LikeService(dynamoClient, tableName);
+  // Create all DAL services using factory pattern (eliminates duplication)
+  const services = createServices(dynamoClient, tableName);
 
   // Create DataLoaders for batching and caching (solves N+1 query problem)
   const loaders = createLoaders(
     {
-      profileService,
-      postService,
-      likeService,
+      profileService: services.profileService,
+      postService: services.postService,
+      likeService: services.likeService,
     },
     userId
   );
@@ -78,6 +67,7 @@ export async function createContext(
     userId,
     dynamoClient,
     tableName,
+    services,
     loaders,
   };
 }

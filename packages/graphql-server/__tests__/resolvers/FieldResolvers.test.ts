@@ -19,7 +19,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Profile as ProfileResolver } from '../../src/schema/resolvers/Profile.js';
 import { Post as PostResolver } from '../../src/schema/resolvers/Post.js';
 import { Comment as CommentResolver } from '../../src/schema/resolvers/Comment.js';
-import { ProfileService, FollowService, LikeService, PostService } from '@social-media-app/dal';
+import { ProfileService, FollowService, LikeService, PostService, CommentService } from '@social-media-app/dal';
 import { createLoaders } from '../../src/dataloaders/index.js';
 import type { GraphQLContext } from '../../src/context.js';
 import type { Profile, PublicProfile, Post, Comment } from '@social-media-app/shared';
@@ -35,11 +35,20 @@ describe('Field Resolvers', () => {
     mockProfileService = new ProfileService({} as any, 'test-table', 'test-bucket', 'test-domain', {} as any);
     mockPostService = new PostService({} as any, 'test-table', mockProfileService);
     mockLikeService = new LikeService({} as any, 'test-table');
+    const mockCommentService = new CommentService({} as any, 'test-table');
+    const mockFollowService = new FollowService({} as any, 'test-table');
 
     mockContext = {
       userId: 'test-user-123',
       dynamoClient: {} as any,
       tableName: 'test-table',
+      services: {
+        profileService: mockProfileService,
+        postService: mockPostService,
+        likeService: mockLikeService,
+        commentService: mockCommentService,
+        followService: mockFollowService,
+      },
       loaders: createLoaders({
         profileService: mockProfileService,
         postService: mockPostService,

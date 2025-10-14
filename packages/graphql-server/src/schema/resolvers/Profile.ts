@@ -1,21 +1,34 @@
 /**
- * Profile Type Resolvers
+ * Profile Field Resolvers
  *
- * Implements field resolvers for the Profile type.
- * Handles computed fields like follower/following counts and follow status.
+ * Implements field-level resolvers for the Profile type.
+ * Handles computed/relational fields that require additional data fetching.
  */
 
-// import type { ProfileResolvers } from '../generated/types.js';
+import type { ProfileResolvers } from '../generated/types.js';
 
 /**
  * Profile field resolvers
  *
- * Will include:
- * - followersCount: Int!
- * - followingCount: Int!
- * - isFollowing: Boolean!
- * - posts(limit: Int, cursor: String): PostConnection
+ * Implements:
+ * - isFollowing: Whether the current user follows this profile
  */
-export const Profile = {
-  // Profile field resolvers will be implemented here
+export const Profile: ProfileResolvers = {
+  /**
+   * Check if the current authenticated user follows this profile
+   * Returns null if:
+   * - User is not authenticated
+   * - User is viewing their own profile
+   */
+  isFollowing: async (parent, _args, context) => {
+    // Cannot follow yourself
+    if (!context.userId || context.userId === parent.id) {
+      return null;
+    }
+
+    // Get follow status
+    const status = await context.services.followService.getFollowStatus(context.userId, parent.id);
+
+    return status.isFollowing;
+  },
 };
