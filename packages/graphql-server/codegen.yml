@@ -1,0 +1,10 @@
+schema: "./src/schema/typeDefs.ts"
+generates:
+  ./src/schema/generated/types.ts:
+    plugins:
+      - typescript
+      - typescript-resolvers
+    config:
+      contextType: "../../context#GraphQLContext"
+      useIndexSignature: true
+      maybeValue: T | null

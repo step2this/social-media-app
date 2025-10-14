@@ -1,0 +1,46 @@
+{
+  "name": "@social-media-app/graphql-server",
+  "version": "1.0.0",
+  "description": "GraphQL server with Apollo Server v4 and AWS Lambda integration",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    "codegen": "graphql-codegen --config codegen.yml",
+    "codegen:watch": "graphql-codegen --config codegen.yml --watch",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@apollo/server": "^4.11.3",
+    "@as-integrations/aws-lambda": "^3.1.0",
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0",
+    "@social-media-app/auth-utils": "workspace:*",
+    "@social-media-app/aws-utils": "workspace:*",
+    "@social-media-app/dal": "workspace:*",
+    "@social-media-app/shared": "workspace:*",
+    "dataloader": "^2.2.2",
+    "graphql": "^16.9.0",
+    "graphql-tag": "^2.12.6",
+    "jose": "^5.0.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "^5.0.0",
+    "@graphql-codegen/typescript": "^4.0.0",
+    "@graphql-codegen/typescript-resolvers": "^4.0.0",
+    "@types/aws-lambda": "^8.10.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
