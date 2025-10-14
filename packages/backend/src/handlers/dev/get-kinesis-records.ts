@@ -51,7 +51,7 @@ export const handler = async (
 
     // Parse query parameters
     const limit = parseInt(event.queryStringParameters?.limit || '50', 10);
-    const shardIteratorType = event.queryStringParameters?.iteratorType || 'TRIM_HORIZON';
+    const shardIteratorType = event.queryStringParameters?.iteratorType || 'LATEST';
 
     if (limit < 1 || limit > 100) {
       return errorResponse(400, 'Limit must be between 1 and 100');

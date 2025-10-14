@@ -4,6 +4,10 @@
  */
 
 .dev-kinesis-monitor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: calc(100vh - 120px); /* Reserve space for menu header */
   padding: var(--spacing-md);
   background: var(--tama-gray-800);
   border-radius: var(--border-radius-md);
@@ -65,6 +69,26 @@
   cursor: not-allowed;
 }
 
+.dev-kinesis-monitor__clear-btn {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--tama-racing-red);
+  color: var(--tama-pearl-white);
+  border: none;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.dev-kinesis-monitor__clear-btn:hover:not(:disabled) {
+  background: var(--tama-gray-800);
+}
+
+.dev-kinesis-monitor__clear-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .dev-kinesis-monitor__meta {
   display: flex;
   justify-content: space-between;
@@ -118,8 +142,10 @@
 }
 
 .dev-kinesis-monitor__records {
-  max-height: 400px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);

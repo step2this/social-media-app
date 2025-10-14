@@ -4,11 +4,8 @@ import { feedService } from '../services/feedService';
 import { PostCard } from '../components/posts/PostCard';
 import { useFeedItemAutoRead } from '../hooks/useFeedItemAutoRead';
 import {
-  DevMenu,
   DevReadStateDebugger,
-  DevManualMarkButton,
-  DevCacheStatusIndicator,
-  DevKinesisMonitor
+  DevManualMarkButton
 } from '../components/dev';
 import { useAuthStore } from '../stores/authStore';
 import './HomePage.css';
@@ -194,24 +191,19 @@ export const HomePage: React.FC = () => {
         )}
       </div>
 
-      {/* Dev Tools Menu (Ctrl+Shift+D) */}
-      <DevMenu>
-        {/* Cache and streaming status indicator - placed at top for visibility */}
-        <DevCacheStatusIndicator />
-
-        {/* Kinesis stream monitoring */}
-        <DevKinesisMonitor />
-
-        {/* Feed debugging tools */}
-        <DevReadStateDebugger posts={posts} currentUserId={user?.id} />
-        {posts.map((post) => (
-          <DevManualMarkButton
-            key={post.id}
-            post={post}
-            onMarkComplete={() => loadInitialPosts()}
-          />
-        ))}
-      </DevMenu>
+      {/* Page-specific dev tools (global tools now in AppLayout) */}
+      {import.meta.env.DEV && (
+        <div className="home-page__dev-tools">
+          <DevReadStateDebugger posts={posts} currentUserId={user?.id} />
+          {posts.map((post) => (
+            <DevManualMarkButton
+              key={post.id}
+              post={post}
+              onMarkComplete={() => loadInitialPosts()}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

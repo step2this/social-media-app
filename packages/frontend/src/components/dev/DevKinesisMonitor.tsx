@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import './DevKinesisMonitor.css';
 
 /**
@@ -11,6 +11,7 @@ interface KinesisRecord {
     eventType?: string;
     postId?: string;
     userId?: string;
+    userHandle?: string;
     authorId?: string;
     authorHandle?: string;
     caption?: string;
@@ -44,6 +45,34 @@ export interface DevKinesisMonitorProps {
    * @default 50
    */
   limit?: number;
+}
+
+// Maximum events to display (memory limit)
+const MAX_DISPLAYED_EVENTS = 50;
+// Maximum event age in milliseconds (5 minutes)
+const MAX_EVENT_AGE_MS = 5 * 60 * 1000;
+
+/**
+ * Prune old records using hybrid approach:
+ * Keep last 50 events OR last 5 minutes, whichever is LESS
+ */
+function pruneOldRecords(records: KinesisRecord[]): KinesisRecord[] {
+  const now = Date.now();
+  const cutoffTime = now - MAX_EVENT_AGE_MS;
+
+  // Filter by time (last 5 minutes)
+  const recentByTime = records.filter(record => {
+    const recordTime = new Date(record.approximateArrivalTimestamp).getTime();
+    return !isNaN(recordTime) && recordTime >= cutoffTime;
+  });
+
+  // Take last 50 events
+  const recentByCount = records.slice(-MAX_DISPLAYED_EVENTS);
+
+  // Return whichever has FEWER events (more aggressive pruning)
+  return recentByTime.length < recentByCount.length
+    ? recentByTime
+    : recentByCount;
 }
 
 /**
@@ -131,7 +160,8 @@ export function DevKinesisMonitor({
       }
 
       const data: KinesisRecordsResponse = await response.json();
-      setRecords(data.records);
+      const prunedRecords = pruneOldRecords(data.records);
+      setRecords(prunedRecords);
       setStreamName(data.streamName);
       setError(null);
       setLastUpdated(new Date());
@@ -145,6 +175,14 @@ export function DevKinesisMonitor({
   }, [limit]);
 
   /**
+   * Clear all records from the display
+   */
+  const clearRecords = useCallback(() => {
+    setRecords([]);
+    setFilteredRecords([]);
+  }, []);
+
+  /**
    * Filter records by event type
    */
   useEffect(() => {
@@ -156,6 +194,14 @@ export function DevKinesisMonitor({
       );
     }
   }, [records, eventTypeFilter]);
+
+  /**
+   * Display records in reverse chronological order (newest first)
+   * Memoized to avoid recreating array on every render
+   */
+  const displayRecords = useMemo(() => {
+    return filteredRecords.slice().reverse();
+  }, [filteredRecords]);
 
   /**
    * Initial fetch
@@ -204,6 +250,14 @@ export function DevKinesisMonitor({
           >
             🔄 Refresh
           </button>
+          <button
+            onClick={clearRecords}
+            className="dev-kinesis-monitor__clear-btn"
+            disabled={records.length === 0}
+            title="Clear all events from display"
+          >
+            🗑️ Clear
+          </button>
         </div>
       </div>
 
@@ -243,7 +297,7 @@ export function DevKinesisMonitor({
 
       {loading && records.length === 0 ? (
         <div className="dev-kinesis-monitor__loading">Loading records...</div>
-      ) : filteredRecords.length === 0 ? (
+      ) : displayRecords.length === 0 ? (
         <div className="dev-kinesis-monitor__empty">
           {records.length === 0
             ? 'No records in stream yet. Perform some actions to generate events!'
@@ -251,7 +305,7 @@ export function DevKinesisMonitor({
         </div>
       ) : (
         <div className="dev-kinesis-monitor__records">
-          {filteredRecords.map((record) => (
+          {displayRecords.map((record) => (
             <div key={record.sequenceNumber} className="dev-kinesis-monitor__record">
               <div className="dev-kinesis-monitor__record-header">
                 <span className="dev-kinesis-monitor__event-type">
@@ -269,11 +323,14 @@ export function DevKinesisMonitor({
                     {record.data.postId?.slice(0, 8) || 'N/A'}...
                   </span>
                 </div>
-                {record.data.userId && (
+                {(record.data.userHandle || record.data.userId) && (
                   <div className="dev-kinesis-monitor__data-row">
-                    <span className="dev-kinesis-monitor__label">User ID:</span>
+                    <span className="dev-kinesis-monitor__label">User:</span>
                     <span className="dev-kinesis-monitor__value">
-                      {record.data.userId.slice(0, 8)}...
+                      {record.data.userHandle
+                        ? `@${record.data.userHandle}`
+                        : `${record.data.userId?.slice(0, 8)}...`
+                      }
                     </span>
                   </div>
                 )}

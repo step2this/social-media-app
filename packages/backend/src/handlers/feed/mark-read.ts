@@ -22,7 +22,7 @@
  */
 
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { FeedService, KinesisEventPublisher } from '@social-media-app/dal';
+import { FeedService, KinesisEventPublisher, ProfileService } from '@social-media-app/dal';
 import { MarkFeedItemsAsReadRequestSchema, type PostReadEvent } from '@social-media-app/shared';
 import { errorResponse, successResponse, authenticateRequest } from '../../utils/index.js';
 import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
@@ -105,18 +105,25 @@ export const handler = async (
 
     // 7. Publish POST_READ events to Kinesis
     try {
+      // Fetch user profile to get handle
+      const profileService = new ProfileService(dynamoClient, tableName);
+      const userProfile = await profileService.getProfileById(userId);
+      const userHandle = userProfile?.handle || 'unknown';
+
       const readEvents: PostReadEvent[] = postIds.map(postId => ({
         eventId: randomUUID(),
         timestamp: new Date().toISOString(),
         eventType: 'POST_READ',
         version: '1.0',
         userId,
+        userHandle,
         postId
       }));
 
       const batchResult = await kinesisPublisher.publishEventsBatch(readEvents);
 
       console.log('[MarkRead] Published POST_READ events', {
+        userHandle,
         successCount: batchResult.successCount,
         failedCount: batchResult.failedCount
       });

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { LeftSidebar } from './LeftSidebar';
 import { RightPanel } from './RightPanel';
 import { MobileNavigation } from './MobileNavigation';
+import { DevMenu, DevCacheStatusIndicator, DevKinesisMonitor } from '../dev';
 import './AppLayout.css';
 
 interface AppLayoutProps {
@@ -64,6 +65,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, className = '' }
           </div>
         </main>
         <MobileNavigation />
+        {/* Global developer tools - available on all pages */}
+        {import.meta.env.DEV && (
+          <DevMenu>
+            <DevCacheStatusIndicator />
+            <DevKinesisMonitor />
+          </DevMenu>
+        )}
       </div>
     );
   }
@@ -83,6 +91,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, className = '' }
       </main>
       {/* Right panel only shows on large-tablet and desktop */}
       {(breakpoint === 'large-tablet' || breakpoint === 'desktop') && <RightPanel />}
+      {/* Global developer tools - available on all pages */}
+      {import.meta.env.DEV && (
+        <DevMenu>
+          <DevCacheStatusIndicator />
+          <DevKinesisMonitor />
+        </DevMenu>
+      )}
     </div>
   );
 };

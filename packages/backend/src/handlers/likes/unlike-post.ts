@@ -1,5 +1,5 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { LikeService, KinesisEventPublisher } from '@social-media-app/dal';
+import { LikeService, KinesisEventPublisher, ProfileService } from '@social-media-app/dal';
 import {
   UnlikePostRequestSchema,
   UnlikePostResponseSchema,
@@ -59,12 +59,18 @@ export const handler = async (
 
     // Publish POST_LIKED event to Kinesis (with liked: false for unlike)
     try {
+      // Fetch user profile to get handle
+      const profileService = new ProfileService(dynamoClient, tableName);
+      const userProfile = await profileService.getProfileById(decoded.userId);
+      const userHandle = userProfile?.handle || 'unknown';
+
       const likeEvent: PostLikedEvent = {
         eventId: randomUUID(),
         timestamp: new Date().toISOString(),
         eventType: 'POST_LIKED',
         version: '1.0',
         userId: decoded.userId,
+        userHandle,
         postId: validatedRequest.postId,
         liked: false // false indicates an unlike
       };
@@ -74,6 +80,7 @@ export const handler = async (
       console.log('[UnlikePost] Published POST_LIKED event', {
         postId: validatedRequest.postId,
         userId: decoded.userId,
+        userHandle,
         liked: false
       });
     } catch (error) {

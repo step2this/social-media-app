@@ -13,13 +13,13 @@ export interface DevMenuProps {
 }
 
 /**
- * Developer menu with visible floating action button (FAB) and keyboard shortcuts
+ * Developer menu with persistent always-visible panel
  *
- * Provides a slide-in panel from the right side with debugging tools.
+ * Provides a sticky panel from the right side with debugging tools that stays open.
  * - **FAB**: Always-visible button in bottom-right corner (🛠️)
- * - **Keyboard**: Ctrl+Shift+D (or Cmd+Shift+D on Mac)
- * - **Escape**: Close menu when open
- * - **Backdrop**: Click outside to close
+ * - **Keyboard**: Ctrl+Shift+D (or Cmd+Shift+D on Mac) to toggle collapse/expand
+ * - **Always Open**: Panel is always visible, can be collapsed to header bar
+ * - **Backdrop**: Non-interactive, just provides visual separation
  *
  * @example
  * ```tsx
@@ -30,26 +30,18 @@ export interface DevMenuProps {
  * ```
  */
 export const DevMenu: React.FC<DevMenuProps> = ({ children }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   /**
-   * Toggle menu open/closed
+   * Toggle between collapsed and expanded states
    */
-  const toggleMenu = useCallback(() => {
-    setIsOpen(prev => !prev);
-  }, []);
-
-  /**
-   * Close menu
-   */
-  const closeMenu = useCallback(() => {
-    setIsOpen(false);
+  const toggleCollapse = useCallback(() => {
+    setIsCollapsed(prev => !prev);
   }, []);
 
   /**
    * Handle keyboard shortcuts
-   * - Ctrl+Shift+D or Cmd+Shift+D: Toggle menu
-   * - Escape: Close menu when open
+   * - Ctrl+Shift+D or Cmd+Shift+D: Toggle collapse/expand
    */
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -60,14 +52,7 @@ export const DevMenu: React.FC<DevMenuProps> = ({ children }) => {
         (event.ctrlKey || event.metaKey)
       ) {
         event.preventDefault();
-        toggleMenu();
-        return;
-      }
-
-      // Check for Escape key when menu is open
-      if (event.key === 'Escape' && isOpen) {
-        event.preventDefault();
-        closeMenu();
+        toggleCollapse();
         return;
       }
     };
@@ -79,62 +64,50 @@ export const DevMenu: React.FC<DevMenuProps> = ({ children }) => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, toggleMenu, closeMenu]);
+  }, [toggleCollapse]);
 
-  /**
-   * Handle backdrop click to close menu
-   */
-  const handleBackdropClick = useCallback((event: React.MouseEvent) => {
-    // Only close if clicking directly on backdrop, not on children
-    if (event.target === event.currentTarget) {
-      closeMenu();
-    }
-  }, [closeMenu]);
 
   return (
     <>
       {/* Floating Action Button - Always visible */}
       <button
         className="dev-menu__fab"
-        onClick={toggleMenu}
-        aria-label="Toggle developer tools"
-        title="Developer Tools (Ctrl+Shift+D)"
+        onClick={toggleCollapse}
+        aria-label={isCollapsed ? "Expand developer tools" : "Collapse developer tools"}
+        title={`Developer Tools (Ctrl+Shift+D) - ${isCollapsed ? 'Expand' : 'Collapse'}`}
         type="button"
       >
-        🛠️
+        {isCollapsed ? '⬆️' : '⬇️'}
       </button>
 
-      {/* Slide-in menu panel (only when open) */}
-      {isOpen && createPortal(
-        <div className="dev-menu">
-          {/* Backdrop overlay */}
-          <div
-            className="dev-menu__backdrop"
-            onClick={handleBackdropClick}
-            role="button"
-            tabIndex={-1}
-            aria-label="Close developer menu"
-          />
+      {/* Always-visible panel - can be collapsed to header only */}
+      {createPortal(
+        <div className={`dev-menu ${isCollapsed ? 'dev-menu--collapsed' : ''}`}>
+          {/* Non-interactive backdrop overlay for visual separation */}
+          <div className="dev-menu__backdrop" aria-hidden="true" />
 
-          {/* Slide-in panel */}
-          <aside className="dev-menu__panel">
-            {/* Header with title and close button */}
+          {/* Persistent panel */}
+          <aside className={`dev-menu__panel ${isCollapsed ? 'dev-menu__panel--collapsed' : ''}`}>
+            {/* Header with title and collapse button */}
             <header className="dev-menu__header">
               <h2 className="dev-menu__title">Developer Tools</h2>
               <button
-                className="dev-menu__close-button"
-                onClick={closeMenu}
-                aria-label="Close developer menu"
+                className="dev-menu__collapse-button"
+                onClick={toggleCollapse}
+                aria-label={isCollapsed ? "Expand developer tools" : "Collapse developer tools"}
                 type="button"
+                title={isCollapsed ? "Expand" : "Collapse"}
               >
-                ×
+                {isCollapsed ? '⬆️' : '⬇️'}
               </button>
             </header>
 
-            {/* Content area for dev tools */}
-            <div className="dev-menu__content">
-              {children}
-            </div>
+            {/* Content area for dev tools - hidden when collapsed */}
+            {!isCollapsed && (
+              <div className="dev-menu__content">
+                {children}
+              </div>
+            )}
           </aside>
         </div>,
         document.body

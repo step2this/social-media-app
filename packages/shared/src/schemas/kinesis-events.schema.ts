@@ -48,6 +48,8 @@ export const PostReadEventSchema = BaseEventSchema.extend({
   eventType: z.literal('POST_READ'),
   /** ID of the user who read the post */
   userId: UUIDField,
+  /** Username/handle of the user who read the post */
+  userHandle: z.string().min(1),
   /** ID of the post that was read */
   postId: UUIDField,
   /** Optional DynamoDB keys if read from feed */
@@ -64,6 +66,8 @@ export const PostLikedEventSchema = BaseEventSchema.extend({
   eventType: z.literal('POST_LIKED'),
   /** ID of the user who liked/unliked */
   userId: UUIDField,
+  /** Username/handle of the user who liked/unliked */
+  userHandle: z.string().min(1),
   /** ID of the post that was liked/unliked */
   postId: UUIDField,
   /** true = liked, false = unliked */

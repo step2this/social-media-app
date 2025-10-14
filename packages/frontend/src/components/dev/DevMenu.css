@@ -46,6 +46,7 @@
 
 /**
  * Slide-in menu overlay container
+ * pointer-events: none allows clicks to pass through to main website
  */
 .dev-menu {
   position: fixed;
@@ -54,21 +55,24 @@
   display: flex;
   align-items: stretch;
   justify-content: flex-end;
+  pointer-events: none; /* Allow clicks to pass through to main content */
 }
 
 /**
- * Backdrop overlay - semi-transparent dark background
+ * Backdrop overlay - non-interactive, subtle visual separation
+ * Reduced opacity since it's always visible
  */
 .dev-menu__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  cursor: pointer;
+  background: rgba(0, 0, 0, 0.2);
+  pointer-events: none; /* Non-interactive - doesn't block clicks */
 }
 
 /**
  * Slide-in panel from right side
- * Dark background with slide-in animation
+ * Dark background with smooth transitions
+ * pointer-events: auto restores clicking on the panel itself
  */
 .dev-menu__panel {
   position: relative;
@@ -78,6 +82,8 @@
   box-shadow: var(--tama-depth-shadow);
   overflow-y: auto;
   animation: slideInRight 0.3s ease-out;
+  transition: width 0.3s ease, max-width 0.3s ease;
+  pointer-events: auto; /* Restore clicks on the panel */
 }
 
 /**
@@ -115,13 +121,13 @@
 }
 
 /**
- * Close button - large X icon
+ * Collapse/Expand button
  */
-.dev-menu__close-button {
+.dev-menu__collapse-button {
   background: transparent;
   border: none;
   color: var(--tama-pearl-white);
-  font-size: 2rem;
+  font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
   padding: 0;
@@ -131,15 +137,15 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--border-radius-sm);
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
-.dev-menu__close-button:hover {
+.dev-menu__collapse-button:hover {
   background-color: var(--tama-gray-800);
-  color: var(--tama-racing-red);
+  transform: scale(1.1);
 }
 
-.dev-menu__close-button:focus {
+.dev-menu__collapse-button:focus {
   outline: 2px solid var(--tama-electric-blue);
   outline-offset: 2px;
 }
@@ -149,6 +155,33 @@
  */
 .dev-menu__content {
   padding: var(--spacing-lg);
+}
+
+/**
+ * Collapsed state - panel minimized to header only
+ */
+.dev-menu--collapsed {
+  /* Backdrop completely transparent when collapsed */
+  pointer-events: none;
+}
+
+.dev-menu--collapsed .dev-menu__backdrop {
+  opacity: 0;
+}
+
+.dev-menu__panel--collapsed {
+  width: auto;
+  max-width: 300px;
+  overflow: visible;
+}
+
+.dev-menu__panel--collapsed .dev-menu__header {
+  border-bottom: none;
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.dev-menu__panel--collapsed .dev-menu__title {
+  font-size: 0.875rem;
 }
 
 /**
@@ -164,5 +197,15 @@
 @media (max-width: 480px) {
   .dev-menu__panel {
     width: 100%;
+  }
+}
+
+/**
+ * Mobile: Position FAB above bottom navigation
+ * Bottom nav is 64px tall, so FAB needs to be at least 64px + 24px spacing = 88px from bottom
+ */
+@media (max-width: 767px) {
+  .dev-menu__fab {
+    bottom: 88px;
   }
 }

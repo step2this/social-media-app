@@ -86,12 +86,20 @@ export const handler = async (
 
     // Publish POST_LIKED event to Kinesis
     try {
+      // Fetch user profile to get handle
+      const dynamoClient = createDynamoDBClient();
+      const tableName = getTableName();
+      const profileService = new ProfileService(dynamoClient, tableName);
+      const userProfile = await profileService.getProfileById(decoded.userId);
+      const userHandle = userProfile?.handle || 'unknown';
+
       const likeEvent: PostLikedEvent = {
         eventId: randomUUID(),
         timestamp: new Date().toISOString(),
         eventType: 'POST_LIKED',
         version: '1.0',
         userId: decoded.userId,
+        userHandle,
         postId: validatedRequest.postId,
         liked: true
       };
@@ -101,6 +109,7 @@ export const handler = async (
       console.log('[LikePost] Published POST_LIKED event', {
         postId: validatedRequest.postId,
         userId: decoded.userId,
+        userHandle,
         liked: true
       });
     } catch (error) {
