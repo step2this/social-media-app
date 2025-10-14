@@ -318,4 +318,95 @@ export const Query: QueryResolvers = {
       likesCount: post?.likesCount || 0,
     };
   },
+
+  /**
+   * Get paginated notifications for authenticated user
+   * Requires authentication
+   */
+  notifications: async (_parent, args, context) => {
+    if (!context.userId) {
+      throw new GraphQLError('You must be authenticated to access notifications', {
+        extensions: { code: 'UNAUTHENTICATED' },
+      });
+    }
+
+    // Parse cursor if provided
+    let cursor: string | undefined;
+    if (args.cursor) {
+      try {
+        // Validate cursor is valid base64
+        Buffer.from(args.cursor, 'base64').toString('utf-8');
+        cursor = args.cursor;
+      } catch (error) {
+        throw new GraphQLError('Invalid cursor', {
+          extensions: { code: 'BAD_REQUEST' },
+        });
+      }
+    }
+
+    try {
+      // Get notifications from service
+      const result = await context.services.notificationService.getNotifications({
+        userId: context.userId,
+        limit: args.limit || 20,
+        cursor,
+      });
+
+      // Transform to Relay connection
+      const edges = result.notifications.map((notification) => ({
+        node: notification,
+        cursor: Buffer.from(
+          JSON.stringify({
+            PK: `USER#${context.userId}`,
+            SK: `NOTIFICATION#${notification.createdAt}#${notification.id}`,
+          })
+        ).toString('base64'),
+      }));
+
+      const pageInfo = {
+        hasNextPage: result.hasMore,
+        hasPreviousPage: false, // Not supported yet
+        startCursor: edges.length > 0 ? edges[0].cursor : null,
+        endCursor: edges.length > 0 && result.hasMore ? edges[edges.length - 1].cursor : null,
+      };
+
+      return {
+        edges,
+        pageInfo,
+      };
+    } catch (error) {
+      // Handle specific errors
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid cursor')) {
+          throw new GraphQLError(error.message, {
+            extensions: { code: 'BAD_REQUEST' },
+          });
+        }
+      }
+      // Re-throw as internal server error
+      throw new GraphQLError('Failed to fetch notifications', {
+        extensions: { code: 'INTERNAL_SERVER_ERROR' },
+      });
+    }
+  },
+
+  /**
+   * Get count of unread notifications for authenticated user
+   * Requires authentication
+   */
+  unreadNotificationsCount: async (_parent, _args, context) => {
+    if (!context.userId) {
+      throw new GraphQLError('You must be authenticated to access notifications', {
+        extensions: { code: 'UNAUTHENTICATED' },
+      });
+    }
+
+    // Get unread count from service
+    const count = await context.services.notificationService.getUnreadCount(context.userId);
+
+    return count;
+  },
 };

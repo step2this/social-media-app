@@ -426,4 +426,216 @@ export const Mutation: MutationResolvers = {
     // For now, we'll just return success (idempotent behavior)
     return { success: true };
   },
+
+  /**
+   * Update profile information
+   * Requires authentication
+   */
+  updateProfile: async (_parent, args, context) => {
+    if (!context.userId) {
+      throw new GraphQLError('Authentication required', {
+        extensions: { code: 'UNAUTHENTICATED' },
+      });
+    }
+
+    try {
+      // Update profile via ProfileService
+      const updatedProfile = await context.services.profileService.updateProfile(
+        context.userId,
+        args.input
+      );
+
+      return updatedProfile;
+    } catch (error) {
+      // Handle specific errors
+      if (error instanceof Error) {
+        if (error.message.includes('Handle is already taken')) {
+          throw new GraphQLError(error.message, {
+            extensions: { code: 'BAD_REQUEST' },
+          });
+        }
+      }
+      // Re-throw as internal server error for unexpected errors
+      throw new GraphQLError('Failed to update profile', {
+        extensions: { code: 'INTERNAL_SERVER_ERROR' },
+      });
+    }
+  },
+
+  /**
+   * Get presigned URL for profile picture upload
+   * Requires authentication
+   */
+  getProfilePictureUploadUrl: async (_parent, args, context) => {
+    if (!context.userId) {
+      throw new GraphQLError('Authentication required', {
+        extensions: { code: 'UNAUTHENTICATED' },
+      });
+    }
+
+    try {
+      // Get presigned URL from ProfileService
+      const result = await context.services.profileService.generatePresignedUrl(
+        context.userId,
+        {
+          fileType: args.fileType || 'image/jpeg',
+          purpose: 'profile-picture',
+        }
+      );
+
+      return {
+        uploadUrl: result.uploadUrl,
+      };
+    } catch (error) {
+      // Handle S3/configuration errors
+      if (error instanceof Error) {
+        throw new GraphQLError(error.message, {
+          extensions: { code: 'INTERNAL_SERVER_ERROR' },
+        });
+      }
+      throw new GraphQLError('Failed to generate upload URL', {
+        extensions: { code: 'INTERNAL_SERVER_ERROR' },
+      });
+    }
+  },
+
+  /**
+   * Mark a notification as read
+   * Requires authentication and ownership
+   */
+  markNotificationAsRead: async (_parent, args, context) => {
+    if (!context.userId) {
+      throw new GraphQLError('Authentication required', {
+        extensions: { code: 'UNAUTHENTICATED' },
+      });
+    }
+
+    try {
+      // Mark notification as read
+      const result = await context.services.notificationService.markAsRead({
+        userId: context.userId,
+        notificationId: args.id,
+      });
+
+      if (!result.notification) {
+        throw new GraphQLError('Notification not found', {
+          extensions: { code: 'NOT_FOUND' },
+        });
+      }
+
+      return result.notification;
+    } catch (error) {
+      // Handle specific errors
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+      if (error instanceof Error) {
+        if (error.message.includes('Notification not found')) {
+          throw new GraphQLError(error.message, {
+            extensions: { code: 'NOT_FOUND' },
+          });
+        }
+        if (error.message.includes('Unauthorized')) {
+          throw new GraphQLError(error.message, {
+            extensions: { code: 'FORBIDDEN' },
+          });
+        }
+      }
+      // Re-throw as internal server error
+      throw new GraphQLError('Failed to mark notification as read', {
+        extensions: { code: 'INTERNAL_SERVER_ERROR' },
+      });
+    }
+  },
+
+  /**
+   * Mark all notifications as read
+   * Requires authentication
+   */
+  markAllNotificationsAsRead: async (_parent, _args, context) => {
+    if (!context.userId) {
+      throw new GraphQLError('Authentication required', {
+        extensions: { code: 'UNAUTHENTICATED' },
+      });
+    }
+
+    // Mark all notifications as read
+    const result = await context.services.notificationService.markAllAsRead({
+      userId: context.userId,
+    });
+
+    return {
+      updatedCount: result.updatedCount,
+    };
+  },
+
+  /**
+   * Delete a notification
+   * Requires authentication and ownership (idempotent)
+   */
+  deleteNotification: async (_parent, args, context) => {
+    if (!context.userId) {
+      throw new GraphQLError('Authentication required', {
+        extensions: { code: 'UNAUTHENTICATED' },
+      });
+    }
+
+    try {
+      // Delete notification (idempotent)
+      await context.services.notificationService.deleteNotification({
+        userId: context.userId,
+        notificationId: args.id,
+      });
+
+      return { success: true };
+    } catch (error) {
+      // Handle specific errors
+      if (error instanceof Error) {
+        if (error.message.includes('Unauthorized')) {
+          throw new GraphQLError(error.message, {
+            extensions: { code: 'FORBIDDEN' },
+          });
+        }
+      }
+      // For idempotent behavior, still return success for other errors
+      return { success: true };
+    }
+  },
+
+  /**
+   * Mark feed items as read
+   * Requires authentication
+   */
+  markFeedItemsAsRead: async (_parent, args, context) => {
+    if (!context.userId) {
+      throw new GraphQLError('Authentication required', {
+        extensions: { code: 'UNAUTHENTICATED' },
+      });
+    }
+
+    try {
+      // Mark feed items as read
+      const result = await context.services.feedService.markFeedItemsAsRead({
+        userId: context.userId,
+        postIds: args.postIds,
+      });
+
+      return {
+        updatedCount: result.updatedCount,
+      };
+    } catch (error) {
+      // Handle validation errors
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid UUID')) {
+          throw new GraphQLError(error.message, {
+            extensions: { code: 'BAD_REQUEST' },
+          });
+        }
+      }
+      // Re-throw as internal server error
+      throw new GraphQLError('Failed to mark feed items as read', {
+        extensions: { code: 'INTERNAL_SERVER_ERROR' },
+      });
+    }
+  },
 };

@@ -132,6 +132,7 @@ describe('Service Factory', () => {
         'feedService',
         'followService',
         'likeService',
+        'notificationService',
         'postService',
         'profileService',
       ]);
