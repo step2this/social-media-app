@@ -27,10 +27,12 @@
     "@aws-sdk/lib-dynamodb": "^3.0.0",
     "@aws-sdk/s3-request-presigner": "^3.894.0",
     "@aws-sdk/util-dynamodb": "^3.908.0",
+    "@social-media-app/auction-dal": "workspace:*",
     "@social-media-app/auth-utils": "workspace:*",
     "@social-media-app/aws-utils": "workspace:*",
     "@social-media-app/dal": "workspace:*",
     "@social-media-app/shared": "workspace:*",
+    "pg": "^8.11.3",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "ioredis": "^5.8.1",
@@ -40,12 +42,15 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@apollo/server": "^4.12.2",
     "@types/aws-lambda": "^8.10.0",
     "@types/lodash-es": "^4.17.0",
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.10.9",
     "aws-lambda": "^1.0.7",
     "aws-sdk-client-mock": "^4.1.0",
     "dotenv": "^17.2.3",
+    "graphql": "^16.11.0",
     "typescript": "^5.3.0",
     "vitest": "^1.0.0"
   }

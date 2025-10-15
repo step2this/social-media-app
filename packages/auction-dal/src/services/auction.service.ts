@@ -7,7 +7,7 @@
  * @module auction-dal/services
  */
 
-import { Pool, PoolClient } from 'pg';
+import { Pool } from 'pg';
 import type {
   Auction,
   Bid,
