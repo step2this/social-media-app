@@ -12,6 +12,7 @@ import { AuthLambdas } from '../constructs/auth-lambdas.js';
 import { ProfileLambdas } from '../constructs/profile-lambdas.js';
 import { LikeLambdas } from '../constructs/like-lambdas.js';
 import { FollowLambdas } from '../constructs/follow-lambdas.js';
+import { GraphQLLambda } from '../constructs/graphql-lambda.js';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as kinesis from 'aws-cdk-lib/aws-kinesis';
 import { DynamoEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
@@ -184,6 +185,14 @@ export class ApiStack extends Stack {
         ]
       })
     );
+
+    // Create GraphQL Lambda function
+    const graphqlLambda = new GraphQLLambda(this, 'GraphQLLambda', {
+      environment: props.environment,
+      table: props.table,
+      mediaBucket: props.mediaBucket,
+      cloudFrontDomain: props.cloudFrontDomain
+    });
 
     // Create HTTP API Gateway
     const httpApi = new apigateway.HttpApi(this, 'HttpApi', {
@@ -424,6 +433,17 @@ export class ApiStack extends Stack {
       )
     });
 
+    // GraphQL endpoint
+    // Supports both POST (for queries/mutations) and GET (for GraphQL Playground in dev)
+    httpApi.addRoutes({
+      path: '/graphql',
+      methods: [apigateway.HttpMethod.POST, apigateway.HttpMethod.GET],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration(
+        'GraphQLIntegration',
+        graphqlLambda.function
+      )
+    });
+
     // Add explicit OPTIONS route for CORS debugging
     // This helps with preflight request debugging and ensures proper CORS headers
     httpApi.addRoutes({
@@ -440,6 +460,13 @@ export class ApiStack extends Stack {
     new CfnOutput(this, 'ApiUrl', {
       value: this.apiUrl,
       description: 'HTTP API Gateway URL'
+    });
+
+    // Output the GraphQL endpoint
+    new CfnOutput(this, 'GraphQLEndpoint', {
+      value: `${httpApi.apiEndpoint}/graphql`,
+      description: 'GraphQL API endpoint',
+      exportName: `${props.environment}-graphql-endpoint`
     });
   }
 }
