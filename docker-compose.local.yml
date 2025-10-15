@@ -70,6 +70,26 @@ services:
     networks:
       - tamafriends-local
 
+  postgres:
+    image: postgres:15-alpine
+    container_name: tamafriends-postgres-local
+    environment:
+      POSTGRES_DB: auctions_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./packages/auction-dal/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - tamafriends-local
+
 networks:
   tamafriends-local:
     driver: bridge
@@ -77,4 +97,6 @@ networks:
 
 volumes:
   localstack-data:
+    driver: local
+  postgres-data:
     driver: local
