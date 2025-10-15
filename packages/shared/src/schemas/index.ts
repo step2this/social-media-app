@@ -10,3 +10,4 @@ export * from './follow.schema.js';
 export * from './comment.schema.js';
 export * from './notification.schema.js';
 export * from './kinesis-events.schema.js';
+export * from './auction.schema.js';
