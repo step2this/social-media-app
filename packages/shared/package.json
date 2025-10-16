@@ -10,6 +10,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./test-utils": {
+      "types": "./dist/test-utils/index.d.ts",
+      "import": "./dist/test-utils/index.js"
     }
   },
   "scripts": {
@@ -23,9 +27,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.911.0",
+    "@aws-sdk/s3-request-presigner": "^3.911.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
     "@types/node": "^22.0.0",
     "typescript": "^5.3.0",
     "vitest": "^1.0.0"
