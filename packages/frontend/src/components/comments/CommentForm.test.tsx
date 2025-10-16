@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CommentForm } from './CommentForm';
 import { commentService } from '../../services/commentService';
+import { createMockComment } from '../../test-utils/mock-factories';
 
 // Mock commentService
 vi.mock('../../services/commentService', () => ({
@@ -125,15 +126,11 @@ describe('CommentForm', () => {
     it('should disable submit button during submission', async () => {
       const user = userEvent.setup();
       const mockComment = {
-        comment: {
+        comment: createMockComment({
           id: 'comment-123',
           postId: mockPostId,
-          userId: 'user-123',
-          userHandle: 'testuser',
-          content: 'Great post!',
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z'
-        },
+          content: 'Great post!'
+        }),
         commentsCount: 1
       };
 
@@ -167,15 +164,11 @@ describe('CommentForm', () => {
     it('should call commentService.createComment on submit', async () => {
       const user = userEvent.setup();
       const mockComment = {
-        comment: {
+        comment: createMockComment({
           id: 'comment-123',
           postId: mockPostId,
-          userId: 'user-123',
-          userHandle: 'testuser',
-          content: 'Great post!',
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z'
-        },
+          content: 'Great post!'
+        }),
         commentsCount: 1
       };
 
@@ -197,15 +190,11 @@ describe('CommentForm', () => {
     it('should show loading state during submission', async () => {
       const user = userEvent.setup();
       const mockComment = {
-        comment: {
+        comment: createMockComment({
           id: 'comment-123',
           postId: mockPostId,
-          userId: 'user-123',
-          userHandle: 'testuser',
-          content: 'Great post!',
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z'
-        },
+          content: 'Great post!'
+        }),
         commentsCount: 1
       };
 
@@ -232,15 +221,11 @@ describe('CommentForm', () => {
     it('should call onCommentCreated callback after success', async () => {
       const user = userEvent.setup();
       const mockComment = {
-        comment: {
+        comment: createMockComment({
           id: 'comment-123',
           postId: mockPostId,
-          userId: 'user-123',
-          userHandle: 'testuser',
-          content: 'Great post!',
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z'
-        },
+          content: 'Great post!'
+        }),
         commentsCount: 1
       };
 
@@ -262,15 +247,11 @@ describe('CommentForm', () => {
     it('should clear input after successful submit', async () => {
       const user = userEvent.setup();
       const mockComment = {
-        comment: {
+        comment: createMockComment({
           id: 'comment-123',
           postId: mockPostId,
-          userId: 'user-123',
-          userHandle: 'testuser',
-          content: 'Great post!',
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z'
-        },
+          content: 'Great post!'
+        }),
         commentsCount: 1
       };
 
@@ -294,15 +275,11 @@ describe('CommentForm', () => {
     it('should reset character counter after successful submit', async () => {
       const user = userEvent.setup();
       const mockComment = {
-        comment: {
+        comment: createMockComment({
           id: 'comment-123',
           postId: mockPostId,
-          userId: 'user-123',
-          userHandle: 'testuser',
-          content: 'Great post!',
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z'
-        },
+          content: 'Great post!'
+        }),
         commentsCount: 1
       };
 
@@ -416,15 +393,11 @@ describe('CommentForm', () => {
     it('should be keyboard accessible', async () => {
       const user = userEvent.setup();
       const mockComment = {
-        comment: {
+        comment: createMockComment({
           id: 'comment-123',
           postId: mockPostId,
-          userId: 'user-123',
-          userHandle: 'testuser',
-          content: 'Great post!',
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z'
-        },
+          content: 'Great post!'
+        }),
         commentsCount: 1
       };
 
@@ -466,15 +439,11 @@ describe('CommentForm', () => {
     it('should trim whitespace from comment content', async () => {
       const user = userEvent.setup();
       const mockComment = {
-        comment: {
+        comment: createMockComment({
           id: 'comment-123',
           postId: mockPostId,
-          userId: 'user-123',
-          userHandle: 'testuser',
-          content: 'Great post!',
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z'
-        },
+          content: 'Great post!'
+        }),
         commentsCount: 1
       };
 

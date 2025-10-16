@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ProfileDisplay } from './ProfileDisplay';
-import type { PublicProfile } from '@social-media-app/shared';
+import { createMockPublicProfile, createMockProfile } from '../../test-utils/mock-factories';
 
 // Mock window.matchMedia for jsdom environment
 const mockMatchMedia = vi.fn().mockImplementation(query => ({
@@ -29,7 +29,7 @@ describe('ProfileDisplay Component - Wireframe Implementation', () => {
     vi.clearAllMocks();
   });
 
-  const mockPublicProfile: PublicProfile = {
+  const mockPublicProfile = createMockPublicProfile({
     id: 'user-123',
     handle: 'johndoe',
     username: 'johndoe',
@@ -41,14 +41,24 @@ describe('ProfileDisplay Component - Wireframe Implementation', () => {
     followersCount: 150,
     followingCount: 75,
     createdAt: '2024-01-15T10:30:00.000Z'
-  };
+  });
 
-  const mockUserProfile = {
-    ...mockPublicProfile,
+  const mockUserProfile = createMockProfile({
+    id: 'user-123',
+    handle: 'johndoe',
+    username: 'johndoe',
+    fullName: 'John Doe',
+    bio: 'Software developer passionate about clean code',
+    profilePictureUrl: 'https://example.com/avatar.jpg',
+    profilePictureThumbnailUrl: 'https://example.com/avatar-thumb.jpg',
+    postsCount: 42,
+    followersCount: 150,
+    followingCount: 75,
+    createdAt: '2024-01-15T10:30:00.000Z',
     email: 'john@example.com',
     emailVerified: true,
     updatedAt: '2024-01-20T15:45:00.000Z'
-  };
+  });
 
   describe('Wireframe Layout Structure', () => {
     it('should render with wireframe-compliant three-section layout', () => {
@@ -134,12 +144,11 @@ describe('ProfileDisplay Component - Wireframe Implementation', () => {
     });
 
     it('should format large numbers with K/M notation for stats display', () => {
-      const profileWithLargeStats = {
-        ...mockPublicProfile,
+      const profileWithLargeStats = createMockPublicProfile({
         followersCount: 1200,
         followingCount: 75000,
         postsCount: 1500000
-      };
+      });
 
       render(<ProfileDisplay profile={profileWithLargeStats} />);
 
@@ -339,11 +348,13 @@ describe('ProfileDisplay Component - Wireframe Implementation', () => {
 
   describe('Error Handling', () => {
     it('should handle missing profile data gracefully', () => {
-      const incompleteProfile = {
+      const incompleteProfile = createMockPublicProfile({
         id: 'user-123',
         handle: 'incomplete',
-        username: 'incomplete'
-      };
+        username: 'incomplete',
+        fullName: undefined,
+        bio: undefined
+      });
 
       render(<ProfileDisplay profile={incompleteProfile as any} />);
 
@@ -357,11 +368,10 @@ describe('ProfileDisplay Component - Wireframe Implementation', () => {
     });
 
     it('should display placeholder avatar when no profile picture', () => {
-      const profileWithoutAvatar = {
-        ...mockPublicProfile,
+      const profileWithoutAvatar = createMockPublicProfile({
         profilePictureUrl: undefined,
         profilePictureThumbnailUrl: undefined
-      };
+      });
 
       render(<ProfileDisplay profile={profileWithoutAvatar} />);
 

@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { HomePage } from './HomePage';
 import * as feedService from '../services/feedService';
 import type { FeedPostItem } from '@social-media-app/shared';
+import { createMockFeedPostItem } from '../test-utils/mock-factories';
 
 // Mock feedService
 vi.mock('../services/feedService', () => ({
@@ -29,34 +30,28 @@ vi.mock('../components/posts/PostCard', () => ({
 }));
 
 const mockFeedPosts: FeedPostItem[] = [
-  {
+  createMockFeedPostItem({
     id: 'post-1',
     userId: 'user-1',
     userHandle: 'user1',
     authorHandle: 'user1',
     caption: 'First post',
-    tags: ['test'],
-    imageUrl: 'https://example.com/1.jpg',
     likesCount: 10,
     commentsCount: 2,
     createdAt: '2025-10-09T10:00:00Z',
-    updatedAt: '2025-10-09T10:00:00Z',
     isLiked: false
-  },
-  {
+  }),
+  createMockFeedPostItem({
     id: 'post-2',
     userId: 'user-2',
     userHandle: 'user2',
     authorHandle: 'user2',
     caption: 'Second post',
-    tags: ['vitest'],
-    imageUrl: 'https://example.com/2.jpg',
     likesCount: 5,
     commentsCount: 1,
     createdAt: '2025-10-09T11:00:00Z',
-    updatedAt: '2025-10-09T11:00:00Z',
     isLiked: true
-  }
+  })
 ];
 
 const renderHomePage = () => render(
@@ -226,48 +221,39 @@ describe('HomePage', () => {
     it('should preserve unread posts during optimistic updates', async () => {
       const fivePosts: FeedPostItem[] = [
         ...mockFeedPosts,
-        {
+        createMockFeedPostItem({
           id: 'post-3',
           userId: 'user-3',
           userHandle: 'user3',
           authorHandle: 'user3',
           caption: 'Third post',
-          tags: [],
-          imageUrl: 'https://example.com/3.jpg',
           likesCount: 3,
           commentsCount: 0,
           createdAt: '2025-10-09T12:00:00Z',
-          updatedAt: '2025-10-09T12:00:00Z',
           isLiked: false
-        },
-        {
+        }),
+        createMockFeedPostItem({
           id: 'post-4',
           userId: 'user-4',
           userHandle: 'user4',
           authorHandle: 'user4',
           caption: 'Fourth post',
-          tags: [],
-          imageUrl: 'https://example.com/4.jpg',
           likesCount: 7,
           commentsCount: 2,
           createdAt: '2025-10-09T13:00:00Z',
-          updatedAt: '2025-10-09T13:00:00Z',
           isLiked: false
-        },
-        {
+        }),
+        createMockFeedPostItem({
           id: 'post-5',
           userId: 'user-5',
           userHandle: 'user5',
           authorHandle: 'user5',
           caption: 'Fifth post',
-          tags: [],
-          imageUrl: 'https://example.com/5.jpg',
           likesCount: 12,
           commentsCount: 4,
           createdAt: '2025-10-09T14:00:00Z',
-          updatedAt: '2025-10-09T14:00:00Z',
           isLiked: false
-        }
+        })
       ];
 
       vi.mocked(feedService.feedService.markPostsAsRead).mockResolvedValue({

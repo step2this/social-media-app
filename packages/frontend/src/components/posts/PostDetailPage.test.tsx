@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { PostDetailPage } from './PostDetailPage.js';
 import * as postService from '../../services/postService.js';
 import * as useAuthModule from '../../hooks/useAuth.js';
+import { createMockPost } from '../../test-utils/mock-factories.js';
 import type { Post } from '@social-media-app/shared';
 
 // Mock the postService
@@ -45,7 +46,7 @@ vi.mock('../../hooks/useAuth', () => ({
   }))
 }));
 
-const mockPost: Post = {
+const mockPost: Post = createMockPost({
   id: 'post-123',
   userId: 'user-123',
   userHandle: 'testuser',
@@ -55,10 +56,9 @@ const mockPost: Post = {
   tags: ['test', 'post', 'tamagotchi'],
   likesCount: 42,
   commentsCount: 7,
-  isPublic: true,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z'
-};
+});
 
 const renderPostDetailPage = (postId = 'post-123') => {
   return render(

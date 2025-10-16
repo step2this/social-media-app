@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react';
 import { PostCard } from './PostCard';
 import type { Post } from '@social-media-app/shared';
 import { renderWithRouter } from '../../test-utils/render-helpers';
+import { createMockPost } from '../../test-utils/mock-factories';
 
 // Mock the hooks and components
 vi.mock('../../hooks/useLike', () => ({
@@ -33,20 +34,18 @@ vi.mock('../common/MaterialIcon', () => ({
 }));
 
 describe('PostCard', () => {
-  const mockPost: Post = {
+  const mockPost = createMockPost({
     id: 'post-123',
     userId: 'user-123',
     userHandle: 'testuser',
-    authorHandle: 'testuser',
     caption: 'Test caption for post',
     tags: ['test', 'vitest'],
     imageUrl: 'https://example.com/image.jpg',
     likesCount: 42,
     commentsCount: 5,
     createdAt: '2025-10-09T10:00:00Z',
-    updatedAt: '2025-10-09T10:00:00Z',
-    isLiked: false
-  };
+    updatedAt: '2025-10-09T10:00:00Z'
+  }) as Post & { isLiked?: boolean };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -124,14 +123,18 @@ describe('PostCard', () => {
 
   describe('Optional Fields', () => {
     it('should handle missing caption', () => {
-      const postWithoutCaption = { ...mockPost, caption: undefined };
+      const postWithoutCaption = createMockPost({
+        caption: undefined
+      });
       renderWithRouter(<PostCard post={postWithoutCaption} />);
 
       expect(screen.queryByText('Test caption')).not.toBeInTheDocument();
     });
 
     it('should handle missing tags', () => {
-      const postWithoutTags = { ...mockPost, tags: [] };
+      const postWithoutTags = createMockPost({
+        tags: []
+      });
       renderWithRouter(<PostCard post={postWithoutTags} />);
 
       expect(screen.queryByText(/#/)).not.toBeInTheDocument();

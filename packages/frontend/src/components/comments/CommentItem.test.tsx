@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { CommentItem } from './CommentItem';
 import { commentService } from '../../services/commentService';
 import { renderWithRouter } from '../../test-utils/render-helpers';
+import { createMockComment } from '../../test-utils/mock-factories';
 import type { Comment } from '@social-media-app/shared';
 
 // Mock commentService
@@ -14,7 +15,7 @@ vi.mock('../../services/commentService', () => ({
 }));
 
 describe('CommentItem', () => {
-  const mockComment: Comment = {
+  const mockComment: Comment = createMockComment({
     id: 'comment-123',
     postId: 'post-123',
     userId: 'user-123',
@@ -22,7 +23,7 @@ describe('CommentItem', () => {
     content: 'This is a great post!',
     createdAt: '2024-01-01T12:00:00.000Z',
     updatedAt: '2024-01-01T12:00:00.000Z'
-  };
+  });
 
   const mockOnCommentDeleted = vi.fn();
 
@@ -318,10 +319,9 @@ describe('CommentItem', () => {
 
   describe('Relative Time Display', () => {
     it('should show "just now" for recent comments', () => {
-      const recentComment = {
-        ...mockComment,
+      const recentComment = createMockComment({
         createdAt: new Date().toISOString()
-      };
+      });
 
       renderWithRouter(<CommentItem comment={recentComment} />);
 
@@ -331,10 +331,9 @@ describe('CommentItem', () => {
 
     it('should show minutes for older comments', () => {
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      const olderComment = {
-        ...mockComment,
+      const olderComment = createMockComment({
         createdAt: fiveMinutesAgo
-      };
+      });
 
       renderWithRouter(<CommentItem comment={olderComment} />);
 
@@ -398,10 +397,9 @@ describe('CommentItem', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty content gracefully', () => {
-      const emptyComment = {
-        ...mockComment,
+      const emptyComment = createMockComment({
         content: ''
-      };
+      });
 
       renderWithRouter(<CommentItem comment={emptyComment} />);
 
@@ -411,10 +409,9 @@ describe('CommentItem', () => {
     });
 
     it('should handle long content with line breaks', () => {
-      const longComment = {
-        ...mockComment,
+      const longComment = createMockComment({
         content: 'Line 1\nLine 2\nLine 3\n'.repeat(10)
-      };
+      });
 
       renderWithRouter(<CommentItem comment={longComment} />);
 
@@ -423,10 +420,9 @@ describe('CommentItem', () => {
     });
 
     it('should handle special characters in content', () => {
-      const specialComment = {
-        ...mockComment,
+      const specialComment = createMockComment({
         content: 'Hello <script>alert("xss")</script> & "quotes" & \'apostrophes\''
-      };
+      });
 
       renderWithRouter(<CommentItem comment={specialComment} />);
 
@@ -436,10 +432,9 @@ describe('CommentItem', () => {
     });
 
     it('should handle missing userHandle gracefully', () => {
-      const noHandleComment = {
-        ...mockComment,
+      const noHandleComment = createMockComment({
         userHandle: ''
-      };
+      });
 
       renderWithRouter(<CommentItem comment={noHandleComment} />);
 

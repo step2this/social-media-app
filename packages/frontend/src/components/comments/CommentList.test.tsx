@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { CommentList } from './CommentList';
 import { commentService } from '../../services/commentService';
 import { renderWithRouter } from '../../test-utils/render-helpers';
+import { createMockComment } from '../../test-utils/mock-factories';
 import type { Comment } from '@social-media-app/shared';
 
 // Mock commentService
@@ -21,7 +22,7 @@ describe('CommentList', () => {
   const mockCurrentUserId = 'user-123';
 
   const mockComments: Comment[] = [
-    {
+    createMockComment({
       id: 'comment-1',
       postId: mockPostId,
       userId: 'user-123',
@@ -29,8 +30,8 @@ describe('CommentList', () => {
       content: 'First comment',
       createdAt: '2024-01-01T12:00:00.000Z',
       updatedAt: '2024-01-01T12:00:00.000Z'
-    },
-    {
+    }),
+    createMockComment({
       id: 'comment-2',
       postId: mockPostId,
       userId: 'user-456',
@@ -38,8 +39,8 @@ describe('CommentList', () => {
       content: 'Second comment',
       createdAt: '2024-01-01T12:05:00.000Z',
       updatedAt: '2024-01-01T12:05:00.000Z'
-    },
-    {
+    }),
+    createMockComment({
       id: 'comment-3',
       postId: mockPostId,
       userId: 'user-789',
@@ -47,7 +48,7 @@ describe('CommentList', () => {
       content: 'Third comment',
       createdAt: '2024-01-01T12:10:00.000Z',
       updatedAt: '2024-01-01T12:10:00.000Z'
-    }
+    })
   ];
 
   beforeEach(() => {
@@ -219,7 +220,7 @@ describe('CommentList', () => {
         nextCursor: null
       });
 
-      const newComment: Comment = {
+      const newComment: Comment = createMockComment({
         id: 'comment-new',
         postId: mockPostId,
         userId: mockCurrentUserId,
@@ -227,7 +228,7 @@ describe('CommentList', () => {
         content: 'New comment!',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      };
+      });
 
       vi.mocked(commentService.createComment).mockResolvedValue({
         comment: newComment,
@@ -264,7 +265,7 @@ describe('CommentList', () => {
         nextCursor: null
       });
 
-      const newComment: Comment = {
+      const newComment: Comment = createMockComment({
         id: 'comment-new',
         postId: mockPostId,
         userId: mockCurrentUserId,
@@ -272,7 +273,7 @@ describe('CommentList', () => {
         content: 'Newest comment!',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      };
+      });
 
       vi.mocked(commentService.createComment).mockResolvedValue({
         comment: newComment,
@@ -456,15 +457,17 @@ describe('CommentList', () => {
     });
 
     it('should handle very long comment list', async () => {
-      const manyComments = Array.from({ length: 50 }, (_, i) => ({
-        id: `comment-${i}`,
-        postId: mockPostId,
-        userId: `user-${i}`,
-        userHandle: `user${i}`,
-        content: `Comment number ${i}`,
-        createdAt: new Date(Date.now() - i * 1000).toISOString(),
-        updatedAt: new Date(Date.now() - i * 1000).toISOString()
-      }));
+      const manyComments = Array.from({ length: 50 }, (_, i) =>
+        createMockComment({
+          id: `comment-${i}`,
+          postId: mockPostId,
+          userId: `user-${i}`,
+          userHandle: `user${i}`,
+          content: `Comment number ${i}`,
+          createdAt: new Date(Date.now() - i * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - i * 1000).toISOString()
+        })
+      );
 
       vi.mocked(commentService.getComments).mockResolvedValue({
         comments: manyComments,

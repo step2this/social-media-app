@@ -5,6 +5,7 @@ import { MyProfilePage } from './MyProfilePage';
 import { useAuth } from '../../hooks/useAuth';
 import { profileService } from '../../services/profileService';
 import { renderWithRouter } from '../../test-utils/render-helpers';
+import { createMockProfile, createMockUser } from '../../test-utils/mock-factories';
 
 // Mock dependencies
 vi.mock('../../hooks/useAuth');
@@ -18,34 +19,24 @@ vi.mock('../../services/profileService', () => ({
 const mockUseAuth = useAuth as MockedFunction<typeof useAuth>;
 
 describe('MyProfilePage Component', () => {
-  const mockProfile = {
+  const mockProfile = createMockProfile({
     id: 'user-123',
-    email: 'test@example.com',
-    username: 'testuser',
-    emailVerified: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-    handle: 'testuser',
-    fullName: 'Test User',
-    bio: 'Test bio',
-    profilePictureUrl: undefined,
-    profilePictureThumbnailUrl: undefined,
     postsCount: 5,
     followersCount: 10,
     followingCount: 3
-  };
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseAuth.mockReturnValue({
-      user: {
+      user: createMockUser({
         id: mockProfile.id,
         email: mockProfile.email,
         username: mockProfile.username,
         emailVerified: mockProfile.emailVerified,
         createdAt: mockProfile.createdAt,
         updatedAt: mockProfile.updatedAt
-      },
+      }),
       tokens: { accessToken: 'test-token', refreshToken: 'test-refresh', expiresIn: 3600 },
       isAuthenticated: true,
       isLoading: false,
@@ -93,7 +84,11 @@ describe('MyProfilePage Component', () => {
     });
 
     it('should display default avatar when no profile picture', async () => {
-      const profileWithoutAvatar = { ...mockProfile, profilePictureUrl: undefined };
+      const profileWithoutAvatar = createMockProfile({
+        ...mockProfile,
+        profilePictureUrl: undefined,
+        profilePictureThumbnailUrl: undefined
+      });
       vi.mocked(profileService.getCurrentProfile).mockResolvedValue(profileWithoutAvatar);
 
       renderWithRouter(<MyProfilePage />);
@@ -107,11 +102,11 @@ describe('MyProfilePage Component', () => {
     });
 
     it('should display profile picture when available', async () => {
-      const profileWithAvatar = {
+      const profileWithAvatar = createMockProfile({
         ...mockProfile,
         profilePictureUrl: 'https://example.com/avatar.jpg',
         profilePictureThumbnailUrl: 'https://example.com/avatar-thumb.jpg'
-      };
+      });
       vi.mocked(profileService.getCurrentProfile).mockResolvedValue(profileWithAvatar);
 
       renderWithRouter(<MyProfilePage />);
@@ -193,11 +188,13 @@ describe('MyProfilePage Component', () => {
 
     it('should update profile when form is submitted', async () => {
       vi.mocked(profileService.getCurrentProfile).mockResolvedValue(mockProfile);
-      vi.mocked(profileService.updateProfile).mockResolvedValue({
-        ...mockProfile,
-        fullName: 'Updated Name',
-        bio: 'Updated bio'
-      });
+      vi.mocked(profileService.updateProfile).mockResolvedValue(
+        createMockProfile({
+          ...mockProfile,
+          fullName: 'Updated Name',
+          bio: 'Updated bio'
+        })
+      );
 
       const user = userEvent.setup();
       renderWithRouter(<MyProfilePage />);
