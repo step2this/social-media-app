@@ -65,6 +65,14 @@ echo "4️⃣  Starting frontend server..."
 pnpm --filter @social-media-app/frontend dev &
 FRONTEND_PID=$!
 
+# Give frontend a moment to start
+sleep 2
+
+# Step 5: Start GraphQL server
+echo "5️⃣  Starting GraphQL server..."
+pnpm --filter @social-media-app/graphql-server start &
+GRAPHQL_PID=$!
+
 echo ""
 echo "🎉 Development environment started!"
 echo ""
@@ -72,6 +80,7 @@ echo "📊 Services:"
 echo "   LocalStack:  http://localhost:4566"
 echo "   Backend API: http://localhost:3001"
 echo "   Frontend:    http://localhost:3000"
+echo "   GraphQL API: http://localhost:4000/graphql"
 echo ""
 echo "🔄 Stream Processor: Active (polls DynamoDB Streams every 2s)"
 echo "📈 Profile stats will update automatically"
@@ -79,4 +88,4 @@ echo ""
 echo "⏹️  To stop: pnpm servers:stop"
 
 # Wait for background processes
-wait $BACKEND_PID $FRONTEND_PID
+wait $BACKEND_PID $FRONTEND_PID $GRAPHQL_PID
