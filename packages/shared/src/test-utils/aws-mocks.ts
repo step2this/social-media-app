@@ -10,7 +10,11 @@
  */
 
 import { vi } from 'vitest';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
+import type {
+  APIGatewayProxyEventV2,
+  DynamoDBRecord,
+  DynamoDBStreamEvent
+} from 'aws-lambda';
 
 /**
  * Configuration options for the mock DynamoDB client
@@ -1033,4 +1037,313 @@ export const isConditionalCheckFailedException = (error: unknown): boolean => {
     (error.name === 'ConditionalCheckFailedException' ||
      (error as any).__type === 'ConditionalCheckFailedException')
   );
+};
+
+/**
+ * Convert plain JavaScript object to DynamoDB AttributeValue format
+ *
+ * This utility converts plain JavaScript objects into the AttributeValue format
+ * used by DynamoDB Streams. It supports all common data types including strings,
+ * numbers, booleans, null, arrays, and nested objects.
+ *
+ * Supported type mappings:
+ * - `string` → `{ S: string }`
+ * - `number` → `{ N: string }`
+ * - `boolean` → `{ BOOL: boolean }`
+ * - `null/undefined` → `{ NULL: true }`
+ * - `array` → `{ L: AttributeValue[] }`
+ * - `object` → `{ M: { [key: string]: AttributeValue } }`
+ *
+ * @param obj - Plain JavaScript object to convert
+ * @returns Object with DynamoDB AttributeValue format
+ *
+ * @example
+ * ```typescript
+ * import { convertToAttributeValue } from '@social-media-app/shared/test-utils/aws-mocks';
+ *
+ * const data = {
+ *   id: 'user-123',
+ *   age: 25,
+ *   active: true,
+ *   tags: ['developer', 'admin'],
+ *   metadata: { role: 'admin' }
+ * };
+ *
+ * const attributeValue = convertToAttributeValue(data);
+ * // {
+ * //   id: { S: 'user-123' },
+ * //   age: { N: '25' },
+ * //   active: { BOOL: true },
+ * //   tags: { L: [{ S: 'developer' }, { S: 'admin' }] },
+ * //   metadata: { M: { role: { S: 'admin' } } }
+ * // }
+ * ```
+ */
+export const convertToAttributeValue = (obj: Record<string, any>): Record<string, any> => {
+  const result: Record<string, any> = {};
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === null || value === undefined) {
+      result[key] = { NULL: true };
+    } else if (typeof value === 'string') {
+      result[key] = { S: value };
+    } else if (typeof value === 'number') {
+      result[key] = { N: String(value) };
+    } else if (typeof value === 'boolean') {
+      result[key] = { BOOL: value };
+    } else if (Array.isArray(value)) {
+      // Handle arrays (L for list)
+      result[key] = {
+        L: value.map(item => {
+          if (typeof item === 'string') return { S: item };
+          if (typeof item === 'number') return { N: String(item) };
+          if (typeof item === 'boolean') return { BOOL: item };
+          if (item === null || item === undefined) return { NULL: true };
+          if (typeof item === 'object') return { M: convertToAttributeValue(item) };
+          return { NULL: true };
+        })
+      };
+    } else if (typeof value === 'object') {
+      // Handle nested objects (M for map)
+      result[key] = { M: convertToAttributeValue(value) };
+    }
+  }
+
+  return result;
+};
+
+/**
+ * Configuration for creating a DynamoDB Stream record
+ *
+ * Represents the configuration options for a single record in a DynamoDB Stream event.
+ * Records represent changes to items in a DynamoDB table (INSERT, MODIFY, or REMOVE operations).
+ */
+export interface DynamoDBStreamRecordConfig {
+  /**
+   * Type of DynamoDB operation that triggered this record
+   * - INSERT: New item was added
+   * - MODIFY: Existing item was updated
+   * - REMOVE: Item was deleted
+   */
+  readonly eventName: 'INSERT' | 'MODIFY' | 'REMOVE';
+
+  /**
+   * Primary key (PK/SK) of the item that changed
+   * Will be automatically converted to DynamoDB AttributeValue format
+   * @default { PK: 'TEST#id', SK: 'ITEM#id' }
+   */
+  readonly keys?: Record<string, any>;
+
+  /**
+   * New image of the item after the change (for INSERT and MODIFY)
+   * Will be automatically converted to DynamoDB AttributeValue format
+   */
+  readonly newImage?: Record<string, any>;
+
+  /**
+   * Old image of the item before the change (for MODIFY and REMOVE)
+   * Will be automatically converted to DynamoDB AttributeValue format
+   */
+  readonly oldImage?: Record<string, any>;
+
+  /**
+   * Unique identifier for this event
+   * @default 'test-event-id'
+   */
+  readonly eventID?: string;
+
+  /**
+   * Sequence number for ordering events
+   * @default '123'
+   */
+  readonly sequenceNumber?: string;
+}
+
+/**
+ * Create a mock DynamoDB Stream record
+ *
+ * This function creates a single DynamoDB Stream record that represents a change
+ * to an item in a DynamoDB table. Stream records are the building blocks of
+ * DynamoDB Stream events and contain the old/new images of changed items.
+ *
+ * The function automatically converts plain JavaScript objects to DynamoDB's
+ * AttributeValue format, so you can pass normal objects without worrying about
+ * the wire format.
+ *
+ * @param config - Configuration for the stream record
+ * @returns A complete DynamoDBRecord object in the format expected by Lambda handlers
+ *
+ * @example
+ * ```typescript
+ * import { createMockDynamoDBStreamRecord } from '@social-media-app/shared/test-utils/aws-mocks';
+ *
+ * // INSERT event (new item created)
+ * const insertRecord = createMockDynamoDBStreamRecord({
+ *   eventName: 'INSERT',
+ *   keys: { PK: 'USER#123', SK: 'PROFILE' },
+ *   newImage: {
+ *     PK: 'USER#123',
+ *     SK: 'PROFILE',
+ *     username: 'john',
+ *     email: 'john@example.com'
+ *   }
+ * });
+ *
+ * // MODIFY event (item updated)
+ * const modifyRecord = createMockDynamoDBStreamRecord({
+ *   eventName: 'MODIFY',
+ *   keys: { PK: 'POST#456', SK: 'METADATA' },
+ *   oldImage: {
+ *     likesCount: 10,
+ *     commentsCount: 5
+ *   },
+ *   newImage: {
+ *     likesCount: 11,
+ *     commentsCount: 5
+ *   }
+ * });
+ *
+ * // REMOVE event (item deleted)
+ * const removeRecord = createMockDynamoDBStreamRecord({
+ *   eventName: 'REMOVE',
+ *   keys: { PK: 'POST#789', SK: 'METADATA' },
+ *   oldImage: {
+ *     PK: 'POST#789',
+ *     SK: 'METADATA',
+ *     likesCount: 5
+ *   }
+ * });
+ * ```
+ */
+export const createMockDynamoDBStreamRecord = (
+  config: DynamoDBStreamRecordConfig
+): DynamoDBRecord => {
+  const {
+    eventName,
+    keys = { PK: 'TEST#id', SK: 'ITEM#id' },
+    newImage,
+    oldImage,
+    eventID = 'test-event-id',
+    sequenceNumber = '123'
+  } = config;
+
+  return {
+    eventID,
+    eventName,
+    eventVersion: '1.1',
+    eventSource: 'aws:dynamodb',
+    awsRegion: 'us-east-1',
+    dynamodb: {
+      Keys: convertToAttributeValue(keys),
+      NewImage: newImage ? convertToAttributeValue(newImage) : undefined,
+      OldImage: oldImage ? convertToAttributeValue(oldImage) : undefined,
+      SequenceNumber: sequenceNumber,
+      SizeBytes: 100,
+      StreamViewType: 'NEW_AND_OLD_IMAGES'
+    }
+  };
+};
+
+/**
+ * Configuration for creating a DynamoDB Stream event
+ *
+ * Represents the configuration options for a complete DynamoDB Stream event
+ * that can contain multiple records (batch processing).
+ */
+export interface DynamoDBStreamEventConfig {
+  /**
+   * Array of record configurations to include in the event
+   * Each record represents a single change to a DynamoDB item
+   * @default []
+   */
+  readonly records?: readonly DynamoDBStreamRecordConfig[];
+
+  /**
+   * ARN of the DynamoDB Stream source
+   * @default 'arn:aws:dynamodb:us-east-1:123456789012:table/test-table/stream/2024-01-01T00:00:00.000'
+   */
+  readonly eventSourceARN?: string;
+}
+
+/**
+ * Create a mock DynamoDB Stream event
+ *
+ * This function creates a complete DynamoDB Stream event that can contain
+ * multiple records. DynamoDB Streams invoke Lambda functions with batches
+ * of records (up to 1000 per invocation), so this function allows you to
+ * test batch processing scenarios.
+ *
+ * The function is useful for testing Lambda handlers that process DynamoDB
+ * Stream events, such as:
+ * - Updating counters (likes, comments, etc.)
+ * - Creating notifications based on changes
+ * - Syncing data to other systems
+ * - Maintaining denormalized views
+ *
+ * @param config - Configuration for the stream event
+ * @returns A complete DynamoDBStreamEvent object ready to be passed to Lambda handlers
+ *
+ * @example
+ * ```typescript
+ * import { createMockDynamoDBStreamEvent } from '@social-media-app/shared/test-utils/aws-mocks';
+ *
+ * // Single record event (like counter update)
+ * const singleRecordEvent = createMockDynamoDBStreamEvent({
+ *   records: [
+ *     {
+ *       eventName: 'INSERT',
+ *       keys: { PK: 'POST#123#LIKE#user-456', SK: 'LIKE' },
+ *       newImage: {
+ *         PK: 'POST#123#LIKE#user-456',
+ *         SK: 'LIKE',
+ *         postId: '123',
+ *         userId: 'user-456',
+ *         createdAt: '2024-01-01T00:00:00.000Z'
+ *       }
+ *     }
+ *   ]
+ * });
+ *
+ * // Batch event with multiple records
+ * const batchEvent = createMockDynamoDBStreamEvent({
+ *   records: [
+ *     {
+ *       eventName: 'INSERT',
+ *       keys: { PK: 'POST#123#LIKE#user-1', SK: 'LIKE' },
+ *       newImage: { postId: '123', userId: 'user-1' }
+ *     },
+ *     {
+ *       eventName: 'INSERT',
+ *       keys: { PK: 'POST#123#LIKE#user-2', SK: 'LIKE' },
+ *       newImage: { postId: '123', userId: 'user-2' }
+ *     },
+ *     {
+ *       eventName: 'REMOVE',
+ *       keys: { PK: 'POST#123#LIKE#user-3', SK: 'LIKE' },
+ *       oldImage: { postId: '123', userId: 'user-3' }
+ *     }
+ *   ]
+ * });
+ *
+ * // Empty event (no changes)
+ * const emptyEvent = createMockDynamoDBStreamEvent();
+ *
+ * // Test your handler
+ * await handler(singleRecordEvent);
+ * ```
+ */
+export const createMockDynamoDBStreamEvent = (
+  config: DynamoDBStreamEventConfig = {}
+): DynamoDBStreamEvent => {
+  const {
+    records = [],
+    eventSourceARN = 'arn:aws:dynamodb:us-east-1:123456789012:table/test-table/stream/2024-01-01T00:00:00.000'
+  } = config;
+
+  return {
+    Records: records.map(recordConfig => ({
+      ...createMockDynamoDBStreamRecord(recordConfig),
+      eventSourceARN
+    }))
+  };
 };

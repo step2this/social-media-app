@@ -10,11 +10,29 @@ The test utilities are part of the `@social-media-app/shared` package and are av
 import {
   createMockDynamoClient,
   createMockAPIGatewayEvent,
-  createMockJWT
+  createMockJWT,
+  createMockDynamoDBStreamEvent,
+  convertToAttributeValue
 } from '@social-media-app/shared/test-utils';
 ```
 
 ## Available Utilities
+
+### Core DynamoDB Mocking
+- `createMockDynamoClient` - Mock DynamoDB DocumentClient for testing
+- `convertToAttributeValue` - Convert plain objects to DynamoDB AttributeValue format
+- `createMockDynamoDBStreamRecord` - Create DynamoDB Stream records
+- `createMockDynamoDBStreamEvent` - Create complete Stream events with multiple records
+
+### API Gateway & Authentication
+- `createMockAPIGatewayEvent` - Create API Gateway events
+- `createMockJWT` - Generate mock JWT tokens
+
+### Error Handling
+- `isConditionalCheckFailedException` - Type guard for DynamoDB conditional check failures
+
+### S3 Mocking
+- `setupS3Mocks` - Setup S3 and presigned URL mocks
 
 ### `createMockDynamoClient(options?)`
 
@@ -195,6 +213,187 @@ try {
 }
 ```
 
+### `convertToAttributeValue(obj)`
+
+Converts plain JavaScript objects to DynamoDB AttributeValue format used in Stream events.
+
+**Supported Types:**
+- `string` → `{ S: string }`
+- `number` → `{ N: string }`
+- `boolean` → `{ BOOL: boolean }`
+- `null/undefined` → `{ NULL: true }`
+- `array` → `{ L: AttributeValue[] }`
+- `object` → `{ M: { [key: string]: AttributeValue } }`
+
+**Example:**
+```typescript
+import { convertToAttributeValue } from '@social-media-app/shared/test-utils';
+
+const data = {
+  id: 'user-123',
+  age: 25,
+  active: true,
+  tags: ['developer', 'admin'],
+  metadata: { role: 'admin' }
+};
+
+const attributeValue = convertToAttributeValue(data);
+// {
+//   id: { S: 'user-123' },
+//   age: { N: '25' },
+//   active: { BOOL: true },
+//   tags: { L: [{ S: 'developer' }, { S: 'admin' }] },
+//   metadata: { M: { role: { S: 'admin' } } }
+// }
+```
+
+### `createMockDynamoDBStreamRecord(config)`
+
+Creates a single DynamoDB Stream record representing a change to a DynamoDB item.
+
+**Configuration:**
+```typescript
+interface DynamoDBStreamRecordConfig {
+  eventName: 'INSERT' | 'MODIFY' | 'REMOVE';
+  keys?: Record<string, any>;        // Default: { PK: 'TEST#id', SK: 'ITEM#id' }
+  newImage?: Record<string, any>;    // New item state (auto-converted)
+  oldImage?: Record<string, any>;    // Old item state (auto-converted)
+  eventID?: string;                  // Default: 'test-event-id'
+  sequenceNumber?: string;           // Default: '123'
+}
+```
+
+**Example:**
+```typescript
+import { createMockDynamoDBStreamRecord } from '@social-media-app/shared/test-utils';
+
+// INSERT event (new item created)
+const insertRecord = createMockDynamoDBStreamRecord({
+  eventName: 'INSERT',
+  keys: { PK: 'USER#123', SK: 'PROFILE' },
+  newImage: {
+    PK: 'USER#123',
+    SK: 'PROFILE',
+    username: 'john',
+    email: 'john@example.com'
+  }
+});
+
+// MODIFY event (item updated)
+const modifyRecord = createMockDynamoDBStreamRecord({
+  eventName: 'MODIFY',
+  keys: { PK: 'POST#456', SK: 'METADATA' },
+  oldImage: { likesCount: 10, commentsCount: 5 },
+  newImage: { likesCount: 11, commentsCount: 5 }
+});
+
+// REMOVE event (item deleted)
+const removeRecord = createMockDynamoDBStreamRecord({
+  eventName: 'REMOVE',
+  keys: { PK: 'POST#789', SK: 'METADATA' },
+  oldImage: { PK: 'POST#789', SK: 'METADATA', likesCount: 5 }
+});
+```
+
+### `createMockDynamoDBStreamEvent(config?)`
+
+Creates a complete DynamoDB Stream event with multiple records for batch processing scenarios.
+
+**Configuration:**
+```typescript
+interface DynamoDBStreamEventConfig {
+  records?: readonly DynamoDBStreamRecordConfig[];
+  eventSourceARN?: string;  // Default: test ARN
+}
+```
+
+**Example:**
+```typescript
+import { createMockDynamoDBStreamEvent } from '@social-media-app/shared/test-utils';
+import { handler } from './like-counter.js';
+
+describe('like-counter stream handler', () => {
+  it('should increment like count on INSERT', async () => {
+    const event = createMockDynamoDBStreamEvent({
+      records: [
+        {
+          eventName: 'INSERT',
+          keys: { PK: 'POST#123#LIKE#user-456', SK: 'LIKE' },
+          newImage: {
+            PK: 'POST#123#LIKE#user-456',
+            SK: 'LIKE',
+            postId: '123',
+            userId: 'user-456',
+            createdAt: '2024-01-01T00:00:00.000Z'
+          }
+        }
+      ]
+    });
+
+    await handler(event);
+
+    // Verify like count was incremented
+    expect(mockClient.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          UpdateExpression: expect.stringContaining('likesCount')
+        })
+      })
+    );
+  });
+
+  it('should process batch events', async () => {
+    const event = createMockDynamoDBStreamEvent({
+      records: [
+        {
+          eventName: 'INSERT',
+          keys: { PK: 'POST#123#LIKE#user-1', SK: 'LIKE' },
+          newImage: { postId: '123', userId: 'user-1' }
+        },
+        {
+          eventName: 'INSERT',
+          keys: { PK: 'POST#123#LIKE#user-2', SK: 'LIKE' },
+          newImage: { postId: '123', userId: 'user-2' }
+        },
+        {
+          eventName: 'REMOVE',
+          keys: { PK: 'POST#123#LIKE#user-3', SK: 'LIKE' },
+          oldImage: { postId: '123', userId: 'user-3' }
+        }
+      ]
+    });
+
+    const result = await handler(event);
+
+    expect(result.batchItemFailures).toHaveLength(0);
+  });
+
+  it('should handle comment deletion', async () => {
+    const event = createMockDynamoDBStreamEvent({
+      records: [
+        {
+          eventName: 'REMOVE',
+          keys: { PK: 'POST#123#COMMENT#789', SK: 'COMMENT' },
+          oldImage: {
+            PK: 'POST#123#COMMENT#789',
+            SK: 'COMMENT',
+            postId: '123',
+            commentId: '789',
+            authorId: 'user-456',
+            content: 'Great post!',
+            createdAt: '2024-01-01T10:00:00.000Z'
+          }
+        }
+      ]
+    });
+
+    await handler(event);
+
+    // Verify comment count was decremented
+  });
+});
+```
+
 ## Migration Guide
 
 ### Before (Duplicated Code)
@@ -296,7 +495,9 @@ import type {
   MockDynamoCommand,
   MockDynamoClientOptions,
   APIGatewayEventConfig,
-  S3MockConfig
+  S3MockConfig,
+  DynamoDBStreamRecordConfig,
+  DynamoDBStreamEventConfig
 } from '@social-media-app/shared/test-utils';
 ```
 
@@ -311,6 +512,9 @@ The test utilities themselves are thoroughly tested. See `aws-mocks.test.ts` for
 - API Gateway event generation
 - JWT token creation
 - Error type guards
+- DynamoDB Stream event generation (INSERT, MODIFY, REMOVE)
+- AttributeValue conversion (all data types)
+- Batch event processing
 
 ## Contributing
 

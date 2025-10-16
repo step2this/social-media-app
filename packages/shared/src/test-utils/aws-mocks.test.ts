@@ -12,6 +12,9 @@ import {
   createMockAPIGatewayEvent,
   createMockJWT,
   isConditionalCheckFailedException,
+  convertToAttributeValue,
+  createMockDynamoDBStreamRecord,
+  createMockDynamoDBStreamEvent,
   type MockDynamoClient
 } from './aws-mocks.js';
 
@@ -327,9 +330,9 @@ describe('createMockAPIGatewayEvent', () => {
     expect(event.headers['content-type']).toBe('application/json');
   });
 
-  it('should create event with string body', () => {
+  it('should create event with raw string body', () => {
     const event = createMockAPIGatewayEvent({
-      body: 'raw string'
+      rawBody: 'raw string'
     });
 
     expect(event.body).toBe('raw string');
@@ -422,5 +425,392 @@ describe('isConditionalCheckFailedException', () => {
     expect(isConditionalCheckFailedException('string')).toBe(false);
     expect(isConditionalCheckFailedException(null)).toBe(false);
     expect(isConditionalCheckFailedException(undefined)).toBe(false);
+  });
+});
+
+describe('convertToAttributeValue', () => {
+  it('should convert string values', () => {
+    const result = convertToAttributeValue({ name: 'John' });
+    expect(result).toEqual({ name: { S: 'John' } });
+  });
+
+  it('should convert number values', () => {
+    const result = convertToAttributeValue({ age: 25, count: 0 });
+    expect(result).toEqual({
+      age: { N: '25' },
+      count: { N: '0' }
+    });
+  });
+
+  it('should convert boolean values', () => {
+    const result = convertToAttributeValue({ active: true, deleted: false });
+    expect(result).toEqual({
+      active: { BOOL: true },
+      deleted: { BOOL: false }
+    });
+  });
+
+  it('should convert null values', () => {
+    const result = convertToAttributeValue({ empty: null });
+    expect(result).toEqual({ empty: { NULL: true } });
+  });
+
+  it('should convert undefined values', () => {
+    const result = convertToAttributeValue({ missing: undefined });
+    expect(result).toEqual({ missing: { NULL: true } });
+  });
+
+  it('should convert arrays with primitives', () => {
+    const result = convertToAttributeValue({
+      tags: ['admin', 'user'],
+      counts: [1, 2, 3],
+      flags: [true, false]
+    });
+
+    expect(result).toEqual({
+      tags: { L: [{ S: 'admin' }, { S: 'user' }] },
+      counts: { L: [{ N: '1' }, { N: '2' }, { N: '3' }] },
+      flags: { L: [{ BOOL: true }, { BOOL: false }] }
+    });
+  });
+
+  it('should convert nested objects', () => {
+    const result = convertToAttributeValue({
+      metadata: {
+        role: 'admin',
+        level: 5
+      }
+    });
+
+    expect(result).toEqual({
+      metadata: {
+        M: {
+          role: { S: 'admin' },
+          level: { N: '5' }
+        }
+      }
+    });
+  });
+
+  it('should handle complex nested structures', () => {
+    const result = convertToAttributeValue({
+      user: {
+        id: '123',
+        age: 25,
+        active: true,
+        tags: ['developer', 'admin'],
+        metadata: {
+          lastLogin: '2024-01-01',
+          loginCount: 10
+        }
+      }
+    });
+
+    expect(result).toEqual({
+      user: {
+        M: {
+          id: { S: '123' },
+          age: { N: '25' },
+          active: { BOOL: true },
+          tags: { L: [{ S: 'developer' }, { S: 'admin' }] },
+          metadata: {
+            M: {
+              lastLogin: { S: '2024-01-01' },
+              loginCount: { N: '10' }
+            }
+          }
+        }
+      }
+    });
+  });
+
+  it('should handle arrays with nested objects', () => {
+    const result = convertToAttributeValue({
+      items: [
+        { id: '1', name: 'Item 1' },
+        { id: '2', name: 'Item 2' }
+      ]
+    });
+
+    expect(result).toEqual({
+      items: {
+        L: [
+          {
+            M: {
+              id: { S: '1' },
+              name: { S: 'Item 1' }
+            }
+          },
+          {
+            M: {
+              id: { S: '2' },
+              name: { S: 'Item 2' }
+            }
+          }
+        ]
+      }
+    });
+  });
+});
+
+describe('createMockDynamoDBStreamRecord', () => {
+  it('should create INSERT record with default keys', () => {
+    const record = createMockDynamoDBStreamRecord({
+      eventName: 'INSERT',
+      newImage: {
+        PK: 'USER#123',
+        SK: 'PROFILE',
+        username: 'john'
+      }
+    });
+
+    expect(record.eventName).toBe('INSERT');
+    expect(record.eventVersion).toBe('1.1');
+    expect(record.eventSource).toBe('aws:dynamodb');
+    expect(record.awsRegion).toBe('us-east-1');
+    expect(record.dynamodb?.StreamViewType).toBe('NEW_AND_OLD_IMAGES');
+    expect(record.dynamodb?.NewImage).toEqual({
+      PK: { S: 'USER#123' },
+      SK: { S: 'PROFILE' },
+      username: { S: 'john' }
+    });
+    expect(record.dynamodb?.OldImage).toBeUndefined();
+  });
+
+  it('should create MODIFY record with old and new images', () => {
+    const record = createMockDynamoDBStreamRecord({
+      eventName: 'MODIFY',
+      keys: { PK: 'POST#123', SK: 'METADATA' },
+      oldImage: {
+        likesCount: 10,
+        commentsCount: 5
+      },
+      newImage: {
+        likesCount: 11,
+        commentsCount: 5
+      }
+    });
+
+    expect(record.eventName).toBe('MODIFY');
+    expect(record.dynamodb?.Keys).toEqual({
+      PK: { S: 'POST#123' },
+      SK: { S: 'METADATA' }
+    });
+    expect(record.dynamodb?.OldImage).toEqual({
+      likesCount: { N: '10' },
+      commentsCount: { N: '5' }
+    });
+    expect(record.dynamodb?.NewImage).toEqual({
+      likesCount: { N: '11' },
+      commentsCount: { N: '5' }
+    });
+  });
+
+  it('should create REMOVE record with only old image', () => {
+    const record = createMockDynamoDBStreamRecord({
+      eventName: 'REMOVE',
+      keys: { PK: 'POST#789', SK: 'METADATA' },
+      oldImage: {
+        PK: 'POST#789',
+        SK: 'METADATA',
+        likesCount: 5
+      }
+    });
+
+    expect(record.eventName).toBe('REMOVE');
+    expect(record.dynamodb?.OldImage).toEqual({
+      PK: { S: 'POST#789' },
+      SK: { S: 'METADATA' },
+      likesCount: { N: '5' }
+    });
+    expect(record.dynamodb?.NewImage).toBeUndefined();
+  });
+
+  it('should support custom eventID and sequenceNumber', () => {
+    const record = createMockDynamoDBStreamRecord({
+      eventName: 'INSERT',
+      eventID: 'custom-event-123',
+      sequenceNumber: '456789',
+      newImage: { id: 'test' }
+    });
+
+    expect(record.eventID).toBe('custom-event-123');
+    expect(record.dynamodb?.SequenceNumber).toBe('456789');
+  });
+
+  it('should handle complex data types in images', () => {
+    const record = createMockDynamoDBStreamRecord({
+      eventName: 'INSERT',
+      newImage: {
+        PK: 'USER#123',
+        SK: 'PROFILE',
+        username: 'john',
+        age: 25,
+        active: true,
+        tags: ['developer', 'admin'],
+        metadata: {
+          role: 'admin',
+          level: 5
+        },
+        emptyField: null
+      }
+    });
+
+    expect(record.dynamodb?.NewImage).toEqual({
+      PK: { S: 'USER#123' },
+      SK: { S: 'PROFILE' },
+      username: { S: 'john' },
+      age: { N: '25' },
+      active: { BOOL: true },
+      tags: { L: [{ S: 'developer' }, { S: 'admin' }] },
+      metadata: {
+        M: {
+          role: { S: 'admin' },
+          level: { N: '5' }
+        }
+      },
+      emptyField: { NULL: true }
+    });
+  });
+});
+
+describe('createMockDynamoDBStreamEvent', () => {
+  it('should create empty event by default', () => {
+    const event = createMockDynamoDBStreamEvent();
+
+    expect(event.Records).toHaveLength(0);
+  });
+
+  it('should create single record event', () => {
+    const event = createMockDynamoDBStreamEvent({
+      records: [
+        {
+          eventName: 'INSERT',
+          keys: { PK: 'POST#123#LIKE#user-456', SK: 'LIKE' },
+          newImage: {
+            PK: 'POST#123#LIKE#user-456',
+            SK: 'LIKE',
+            postId: '123',
+            userId: 'user-456',
+            createdAt: '2024-01-01T00:00:00.000Z'
+          }
+        }
+      ]
+    });
+
+    expect(event.Records).toHaveLength(1);
+    expect(event.Records[0].eventName).toBe('INSERT');
+    expect(event.Records[0].dynamodb?.NewImage).toEqual({
+      PK: { S: 'POST#123#LIKE#user-456' },
+      SK: { S: 'LIKE' },
+      postId: { S: '123' },
+      userId: { S: 'user-456' },
+      createdAt: { S: '2024-01-01T00:00:00.000Z' }
+    });
+  });
+
+  it('should create batch event with multiple records', () => {
+    const event = createMockDynamoDBStreamEvent({
+      records: [
+        {
+          eventName: 'INSERT',
+          keys: { PK: 'POST#123#LIKE#user-1', SK: 'LIKE' },
+          newImage: { postId: '123', userId: 'user-1' }
+        },
+        {
+          eventName: 'INSERT',
+          keys: { PK: 'POST#123#LIKE#user-2', SK: 'LIKE' },
+          newImage: { postId: '123', userId: 'user-2' }
+        },
+        {
+          eventName: 'REMOVE',
+          keys: { PK: 'POST#123#LIKE#user-3', SK: 'LIKE' },
+          oldImage: { postId: '123', userId: 'user-3' }
+        }
+      ]
+    });
+
+    expect(event.Records).toHaveLength(3);
+    expect(event.Records[0].eventName).toBe('INSERT');
+    expect(event.Records[1].eventName).toBe('INSERT');
+    expect(event.Records[2].eventName).toBe('REMOVE');
+  });
+
+  it('should include eventSourceARN in all records', () => {
+    const customArn = 'arn:aws:dynamodb:us-west-2:123456789012:table/my-table/stream/2024-01-01T00:00:00.000';
+    const event = createMockDynamoDBStreamEvent({
+      eventSourceARN: customArn,
+      records: [
+        {
+          eventName: 'INSERT',
+          newImage: { id: 'test-1' }
+        },
+        {
+          eventName: 'MODIFY',
+          oldImage: { id: 'test-2', count: 1 },
+          newImage: { id: 'test-2', count: 2 }
+        }
+      ]
+    });
+
+    expect(event.Records).toHaveLength(2);
+    expect(event.Records[0].eventSourceARN).toBe(customArn);
+    expect(event.Records[1].eventSourceARN).toBe(customArn);
+  });
+
+  it('should support complex like counter scenario', () => {
+    const event = createMockDynamoDBStreamEvent({
+      records: [
+        {
+          eventName: 'INSERT',
+          eventID: 'like-event-1',
+          sequenceNumber: '100',
+          keys: { PK: 'POST#post-123#LIKE#user-456', SK: 'LIKE' },
+          newImage: {
+            PK: 'POST#post-123#LIKE#user-456',
+            SK: 'LIKE',
+            postId: 'post-123',
+            userId: 'user-456',
+            createdAt: '2024-01-01T12:00:00.000Z'
+          }
+        }
+      ]
+    });
+
+    const record = event.Records[0];
+    expect(record.eventID).toBe('like-event-1');
+    expect(record.eventName).toBe('INSERT');
+    expect(record.dynamodb?.Keys).toEqual({
+      PK: { S: 'POST#post-123#LIKE#user-456' },
+      SK: { S: 'LIKE' }
+    });
+    expect(record.dynamodb?.NewImage?.postId).toEqual({ S: 'post-123' });
+    expect(record.dynamodb?.NewImage?.userId).toEqual({ S: 'user-456' });
+  });
+
+  it('should support comment counter scenario with REMOVE', () => {
+    const event = createMockDynamoDBStreamEvent({
+      records: [
+        {
+          eventName: 'REMOVE',
+          keys: { PK: 'POST#post-123#COMMENT#comment-789', SK: 'COMMENT' },
+          oldImage: {
+            PK: 'POST#post-123#COMMENT#comment-789',
+            SK: 'COMMENT',
+            postId: 'post-123',
+            commentId: 'comment-789',
+            authorId: 'user-456',
+            content: 'Great post!',
+            createdAt: '2024-01-01T10:00:00.000Z'
+          }
+        }
+      ]
+    });
+
+    const record = event.Records[0];
+    expect(record.eventName).toBe('REMOVE');
+    expect(record.dynamodb?.OldImage?.postId).toEqual({ S: 'post-123' });
+    expect(record.dynamodb?.OldImage?.commentId).toEqual({ S: 'comment-789' });
+    expect(record.dynamodb?.NewImage).toBeUndefined();
   });
 });

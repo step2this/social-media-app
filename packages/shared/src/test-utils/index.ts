@@ -14,9 +14,14 @@ export {
   createMockAPIGatewayEvent,
   createMockJWT,
   isConditionalCheckFailedException,
+  convertToAttributeValue,
+  createMockDynamoDBStreamRecord,
+  createMockDynamoDBStreamEvent,
   type MockDynamoClientOptions,
   type MockDynamoCommand,
   type MockDynamoClient,
   type S3MockConfig,
-  type APIGatewayEventConfig
+  type APIGatewayEventConfig,
+  type DynamoDBStreamRecordConfig,
+  type DynamoDBStreamEventConfig
 } from './aws-mocks.js';
