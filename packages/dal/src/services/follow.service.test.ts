@@ -1,102 +1,11 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, functional/prefer-immutable-types */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { FollowService, type FollowEntity } from './follow.service';
-import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-
-interface MockDynamoCommand {
-  readonly constructor: { readonly name: string };
-  readonly input: {
-    readonly TableName?: string;
-    readonly Item?: Record<string, unknown>;
-    readonly Key?: Record<string, unknown>;
-    readonly ConditionExpression?: string;
-    readonly UpdateExpression?: string;
-    readonly ExpressionAttributeValues?: Record<string, unknown>;
-    readonly ReturnValues?: string;
-  };
-}
-
-// Mock DynamoDB client
-const createMockDynamoClient = () => {
-  const items = new Map<string, Record<string, unknown>>();
-
-  const handlePutCommand = (command: MockDynamoCommand) => {
-    const item = command.input.Item!;
-    const key = `${item.PK}#${item.SK}`;
-
-    // Check condition expression for duplicate prevention
-    if (command.input.ConditionExpression === 'attribute_not_exists(PK)' && items.has(key)) {
-      const error: any = new Error('ConditionalCheckFailedException');
-      error.name = 'ConditionalCheckFailedException';
-      error.__type = 'ConditionalCheckFailedException';
-      throw error;
-    }
-
-    items.set(key, item);
-    return { $metadata: {} };
-  };
-
-  const handleGetCommand = (command: MockDynamoCommand) => {
-    const key = `${command.input.Key!.PK}#${command.input.Key!.SK}`;
-    const item = items.get(key);
-    return { Item: item, $metadata: {} };
-  };
-
-  const handleDeleteCommand = (command: MockDynamoCommand) => {
-    const key = `${command.input.Key!.PK}#${command.input.Key!.SK}`;
-    items.delete(key);
-    return { $metadata: {} };
-  };
-
-  const handleQueryCommand = (command: MockDynamoCommand) => {
-    const results: Record<string, unknown>[] = [];
-    const pkValue = command.input.ExpressionAttributeValues?.[':pk'] as string;
-    const skPrefix = command.input.ExpressionAttributeValues?.[':sk'] as string;
-
-    // Determine which key fields to use based on IndexName
-    const indexName = (command.input as any).IndexName;
-    const pkField = indexName === 'GSI2' ? 'GSI2PK' : 'PK';
-    const skField = indexName === 'GSI2' ? 'GSI2SK' : 'SK';
-
-    // Filter items by PK and SK prefix
-    for (const [key, item] of items.entries()) {
-      if (item[pkField] === pkValue && typeof item[skField] === 'string' && (item[skField] as string).startsWith(skPrefix)) {
-        results.push(item);
-      }
-    }
-
-    // If Select='COUNT', return Count instead of Items
-    const selectType = (command.input as any).Select;
-    if (selectType === 'COUNT') {
-      return { Count: results.length, $metadata: {} };
-    }
-
-    return { Items: results, $metadata: {} };
-  };
-
-  const send = vi.fn((command: MockDynamoCommand) => {
-    const commandName = command.constructor.name;
-
-    switch (commandName) {
-      case 'PutCommand':
-        return Promise.resolve(handlePutCommand(command));
-      case 'GetCommand':
-        return Promise.resolve(handleGetCommand(command));
-      case 'DeleteCommand':
-        return Promise.resolve(handleDeleteCommand(command));
-      case 'QueryCommand':
-        return Promise.resolve(handleQueryCommand(command));
-      default:
-        return Promise.resolve({ $metadata: {} });
-    }
-  });
-
-  return { send } as unknown as DynamoDBDocumentClient;
-};
+import { createMockDynamoClient, type MockDynamoClient } from '@social-media-app/shared/test-utils';
 
 describe('FollowService', () => {
   const tableName = 'test-table';
-  let mockClient: DynamoDBDocumentClient;
+  let mockClient: MockDynamoClient;
   let service: FollowService;
 
   beforeEach(() => {

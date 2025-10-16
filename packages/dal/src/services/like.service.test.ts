@@ -1,76 +1,12 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, functional/prefer-immutable-types */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { LikeService, type LikeEntity } from './like.service';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-
-interface MockDynamoCommand {
-  readonly constructor: { readonly name: string };
-  readonly input: {
-    readonly TableName?: string;
-    readonly Item?: Record<string, unknown>;
-    readonly Key?: Record<string, unknown>;
-    readonly ConditionExpression?: string;
-    readonly UpdateExpression?: string;
-    readonly ExpressionAttributeValues?: Record<string, unknown>;
-    readonly ReturnValues?: string;
-  };
-}
-
-// Mock DynamoDB client
-const createMockDynamoClient = () => {
-  const items = new Map<string, Record<string, unknown>>();
-
-  const handlePutCommand = (command: MockDynamoCommand) => {
-    const item = command.input.Item!;
-    const key = `${item.PK}#${item.SK}`;
-
-    // Check condition expression for duplicate prevention
-    if (command.input.ConditionExpression === 'attribute_not_exists(PK)' && items.has(key)) {
-      const error = new Error('The conditional request failed');
-      error.name = 'ConditionalCheckFailedException';
-      throw error;
-    }
-
-    items.set(key, item);
-    return { $metadata: {} };
-  };
-
-  const handleGetCommand = (command: MockDynamoCommand) => {
-    const key = `${command.input.Key!.PK}#${command.input.Key!.SK}`;
-    const item = items.get(key);
-    return { Item: item, $metadata: {} };
-  };
-
-  const handleDeleteCommand = (command: MockDynamoCommand) => {
-    const key = `${command.input.Key!.PK}#${command.input.Key!.SK}`;
-    items.delete(key);
-    return { $metadata: {} };
-  };
-
-  const send = vi.fn((command: MockDynamoCommand) => {
-    const commandName = command.constructor.name;
-
-    switch (commandName) {
-      case 'PutCommand':
-        return Promise.resolve(handlePutCommand(command));
-      case 'GetCommand':
-        return Promise.resolve(handleGetCommand(command));
-      case 'DeleteCommand':
-        return Promise.resolve(handleDeleteCommand(command));
-      default:
-        return Promise.resolve({ $metadata: {} });
-    }
-  });
-
-  return {
-    send,
-    _items: items  // For test inspection
-  } as unknown as DynamoDBDocumentClient & { _items: Map<string, Record<string, unknown>> };
-};
+import { createMockDynamoClient, type MockDynamoClient } from '@social-media-app/shared/test-utils';
 
 describe('LikeService', () => {
   let likeService: LikeService;
-  let mockDynamoClient: ReturnType<typeof createMockDynamoClient>;
+  let mockDynamoClient: MockDynamoClient;
   const tableName = 'test-table';
   const userId = 'user-123';
   const postId = 'post-456';
@@ -91,7 +27,7 @@ describe('LikeService', () => {
       expect(mockDynamoClient.send).toHaveBeenCalledOnce();
 
       // Verify the like entity structure
-      const createdLike = mockDynamoClient._items.get(`POST#${postId}#LIKE#${userId}`);
+      const createdLike = mockDynamoClient._getItems().get(`POST#${postId}#LIKE#${userId}`);
       expect(createdLike).toBeDefined();
       expect(createdLike?.PK).toBe(`POST#${postId}`);
       expect(createdLike?.SK).toBe(`LIKE#${userId}`);
@@ -129,14 +65,14 @@ describe('LikeService', () => {
     it('should delete like entity', async () => {
       // First like the post
       await likeService.likePost(userId, postId, postUserId, postSK);
-      expect(mockDynamoClient._items.has(`POST#${postId}#LIKE#${userId}`)).toBe(true);
+      expect(mockDynamoClient._getItems().has(`POST#${postId}#LIKE#${userId}`)).toBe(true);
 
       // Then unlike
       const result = await likeService.unlikePost(userId, postId);
 
       expect(result.success).toBe(true);
       expect(result.isLiked).toBe(false);
-      expect(mockDynamoClient._items.has(`POST#${postId}#LIKE#${userId}`)).toBe(false);
+      expect(mockDynamoClient._getItems().has(`POST#${postId}#LIKE#${userId}`)).toBe(false);
     });
 
     it('should handle unlike when not liked (idempotent)', async () => {
@@ -202,7 +138,7 @@ describe('LikeService', () => {
       expect(result.isLiked).toBe(true);
 
       // Verify postUserId is stored in DynamoDB entity
-      const createdLike = mockDynamoClient._items.get(`POST#${postId}#LIKE#${userId}`);
+      const createdLike = mockDynamoClient._getItems().get(`POST#${postId}#LIKE#${userId}`);
       expect(createdLike).toBeDefined();
       expect(createdLike?.postUserId).toBe(postUserId);
     });
@@ -219,7 +155,7 @@ describe('LikeService', () => {
       expect(result.isLiked).toBe(true);
 
       // Verify postSK is stored in DynamoDB entity
-      const createdLike = mockDynamoClient._items.get(`POST#${postId}#LIKE#${userId}`);
+      const createdLike = mockDynamoClient._getItems().get(`POST#${postId}#LIKE#${userId}`);
       expect(createdLike).toBeDefined();
       expect(createdLike?.postSK).toBe(postSK);
     });
@@ -235,7 +171,7 @@ describe('LikeService', () => {
       expect(result.success).toBe(true);
 
       // Verify both fields are stored correctly
-      const createdLike = mockDynamoClient._items.get(`POST#${postId}#LIKE#${userId}`);
+      const createdLike = mockDynamoClient._getItems().get(`POST#${postId}#LIKE#${userId}`);
       expect(createdLike).toBeDefined();
       expect(createdLike?.postUserId).toBe(postUserId);
       expect(createdLike?.postSK).toBe(postSK);

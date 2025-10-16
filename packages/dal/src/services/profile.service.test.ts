@@ -6,8 +6,9 @@ import type {
   UpdateProfileWithHandleRequest,
   GetPresignedUrlRequest
 } from '@social-media-app/shared';
+import { createMockDynamoClient, type MockDynamoClient } from '@social-media-app/shared/test-utils';
 
-// Mock AWS SDK
+// Setup S3 mocks (must be at top level for hoisting)
 vi.mock('@aws-sdk/client-s3', () => ({
   S3Client: vi.fn().mockImplementation(() => ({})),
   PutObjectCommand: vi.fn()
@@ -17,158 +18,9 @@ vi.mock('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: vi.fn().mockResolvedValue('https://example.com/signed-url')
 }));
 
-interface MockDynamoCommand {
-  readonly constructor: { readonly name: string };
-  readonly input: {
-    readonly TableName?: string;
-    readonly Item?: Record<string, unknown>;
-    readonly Key?: Record<string, unknown>;
-    readonly IndexName?: string;
-    readonly KeyConditionExpression?: string;
-    readonly ExpressionAttributeValues?: Record<string, unknown>;
-    readonly Limit?: number;
-    readonly UpdateExpression?: string;
-    readonly ExpressionAttributeNames?: Record<string, unknown>;
-    readonly ReturnValues?: string;
-    readonly ConditionExpression?: string;
-  };
-}
-
-// Mock DynamoDB client with proper typing
-const createMockDynamoClient = () => {
-  const items = new Map<string, Record<string, unknown>>();
-  const gsi3Items = new Map<string, Record<string, unknown>[]>();
-
-  const updateGSI3 = (item: Record<string, unknown>) => {
-    const gsi3Key = item.GSI3PK as string;
-    if (gsi3Key) {
-      if (!gsi3Items.has(gsi3Key)) {
-        gsi3Items.set(gsi3Key, []);
-      }
-      gsi3Items.get(gsi3Key)!.push(item);
-    }
-  };
-
-  const handleGetCommand = (command: MockDynamoCommand) => {
-    const { Key } = command.input;
-    const key = `${Key!.PK}#${Key!.SK}`;
-    const item = items.get(key);
-    return { Item: item };
-  };
-
-  const handleQueryCommand = (command: MockDynamoCommand) => {
-    const { KeyConditionExpression, IndexName, ExpressionAttributeValues, Limit } = command.input;
-    let results: Record<string, unknown>[] = [];
-
-    if (IndexName === 'GSI3' && KeyConditionExpression === 'GSI3PK = :pk') {
-      const pk = ExpressionAttributeValues?.[':pk'] as string;
-      results = gsi3Items.get(pk) || [];
-    }
-
-    const limit = Limit || results.length;
-    const paginatedResults = results.slice(0, limit);
-
-    return {
-      Items: paginatedResults
-    };
-  };
-
-  const handleUpdateCommand = (command: MockDynamoCommand) => {
-    const { Key, UpdateExpression, ExpressionAttributeNames, ExpressionAttributeValues, ConditionExpression } = command.input;
-    const key = `${Key!.PK}#${Key!.SK}`;
-    const item = items.get(key);
-
-    if (!item) {
-      return { Attributes: null };
-    }
-
-    // Handle condition expression
-    if (ConditionExpression === 'postsCount > :zero') {
-      const postsCount = item.postsCount as number || 0;
-      const zero = ExpressionAttributeValues?.[':zero'] as number || 0;
-      if (postsCount <= zero) {
-        throw new Error('ConditionalCheckFailedException');
-      }
-    }
-    if (ConditionExpression === 'if_not_exists(postsCount, :zero) > :zero') {
-      const postsCount = item.postsCount as number || 0;
-      const zero = ExpressionAttributeValues?.[':zero'] as number || 0;
-      if (postsCount <= zero) {
-        throw new Error('ConditionalCheckFailedException');
-      }
-    }
-
-    const updatedItem = { ...item };
-
-    // Parse UPDATE expression - simplified for test purposes
-    if (UpdateExpression?.includes('#updatedAt = :updatedAt')) {
-      updatedItem.updatedAt = ExpressionAttributeValues?.[':updatedAt'];
-    }
-    if (UpdateExpression?.includes('#handle = :handle')) {
-      updatedItem.handle = ExpressionAttributeValues?.[':handle'];
-    }
-    if (UpdateExpression?.includes('GSI3PK = :gsi3pk')) {
-      updatedItem.GSI3PK = ExpressionAttributeValues?.[':gsi3pk'];
-      updatedItem.GSI3SK = ExpressionAttributeValues?.[':gsi3sk'];
-      updateGSI3(updatedItem);
-    }
-    if (UpdateExpression?.includes('#bio = :bio')) {
-      updatedItem.bio = ExpressionAttributeValues?.[':bio'];
-    }
-    if (UpdateExpression?.includes('#fullName = :fullName')) {
-      updatedItem.fullName = ExpressionAttributeValues?.[':fullName'];
-    }
-    if (UpdateExpression?.includes('profilePictureUrl = :url')) {
-      updatedItem.profilePictureUrl = ExpressionAttributeValues?.[':url'];
-      updatedItem.profilePictureThumbnailUrl = ExpressionAttributeValues?.[':thumb'];
-    }
-    if (UpdateExpression?.includes('postsCount = postsCount + :inc')) {
-      const currentCount = (updatedItem.postsCount as number) || 0;
-      updatedItem.postsCount = currentCount + (ExpressionAttributeValues?.[':inc'] as number || 0);
-    }
-    if (UpdateExpression?.includes('postsCount = if_not_exists(postsCount, :zero) + :inc')) {
-      const currentCount = (updatedItem.postsCount as number) || 0;
-      updatedItem.postsCount = currentCount + (ExpressionAttributeValues?.[':inc'] as number || 0);
-    }
-    if (UpdateExpression?.includes('postsCount = postsCount - :dec')) {
-      const currentCount = (updatedItem.postsCount as number) || 0;
-      updatedItem.postsCount = Math.max(0, currentCount - (ExpressionAttributeValues?.[':dec'] as number || 0));
-    }
-    if (UpdateExpression?.includes('postsCount = if_not_exists(postsCount, :zero) - :dec')) {
-      const currentCount = (updatedItem.postsCount as number) || 0;
-      updatedItem.postsCount = Math.max(0, currentCount - (ExpressionAttributeValues?.[':dec'] as number || 0));
-    }
-
-    items.set(key, updatedItem);
-    return { Attributes: updatedItem };
-  };
-
-  return {
-    send: vi.fn().mockImplementation((command: MockDynamoCommand) => {
-      switch (command.constructor.name) {
-        case 'GetCommand':
-          return Promise.resolve(handleGetCommand(command));
-        case 'QueryCommand':
-          return Promise.resolve(handleQueryCommand(command));
-        case 'UpdateCommand':
-          return Promise.resolve(handleUpdateCommand(command));
-        default:
-          return Promise.reject(new Error(`Unknown command: ${command.constructor.name}`));
-      }
-    }),
-    // Expose internal state for testing
-    _getItems: () => items,
-    _getGSI3Items: () => gsi3Items,
-    _setItem: (key: string, item: Record<string, unknown>) => {
-      items.set(key, item);
-      updateGSI3(item);
-    }
-  };
-};
-
 describe('ProfileService', () => {
   let profileService: ProfileService;
-  let mockDynamoClient: ReturnType<typeof createMockDynamoClient>;
+  let mockDynamoClient: MockDynamoClient;
   const tableName = 'test-table';
   const s3BucketName = 'test-bucket';
   const cloudFrontDomain = 'cdn.example.com';

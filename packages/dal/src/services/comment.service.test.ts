@@ -1,135 +1,13 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, functional/prefer-immutable-types */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { CommentService } from './comment.service.js';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import type { Comment } from '@social-media-app/shared';
-
-interface MockDynamoCommand {
-  readonly constructor: { readonly name: string };
-  readonly input: {
-    readonly TableName?: string;
-    readonly IndexName?: string;
-    readonly Item?: Record<string, unknown>;
-    readonly Key?: Record<string, unknown>;
-    readonly KeyConditionExpression?: string;
-    readonly ExpressionAttributeNames?: Record<string, string>;
-    readonly ExpressionAttributeValues?: Record<string, unknown>;
-    readonly ScanIndexForward?: boolean;
-    readonly Limit?: number;
-    readonly ExclusiveStartKey?: Record<string, unknown>;
-    readonly ConditionExpression?: string;
-    readonly Select?: string;
-  };
-}
-
-// Mock DynamoDB client with Query support
-const createMockDynamoClient = () => {
-  const items = new Map<string, Record<string, unknown>>();
-
-  const handlePutCommand = (command: MockDynamoCommand) => {
-    const item = command.input.Item!;
-    const key = `${item.PK}#${item.SK}`;
-    items.set(key, item);
-    return { $metadata: {} };
-  };
-
-  const handleQueryCommand = (command: MockDynamoCommand) => {
-    const allItems = Array.from(items.values());
-    const values = command.input.ExpressionAttributeValues || {};
-    const indexName = command.input.IndexName;
-
-    // Filter items based on key condition and index
-    const filtered = allItems.filter(item => {
-      // Handle GSI1 queries (for comment lookup by ID)
-      if (indexName === 'GSI1') {
-        const gsi1PkValue = values[':pk'] as string;
-        return item.GSI1PK === gsi1PkValue;
-      }
-
-      // Handle base table queries
-      const pkValue = values[':pk'] as string;
-      const skPrefix = values[':skPrefix'] as string | undefined;
-
-      if (item.PK !== pkValue) return false;
-      if (skPrefix && !String(item.SK).startsWith(skPrefix)) return false;
-
-      return true;
-    });
-
-    // Sort by SK (descending by default for comments)
-    const sorted = filtered.sort((a, b) => {
-      const skA = String(a.SK);
-      const skB = String(b.SK);
-      return command.input.ScanIndexForward ? skA.localeCompare(skB) : skB.localeCompare(skA);
-    });
-
-    // Handle COUNT queries (for totalCount)
-    if (command.input.Select === 'COUNT') {
-      return {
-        Count: sorted.length,
-        $metadata: {}
-      };
-    }
-
-    // Handle pagination with ExclusiveStartKey
-    let startIndex = 0;
-    if (command.input.ExclusiveStartKey) {
-      const exclusiveKey = command.input.ExclusiveStartKey;
-      startIndex = sorted.findIndex(item =>
-        item.PK === exclusiveKey.PK && item.SK === exclusiveKey.SK
-      ) + 1;
-    }
-
-    // Apply limit
-    const limit = command.input.Limit || sorted.length;
-    const result = sorted.slice(startIndex, startIndex + limit);
-
-    return {
-      Items: result,
-      Count: result.length,
-      $metadata: {}
-    };
-  };
-
-  const handleGetCommand = (command: MockDynamoCommand) => {
-    const key = `${command.input.Key!.PK}#${command.input.Key!.SK}`;
-    const item = items.get(key);
-    return { Item: item, $metadata: {} };
-  };
-
-  const handleDeleteCommand = (command: MockDynamoCommand) => {
-    const key = `${command.input.Key!.PK}#${command.input.Key!.SK}`;
-    const deleted = items.has(key);
-    items.delete(key);
-    return { $metadata: {}, deleted };
-  };
-
-  const send = vi.fn((command: MockDynamoCommand) => {
-    const commandName = command.constructor.name;
-
-    switch (commandName) {
-      case 'PutCommand':
-        return Promise.resolve(handlePutCommand(command));
-      case 'QueryCommand':
-        return Promise.resolve(handleQueryCommand(command));
-      case 'GetCommand':
-        return Promise.resolve(handleGetCommand(command));
-      case 'DeleteCommand':
-        return Promise.resolve(handleDeleteCommand(command));
-      default:
-        return Promise.resolve({ $metadata: {} });
-    }
-  });
-
-  return {
-    send,
-    _items: items  // For test inspection
-  } as unknown as DynamoDBDocumentClient & { _items: Map<string, Record<string, unknown>> };
-};
+import { createMockDynamoClient, type MockDynamoClient } from '@social-media-app/shared/test-utils';
 
 describe('CommentService', () => {
   let commentService: CommentService;
-  let mockDynamoClient: ReturnType<typeof createMockDynamoClient>;
+  let mockDynamoClient: MockDynamoClient;
   const tableName = 'test-table';
   const userId = 'user-123';
   const postId = 'post-456';
@@ -158,7 +36,7 @@ describe('CommentService', () => {
       expect(result.commentsCount).toBe(0); // Will be updated by stream processor
 
       // Verify the comment entity structure in DynamoDB
-      const allItems = Array.from(mockDynamoClient._items.values());
+      const allItems = Array.from(mockDynamoClient._getItems().values());
       const commentEntity = allItems.find(item => item.postId === postId && item.userId === userId);
 
       expect(commentEntity).toBeDefined();
@@ -188,7 +66,7 @@ describe('CommentService', () => {
       expect(result.comment).toBeDefined();
 
       // Verify postUserId is stored in DynamoDB entity
-      const allItems = Array.from(mockDynamoClient._items.values());
+      const allItems = Array.from(mockDynamoClient._getItems().values());
       const commentEntity = allItems.find(item => item.id === result.comment.id);
 
       expect(commentEntity).toBeDefined();
@@ -212,7 +90,7 @@ describe('CommentService', () => {
       expect(result.comment).toBeDefined();
 
       // Verify postSK is stored in DynamoDB entity
-      const allItems = Array.from(mockDynamoClient._items.values());
+      const allItems = Array.from(mockDynamoClient._getItems().values());
       const commentEntity = allItems.find(item => item.id === result.comment.id);
 
       expect(commentEntity).toBeDefined();
@@ -233,7 +111,7 @@ describe('CommentService', () => {
       );
 
       // Verify both fields are stored correctly
-      const allItems = Array.from(mockDynamoClient._items.values());
+      const allItems = Array.from(mockDynamoClient._getItems().values());
       const commentEntity = allItems.find(item => item.id === result.comment.id);
 
       expect(commentEntity).toBeDefined();
@@ -279,7 +157,7 @@ describe('CommentService', () => {
       const commentId = created.comment.id;
 
       // Verify it exists
-      expect(mockDynamoClient._items.size).toBeGreaterThan(0);
+      expect(mockDynamoClient._getItems().size).toBeGreaterThan(0);
 
       // Delete it
       const result = await commentService.deleteComment(userId, commentId);

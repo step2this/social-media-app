@@ -1,235 +1,12 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, functional/prefer-immutable-types */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { NotificationService } from './notification.service.js';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-
-interface MockDynamoCommand {
-  readonly constructor: { readonly name: string };
-  readonly input: {
-    readonly TableName?: string;
-    readonly IndexName?: string;
-    readonly Item?: Record<string, unknown>;
-    readonly Key?: Record<string, unknown>;
-    readonly KeyConditionExpression?: string;
-    readonly FilterExpression?: string;
-    readonly ExpressionAttributeNames?: Record<string, string>;
-    readonly ExpressionAttributeValues?: Record<string, unknown>;
-    readonly ScanIndexForward?: boolean;
-    readonly Limit?: number;
-    readonly ExclusiveStartKey?: Record<string, unknown>;
-    readonly ConditionExpression?: string;
-    readonly UpdateExpression?: string;
-  };
-}
-
-// Mock DynamoDB client with full support for notifications
-const createMockDynamoClient = () => {
-  const items = new Map<string, Record<string, unknown>>();
-
-  const handlePutCommand = (command: MockDynamoCommand) => {
-    const item = command.input.Item!;
-    const key = `${item.PK}#${item.SK}`;
-    items.set(key, item);
-    return { $metadata: {} };
-  };
-
-  const handleUpdateCommand = (command: MockDynamoCommand) => {
-    const keyObj = command.input.Key!;
-    const key = `${keyObj.PK}#${keyObj.SK}`;
-    const item = items.get(key);
-
-    if (!item) {
-      return { $metadata: {}, Attributes: undefined };
-    }
-
-    // Parse UpdateExpression and apply changes
-    const updateExpr = command.input.UpdateExpression || '';
-    const values = command.input.ExpressionAttributeValues || {};
-    const names = command.input.ExpressionAttributeNames || {};
-
-    // Handle SET operations
-    if (updateExpr.includes('SET')) {
-      const setMatch = updateExpr.match(/SET\s+(.+?)(?:\s+REMOVE|$)/);
-      if (setMatch) {
-        const setPairs = setMatch[1].split(',').map(s => s.trim());
-        setPairs.forEach(pair => {
-          const [nameExpr, valueExpr] = pair.split('=').map(s => s.trim());
-          const actualName = names[nameExpr] || nameExpr;
-          const actualValue = values[valueExpr];
-          if (actualValue !== undefined) {
-            item[actualName] = actualValue;
-          }
-        });
-      }
-    }
-
-    // Handle REMOVE operations
-    if (updateExpr.includes('REMOVE')) {
-      const removeMatch = updateExpr.match(/REMOVE\s+(.+?)$/);
-      if (removeMatch) {
-        const removeFields = removeMatch[1].split(',').map(s => s.trim());
-        removeFields.forEach(fieldExpr => {
-          const actualName = names[fieldExpr] || fieldExpr;
-          delete item[actualName];
-        });
-      }
-    }
-
-    items.set(key, item);
-    return { $metadata: {}, Attributes: item };
-  };
-
-  const handleQueryCommand = (command: MockDynamoCommand) => {
-    const allItems = Array.from(items.values());
-    const values = command.input.ExpressionAttributeValues || {};
-    const names = command.input.ExpressionAttributeNames || {};
-    const indexName = command.input.IndexName;
-    const filterExpr = command.input.FilterExpression;
-    const exclusiveStartKey = command.input.ExclusiveStartKey;
-
-    // Filter items based on key condition and index
-    let filtered = allItems.filter(item => {
-      // Handle GSI1 queries (notification by ID)
-      if (indexName === 'GSI1') {
-        const gsi1PkValue = values[':pk'] as string;
-        return item.GSI1PK === gsi1PkValue;
-      }
-
-      // Handle GSI2 queries (unread notifications - sparse index)
-      if (indexName === 'GSI2') {
-        const gsi2PkValue = values[':gsi2pk'] as string;
-        // Only return items that have GSI2PK set (sparse index)
-        return item.GSI2PK === gsi2PkValue && item.GSI2PK !== undefined;
-      }
-
-      // Handle base table queries
-      const pkValue = values[':pk'] as string;
-      const skPrefix = values[':skPrefix'] as string | undefined;
-      const skValue = values[':sk'] as string | undefined;
-
-      if (item.PK !== pkValue) return false;
-      if (skPrefix && !String(item.SK).startsWith(skPrefix)) return false;
-      if (skValue && item.SK !== skValue) return false;
-
-      return true;
-    });
-
-    // Apply filter expression if present
-    if (filterExpr) {
-      filtered = filtered.filter(item => {
-        // Handle #type = :type
-        if (filterExpr.includes('#type = :type')) {
-          const typeAttr = names['#type'] || 'type';
-          const typeValue = values[':type'];
-          if (item[typeAttr] !== typeValue) return false;
-        }
-
-        // Handle priority = :priority
-        if (filterExpr.includes('priority = :priority')) {
-          const priorityValue = values[':priority'];
-          if (item.priority !== priorityValue) return false;
-        }
-
-        // Handle #status = :status
-        if (filterExpr.includes('#status = :status')) {
-          const statusAttr = names['#status'] || 'status';
-          const statusValue = values[':status'];
-          if (item[statusAttr] !== statusValue) return false;
-        }
-
-        return true;
-      });
-    }
-
-    // Sort by SK
-    const sorted = filtered.sort((a, b) => {
-      const skA = String(a.SK);
-      const skB = String(b.SK);
-      return command.input.ScanIndexForward ? skA.localeCompare(skB) : skB.localeCompare(skA);
-    });
-
-    // Handle pagination with ExclusiveStartKey
-    let paginatedItems = sorted;
-    if (exclusiveStartKey) {
-      const startSK = String(exclusiveStartKey.SK);
-      const startIndex = sorted.findIndex(item => String(item.SK) === startSK);
-      if (startIndex >= 0) {
-        // Start from the item AFTER the ExclusiveStartKey
-        paginatedItems = sorted.slice(startIndex + 1);
-      }
-    }
-
-    // Apply limit
-    const limit = command.input.Limit || paginatedItems.length;
-    const result = paginatedItems.slice(0, limit);
-
-    // Set LastEvaluatedKey if there are more items after the limit
-    const hasMore = paginatedItems.length > limit;
-    const response: {
-      Items: typeof result;
-      Count: number;
-      $metadata: Record<string, unknown>;
-      LastEvaluatedKey?: Record<string, unknown>;
-    } = {
-      Items: result,
-      Count: result.length,
-      $metadata: {}
-    };
-
-    if (hasMore && result.length > 0) {
-      const lastItem = result[result.length - 1];
-      response.LastEvaluatedKey = {
-        PK: lastItem.PK,
-        SK: lastItem.SK
-      };
-    }
-
-    return response;
-  };
-
-  const handleGetCommand = (command: MockDynamoCommand) => {
-    const keyObj = command.input.Key!;
-    const key = `${keyObj.PK}#${keyObj.SK}`;
-    const item = items.get(key);
-    return { Item: item, $metadata: {} };
-  };
-
-  const handleDeleteCommand = (command: MockDynamoCommand) => {
-    const keyObj = command.input.Key!;
-    const key = `${keyObj.PK}#${keyObj.SK}`;
-    const deleted = items.has(key);
-    items.delete(key);
-    return { $metadata: {}, deleted };
-  };
-
-  const send = vi.fn((command: MockDynamoCommand) => {
-    const commandName = command.constructor.name;
-
-    switch (commandName) {
-      case 'PutCommand':
-        return Promise.resolve(handlePutCommand(command));
-      case 'UpdateCommand':
-        return Promise.resolve(handleUpdateCommand(command));
-      case 'QueryCommand':
-        return Promise.resolve(handleQueryCommand(command));
-      case 'GetCommand':
-        return Promise.resolve(handleGetCommand(command));
-      case 'DeleteCommand':
-        return Promise.resolve(handleDeleteCommand(command));
-      default:
-        return Promise.resolve({ $metadata: {} });
-    }
-  });
-
-  return {
-    send,
-    _items: items  // For test inspection
-  } as unknown as DynamoDBDocumentClient & { _items: Map<string, Record<string, unknown>> };
-};
+import { createMockDynamoClient, type MockDynamoClient } from '@social-media-app/shared/test-utils';
 
 describe('NotificationService', () => {
   let notificationService: NotificationService;
-  let mockDynamoClient: ReturnType<typeof createMockDynamoClient>;
+  let mockDynamoClient: MockDynamoClient;
   const tableName = 'test-table';
 
   beforeEach(() => {
@@ -274,7 +51,7 @@ describe('NotificationService', () => {
       expect(result.notification.updatedAt).toBeDefined();
 
       // Verify entity in DynamoDB
-      const allItems = Array.from(mockDynamoClient._items.values());
+      const allItems = Array.from(mockDynamoClient._getItems().values());
       const entity = allItems.find(item => item.id === result.notification.id);
 
       expect(entity).toBeDefined();
@@ -288,7 +65,7 @@ describe('NotificationService', () => {
     it('should set sparse GSI2 keys for unread notifications', async () => {
       const result = await notificationService.createNotification(validNotificationData);
 
-      const allItems = Array.from(mockDynamoClient._items.values());
+      const allItems = Array.from(mockDynamoClient._getItems().values());
       const entity = allItems.find(item => item.id === result.notification.id);
 
       expect(entity?.GSI2PK).toBe(`UNREAD#USER#${validNotificationData.userId}`);
@@ -301,7 +78,7 @@ describe('NotificationService', () => {
       const result = await notificationService.createNotification(validNotificationData);
       const afterCreate = Date.now();
 
-      const allItems = Array.from(mockDynamoClient._items.values());
+      const allItems = Array.from(mockDynamoClient._getItems().values());
       const entity = allItems.find(item => item.id === result.notification.id);
 
       expect(entity?.ttl).toBeDefined();
@@ -777,7 +554,7 @@ describe('NotificationService', () => {
         notificationId: testNotificationId
       });
 
-      const allItems = Array.from(mockDynamoClient._items.values());
+      const allItems = Array.from(mockDynamoClient._getItems().values());
       const entity = allItems.find(item => item.id === testNotificationId);
 
       expect(entity?.GSI2PK).toBeUndefined();
@@ -945,7 +722,7 @@ describe('NotificationService', () => {
         userId: 'user-123'
       });
 
-      const allItems = Array.from(mockDynamoClient._items.values());
+      const allItems = Array.from(mockDynamoClient._getItems().values());
       const userNotifs = allItems.filter(item =>
         String(item.PK).startsWith('USER#user-123') &&
         String(item.SK).startsWith('NOTIFICATION#')

@@ -29,6 +29,18 @@ export interface MockDynamoClientOptions {
   readonly enableGSI2?: boolean;
 
   /**
+   * Whether to enable GSI1 support (for email/token lookups)
+   * @default true
+   */
+  readonly enableGSI1?: boolean;
+
+  /**
+   * Whether to enable GSI4 support (for user post queries)
+   * @default true
+   */
+  readonly enableGSI4?: boolean;
+
+  /**
    * Custom command handlers for extending mock behavior
    */
   readonly customHandlers?: {
@@ -54,6 +66,10 @@ export interface MockDynamoCommand {
     readonly ReturnValues?: string;
     readonly ConditionExpression?: string;
     readonly Select?: string;
+    readonly ScanIndexForward?: boolean;
+    readonly ExclusiveStartKey?: Record<string, unknown>;
+    readonly FilterExpression?: string;
+    readonly RequestItems?: Record<string, unknown>;
   };
 }
 
@@ -65,8 +81,12 @@ export interface MockDynamoClient {
   readonly send: ReturnType<typeof vi.fn>;
   /** Get all stored items (test helper) */
   readonly _getItems: () => Map<string, Record<string, unknown>>;
+  /** Get GSI1 items (test helper) */
+  readonly _getGSI1Items: () => Map<string, Record<string, unknown>[]>;
   /** Get GSI3 items (test helper) */
   readonly _getGSI3Items: () => Map<string, Record<string, unknown>[]>;
+  /** Get GSI4 items (test helper) */
+  readonly _getGSI4Items: () => Map<string, Record<string, unknown>[]>;
   /** Set an item directly (test helper) */
   readonly _setItem: (key: string, item: Record<string, unknown>) => void;
   /** Clear all data (test helper) */
@@ -111,13 +131,74 @@ export interface MockDynamoClient {
 export const createMockDynamoClient = (
   options: MockDynamoClientOptions = {}
 ): MockDynamoClient => {
-  const { enableGSI3 = true, enableGSI2 = true, customHandlers = {} } = options;
+  const { enableGSI3 = true, enableGSI2 = true, enableGSI1 = true, enableGSI4 = true, customHandlers = {} } = options;
 
   // Primary storage
   const items = new Map<string, Record<string, unknown>>();
 
+  // GSI1 storage (for email/token-based queries)
+  const gsi1Items = new Map<string, Record<string, unknown>[]>();
+
+  // GSI2 storage (for username-based queries)
+  const gsi2Items = new Map<string, Record<string, unknown>[]>();
+
   // GSI3 storage (for handle-based queries)
   const gsi3Items = new Map<string, Record<string, unknown>[]>();
+
+  // GSI4 storage (for user post queries)
+  const gsi4Items = new Map<string, Record<string, unknown>[]>();
+
+  /**
+   * Updates GSI1 index when items are modified
+   */
+  const updateGSI1 = (item: Record<string, unknown>): void => {
+    if (!enableGSI1) return;
+
+    const gsi1Key = item.GSI1PK as string;
+    if (gsi1Key) {
+      if (!gsi1Items.has(gsi1Key)) {
+        gsi1Items.set(gsi1Key, []);
+      }
+      // Remove any existing entry for this item
+      const existingItems = gsi1Items.get(gsi1Key)!;
+      const filtered = existingItems.filter(
+        existing => `${existing.PK}#${existing.SK}` !== `${item.PK}#${item.SK}`
+      );
+      filtered.push(item);
+      gsi1Items.set(gsi1Key, filtered);
+    }
+  };
+
+  /**
+   * Updates GSI2 index when items are modified
+   * Handles sparse index: removes items when GSI2PK is deleted
+   */
+  const updateGSI2 = (item: Record<string, unknown>): void => {
+    if (!enableGSI2) return;
+
+    const gsi2Key = item.GSI2PK as string | undefined;
+    const itemKey = `${item.PK}#${item.SK}`;
+
+    // First, remove this item from ALL GSI2 indexes (in case GSI2PK changed or was removed)
+    for (const [key, items] of gsi2Items.entries()) {
+      const filtered = items.filter(existing => `${existing.PK}#${existing.SK}` !== itemKey);
+      if (filtered.length === 0) {
+        gsi2Items.delete(key);
+      } else if (filtered.length < items.length) {
+        gsi2Items.set(key, filtered);
+      }
+    }
+
+    // Then, if item has GSI2PK, add it to the appropriate index
+    if (gsi2Key) {
+      if (!gsi2Items.has(gsi2Key)) {
+        gsi2Items.set(gsi2Key, []);
+      }
+      const existingItems = gsi2Items.get(gsi2Key)!;
+      existingItems.push(item);
+      gsi2Items.set(gsi2Key, existingItems);
+    }
+  };
 
   /**
    * Updates GSI3 index when items are modified
@@ -137,6 +218,27 @@ export const createMockDynamoClient = (
       );
       filtered.push(item);
       gsi3Items.set(gsi3Key, filtered);
+    }
+  };
+
+  /**
+   * Updates GSI4 index when items are modified
+   */
+  const updateGSI4 = (item: Record<string, unknown>): void => {
+    if (!enableGSI4) return;
+
+    const gsi4Key = item.GSI4PK as string;
+    if (gsi4Key) {
+      if (!gsi4Items.has(gsi4Key)) {
+        gsi4Items.set(gsi4Key, []);
+      }
+      // Remove any existing entry for this item
+      const existingItems = gsi4Items.get(gsi4Key)!;
+      const filtered = existingItems.filter(
+        existing => `${existing.PK}#${existing.SK}` !== `${item.PK}#${item.SK}`
+      );
+      filtered.push(item);
+      gsi4Items.set(gsi4Key, filtered);
     }
   };
 
@@ -162,36 +264,74 @@ export const createMockDynamoClient = (
       KeyConditionExpression,
       IndexName,
       ExpressionAttributeValues,
+      FilterExpression,
       Limit,
-      Select
+      Select,
+      ScanIndexForward,
+      ExclusiveStartKey
     } = command.input;
 
     let results: Record<string, unknown>[] = [];
 
+    // Handle GSI1 queries (e.g., email/token lookups)
+    if (enableGSI1 && IndexName === 'GSI1') {
+      // Support various key condition expressions for GSI1
+      if (KeyConditionExpression === 'GSI1PK = :email' ||
+          KeyConditionExpression === 'GSI1PK = :token' ||
+          KeyConditionExpression === 'GSI1PK = :pk') {
+        const pkValue = (ExpressionAttributeValues?.[':email'] ||
+                        ExpressionAttributeValues?.[':token'] ||
+                        ExpressionAttributeValues?.[':pk']) as string;
+        results = gsi1Items.get(pkValue) || [];
+      } else if (KeyConditionExpression?.includes('GSI1PK = :pk') && KeyConditionExpression?.includes('begins_with')) {
+        // Handle begins_with for GSI1
+        const pkValue = ExpressionAttributeValues?.[':pk'] as string;
+        const skPrefix = ExpressionAttributeValues?.[':sk'] as string;
+        const gsi1Results = gsi1Items.get(pkValue) || [];
+        results = gsi1Results.filter(item =>
+          typeof item.GSI1SK === 'string' && item.GSI1SK.startsWith(skPrefix)
+        );
+      }
+    }
+    // Handle GSI2 queries (e.g., username-based lookups, unread notifications)
+    else if (enableGSI2 && IndexName === 'GSI2') {
+      // Support various key condition expressions for GSI2
+      if (KeyConditionExpression === 'GSI2PK = :username' ||
+          KeyConditionExpression === 'GSI2PK = :pk' ||
+          KeyConditionExpression === 'GSI2PK = :gsi2pk') {
+        const pkValue = (ExpressionAttributeValues?.[':username'] ||
+                        ExpressionAttributeValues?.[':pk'] ||
+                        ExpressionAttributeValues?.[':gsi2pk']) as string;
+        results = gsi2Items.get(pkValue) || [];
+      } else if (KeyConditionExpression?.includes('begins_with')) {
+        const pkValue = (ExpressionAttributeValues?.[':pk'] ||
+                        ExpressionAttributeValues?.[':gsi2pk']) as string;
+        const skPrefix = (ExpressionAttributeValues?.[':sk'] ||
+                         ExpressionAttributeValues?.[':skPrefix']) as string;
+        const gsi2Results = gsi2Items.get(pkValue) || [];
+        results = gsi2Results.filter(item =>
+          typeof item.GSI2SK === 'string' && item.GSI2SK.startsWith(skPrefix)
+        );
+      }
+    }
     // Handle GSI3 queries (e.g., handle lookups)
-    if (enableGSI3 && IndexName === 'GSI3' && KeyConditionExpression === 'GSI3PK = :pk') {
+    else if (enableGSI3 && IndexName === 'GSI3' && KeyConditionExpression === 'GSI3PK = :pk') {
       const pk = ExpressionAttributeValues?.[':pk'] as string;
       results = gsi3Items.get(pk) || [];
     }
-    // Handle GSI2 queries (e.g., user-based lookups)
-    else if (enableGSI2 && IndexName === 'GSI2') {
-      const pkValue = ExpressionAttributeValues?.[':pk'] as string;
-      const skPrefix = ExpressionAttributeValues?.[':sk'] as string;
-
-      for (const [, item] of items.entries()) {
-        if (
-          item.GSI2PK === pkValue &&
-          typeof item.GSI2SK === 'string' &&
-          item.GSI2SK.startsWith(skPrefix)
-        ) {
-          results.push(item);
-        }
-      }
+    // Handle GSI4 queries (e.g., user post queries)
+    else if (enableGSI4 && IndexName === 'GSI4' && KeyConditionExpression === 'GSI4PK = :pk') {
+      const pk = ExpressionAttributeValues?.[':pk'] as string;
+      const skPrefix = ExpressionAttributeValues?.[':skPrefix'] as string;
+      results = (gsi4Items.get(pk) || []).filter(item => {
+        const itemSK = item.GSI4SK as string;
+        return !skPrefix || itemSK.startsWith(skPrefix);
+      });
     }
     // Handle main table queries
     else {
       const pkValue = ExpressionAttributeValues?.[':pk'] as string;
-      const skPrefix = ExpressionAttributeValues?.[':sk'] as string;
+      const skPrefix = (ExpressionAttributeValues?.[':sk'] || ExpressionAttributeValues?.[':skPrefix']) as string;
 
       for (const [, item] of items.entries()) {
         const pkMatches = item.PK === pkValue;
@@ -203,16 +343,86 @@ export const createMockDynamoClient = (
       }
     }
 
-    // Apply limit
-    const limit = Limit || results.length;
-    const paginatedResults = results.slice(0, limit);
+    // Apply FilterExpression if present
+    if (FilterExpression && ExpressionAttributeValues) {
+      // Handle authorId filter
+      if (FilterExpression.includes('authorId = :authorId')) {
+        const authorId = ExpressionAttributeValues[':authorId'] as string;
+        results = results.filter(item => item.authorId === authorId);
+      }
 
-    // Return count if requested
-    if (Select === 'COUNT') {
-      return Promise.resolve({ Count: paginatedResults.length, $metadata: {} });
+      // Handle notification type filter
+      if (FilterExpression.includes('#type = :type')) {
+        const typeValue = ExpressionAttributeValues[':type'];
+        results = results.filter(item => item.type === typeValue);
+      }
+
+      // Handle notification priority filter
+      if (FilterExpression.includes('priority = :priority')) {
+        const priorityValue = ExpressionAttributeValues[':priority'];
+        results = results.filter(item => item.priority === priorityValue);
+      }
+
+      // Handle notification status filter
+      if (FilterExpression.includes('#status = :status')) {
+        const statusValue = ExpressionAttributeValues[':status'];
+        results = results.filter(item => item.status === statusValue);
+      }
+
+      // Handle postId filter
+      if (FilterExpression.includes('postId = :postId')) {
+        const postId = ExpressionAttributeValues[':postId'] as string;
+        results = results.filter(item => item.postId === postId);
+      }
+
+      // Handle isRead filter (Instagram-like behavior)
+      if (FilterExpression.includes('isRead')) {
+        if (FilterExpression.includes('attribute_not_exists(isRead)') ||
+            FilterExpression.includes('isRead = :false')) {
+          results = results.filter(item => !item.isRead || item.isRead === false);
+        }
+      }
     }
 
-    return Promise.resolve({ Items: paginatedResults, $metadata: {} });
+    // Sort results by SK (ascending by default, descending if ScanIndexForward is false)
+    const sorted = results.sort((a, b) => {
+      const skA = String(a.SK);
+      const skB = String(b.SK);
+      return ScanIndexForward === false ? skB.localeCompare(skA) : skA.localeCompare(skB);
+    });
+
+    // Return count if requested (should be total count before pagination)
+    if (Select === 'COUNT') {
+      return Promise.resolve({ Count: sorted.length, $metadata: {} });
+    }
+
+    // Handle pagination with ExclusiveStartKey
+    let startIndex = 0;
+    if (ExclusiveStartKey) {
+      startIndex = sorted.findIndex(item =>
+        item.PK === ExclusiveStartKey.PK && item.SK === ExclusiveStartKey.SK
+      ) + 1;
+    }
+
+    // Apply limit
+    const limit = Limit || sorted.length;
+    const paginatedResults = sorted.slice(startIndex, startIndex + limit);
+
+    // Determine if there are more results
+    const hasMore = startIndex + limit < sorted.length;
+    const lastEvaluatedKey = hasMore && paginatedResults.length > 0
+      ? {
+          PK: paginatedResults[paginatedResults.length - 1].PK,
+          SK: paginatedResults[paginatedResults.length - 1].SK
+        }
+      : undefined;
+
+    return Promise.resolve({
+      Items: paginatedResults,
+      Count: paginatedResults.length,
+      LastEvaluatedKey: lastEvaluatedKey,
+      $metadata: {}
+    });
   };
 
   /**
@@ -249,6 +459,16 @@ export const createMockDynamoClient = (
           return Promise.reject(error);
         }
       }
+      // Handle "if_not_exists(postsCount, :zero) > :zero" condition
+      if (ConditionExpression.includes('if_not_exists(postsCount, :zero) > :zero')) {
+        const postsCount = (item.postsCount as number) || 0;
+        const zero = (ExpressionAttributeValues?.[':zero'] as number) || 0;
+        if (postsCount <= zero) {
+          const error: any = new Error('ConditionalCheckFailedException');
+          error.name = 'ConditionalCheckFailedException';
+          return Promise.reject(error);
+        }
+      }
     }
 
     const updatedItem = { ...item };
@@ -256,7 +476,7 @@ export const createMockDynamoClient = (
     // Parse UpdateExpression - supports common patterns
     if (UpdateExpression) {
       // Simple SET operations
-      if (UpdateExpression.includes('#updatedAt = :updatedAt')) {
+      if (UpdateExpression.includes('#updatedAt = :updatedAt') || UpdateExpression.includes('updatedAt = :updatedAt')) {
         updatedItem.updatedAt = ExpressionAttributeValues?.[':updatedAt'];
       }
       if (UpdateExpression.includes('#handle = :handle')) {
@@ -271,6 +491,24 @@ export const createMockDynamoClient = (
       if (UpdateExpression.includes('profilePictureUrl = :url')) {
         updatedItem.profilePictureUrl = ExpressionAttributeValues?.[':url'];
         updatedItem.profilePictureThumbnailUrl = ExpressionAttributeValues?.[':thumb'];
+      }
+
+      // Post-specific updates
+      if (UpdateExpression.includes('caption = :caption')) {
+        updatedItem.caption = ExpressionAttributeValues?.[':caption'];
+      }
+      if (UpdateExpression.includes('tags = :tags')) {
+        updatedItem.tags = ExpressionAttributeValues?.[':tags'];
+      }
+      if (UpdateExpression.includes('isPublic = :isPublic')) {
+        updatedItem.isPublic = ExpressionAttributeValues?.[':isPublic'];
+      }
+
+      // GSI1 updates (for auth service token updates)
+      if (UpdateExpression.includes('GSI1PK = :gsi1pk')) {
+        updatedItem.hashedToken = ExpressionAttributeValues?.[':token'];
+        updatedItem.GSI1PK = ExpressionAttributeValues?.[':gsi1pk'];
+        updateGSI1(updatedItem);
       }
 
       // GSI3 updates
@@ -363,9 +601,38 @@ export const createMockDynamoClient = (
         const currentCount = (updatedItem.followingCount as number) || 0;
         updatedItem.followingCount = Math.max(0, currentCount - ((ExpressionAttributeValues?.[':dec'] as number) || 0));
       }
+
+      // Feed item read status updates
+      if (UpdateExpression.includes('isRead') && ExpressionAttributeValues?.[':isRead'] !== undefined) {
+        updatedItem.isRead = ExpressionAttributeValues[':isRead'] as boolean;
+      }
+      if (UpdateExpression.includes('readAt') && ExpressionAttributeValues?.[':readAt']) {
+        updatedItem.readAt = ExpressionAttributeValues[':readAt'] as string;
+      }
+
+      // Notification-specific updates
+      if (UpdateExpression.includes('#status = :status') && command.input.ExpressionAttributeNames?.['#status']) {
+        updatedItem.status = ExpressionAttributeValues?.[':status'];
+      }
+
+      // Handle REMOVE operations
+      if (UpdateExpression.includes('REMOVE')) {
+        const removeMatch = UpdateExpression.match(/REMOVE\s+(.+)$/);
+        if (removeMatch) {
+          const removeFields = removeMatch[1].split(',').map((f: string) => f.trim());
+          const names = command.input.ExpressionAttributeNames || {};
+          removeFields.forEach((field: string) => {
+            // Handle expression attribute names
+            const actualFieldName = (names[field] as string | undefined) || field;
+            delete (updatedItem as Record<string, unknown>)[actualFieldName];
+          });
+        }
+      }
     }
 
     items.set(key, updatedItem);
+    // Update GSI2 after modifications (sparse index)
+    updateGSI2(updatedItem);
     return Promise.resolve({ Attributes: updatedItem, $metadata: {} });
   };
 
@@ -389,7 +656,10 @@ export const createMockDynamoClient = (
     }
 
     items.set(key, Item);
+    updateGSI1(Item);
+    updateGSI2(Item);
     updateGSI3(Item);
+    updateGSI4(Item);
     return Promise.resolve({ $metadata: {} });
   };
 
@@ -405,6 +675,79 @@ export const createMockDynamoClient = (
     const key = `${Key.PK}#${Key.SK}`;
     items.delete(key);
     return Promise.resolve({ $metadata: {} });
+  };
+
+  /**
+   * Handles ScanCommand - scans table with filter expressions
+   */
+  const handleScanCommand = (command: MockDynamoCommand): Promise<any> => {
+    const { FilterExpression, ExpressionAttributeValues } = command.input;
+
+    let results = Array.from(items.values());
+
+    // Apply filter expressions
+    if (FilterExpression && ExpressionAttributeValues) {
+      // Handle postId filter
+      if (FilterExpression.includes('postId = :postId')) {
+        const postId = ExpressionAttributeValues[':postId'] as string;
+        results = results.filter(item => item.postId === postId);
+      }
+
+      // Handle entityType filter
+      if (FilterExpression.includes('entityType = :entityType')) {
+        const entityType = ExpressionAttributeValues[':entityType'] as string;
+        results = results.filter(item => item.entityType === entityType);
+      }
+    }
+
+    return Promise.resolve({
+      Items: results,
+      Count: results.length,
+      $metadata: {}
+    });
+  };
+
+  /**
+   * Handles BatchWriteCommand - batch operations (deletes and puts)
+   */
+  const handleBatchWriteCommand = (command: MockDynamoCommand): Promise<any> => {
+    const requestItems = command.input.RequestItems;
+    if (!requestItems) {
+      return Promise.resolve({ UnprocessedItems: {}, $metadata: {} });
+    }
+
+    const tableName = Object.keys(requestItems)[0];
+    const requests = requestItems[tableName] as Array<{
+      DeleteRequest?: { Key: { PK: string; SK: string } };
+      PutRequest?: { Item: Record<string, unknown> };
+    }>;
+
+    let deletedCount = 0;
+
+    requests.forEach(request => {
+      if (request.DeleteRequest) {
+        const key = `${request.DeleteRequest.Key.PK}#${request.DeleteRequest.Key.SK}`;
+        if (items.has(key)) {
+          items.delete(key);
+          deletedCount++;
+        }
+      }
+      if (request.PutRequest) {
+        const item = request.PutRequest.Item;
+        const key = `${item.PK}#${item.SK}`;
+        items.set(key, item);
+        updateGSI1(item);
+        updateGSI2(item);
+        updateGSI3(item);
+        updateGSI4(item);
+      }
+    });
+
+    return Promise.resolve({
+      UnprocessedItems: {},
+      _deletedCount: deletedCount, // For testing purposes
+      $metadata: {}
+    });
   };
 
   /**
@@ -430,6 +773,10 @@ export const createMockDynamoClient = (
         return handlePutCommand(command);
       case 'DeleteCommand':
         return handleDeleteCommand(command);
+      case 'ScanCommand':
+        return handleScanCommand(command);
+      case 'BatchWriteCommand':
+        return handleBatchWriteCommand(command);
       default:
         return Promise.resolve({ $metadata: {} });
     }
@@ -438,14 +785,22 @@ export const createMockDynamoClient = (
   return {
     send: send as any,
     _getItems: () => items,
+    _getGSI1Items: () => gsi1Items,
     _getGSI3Items: () => gsi3Items,
+    _getGSI4Items: () => gsi4Items,
     _setItem: (key: string, item: Record<string, unknown>) => {
       items.set(key, item);
+      updateGSI1(item);
+      updateGSI2(item);
       updateGSI3(item);
+      updateGSI4(item);
     },
     _clear: () => {
       items.clear();
+      gsi1Items.clear();
+      gsi2Items.clear();
       gsi3Items.clear();
+      gsi4Items.clear();
     }
   };
 };
