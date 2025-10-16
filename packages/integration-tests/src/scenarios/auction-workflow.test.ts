@@ -2,14 +2,15 @@
  * Auction Workflow Integration Test
  *
  * This test demonstrates the complete auction lifecycle:
- * 1. Seller creates auction
- * 2. Bidder 1 places bid
- * 3. Bidder 2 places higher bid
- * 4. Bidder 1 tries to place lower bid (should fail)
- * 5. Concurrent bidding scenario (race condition handling)
- * 6. Get auction details
- * 7. List auctions with filters
+ * 1. Seller creates auction (status: pending)
+ * 2. Get auction details
+ * 3. Try to bid on pending auction (should fail)
+ * 4. Seller activates auction (status: active, owner-only)
+ * 5. Bidder 1 places first bid
+ * 6. Bidder 2 places higher bid
+ * 7. Bidder 1 tries to place lower bid (should fail)
  * 8. Get bid history
+ * 9. List auctions with filters
  *
  * Prerequisites:
  * - PostgreSQL running on port 5432
@@ -104,30 +105,151 @@ describe('Auction Workflow Integration', () => {
         );
         expect.fail('Should not allow bidding on pending auction');
       } catch (error: any) {
-        expect(error.response?.status).toBe(404);
-        expect(error.response?.data?.message).toContain('not found or not active');
+        expect(error.status).toBe(404);
+        if (error.data?.message) {
+          expect(error.data.message).toContain('not found or not active');
+        } else if (error.data?.error) {
+          expect(error.data.error).toContain('not found or not active');
+        }
       }
 
       console.log('✅ Step 3: Bidding blocked on pending auction');
 
       // ===================================================================
-      // STEP 4: Activate auction (normally would be scheduled, doing manually for test)
+      // STEP 4: Activate auction (seller activates to enable bidding)
       // ===================================================================
-      // Note: We'd need an activate-auction handler for this
-      // For now, we'll directly update via AuctionService in a helper
-      // Skipping activation for now - this would require direct DB access or admin endpoint
+      const activateResponse = await httpClient.post(
+        `/auctions/${auctionId}/activate`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${seller.token}` },
+        }
+      );
 
-      // Instead, let's list auctions to verify it shows up
-      const listResponse = await httpClient.get('/auctions?limit=10');
-      expect(listResponse.status).toBe(200);
-      const { auctions } = listResponse.data as { auctions: Auction[] };
-      const ourAuction = auctions.find((a) => a.id === auctionId);
-      expect(ourAuction).toBeDefined();
+      expect(activateResponse.status).toBe(200);
+      const { auction: activatedAuction } = activateResponse.data as { auction: Auction };
+      expect(activatedAuction.status).toBe('active');
+      expect(activatedAuction.id).toBe(auctionId);
 
-      console.log('✅ Step 4: Auction appears in listing');
+      console.log('✅ Step 4: Auction activated', { auctionId, status: 'active' });
+
+      // Verify non-owner cannot activate
+      try {
+        await httpClient.post(
+          `/auctions/${auctionId}/activate`,
+          {},
+          {
+            headers: { Authorization: `Bearer ${bidder1.token}` },
+          }
+        );
+        expect.fail('Non-owner should not be able to activate auction');
+      } catch (error: any) {
+        expect(error.status).toBe(403);
+      }
+
+      console.log('✅ Step 4b: Non-owner activation blocked');
 
       // ===================================================================
-      // STEP 5: Filter auctions by userId
+      // STEP 5: Bidder 1 places first bid
+      // ===================================================================
+      const bid1Request: PlaceBidRequest = {
+        auctionId,
+        amount: 150.0,
+      };
+
+      const bid1Response = await httpClient.post('/bids', bid1Request, {
+        headers: { Authorization: `Bearer ${bidder1.token}` },
+      });
+
+      expect(bid1Response.status).toBe(201);
+      const { bid: firstBid, auction: auctionAfterBid1 } = bid1Response.data as {
+        bid: Bid;
+        auction: Auction;
+      };
+
+      expect(firstBid.auctionId).toBe(auctionId);
+      expect(firstBid.userId).toBe(bidder1.userId);
+      expect(firstBid.amount).toBe(150.0);
+      expect(auctionAfterBid1.currentPrice).toBe(150.0);
+      expect(auctionAfterBid1.bidCount).toBe(1);
+
+      console.log('✅ Step 5: First bid placed', {
+        bidder: bidder1.userId,
+        amount: 150.0,
+      });
+
+      // ===================================================================
+      // STEP 6: Bidder 2 places higher bid
+      // ===================================================================
+      const bid2Request: PlaceBidRequest = {
+        auctionId,
+        amount: 200.0,
+      };
+
+      const bid2Response = await httpClient.post('/bids', bid2Request, {
+        headers: { Authorization: `Bearer ${bidder2.token}` },
+      });
+
+      expect(bid2Response.status).toBe(201);
+      const { bid: secondBid, auction: auctionAfterBid2 } = bid2Response.data as {
+        bid: Bid;
+        auction: Auction;
+      };
+
+      expect(secondBid.amount).toBe(200.0);
+      expect(auctionAfterBid2.currentPrice).toBe(200.0);
+      expect(auctionAfterBid2.bidCount).toBe(2);
+
+      console.log('✅ Step 6: Higher bid placed', {
+        bidder: bidder2.userId,
+        amount: 200.0,
+      });
+
+      // ===================================================================
+      // STEP 7: Bidder 1 tries to place lower bid (should fail)
+      // ===================================================================
+      try {
+        await httpClient.post(
+          '/bids',
+          {
+            auctionId,
+            amount: 175.0, // Lower than current price of 200
+          } as PlaceBidRequest,
+          {
+            headers: { Authorization: `Bearer ${bidder1.token}` },
+          }
+        );
+        expect.fail('Should not allow bid lower than current price');
+      } catch (error: any) {
+        expect(error.status).toBe(400);
+        if (error.data?.message) {
+          expect(error.data.message).toContain('higher than current price');
+        } else if (error.data?.error) {
+          expect(error.data.error).toContain('higher than current price');
+        }
+      }
+
+      console.log('✅ Step 7: Lower bid rejected');
+
+      // ===================================================================
+      // STEP 8: Get bid history
+      // ===================================================================
+      const historyResponse = await httpClient.get(`/auctions/${auctionId}/bids`);
+      expect(historyResponse.status).toBe(200);
+      const { bids: bidHistory, total: totalBids } = historyResponse.data as {
+        bids: Bid[];
+        total: number;
+      };
+
+      expect(totalBids).toBe(2);
+      expect(bidHistory).toHaveLength(2);
+      // Bids should be ordered by amount descending
+      expect(bidHistory[0].amount).toBeGreaterThanOrEqual(bidHistory[1].amount);
+
+      console.log('✅ Step 8: Bid history retrieved', { totalBids: 2 });
+
+      // ===================================================================
+      // STEP 9: Filter auctions by userId
       // ===================================================================
       const userAuctionsResponse = await httpClient.get(
         `/auctions?userId=${seller.userId}&limit=10`
@@ -139,35 +261,23 @@ describe('Auction Workflow Integration', () => {
       expect(userAuctions.length).toBeGreaterThan(0);
       expect(userAuctions.every((a) => a.userId === seller.userId)).toBe(true);
 
-      console.log('✅ Step 5: Filtered auctions by seller', {
+      console.log('✅ Step 9: Filtered auctions by seller', {
         count: userAuctions.length,
       });
-
-      // ===================================================================
-      // STEP 6: Get bid history (should be empty)
-      // ===================================================================
-      const emptyHistoryResponse = await httpClient.get(`/auctions/${auctionId}/bids`);
-      expect(emptyHistoryResponse.status).toBe(200);
-      const { bids: emptyBids, total: emptyTotal } = emptyHistoryResponse.data as {
-        bids: Bid[];
-        total: number;
-      };
-      expect(emptyBids).toEqual([]);
-      expect(emptyTotal).toBe(0);
-
-      console.log('✅ Step 6: Bid history empty for new auction');
 
       console.log('');
       console.log('🎉 Complete Auction Workflow Test Passed!');
       console.log('   ✓ Auction creation');
       console.log('   ✓ Auction retrieval');
       console.log('   ✓ Pending auction protection');
+      console.log('   ✓ Auction activation (owner-only)');
+      console.log('   ✓ First bid placement');
+      console.log('   ✓ Higher bid placement');
+      console.log('   ✓ Lower bid rejection');
+      console.log('   ✓ Bid history retrieval');
       console.log('   ✓ Auction listing');
       console.log('   ✓ User filtering');
-      console.log('   ✓ Bid history retrieval');
       console.log('');
-      console.log('Note: Bidding tests require activate-auction endpoint');
-      console.log('      or direct database manipulation for testing');
     }, 30000);
   });
 
@@ -243,7 +353,7 @@ describe('Auction Workflow Integration', () => {
         );
         expect.fail('Should reject invalid auction data');
       } catch (error: any) {
-        expect(error.response?.status).toBe(400);
+        expect(error.status).toBe(400);
       }
 
       // Invalid date range
@@ -262,7 +372,7 @@ describe('Auction Workflow Integration', () => {
         );
         expect.fail('Should reject invalid date range');
       } catch (error: any) {
-        expect(error.response?.status).toBe(400);
+        expect(error.status).toBe(400);
       }
 
       // Non-existent auction
@@ -270,7 +380,7 @@ describe('Auction Workflow Integration', () => {
         await httpClient.get('/auctions/00000000-0000-0000-0000-000000000000');
         expect.fail('Should return 404 for non-existent auction');
       } catch (error: any) {
-        expect(error.response?.status).toBe(404);
+        expect(error.status).toBe(404);
       }
 
       // Missing authentication
@@ -283,7 +393,7 @@ describe('Auction Workflow Integration', () => {
         } as CreateAuctionRequest);
         expect.fail('Should require authentication');
       } catch (error: any) {
-        expect(error.response?.status).toBe(401);
+        expect(error.status).toBe(401);
       }
 
       console.log('✅ Error handling working correctly');

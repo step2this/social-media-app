@@ -4,6 +4,11 @@
   "type": "module",
   "private": true,
   "description": "Integration tests for TamaFriends social media app",
+  "main": "./src/utils/index.ts",
+  "exports": {
+    ".": "./src/utils/index.ts",
+    "./test-factories": "./src/utils/test-factories.ts"
+  },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
