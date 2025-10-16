@@ -1,8 +1,8 @@
 /* eslint-disable */
 import { describe, it, expect, beforeEach, vi, type MockedFunction } from 'vitest';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { handler } from './get-comments.js';
 import { CommentService } from '@social-media-app/dal';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 import * as dynamoUtils from '../../utils/dynamodb.js';
 
 // Mock dependencies
@@ -25,38 +25,6 @@ describe('Get Comments Handler', () => {
     deleteComment: vi.fn(),
     getCommentsByPost: vi.fn()
   };
-
-  const createMockEvent = (
-    postId?: string,
-    queryParams?: Record<string, string>
-  ): APIGatewayProxyEventV2 => ({
-    version: '2.0',
-    routeKey: 'GET /comments',
-    rawPath: '/comments',
-    rawQueryString: queryParams ? new URLSearchParams(queryParams).toString() : '',
-    headers: {
-      'content-type': 'application/json'
-    },
-    requestContext: {
-      requestId: 'test-request-id',
-      http: {
-        method: 'GET',
-        path: '/comments',
-        protocol: 'HTTP/1.1',
-        sourceIp: '127.0.0.1',
-        userAgent: 'test-agent'
-      },
-      stage: 'test',
-      time: '2024-01-01T00:00:00.000Z',
-      timeEpoch: 1704067200000,
-      domainName: 'api.example.com',
-      accountId: '123456789012',
-      apiId: 'api123',
-      routeKey: 'GET /comments'
-    },
-    queryStringParameters: postId ? { postId, ...queryParams } : (queryParams || null),
-    isBase64Encoded: false
-  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -97,7 +65,9 @@ describe('Get Comments Handler', () => {
 
     mockCommentService.getCommentsByPost.mockResolvedValue(mockCommentsResponse);
 
-    const event = createMockEvent(postId);
+    const event = createMockAPIGatewayEvent({
+      queryStringParameters: { postId }
+    });
 
     const result = await handler(event);
 
@@ -123,7 +93,9 @@ describe('Get Comments Handler', () => {
 
     mockCommentService.getCommentsByPost.mockResolvedValue(mockCommentsResponse);
 
-    const event = createMockEvent(postId);
+    const event = createMockAPIGatewayEvent({
+      queryStringParameters: { postId }
+    });
 
     const result = await handler(event);
 
@@ -153,7 +125,9 @@ describe('Get Comments Handler', () => {
 
     mockCommentService.getCommentsByPost.mockResolvedValue(mockCommentsResponse);
 
-    const event = createMockEvent(postId, { limit });
+    const event = createMockAPIGatewayEvent({
+      queryStringParameters: { postId, limit }
+    });
 
     const result = await handler(event);
 
@@ -179,7 +153,9 @@ describe('Get Comments Handler', () => {
 
     mockCommentService.getCommentsByPost.mockResolvedValue(mockCommentsResponse);
 
-    const event = createMockEvent(postId);
+    const event = createMockAPIGatewayEvent({
+      queryStringParameters: { postId }
+    });
 
     const result = await handler(event);
 
@@ -213,7 +189,9 @@ describe('Get Comments Handler', () => {
 
     mockCommentService.getCommentsByPost.mockResolvedValue(mockCommentsResponse);
 
-    const event = createMockEvent(postId, { cursor });
+    const event = createMockAPIGatewayEvent({
+      queryStringParameters: { postId, cursor }
+    });
 
     const result = await handler(event);
 
@@ -230,7 +208,7 @@ describe('Get Comments Handler', () => {
   });
 
   it('should return 400 when postId is missing', async () => {
-    const event = createMockEvent(undefined);
+    const event = createMockAPIGatewayEvent({});
 
     const result = await handler(event);
 
@@ -241,7 +219,9 @@ describe('Get Comments Handler', () => {
   });
 
   it('should return 400 when postId is not a valid UUID', async () => {
-    const event = createMockEvent('invalid-uuid');
+    const event = createMockAPIGatewayEvent({
+      queryStringParameters: { postId: 'invalid-uuid' }
+    });
 
     const result = await handler(event);
 
@@ -253,7 +233,9 @@ describe('Get Comments Handler', () => {
 
   it('should return 400 when limit is negative', async () => {
     const postId = '123e4567-e89b-12d3-a456-426614174000';
-    const event = createMockEvent(postId, { limit: '-1' });
+    const event = createMockAPIGatewayEvent({
+      queryStringParameters: { postId, limit: '-1' }
+    });
 
     const result = await handler(event);
 
@@ -265,7 +247,9 @@ describe('Get Comments Handler', () => {
 
   it('should return 400 when limit is not a number', async () => {
     const postId = '123e4567-e89b-12d3-a456-426614174000';
-    const event = createMockEvent(postId, { limit: 'invalid' });
+    const event = createMockAPIGatewayEvent({
+      queryStringParameters: { postId, limit: 'invalid' }
+    });
 
     const result = await handler(event);
 
@@ -282,7 +266,9 @@ describe('Get Comments Handler', () => {
       new Error('DynamoDB connection failed')
     );
 
-    const event = createMockEvent(postId);
+    const event = createMockAPIGatewayEvent({
+      queryStringParameters: { postId }
+    });
 
     // Mock console.error to suppress error output during test
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -318,7 +304,9 @@ describe('Get Comments Handler', () => {
       hasMore: false
     });
 
-    const event = createMockEvent(postId);
+    const event = createMockAPIGatewayEvent({
+      queryStringParameters: { postId }
+    });
 
     // Mock console.error to suppress error output during test
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -343,7 +331,9 @@ describe('Get Comments Handler', () => {
 
     mockCommentService.getCommentsByPost.mockResolvedValue(mockCommentsResponse);
 
-    const event = createMockEvent(postId, { limit: '100' });
+    const event = createMockAPIGatewayEvent({
+      queryStringParameters: { postId, limit: '100' }
+    });
 
     const result = await handler(event);
 
@@ -365,7 +355,9 @@ describe('Get Comments Handler', () => {
 
     mockCommentService.getCommentsByPost.mockResolvedValue(mockCommentsResponse);
 
-    const event = createMockEvent(postId, { limit: '1' });
+    const event = createMockAPIGatewayEvent({
+      queryStringParameters: { postId, limit: '1' }
+    });
 
     const result = await handler(event);
 
@@ -389,7 +381,9 @@ describe('Get Comments Handler', () => {
 
     mockCommentService.getCommentsByPost.mockResolvedValue(mockCommentsResponse);
 
-    const event = createMockEvent(postId, { limit, cursor });
+    const event = createMockAPIGatewayEvent({
+      queryStringParameters: { postId, limit, cursor }
+    });
 
     const result = await handler(event);
 

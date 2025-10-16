@@ -5,7 +5,8 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { handler } from './get-profile.js';
-import { createMockLambdaEvent, setupTestEnvironment } from '../../test/utils/index.js';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
+import { setupTestEnvironment } from '../../test/utils/index.js';
 import type { PublicProfileResponse } from '@social-media-app/shared';
 import { z } from 'zod';
 
@@ -55,7 +56,8 @@ describe('get-profile handler', () => {
   describe('Parameter Validation', () => {
     it('should return 400 when handle is missing', async () => {
       // Arrange
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
         pathParameters: {},
       });
 
@@ -71,8 +73,9 @@ describe('get-profile handler', () => {
 
     it('should return 400 when pathParameters is null', async () => {
       // Arrange
-      const event = createMockLambdaEvent({
-        pathParameters: null,
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        pathParameters: undefined,
       });
 
       // Act
@@ -103,7 +106,8 @@ describe('get-profile handler', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
         pathParameters: { handle: testHandle },
       });
 
@@ -122,7 +126,8 @@ describe('get-profile handler', () => {
 
     it('should return 404 when profile not found', async () => {
       // Arrange
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
         pathParameters: { handle: 'nonexistent-user' },
       });
 
@@ -143,7 +148,8 @@ describe('get-profile handler', () => {
   describe('Error Handling', () => {
     it('should return 500 when ProfileService throws an error', async () => {
       // Arrange
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
         pathParameters: { handle: 'test-handle' },
       });
 
@@ -161,7 +167,8 @@ describe('get-profile handler', () => {
 
     it('should return 400 when Zod validation fails', async () => {
       // Arrange
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
         pathParameters: { handle: 'test-handle' },
       });
 
@@ -196,7 +203,8 @@ describe('get-profile handler', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
         pathParameters: { handle: testProfile.handle },
       });
 
@@ -232,7 +240,8 @@ describe('get-profile handler', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
         pathParameters: { handle: validProfile.handle },
       });
 
@@ -280,7 +289,8 @@ describe('get-profile handler', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
         pathParameters: { handle: testProfile.handle },
       });
 
@@ -306,7 +316,8 @@ describe('get-profile handler', () => {
   describe('Edge Cases', () => {
     it('should handle empty string handle as invalid', async () => {
       // Arrange
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
         pathParameters: { handle: '' },
       });
 
@@ -321,7 +332,8 @@ describe('get-profile handler', () => {
 
     it('should handle whitespace-only handle as valid (current behavior)', async () => {
       // Arrange
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
         pathParameters: { handle: '   ' },
       });
 

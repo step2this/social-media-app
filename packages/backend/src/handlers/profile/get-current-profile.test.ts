@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, type MockedFunction } from 'vitest';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { handler } from './get-current-profile.js';
 import { ProfileService } from '@social-media-app/dal';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 import * as dynamoUtils from '../../utils/dynamodb.js';
 import * as jwtUtils from '../../utils/jwt.js';
 
@@ -38,37 +38,6 @@ const mockVerifyAccessToken = jwtUtils.verifyAccessToken as MockedFunction<typeo
 describe('Get Current Profile Handler', () => {
   let mockProfileService: any;
 
-  const createMockEvent = (
-    headers?: Record<string, string>
-  ): APIGatewayProxyEventV2 => ({
-    version: '2.0',
-    routeKey: 'GET /profile/me',
-    rawPath: '/profile/me',
-    rawQueryString: '',
-    headers: headers || {},
-    requestContext: {
-      requestId: 'test-request-id',
-      http: {
-        method: 'GET',
-        path: '/profile/me',
-        protocol: 'HTTP/1.1',
-        sourceIp: '127.0.0.1',
-        userAgent: 'test-agent'
-      },
-      stage: 'test',
-      time: '2024-01-01T00:00:00Z',
-      timeEpoch: 1704067200000,
-      accountId: 'test-account',
-      apiId: 'test-api',
-      requestId: 'test-request-id',
-      routeKey: 'GET /profile/me',
-      domainName: 'test-domain',
-      domainPrefix: 'test'
-    },
-    body: null,
-    isBase64Encoded: false
-  });
-
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -90,7 +59,11 @@ describe('Get Current Profile Handler', () => {
     it('should return 401 when no Authorization header provided', async () => {
       mockExtractTokenFromHeader.mockReturnValue(null);
 
-      const event = createMockEvent();
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/profile/me',
+        routeKey: 'GET /profile/me'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(401);
@@ -104,8 +77,11 @@ describe('Get Current Profile Handler', () => {
       mockExtractTokenFromHeader.mockReturnValue('invalid-token');
       mockVerifyAccessToken.mockResolvedValue(null);
 
-      const event = createMockEvent({
-        Authorization: 'Bearer invalid-token'
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/profile/me',
+        routeKey: 'GET /profile/me',
+        headers: { authorization: 'Bearer invalid-token' }
       });
 
       const result = await handler(event);
@@ -144,8 +120,11 @@ describe('Get Current Profile Handler', () => {
     it('should return current user profile when valid token provided', async () => {
       mockProfileService.getProfileById.mockResolvedValue(mockUser);
 
-      const event = createMockEvent({
-        Authorization: 'Bearer valid-token'
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/profile/me',
+        routeKey: 'GET /profile/me',
+        headers: { authorization: 'Bearer valid-token' }
       });
 
       const result = await handler(event);
@@ -160,8 +139,11 @@ describe('Get Current Profile Handler', () => {
     it('should return 404 when user profile not found', async () => {
       mockProfileService.getProfileById.mockResolvedValue(null);
 
-      const event = createMockEvent({
-        Authorization: 'Bearer valid-token'
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/profile/me',
+        routeKey: 'GET /profile/me',
+        headers: { authorization: 'Bearer valid-token' }
       });
 
       const result = await handler(event);
@@ -186,8 +168,11 @@ describe('Get Current Profile Handler', () => {
       const serviceError = new Error('Database connection failed');
       mockProfileService.getProfileById.mockRejectedValue(serviceError);
 
-      const event = createMockEvent({
-        Authorization: 'Bearer valid-token'
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/profile/me',
+        routeKey: 'GET /profile/me',
+        headers: { authorization: 'Bearer valid-token' }
       });
 
       const result = await handler(event);
@@ -202,8 +187,11 @@ describe('Get Current Profile Handler', () => {
     it('should return 500 when JWT verification throws an error', async () => {
       mockVerifyAccessToken.mockRejectedValue(new Error('JWT verification failed'));
 
-      const event = createMockEvent({
-        Authorization: 'Bearer valid-token'
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/profile/me',
+        routeKey: 'GET /profile/me',
+        headers: { authorization: 'Bearer valid-token' }
       });
 
       const result = await handler(event);
@@ -242,8 +230,11 @@ describe('Get Current Profile Handler', () => {
     it('should return properly formatted response with correct headers', async () => {
       mockProfileService.getProfileById.mockResolvedValue(mockUser);
 
-      const event = createMockEvent({
-        Authorization: 'Bearer valid-token'
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/profile/me',
+        routeKey: 'GET /profile/me',
+        headers: { authorization: 'Bearer valid-token' }
       });
 
       const result = await handler(event);
@@ -264,8 +255,11 @@ describe('Get Current Profile Handler', () => {
     it('should include all required profile fields', async () => {
       mockProfileService.getProfileById.mockResolvedValue(mockUser);
 
-      const event = createMockEvent({
-        Authorization: 'Bearer valid-token'
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/profile/me',
+        routeKey: 'GET /profile/me',
+        headers: { authorization: 'Bearer valid-token' }
       });
 
       const result = await handler(event);
@@ -317,8 +311,11 @@ describe('Get Current Profile Handler', () => {
 
       mockProfileService.getProfileById.mockResolvedValue(mockUser);
 
-      const event = createMockEvent({
-        Authorization: 'Bearer valid-token'
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/profile/me',
+        routeKey: 'GET /profile/me',
+        headers: { authorization: 'Bearer valid-token' }
       });
 
       await handler(event);

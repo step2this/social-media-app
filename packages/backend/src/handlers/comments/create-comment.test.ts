@@ -1,7 +1,7 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, functional/prefer-immutable-types */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { handler } from './create-comment.js';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 
 // Test constants
 const testUserId = '123e4567-e89b-12d3-a456-426614174000';
@@ -35,37 +35,6 @@ vi.mock('@social-media-app/dal', async () => {
   };
 });
 
-// Test helper to create mock event
-const createMockEvent = (body?: string, authHeader?: string): APIGatewayProxyEventV2 => ({
-  version: '2.0',
-  routeKey: 'POST /comments',
-  rawPath: '/comments',
-  rawQueryString: '',
-  headers: {
-    'content-type': 'application/json',
-    ...(authHeader && { authorization: authHeader })
-  },
-  requestContext: {
-    requestId: 'test-request-id',
-    http: {
-      method: 'POST',
-      path: '/comments',
-      protocol: 'HTTP/1.1',
-      sourceIp: '127.0.0.1',
-      userAgent: 'test-agent'
-    },
-    stage: 'test',
-    time: '2024-01-01T00:00:00.000Z',
-    timeEpoch: 1704067200000,
-    domainName: 'api.example.com',
-    accountId: '123456789012',
-    apiId: 'api123',
-    routeKey: 'POST /comments',
-    domainPrefix: 'api'
-  },
-  body: body || '',
-  isBase64Encoded: false
-});
 
 const mockJWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItaWQifQ.test';
 
@@ -161,10 +130,10 @@ beforeEach(() => {
 describe('create-comment handler', () => {
   describe('successful creation', () => {
     it('should create a comment successfully', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -179,10 +148,10 @@ describe('create-comment handler', () => {
     });
 
     it('should use correct DynamoDB keys for comment', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -194,10 +163,10 @@ describe('create-comment handler', () => {
     });
 
     it('should include GSI1 keys for comment queries', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -207,10 +176,10 @@ describe('create-comment handler', () => {
     });
 
     it('should include GSI2 keys for user queries', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -220,10 +189,10 @@ describe('create-comment handler', () => {
     });
 
     it('should trim whitespace from content', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: '  Test comment with spaces  ' }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: '  Test comment with spaces  ' },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -235,10 +204,10 @@ describe('create-comment handler', () => {
 
   describe('validation', () => {
     it('should return 400 for empty content', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: '' }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: '' },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -246,10 +215,10 @@ describe('create-comment handler', () => {
     });
 
     it('should return 400 for content that is only whitespace', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: '   ' }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: '   ' },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -258,10 +227,10 @@ describe('create-comment handler', () => {
 
     it('should return 400 for content exceeding 500 characters', async () => {
       const longContent = 'a'.repeat(501);
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: longContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: longContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -270,10 +239,10 @@ describe('create-comment handler', () => {
 
     it('should accept content with exactly 500 characters', async () => {
       const maxContent = 'a'.repeat(500);
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: maxContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: maxContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -281,10 +250,10 @@ describe('create-comment handler', () => {
     });
 
     it('should return 400 for missing postId', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -292,10 +261,10 @@ describe('create-comment handler', () => {
     });
 
     it('should return 400 for missing content', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -303,10 +272,10 @@ describe('create-comment handler', () => {
     });
 
     it('should return 400 for invalid JSON', async () => {
-      const event = createMockEvent(
-        'invalid json',
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        rawBody: 'invalid json',
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -314,10 +283,10 @@ describe('create-comment handler', () => {
     });
 
     it('should return 400 for invalid postId format', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: 'not-a-uuid', content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: 'not-a-uuid', content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -327,9 +296,9 @@ describe('create-comment handler', () => {
 
   describe('authentication', () => {
     it('should return 401 when no auth header provided', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: testContent })
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: testContent }
+      });
 
       const result = await handler(event);
 
@@ -337,10 +306,10 @@ describe('create-comment handler', () => {
     });
 
     it('should return 401 when auth header does not start with Bearer', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: testContent }),
-        'InvalidToken'
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: testContent },
+        headers: { authorization: 'InvalidToken' }
+      });
 
       const result = await handler(event);
 
@@ -348,10 +317,10 @@ describe('create-comment handler', () => {
     });
 
     it('should support both lowercase and uppercase Authorization header', async () => {
-      const eventLowercase = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const eventLowercase = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       // Manually set uppercase Authorization
       const eventUppercase = {
@@ -380,10 +349,10 @@ describe('create-comment handler', () => {
         return { $metadata: {} };
       });
 
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -407,10 +376,10 @@ describe('create-comment handler', () => {
         return { $metadata: {} };
       });
 
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -425,10 +394,10 @@ describe('create-comment handler', () => {
         return { $metadata: {} };
       });
 
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -438,10 +407,10 @@ describe('create-comment handler', () => {
 
   describe('post metadata extraction', () => {
     it('should fetch post to extract metadata before creating comment', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -457,10 +426,10 @@ describe('create-comment handler', () => {
       mockPostServiceGetPostById.mockResolvedValue(null);
 
       const nonExistentPostId = '999e9999-e99b-99d9-a999-999999999999';
-      const event = createMockEvent(
-        JSON.stringify({ postId: nonExistentPostId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: nonExistentPostId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -492,10 +461,10 @@ describe('create-comment handler', () => {
         GSI1SK: `USER#${postOwnerId}`
       });
 
-      const event = createMockEvent(
-        JSON.stringify({ postId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -532,10 +501,10 @@ describe('create-comment handler', () => {
         GSI1SK: `USER#${postOwnerId}`
       });
 
-      const event = createMockEvent(
-        JSON.stringify({ postId, content: 'Great post!' }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId, content: 'Great post!' },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -551,10 +520,10 @@ describe('create-comment handler', () => {
     it('should handle post fetch errors gracefully', async () => {
       mockPostServiceGetPostById.mockRejectedValue(new Error('DynamoDB error'));
 
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -567,10 +536,10 @@ describe('create-comment handler', () => {
       mockPostServiceGetPostById.mockResolvedValue(null);
 
       const missingPostId = '888e8888-e88b-88d8-a888-888888888888';
-      const event = createMockEvent(
-        JSON.stringify({ postId: missingPostId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: missingPostId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -582,10 +551,10 @@ describe('create-comment handler', () => {
 
   describe('notification creation', () => {
     it('should create notification when user comments on another user\'s post', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -601,10 +570,10 @@ describe('create-comment handler', () => {
     });
 
     it('should include correct actor information', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -621,10 +590,10 @@ describe('create-comment handler', () => {
 
     it('should include comment preview (first 50 chars) in message', async () => {
       const shortComment = 'Short comment';
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: shortComment }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: shortComment },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -639,10 +608,10 @@ describe('create-comment handler', () => {
 
     it('should truncate long comments with "..."', async () => {
       const longComment = 'a'.repeat(80);
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: longComment }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: longComment },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -679,10 +648,10 @@ describe('create-comment handler', () => {
         GSI1SK: `USER#${testUserId}`
       });
 
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -756,10 +725,10 @@ describe('create-comment handler', () => {
         return { $metadata: {} };
       });
 
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId, content: testContent }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId, content: testContent },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 

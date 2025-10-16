@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, type MockedFunction } from 'vitest';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { handler } from './login.js';
 import { createDefaultAuthService } from '@social-media-app/dal';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 import * as dynamoUtils from '../../utils/dynamodb.js';
 import * as jwtUtils from '../../utils/jwt.js';
 
@@ -34,31 +34,6 @@ describe('Login Handler', () => {
     getUserById: vi.fn(),
     logout: vi.fn()
   };
-
-  const createMockEvent = (body?: unknown): APIGatewayProxyEventV2 => ({
-    version: '2.0',
-    routeKey: 'POST /auth/login',
-    rawPath: '/auth/login',
-    rawQueryString: '',
-    headers: {
-      'content-type': 'application/json'
-    },
-    requestContext: {
-      requestId: 'test-request-id',
-      http: {
-        method: 'POST',
-        path: '/auth/login',
-        protocol: 'HTTP/1.1',
-        sourceIp: '127.0.0.1',
-        userAgent: 'test-agent'
-      },
-      stage: 'test',
-      time: '01/Jan/2024:00:00:00 +0000',
-      timeEpoch: 1704067200
-    },
-    body: body ? JSON.stringify(body) : null,
-    isBase64Encoded: false
-  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -108,7 +83,12 @@ describe('Login Handler', () => {
 
     mockAuthService.login.mockResolvedValue(expectedResponse);
 
-    const event = createMockEvent(loginRequest);
+    const event = createMockAPIGatewayEvent({
+      method: 'POST',
+      path: '/auth/login',
+      routeKey: 'POST /auth/login',
+      body: loginRequest
+    });
     const result = await handler(event);
 
     expect(result.statusCode).toBe(200);
@@ -122,7 +102,12 @@ describe('Login Handler', () => {
       password: ''
     };
 
-    const event = createMockEvent(invalidRequest);
+    const event = createMockAPIGatewayEvent({
+      method: 'POST',
+      path: '/auth/login',
+      routeKey: 'POST /auth/login',
+      body: invalidRequest
+    });
     const result = await handler(event);
 
     expect(result.statusCode).toBe(400);
@@ -139,7 +124,12 @@ describe('Login Handler', () => {
 
     mockAuthService.login.mockRejectedValue(new Error('Invalid email or password'));
 
-    const event = createMockEvent(loginRequest);
+    const event = createMockAPIGatewayEvent({
+      method: 'POST',
+      path: '/auth/login',
+      routeKey: 'POST /auth/login',
+      body: loginRequest
+    });
     const result = await handler(event);
 
     expect(result.statusCode).toBe(401);
@@ -171,7 +161,12 @@ describe('Login Handler', () => {
 
     mockAuthService.login.mockResolvedValue(expectedResponse);
 
-    const event = createMockEvent(loginRequest);
+    const event = createMockAPIGatewayEvent({
+      method: 'POST',
+      path: '/auth/login',
+      routeKey: 'POST /auth/login',
+      body: loginRequest
+    });
     const result = await handler(event);
 
     expect(result.statusCode).toBe(200);
@@ -186,7 +181,12 @@ describe('Login Handler', () => {
 
     mockAuthService.login.mockRejectedValue(new Error('Database connection failed'));
 
-    const event = createMockEvent(loginRequest);
+    const event = createMockAPIGatewayEvent({
+      method: 'POST',
+      path: '/auth/login',
+      routeKey: 'POST /auth/login',
+      body: loginRequest
+    });
     const result = await handler(event);
 
     expect(result.statusCode).toBe(500);
@@ -195,7 +195,11 @@ describe('Login Handler', () => {
   });
 
   it('should handle missing request body', async () => {
-    const event = createMockEvent();
+    const event = createMockAPIGatewayEvent({
+      method: 'POST',
+      path: '/auth/login',
+      routeKey: 'POST /auth/login'
+    });
     const result = await handler(event);
 
     expect(result.statusCode).toBe(400);
@@ -204,7 +208,12 @@ describe('Login Handler', () => {
   });
 
   it('should include CORS headers in response', async () => {
-    const event = createMockEvent({});
+    const event = createMockAPIGatewayEvent({
+      method: 'POST',
+      path: '/auth/login',
+      routeKey: 'POST /auth/login',
+      body: {}
+    });
     const result = await handler(event);
 
     expect(result.headers).toMatchObject({

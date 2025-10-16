@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, type MockedFunction } from 'vitest';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { handler } from './update-post.js';
 import { PostService, ProfileService } from '@social-media-app/dal';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 import * as dynamoUtils from '../../utils/dynamodb.js';
 import * as jwtUtils from '../../utils/jwt.js';
 
@@ -52,43 +52,6 @@ describe('Update Post Handler', () => {
     isHandleAvailable: vi.fn()
   };
 
-  const createMockEvent = (
-    postId: string,
-    body?: unknown,
-    authHeader?: string
-  ): APIGatewayProxyEventV2 => ({
-    version: '2.0',
-    routeKey: 'PUT /posts/{postId}',
-    rawPath: `/posts/${postId}`,
-    rawQueryString: '',
-    headers: {
-      'content-type': 'application/json',
-      ...(authHeader && { authorization: authHeader })
-    },
-    requestContext: {
-      requestId: 'test-request-id',
-      http: {
-        method: 'PUT',
-        path: `/posts/${postId}`,
-        protocol: 'HTTP/1.1',
-        sourceIp: '127.0.0.1',
-        userAgent: 'test-agent'
-      },
-      stage: 'test',
-      time: '2024-01-01T00:00:00.000Z',
-      timeEpoch: 1704067200000,
-      domainName: 'api.example.com',
-      accountId: '123456789012',
-      apiId: 'api123',
-      routeKey: 'PUT /posts/{postId}'
-    },
-    pathParameters: {
-      postId
-    },
-    body: body ? JSON.stringify(body) : null,
-    isBase64Encoded: false
-  });
-
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -132,15 +95,15 @@ describe('Update Post Handler', () => {
     mockVerifyAccessToken.mockResolvedValue(mockUser);
     mockPostService.updatePost.mockResolvedValue(updatedPost);
 
-    const event = createMockEvent(
-      postId,
-      {
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { postId },
+      body: {
         caption: 'Updated caption',
         tags: ['updated', 'test'],
         isPublic: false
       },
-      'Bearer valid-token'
-    );
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     const result = await handler(event);
 
@@ -164,7 +127,10 @@ describe('Update Post Handler', () => {
   });
 
   it('should return 401 when no authorization header', async () => {
-    const event = createMockEvent('test-post-id', { caption: 'Updated' });
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { postId: 'test-post-id' },
+      body: { caption: 'Updated' }
+    });
 
     const result = await handler(event);
 
@@ -175,7 +141,11 @@ describe('Update Post Handler', () => {
   });
 
   it('should return 401 when invalid authorization header format', async () => {
-    const event = createMockEvent('test-post-id', { caption: 'Updated' }, 'InvalidToken');
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { postId: 'test-post-id' },
+      body: { caption: 'Updated' },
+      headers: { authorization: 'InvalidToken' }
+    });
 
     const result = await handler(event);
 
@@ -188,7 +158,11 @@ describe('Update Post Handler', () => {
   it('should return 401 when token verification fails', async () => {
     mockVerifyAccessToken.mockResolvedValue(null);
 
-    const event = createMockEvent('test-post-id', { caption: 'Updated' }, 'Bearer invalid-token');
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { postId: 'test-post-id' },
+      body: { caption: 'Updated' },
+      headers: { authorization: 'Bearer invalid-token' }
+    });
 
     const result = await handler(event);
 
@@ -207,11 +181,11 @@ describe('Update Post Handler', () => {
     mockVerifyAccessToken.mockResolvedValue(mockUser);
     mockPostService.updatePost.mockResolvedValue(null);
 
-    const event = createMockEvent(
-      'non-existent-post-id',
-      { caption: 'Updated' },
-      'Bearer valid-token'
-    );
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { postId: 'non-existent-post-id' },
+      body: { caption: 'Updated' },
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     const result = await handler(event);
 
@@ -229,7 +203,11 @@ describe('Update Post Handler', () => {
 
     mockVerifyAccessToken.mockResolvedValue(mockUser);
 
-    const event = createMockEvent('', { caption: 'Updated' }, 'Bearer valid-token');
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { postId: '' },
+      body: { caption: 'Updated' },
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     const result = await handler(event);
 
@@ -247,15 +225,15 @@ describe('Update Post Handler', () => {
 
     mockVerifyAccessToken.mockResolvedValue(mockUser);
 
-    const event = createMockEvent(
-      'test-post-id',
-      {
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { postId: 'test-post-id' },
+      body: {
         caption: 123, // Invalid type
         tags: 'invalid', // Should be array
         isPublic: 'not-boolean' // Invalid type
       },
-      'Bearer valid-token'
-    );
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     const result = await handler(event);
 
@@ -266,10 +244,11 @@ describe('Update Post Handler', () => {
   });
 
   it('should handle malformed JSON body', async () => {
-    const event: APIGatewayProxyEventV2 = {
-      ...createMockEvent('test-post-id', {}, 'Bearer valid-token'),
-      body: '{ invalid json'
-    };
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { postId: 'test-post-id' },
+      rawBody: '{ invalid json',
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     const result = await handler(event);
 
@@ -306,13 +285,13 @@ describe('Update Post Handler', () => {
     mockVerifyAccessToken.mockResolvedValue(mockUser);
     mockPostService.updatePost.mockResolvedValue(updatedPost);
 
-    const event = createMockEvent(
-      postId,
-      {
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { postId },
+      body: {
         caption: 'Only caption updated'
       },
-      'Bearer valid-token'
-    );
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     const result = await handler(event);
 
@@ -353,13 +332,13 @@ describe('Update Post Handler', () => {
     mockVerifyAccessToken.mockResolvedValue(mockUser);
     mockPostService.updatePost.mockResolvedValue(updatedPost);
 
-    const event = createMockEvent(
-      postId,
-      {
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { postId },
+      body: {
         tags: ['new', 'tags']
       },
-      'Bearer valid-token'
-    );
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     const result = await handler(event);
 
@@ -400,13 +379,13 @@ describe('Update Post Handler', () => {
     mockVerifyAccessToken.mockResolvedValue(mockUser);
     mockPostService.updatePost.mockResolvedValue(updatedPost);
 
-    const event = createMockEvent(
-      postId,
-      {
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { postId },
+      body: {
         isPublic: false
       },
-      'Bearer valid-token'
-    );
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     const result = await handler(event);
 
@@ -447,7 +426,11 @@ describe('Update Post Handler', () => {
     mockVerifyAccessToken.mockResolvedValue(mockUser);
     mockPostService.updatePost.mockResolvedValue(originalPost);
 
-    const event = createMockEvent(postId, {}, 'Bearer valid-token');
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { postId },
+      body: {},
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     const result = await handler(event);
 
@@ -468,7 +451,11 @@ describe('Update Post Handler', () => {
     mockVerifyAccessToken.mockResolvedValue(mockUser);
     mockPostService.updatePost.mockRejectedValue(new Error('Database connection failed'));
 
-    const event = createMockEvent('test-post-id', { caption: 'Updated' }, 'Bearer valid-token');
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { postId: 'test-post-id' },
+      body: { caption: 'Updated' },
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     // Mock console.error to capture error logs
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});

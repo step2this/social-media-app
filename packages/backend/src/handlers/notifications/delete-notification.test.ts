@@ -1,6 +1,7 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, functional/prefer-immutable-types */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { handler } from './delete-notification.js';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 
 // Mock dependencies
@@ -37,41 +38,6 @@ vi.mock('../../utils/index.js', () => ({
     return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error' }) };
   })
 }));
-
-// Test helper to create mock event
-const createMockEvent = (
-  pathParameters?: Record<string, string>,
-  authHeader?: string
-): APIGatewayProxyEventV2 => ({
-  version: '2.0',
-  routeKey: 'DELETE /notifications/{id}',
-  rawPath: `/notifications/${pathParameters?.id || 'test-id'}`,
-  rawQueryString: '',
-  headers: {
-    'content-type': 'application/json',
-    ...(authHeader && { authorization: authHeader })
-  },
-  pathParameters,
-  requestContext: {
-    requestId: 'test-request-id',
-    http: {
-      method: 'DELETE',
-      path: `/notifications/${pathParameters?.id || 'test-id'}`,
-      protocol: 'HTTP/1.1',
-      sourceIp: '127.0.0.1',
-      userAgent: 'test-agent'
-    },
-    stage: 'test',
-    time: '2024-01-01T00:00:00.000Z',
-    timeEpoch: 1704067200000,
-    domainName: 'api.example.com',
-    accountId: '123456789012',
-    apiId: 'api123',
-    routeKey: 'DELETE /notifications/{id}',
-    domainPrefix: 'api'
-  },
-  isBase64Encoded: false
-});
 
 const createAuthHeaders = (userId: string) => `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIke userId}In0.test`;
 
@@ -111,7 +77,10 @@ describe('delete-notification handler', () => {
 
       mockNotificationService.deleteNotification.mockResolvedValue(mockResponse);
 
-      const event = createMockEvent({ id: testNotificationId }, mockJWT);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { id: testNotificationId },
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -132,7 +101,10 @@ describe('delete-notification handler', () => {
 
       mockNotificationService.deleteNotification.mockResolvedValue(mockResponse);
 
-      const event = createMockEvent({ id: testNotificationId }, mockJWT);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { id: testNotificationId },
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -150,7 +122,10 @@ describe('delete-notification handler', () => {
 
       mockNotificationService.deleteNotification.mockResolvedValue(mockResponse);
 
-      const event = createMockEvent({ id: testNotificationId }, mockJWT);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { id: testNotificationId },
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -167,7 +142,10 @@ describe('delete-notification handler', () => {
 
       mockNotificationService.deleteNotification.mockResolvedValue(mockResponse);
 
-      const event = createMockEvent({ id: alternateNotificationId }, mockJWT);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { id: alternateNotificationId },
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -180,7 +158,10 @@ describe('delete-notification handler', () => {
 
   describe('validation', () => {
     it('should validate notificationId is UUID format', async () => {
-      const event = createMockEvent({ id: 'not-a-uuid' }, mockJWT);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { id: 'not-a-uuid' },
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(400);
@@ -189,7 +170,10 @@ describe('delete-notification handler', () => {
     });
 
     it('should return 400 for invalid notificationId format', async () => {
-      const event = createMockEvent({ id: '12345' }, mockJWT);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { id: '12345' },
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(400);
@@ -198,7 +182,10 @@ describe('delete-notification handler', () => {
     });
 
     it('should return 400 for missing notificationId', async () => {
-      const event = createMockEvent({}, mockJWT);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: {},
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(400);
@@ -207,7 +194,10 @@ describe('delete-notification handler', () => {
     });
 
     it('should return 400 for empty notificationId', async () => {
-      const event = createMockEvent({ id: '' }, mockJWT);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { id: '' },
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(400);
@@ -218,7 +208,9 @@ describe('delete-notification handler', () => {
 
   describe('authentication', () => {
     it('should return 401 when no auth header provided', async () => {
-      const event = createMockEvent({ id: testNotificationId });
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { id: testNotificationId }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(401);
@@ -227,7 +219,10 @@ describe('delete-notification handler', () => {
     });
 
     it('should return 401 when auth header does not start with Bearer', async () => {
-      const event = createMockEvent({ id: testNotificationId }, 'InvalidToken');
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { id: testNotificationId },
+        headers: { authorization: 'InvalidToken' }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(401);
@@ -239,7 +234,10 @@ describe('delete-notification handler', () => {
       const { authenticateRequest } = await import('../../utils/index.js');
       vi.mocked(authenticateRequest).mockResolvedValueOnce({ success: false, statusCode: 401, message: 'Unauthorized' });
 
-      const event = createMockEvent({ id: testNotificationId }, mockJWT);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { id: testNotificationId },
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(401);
@@ -249,7 +247,10 @@ describe('delete-notification handler', () => {
       const { authenticateRequest } = await import('../../utils/index.js');
       vi.mocked(authenticateRequest).mockResolvedValueOnce({ success: false, statusCode: 401, message: 'Invalid token' });
 
-      const event = createMockEvent({ id: testNotificationId }, mockJWT);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { id: testNotificationId },
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(401);
@@ -264,7 +265,10 @@ describe('delete-notification handler', () => {
         new Error('Unauthorized: You can only modify your own notifications')
       );
 
-      const event = createMockEvent({ id: testNotificationId }, mockJWT);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { id: testNotificationId },
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(403);
@@ -279,7 +283,10 @@ describe('delete-notification handler', () => {
         new Error('DynamoDB connection failed')
       );
 
-      const event = createMockEvent({ id: testNotificationId }, mockJWT);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { id: testNotificationId },
+        headers: { authorization: mockJWT }
+      });
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const result = await handler(event);
@@ -302,7 +309,10 @@ describe('delete-notification handler', () => {
 
       mockNotificationService.deleteNotification.mockResolvedValue(mockResponse);
 
-      const event = createMockEvent({ id: testNotificationId }, mockJWT);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { id: testNotificationId },
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -322,7 +332,10 @@ describe('delete-notification handler', () => {
 
       mockNotificationService.deleteNotification.mockResolvedValue(mockResponse);
 
-      const event = createMockEvent({ id: testNotificationId }, mockJWT);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { id: testNotificationId },
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);

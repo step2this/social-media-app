@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, type MockedFunction } from 'vitest';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { handler } from './register.js';
 import { createDefaultAuthService } from '@social-media-app/dal';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 import * as dynamoUtils from '../../utils/dynamodb.js';
 import * as jwtUtils from '../../utils/jwt.js';
 
@@ -34,31 +34,6 @@ describe('Register Handler', () => {
     getUserById: vi.fn(),
     logout: vi.fn()
   };
-
-  const createMockEvent = (body?: unknown): APIGatewayProxyEventV2 => ({
-    version: '2.0',
-    routeKey: 'POST /auth/register',
-    rawPath: '/auth/register',
-    rawQueryString: '',
-    headers: {
-      'content-type': 'application/json'
-    },
-    requestContext: {
-      requestId: 'test-request-id',
-      http: {
-        method: 'POST',
-        path: '/auth/register',
-        protocol: 'HTTP/1.1',
-        sourceIp: '127.0.0.1',
-        userAgent: 'test-agent'
-      },
-      stage: 'test',
-      time: '01/Jan/2024:00:00:00 +0000',
-      timeEpoch: 1704067200
-    },
-    body: body ? JSON.stringify(body) : null,
-    isBase64Encoded: false
-  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -99,7 +74,12 @@ describe('Register Handler', () => {
 
     mockAuthService.register.mockResolvedValue(expectedResponse);
 
-    const event = createMockEvent(registerRequest);
+    const event = createMockAPIGatewayEvent({
+      method: 'POST',
+      path: '/auth/register',
+      routeKey: 'POST /auth/register',
+      body: registerRequest
+    });
     const result = await handler(event);
 
     expect(result.statusCode).toBe(201);
@@ -114,7 +94,12 @@ describe('Register Handler', () => {
       username: 'ab'
     };
 
-    const event = createMockEvent(invalidRequest);
+    const event = createMockAPIGatewayEvent({
+      method: 'POST',
+      path: '/auth/register',
+      routeKey: 'POST /auth/register',
+      body: invalidRequest
+    });
     const result = await handler(event);
 
     expect(result.statusCode).toBe(400);
@@ -132,7 +117,12 @@ describe('Register Handler', () => {
 
     mockAuthService.register.mockRejectedValue(new Error('Email already registered'));
 
-    const event = createMockEvent(registerRequest);
+    const event = createMockAPIGatewayEvent({
+      method: 'POST',
+      path: '/auth/register',
+      routeKey: 'POST /auth/register',
+      body: registerRequest
+    });
     const result = await handler(event);
 
     expect(result.statusCode).toBe(409);
@@ -149,7 +139,12 @@ describe('Register Handler', () => {
 
     mockAuthService.register.mockRejectedValue(new Error('Username already taken'));
 
-    const event = createMockEvent(registerRequest);
+    const event = createMockAPIGatewayEvent({
+      method: 'POST',
+      path: '/auth/register',
+      routeKey: 'POST /auth/register',
+      body: registerRequest
+    });
     const result = await handler(event);
 
     expect(result.statusCode).toBe(409);
@@ -166,7 +161,12 @@ describe('Register Handler', () => {
 
     mockAuthService.register.mockRejectedValue(new Error('Database connection failed'));
 
-    const event = createMockEvent(registerRequest);
+    const event = createMockAPIGatewayEvent({
+      method: 'POST',
+      path: '/auth/register',
+      routeKey: 'POST /auth/register',
+      body: registerRequest
+    });
     const result = await handler(event);
 
     expect(result.statusCode).toBe(500);
@@ -175,7 +175,11 @@ describe('Register Handler', () => {
   });
 
   it('should handle missing request body', async () => {
-    const event = createMockEvent();
+    const event = createMockAPIGatewayEvent({
+      method: 'POST',
+      path: '/auth/register',
+      routeKey: 'POST /auth/register'
+    });
     const result = await handler(event);
 
     expect(result.statusCode).toBe(400);
@@ -184,7 +188,12 @@ describe('Register Handler', () => {
   });
 
   it('should include CORS headers in response', async () => {
-    const event = createMockEvent({});
+    const event = createMockAPIGatewayEvent({
+      method: 'POST',
+      path: '/auth/register',
+      routeKey: 'POST /auth/register',
+      body: {}
+    });
     const result = await handler(event);
 
     expect(result.headers).toMatchObject({

@@ -20,7 +20,7 @@
  * Total: 58 comprehensive tests
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 import type { FeedPostItem } from '@social-media-app/shared';
 
 // Test constants
@@ -83,45 +83,6 @@ vi.mock('@social-media-app/dal', () => ({
   RedisCacheService: vi.fn().mockImplementation(() => ({}))
 }));
 
-/**
- * Helper: Create mock API Gateway event
- */
-function createEvent(
-  userId?: string,
-  queryParams?: Record<string, string>
-): APIGatewayProxyEventV2 {
-  return {
-    version: '2.0',
-    routeKey: 'GET /feed',
-    rawPath: '/feed',
-    rawQueryString: queryParams ? new URLSearchParams(queryParams).toString() : '',
-    headers: {
-      'content-type': 'application/json',
-      ...(userId && { authorization: `Bearer mock-jwt-token-${userId}` })
-    },
-    requestContext: {
-      authorizer: userId ? { userId } : undefined,
-      requestId: 'test-request-id',
-      http: {
-        method: 'GET',
-        path: '/feed',
-        protocol: 'HTTP/1.1',
-        sourceIp: '127.0.0.1',
-        userAgent: 'test-agent'
-      },
-      stage: 'test',
-      time: '2025-10-12T00:00:00.000Z',
-      timeEpoch: 1728691200000,
-      domainName: 'api.example.com',
-      accountId: '123456789012',
-      apiId: 'api123',
-      routeKey: 'GET /feed',
-      domainPrefix: 'api'
-    } as any,
-    queryStringParameters: queryParams,
-    isBase64Encoded: false
-  };
-}
 
 /**
  * Helper: Create mock feed post item
@@ -195,7 +156,11 @@ describe('get-feed', () => {
   describe('Authentication & Authorization', () => {
     it('should return 401 if no userId in auth context', async () => {
       const { handler } = await import('./get-feed.js');
-      const event = createEvent();
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed'
+      });
       delete event.requestContext.authorizer;
 
       const response = await handler(event);
@@ -207,7 +172,11 @@ describe('get-feed', () => {
 
     it('should return 401 if userId is missing from authorizer', async () => {
       const { handler } = await import('./get-feed.js');
-      const event = createEvent();
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed'
+      });
       event.requestContext.authorizer = {} as any;
 
       const response = await handler(event);
@@ -219,7 +188,13 @@ describe('get-feed', () => {
 
     it('should return 400 if userId is invalid format (not UUID)', async () => {
       const { handler } = await import('./get-feed.js');
-      const event = createEvent('invalid-user-id');
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: 'Bearer mock-jwt-token-invalid-user-id' }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -230,7 +205,12 @@ describe('get-feed', () => {
 
     it('should return 401 if userId is empty string (no auth header)', async () => {
       const { handler } = await import('./get-feed.js');
-      const event = createEvent('');
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed'
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -241,7 +221,11 @@ describe('get-feed', () => {
 
     it('should return 401 if authorization header is missing', async () => {
       const { handler } = await import('./get-feed.js');
-      const event = createEvent();
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed'
+      });
       delete event.headers.authorization;
       delete event.requestContext.authorizer;
 
@@ -255,7 +239,13 @@ describe('get-feed', () => {
       const utils = await import('../../utils/index.js');
       vi.mocked(utils.verifyAccessToken).mockRejectedValueOnce(new Error('Invalid token'));
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -264,7 +254,13 @@ describe('get-feed', () => {
 
     it('should handle valid authenticated requests', async () => {
       const { handler } = await import('./get-feed.js');
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -279,7 +275,13 @@ describe('get-feed', () => {
   describe('Materialized Feed Items', () => {
     it('should fetch materialized feed items for user', async () => {
       const { handler } = await import('./get-feed.js');
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       await handler(event);
 
@@ -292,7 +294,14 @@ describe('get-feed', () => {
 
     it('should pass limit parameter to FeedService', async () => {
       const { handler } = await import('./get-feed.js');
-      const event = createEvent(TEST_USER_ID, { limit: '50' });
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` },
+        queryStringParameters: { limit: '50' }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       await handler(event);
 
@@ -306,7 +315,14 @@ describe('get-feed', () => {
     it('should pass cursor parameter to FeedService', async () => {
       const { handler } = await import('./get-feed.js');
       const testCursor = 'base64encodedcursor';
-      const event = createEvent(TEST_USER_ID, { cursor: testCursor });
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` },
+        queryStringParameters: { cursor: testCursor }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       await handler(event);
 
@@ -324,7 +340,13 @@ describe('get-feed', () => {
         nextCursor: undefined
       });
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -335,7 +357,13 @@ describe('get-feed', () => {
 
     it('should default limit to 20 if not provided', async () => {
       const { handler } = await import('./get-feed.js');
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       await handler(event);
 
@@ -348,7 +376,14 @@ describe('get-feed', () => {
 
     it('should reject limit exceeding 100 maximum', async () => {
       const { handler } = await import('./get-feed.js');
-      const event = createEvent(TEST_USER_ID, { limit: '500' });
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` },
+        queryStringParameters: { limit: '500' }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -363,7 +398,13 @@ describe('get-feed', () => {
       const { handler } = await import('./get-feed.js');
       mockGetMaterializedFeedItems.mockRejectedValueOnce(new Error('DynamoDB error'));
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -387,7 +428,13 @@ describe('get-feed', () => {
         hasMore: false
       });
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       await handler(event);
 
@@ -404,7 +451,13 @@ describe('get-feed', () => {
       mockGetFollowingList.mockResolvedValueOnce([TEST_CELEBRITY_ID_1]);
       mockGetFollowerCount.mockResolvedValueOnce(6000);
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       await handler(event);
 
@@ -420,7 +473,13 @@ describe('get-feed', () => {
       mockGetFollowingList.mockResolvedValueOnce([TEST_NORMAL_USER_ID]);
       mockGetFollowerCount.mockResolvedValueOnce(100); // Not a celebrity
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       await handler(event);
 
@@ -448,7 +507,13 @@ describe('get-feed', () => {
           hasMore: false
         });
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       await handler(event);
 
@@ -461,7 +526,13 @@ describe('get-feed', () => {
       const { handler } = await import('./get-feed.js');
       mockGetFollowingList.mockRejectedValueOnce(new Error('DynamoDB error'));
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -473,7 +544,13 @@ describe('get-feed', () => {
       mockGetFollowingList.mockResolvedValueOnce([TEST_CELEBRITY_ID_1]);
       mockGetFollowerCount.mockRejectedValueOnce(new Error('DynamoDB error'));
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -486,7 +563,13 @@ describe('get-feed', () => {
       mockGetFollowerCount.mockResolvedValueOnce(6000);
       mockGetUserPosts.mockRejectedValueOnce(new Error('DynamoDB error'));
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -513,7 +596,13 @@ describe('get-feed', () => {
         hasMore: false
       });
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -528,7 +617,13 @@ describe('get-feed', () => {
       mockGetFollowingList.mockResolvedValueOnce([TEST_NORMAL_USER_ID]);
       mockGetFollowerCount.mockResolvedValueOnce(4999);
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       await handler(event);
 
@@ -540,7 +635,13 @@ describe('get-feed', () => {
       mockGetFollowingList.mockResolvedValueOnce([TEST_CELEBRITY_ID_1]);
       mockGetFollowerCount.mockResolvedValueOnce(5000);
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       await handler(event);
 
@@ -570,7 +671,13 @@ describe('get-feed', () => {
         hasMore: false
       });
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -599,7 +706,13 @@ describe('get-feed', () => {
         hasMore: false
       });
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -640,7 +753,14 @@ describe('get-feed', () => {
         hasMore: false
       });
 
-      const event = createEvent(TEST_USER_ID, { limit: '20' });
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` },
+        queryStringParameters: { limit: '20' }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -664,7 +784,13 @@ describe('get-feed', () => {
       mockGetFollowingList.mockResolvedValueOnce([TEST_NORMAL_USER_ID]);
       mockGetFollowerCount.mockResolvedValueOnce(100); // Not celebrity
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -694,7 +820,13 @@ describe('get-feed', () => {
         hasMore: false
       });
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -724,7 +856,13 @@ describe('get-feed', () => {
         hasMore: false
       });
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -746,7 +884,13 @@ describe('get-feed', () => {
 
       mockGetFollowingList.mockResolvedValueOnce([]);
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -773,7 +917,13 @@ describe('get-feed', () => {
 
       mockGetFollowingList.mockResolvedValueOnce([]);
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -798,7 +948,13 @@ describe('get-feed', () => {
 
       mockGetFollowingList.mockResolvedValueOnce([]);
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -817,7 +973,13 @@ describe('get-feed', () => {
 
       mockGetFollowingList.mockResolvedValueOnce([]);
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -836,7 +998,13 @@ describe('get-feed', () => {
 
       mockGetFollowingList.mockResolvedValueOnce([]);
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -855,7 +1023,13 @@ describe('get-feed', () => {
 
       mockGetFollowingList.mockResolvedValueOnce([]);
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -868,7 +1042,14 @@ describe('get-feed', () => {
       const { handler } = await import('./get-feed.js');
 
       const testCursor = 'page2cursor';
-      const event = createEvent(TEST_USER_ID, { cursor: testCursor });
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` },
+        queryStringParameters: { cursor: testCursor }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       await handler(event);
 
@@ -885,7 +1066,13 @@ describe('get-feed', () => {
       // Mock FeedService to throw on invalid cursor
       mockGetMaterializedFeedItems.mockRejectedValueOnce(new Error('Invalid cursor'));
 
-      const event = createEvent(TEST_USER_ID, { cursor: 'invalid-cursor-format' });
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` },
+        queryStringParameters: { cursor: 'invalid-cursor-format' }
+      });
 
       const response = await handler(event);
 
@@ -903,7 +1090,13 @@ describe('get-feed', () => {
 
       mockGetFollowingList.mockResolvedValueOnce([]);
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -927,7 +1120,13 @@ describe('get-feed', () => {
 
       mockGetFollowingList.mockResolvedValueOnce([]);
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -944,7 +1143,13 @@ describe('get-feed', () => {
 
       mockGetFollowingList.mockResolvedValueOnce([]);
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -961,7 +1166,13 @@ describe('get-feed', () => {
 
       mockGetFollowingList.mockResolvedValueOnce([]);
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -979,7 +1190,13 @@ describe('get-feed', () => {
 
       mockGetFollowingList.mockResolvedValueOnce([]);
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -1004,7 +1221,13 @@ describe('get-feed', () => {
 
       mockGetFollowingList.mockResolvedValueOnce([]);
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -1031,7 +1254,13 @@ describe('get-feed', () => {
         hasMore: false
       });
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -1051,7 +1280,13 @@ describe('get-feed', () => {
 
       mockGetMaterializedFeedItems.mockRejectedValueOnce(new Error('DynamoDB connection failed'));
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -1065,7 +1300,13 @@ describe('get-feed', () => {
 
       mockGetFollowingList.mockRejectedValueOnce(new Error('DynamoDB connection failed'));
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -1079,7 +1320,13 @@ describe('get-feed', () => {
       mockGetFollowerCount.mockResolvedValueOnce(5000);
       mockGetUserPosts.mockRejectedValueOnce(new Error('DynamoDB connection failed'));
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -1092,7 +1339,13 @@ describe('get-feed', () => {
 
       mockGetMaterializedFeedItems.mockRejectedValueOnce(new Error('Test error'));
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       await handler(event);
 
@@ -1113,7 +1366,13 @@ describe('get-feed', () => {
       // Celebrity detection fails
       mockGetFollowingList.mockRejectedValueOnce(new Error('Celebrity fetch failed'));
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -1128,7 +1387,13 @@ describe('get-feed', () => {
         new Error('Internal DynamoDB table structure error with sensitive info')
       );
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -1145,7 +1410,13 @@ describe('get-feed', () => {
 
       mockGetMaterializedFeedItems.mockRejectedValueOnce(new Error('Network timeout'));
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -1169,7 +1440,13 @@ describe('get-feed', () => {
 
       mockGetFollowingList.mockResolvedValueOnce([]);
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -1190,7 +1467,13 @@ describe('get-feed', () => {
       mockGetFollowingList.mockResolvedValueOnce([TEST_NORMAL_USER_ID]);
       mockGetFollowerCount.mockResolvedValueOnce(100); // Not celebrity
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -1202,7 +1485,13 @@ describe('get-feed', () => {
     it('should reject extremely large limit values', async () => {
       const { handler } = await import('./get-feed.js');
 
-      const event = createEvent(TEST_USER_ID, { limit: '999999' });
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` },
+        queryStringParameters: { limit: '999999' }
+      });
 
       const response = await handler(event);
 
@@ -1219,7 +1508,14 @@ describe('get-feed', () => {
 
       mockGetMaterializedFeedItems.mockRejectedValueOnce(new Error('Invalid cursor format'));
 
-      const event = createEvent(TEST_USER_ID, { cursor: 'not-a-valid-cursor!!!' });
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` },
+        queryStringParameters: { cursor: 'not-a-valid-cursor!!!' }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 
@@ -1230,7 +1526,12 @@ describe('get-feed', () => {
       const { handler } = await import('./get-feed.js');
 
       // This should fail validation since UUIDs are expected
-      const event = createEvent('12345'); // Numeric ID as string
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: 'Bearer mock-jwt-token-12345' }
+      }); // Numeric ID as string
 
       const response = await handler(event);
 
@@ -1253,7 +1554,13 @@ describe('get-feed', () => {
         hasMore: false
       });
 
-      const event = createEvent(TEST_USER_ID);
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/feed',
+        routeKey: 'GET /feed',
+        headers: { authorization: `Bearer mock-jwt-token-${TEST_USER_ID}` }
+      });
+      event.requestContext.authorizer = { userId: TEST_USER_ID };
 
       const response = await handler(event);
 

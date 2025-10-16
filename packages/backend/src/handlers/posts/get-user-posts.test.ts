@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, type MockedFunction } from 'vitest';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { handler } from './get-user-posts.js';
 import { PostService, ProfileService } from '@social-media-app/dal';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 import * as dynamoUtils from '../../utils/dynamodb.js';
 
 // Mock dependencies
@@ -43,39 +43,6 @@ describe('Get User Posts Handler', () => {
     decrementPostsCount: vi.fn(),
     isHandleAvailable: vi.fn()
   };
-
-  const createMockEvent = (
-    handle?: string,
-    queryParams?: Record<string, string>
-  ): APIGatewayProxyEventV2 => ({
-    version: '2.0',
-    routeKey: 'GET /posts/user/{handle}',
-    rawPath: `/posts/user/${handle || 'testuser'}`,
-    rawQueryString: queryParams ? new URLSearchParams(queryParams).toString() : '',
-    headers: {
-      'content-type': 'application/json'
-    },
-    requestContext: {
-      requestId: 'test-request-id',
-      http: {
-        method: 'GET',
-        path: `/posts/user/${handle || 'testuser'}`,
-        protocol: 'HTTP/1.1',
-        sourceIp: '127.0.0.1',
-        userAgent: 'test-agent'
-      },
-      stage: 'test',
-      time: '2024-01-01T00:00:00.000Z',
-      timeEpoch: 1704067200000,
-      domainName: 'api.example.com',
-      accountId: '123456789012',
-      apiId: 'api123',
-      routeKey: 'GET /posts/user/{handle}'
-    },
-    pathParameters: handle ? { handle } : null,
-    queryStringParameters: queryParams || null,
-    isBase64Encoded: false
-  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -119,7 +86,9 @@ describe('Get User Posts Handler', () => {
 
     mockPostService.getUserPostsByHandle.mockResolvedValue(mockPostsResponse);
 
-    const event = createMockEvent(handle);
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { handle }
+    });
 
     const result = await handler(event);
 
@@ -136,7 +105,7 @@ describe('Get User Posts Handler', () => {
   });
 
   it('should return 400 when handle is missing', async () => {
-    const event = createMockEvent(undefined);
+    const event = createMockAPIGatewayEvent({});
 
     const result = await handler(event);
 
@@ -171,7 +140,10 @@ describe('Get User Posts Handler', () => {
 
     mockPostService.getUserPostsByHandle.mockResolvedValue(mockPostsResponse);
 
-    const event = createMockEvent(handle, { limit, cursor });
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { handle },
+      queryStringParameters: { limit, cursor }
+    });
 
     const result = await handler(event);
 
@@ -197,7 +169,9 @@ describe('Get User Posts Handler', () => {
 
     mockPostService.getUserPostsByHandle.mockResolvedValue(mockPostsResponse);
 
-    const event = createMockEvent(handle);
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { handle }
+    });
 
     const result = await handler(event);
 
@@ -211,7 +185,10 @@ describe('Get User Posts Handler', () => {
 
   it('should return 400 for invalid limit parameter (NaN)', async () => {
     const handle = 'testuser';
-    const event = createMockEvent(handle, { limit: 'invalid' });
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { handle },
+      queryStringParameters: { limit: 'invalid' }
+    });
 
     const result = await handler(event);
 
@@ -223,7 +200,10 @@ describe('Get User Posts Handler', () => {
 
   it('should return 400 for limit below minimum (0)', async () => {
     const handle = 'testuser';
-    const event = createMockEvent(handle, { limit: '0' });
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { handle },
+      queryStringParameters: { limit: '0' }
+    });
 
     const result = await handler(event);
 
@@ -235,7 +215,10 @@ describe('Get User Posts Handler', () => {
 
   it('should return 400 for limit above maximum (101)', async () => {
     const handle = 'testuser';
-    const event = createMockEvent(handle, { limit: '101' });
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { handle },
+      queryStringParameters: { limit: '101' }
+    });
 
     const result = await handler(event);
 
@@ -255,7 +238,9 @@ describe('Get User Posts Handler', () => {
 
     mockPostService.getUserPostsByHandle.mockResolvedValue(mockPostsResponse);
 
-    const event = createMockEvent(handle);
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { handle }
+    });
 
     const result = await handler(event);
 
@@ -284,7 +269,9 @@ describe('Get User Posts Handler', () => {
       totalCount: 1
     });
 
-    const event = createMockEvent(handle);
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { handle }
+    });
 
     // Mock console.error to suppress error output during test
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -304,7 +291,9 @@ describe('Get User Posts Handler', () => {
 
     mockPostService.getUserPostsByHandle.mockRejectedValue(new Error('Database connection failed'));
 
-    const event = createMockEvent(handle);
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { handle }
+    });
 
     // Mock console.error to capture error logs
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -330,7 +319,10 @@ describe('Get User Posts Handler', () => {
 
     mockPostService.getUserPostsByHandle.mockResolvedValue(mockPostsResponse);
 
-    const event = createMockEvent(handle, { limit: '100' }); // Maximum valid limit
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { handle },
+      queryStringParameters: { limit: '100' }
+    }); // Maximum valid limit
 
     const result = await handler(event);
 
@@ -352,7 +344,10 @@ describe('Get User Posts Handler', () => {
 
     mockPostService.getUserPostsByHandle.mockResolvedValue(mockPostsResponse);
 
-    const event = createMockEvent(handle, { limit: '1' }); // Minimum valid limit
+    const event = createMockAPIGatewayEvent({
+      pathParameters: { handle },
+      queryStringParameters: { limit: '1' }
+    }); // Minimum valid limit
 
     const result = await handler(event);
 

@@ -828,50 +828,40 @@ export interface S3MockConfig {
  * from @aws-sdk/s3-request-presigner, which are commonly used together
  * for generating presigned upload URLs.
  *
+ * **IMPORTANT:** Due to Vitest's hoisting behavior, `vi.mock()` must be called
+ * at the top level of test files, not inside functions. This function is deprecated
+ * and should not be used. Instead, set up mocks directly in your test files.
+ *
+ * @deprecated Use `vi.mock()` directly in test files instead
  * @param config - Configuration for the S3 mocks
  *
  * @example
  * ```typescript
- * import { setupS3Mocks } from '@social-media-app/shared/test-utils/aws-mocks';
+ * // Instead of using setupS3Mocks(), do this in your test file:
+ * vi.mock('@aws-sdk/client-s3', () => ({
+ *   S3Client: vi.fn().mockImplementation(() => ({})),
+ *   PutObjectCommand: vi.fn()
+ * }));
  *
- * // Basic setup with defaults
- * setupS3Mocks();
- *
- * // Custom presigned URL
- * setupS3Mocks({
- *   defaultPresignedUrl: 'https://my-bucket.s3.amazonaws.com/upload'
- * });
- *
- * // Custom getSignedUrl behavior
- * setupS3Mocks({
- *   getSignedUrlMock: vi.fn().mockImplementation(async () => {
- *     return 'https://custom-url.com/signed';
- *   })
- * });
+ * vi.mock('@aws-sdk/s3-request-presigner', () => ({
+ *   getSignedUrl: vi.fn().mockResolvedValue('https://example.com/signed-url')
+ * }));
  * ```
  */
-export const setupS3Mocks = (config: S3MockConfig = {}): void => {
-  const {
-    defaultPresignedUrl = 'https://example.com/signed-url',
-    getSignedUrlMock
-  } = config;
-
-  vi.mock('@aws-sdk/client-s3', () => ({
-    S3Client: vi.fn().mockImplementation(() => ({})),
-    PutObjectCommand: vi.fn()
-  }));
-
-  vi.mock('@aws-sdk/s3-request-presigner', () => ({
-    getSignedUrl: getSignedUrlMock || vi.fn().mockResolvedValue(defaultPresignedUrl)
-  }));
+export const setupS3Mocks = (_config: S3MockConfig = {}): void => {
+  // This function is deprecated and should not be used
+  // vi.mock() calls must be at the top level of test files due to hoisting
+  console.warn('setupS3Mocks is deprecated. Use vi.mock() directly in test files.');
 };
 
 /**
  * Configuration for API Gateway event creation
  */
 export interface APIGatewayEventConfig {
-  /** Request body (will be stringified if object) */
-  readonly body?: string | Record<string, unknown>;
+  /** Request body (will be stringified if object, or pass rawBody for raw strings) */
+  readonly body?: Record<string, unknown>;
+  /** Raw request body (for testing invalid JSON) */
+  readonly rawBody?: string;
   /** Authorization header value */
   readonly authHeader?: string;
   /** HTTP method */
@@ -882,6 +872,8 @@ export interface APIGatewayEventConfig {
   readonly routeKey?: string;
   /** Additional headers */
   readonly headers?: Record<string, string>;
+  /** Path parameters (e.g., { postId: '123' }) */
+  readonly pathParameters?: Record<string, string>;
   /** Query string parameters */
   readonly queryStringParameters?: Record<string, string>;
   /** Source IP address */
@@ -930,19 +922,21 @@ export const createMockAPIGatewayEvent = (
 ): APIGatewayProxyEventV2 => {
   const {
     body,
+    rawBody,
     authHeader,
     method = 'POST',
     path = '/api',
     routeKey = `${method} ${path}`,
     headers = {},
+    pathParameters,
     queryStringParameters,
     sourceIp = '127.0.0.1',
     userAgent = 'test-agent'
   } = config;
 
-  // Convert body to string if it's an object
-  const bodyString = typeof body === 'string'
-    ? body
+  // Convert body to string - prefer rawBody for testing invalid JSON
+  const bodyString = rawBody !== undefined
+    ? rawBody
     : body
       ? JSON.stringify(body)
       : '';
@@ -965,6 +959,7 @@ export const createMockAPIGatewayEvent = (
       ? new URLSearchParams(queryStringParameters).toString()
       : '',
     headers: eventHeaders,
+    pathParameters,
     queryStringParameters,
     requestContext: {
       requestId: 'test-request-id',

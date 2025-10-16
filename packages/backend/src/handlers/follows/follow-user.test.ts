@@ -1,7 +1,7 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, functional/prefer-immutable-types */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { handler } from './follow-user.js';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 
 // Mock dependencies
 vi.mock('../../utils/index.js', () => ({
@@ -15,38 +15,6 @@ vi.mock('../../utils/dynamodb.js', () => ({
   createDynamoDBClient: vi.fn(() => mockDynamoClient),
   getTableName: vi.fn(() => 'test-table')
 }));
-
-// Test helper to create mock event
-const createMockEvent = (body?: string, authHeader?: string): APIGatewayProxyEventV2 => ({
-  version: '2.0',
-  routeKey: 'POST /follows',
-  rawPath: '/follows',
-  rawQueryString: '',
-  headers: {
-    'content-type': 'application/json',
-    ...(authHeader && { authorization: authHeader })
-  },
-  requestContext: {
-    requestId: 'test-request-id',
-    http: {
-      method: 'POST',
-      path: '/follows',
-      protocol: 'HTTP/1.1',
-      sourceIp: '127.0.0.1',
-      userAgent: 'test-agent'
-    },
-    stage: 'test',
-    time: '2024-01-01T00:00:00.000Z',
-    timeEpoch: 1704067200000,
-    domainName: 'api.example.com',
-    accountId: '123456789012',
-    apiId: 'api123',
-    routeKey: 'POST /follows',
-    domainPrefix: 'api'
-  },
-  body: body || '',
-  isBase64Encoded: false
-});
 
 const mockJWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmb2xsb3dlci11c2VyLWlkIn0.test';
 const testUserId = '123e4567-e89b-12d3-a456-426614174001';
@@ -103,10 +71,10 @@ beforeEach(() => {
 describe('follow-user handler', () => {
   describe('successful follow', () => {
     it('should follow a user successfully', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ userId: testUserId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { userId: testUserId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -117,10 +85,10 @@ describe('follow-user handler', () => {
     });
 
     it('should use correct DynamoDB keys', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ userId: testUserId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { userId: testUserId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -132,10 +100,10 @@ describe('follow-user handler', () => {
     });
 
     it('should include GSI1 keys for follower queries', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ userId: testUserId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { userId: testUserId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -145,10 +113,10 @@ describe('follow-user handler', () => {
     });
 
     it('should use conditional expression to prevent duplicates', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ userId: testUserId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { userId: testUserId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -159,10 +127,10 @@ describe('follow-user handler', () => {
 
   describe('validation', () => {
     it('should return 400 for invalid request body', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ invalidField: 'value' }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { invalidField: 'value' },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -170,10 +138,10 @@ describe('follow-user handler', () => {
     });
 
     it('should return 400 for missing userId', async () => {
-      const event = createMockEvent(
-        JSON.stringify({}),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: {},
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -181,10 +149,10 @@ describe('follow-user handler', () => {
     });
 
     it('should return 400 for invalid userId format', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ userId: 'not-a-uuid' }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { userId: 'not-a-uuid' },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -192,10 +160,10 @@ describe('follow-user handler', () => {
     });
 
     it('should return 400 for malformed JSON', async () => {
-      const event = createMockEvent(
-        'invalid json',
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        rawBody: 'invalid json',
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -207,9 +175,9 @@ describe('follow-user handler', () => {
 
   describe('authentication', () => {
     it('should return 401 without authorization header', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ userId: testUserId })
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { userId: testUserId }
+      });
 
       const result = await handler(event);
 
@@ -217,10 +185,10 @@ describe('follow-user handler', () => {
     });
 
     it('should return 401 for invalid bearer token', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ userId: testUserId }),
-        'InvalidToken'
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { userId: testUserId },
+        headers: { authorization: 'InvalidToken' }
+      });
 
       const result = await handler(event);
 
@@ -232,10 +200,10 @@ describe('follow-user handler', () => {
     it('should return 500 for DynamoDB errors', async () => {
       mockDynamoClient.send = vi.fn().mockRejectedValue(new Error('DynamoDB error'));
 
-      const event = createMockEvent(
-        JSON.stringify({ userId: testUserId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { userId: testUserId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -245,10 +213,10 @@ describe('follow-user handler', () => {
 
   describe('notification creation', () => {
     it('should create notification when user follows another user', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ userId: testUserId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { userId: testUserId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -264,10 +232,10 @@ describe('follow-user handler', () => {
     });
 
     it('should include correct actor information', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ userId: testUserId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { userId: testUserId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -283,10 +251,10 @@ describe('follow-user handler', () => {
     });
 
     it('should NOT include target (follows are user-to-user)', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ userId: testUserId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { userId: testUserId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -299,10 +267,10 @@ describe('follow-user handler', () => {
     });
 
     it('should NOT create notification for self-follows', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ userId: 'follower-user-id' }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { userId: 'follower-user-id' },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -335,10 +303,10 @@ describe('follow-user handler', () => {
         return { $metadata: {} };
       });
 
-      const event = createMockEvent(
-        JSON.stringify({ userId: testUserId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { userId: testUserId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 

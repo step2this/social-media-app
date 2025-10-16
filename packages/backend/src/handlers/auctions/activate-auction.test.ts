@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { handler } from './activate-auction.js';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 
 // Mock PostgreSQL Pool
 const mockPoolQuery = vi.fn();
@@ -49,40 +49,6 @@ vi.mock('../../utils/index.js', () => ({
 // Mock auction service methods
 const mockActivateAuction = vi.fn();
 const mockGetAuction = vi.fn();
-
-// Test helper to create mock event
-const createMockEvent = (auctionId: string, authHeader?: string): APIGatewayProxyEventV2 => ({
-  version: '2.0',
-  routeKey: 'POST /auctions/{auctionId}/activate',
-  rawPath: `/auctions/${auctionId}/activate`,
-  rawQueryString: '',
-  headers: {
-    'content-type': 'application/json',
-    ...(authHeader && { authorization: authHeader }),
-  },
-  pathParameters: {
-    auctionId,
-  },
-  requestContext: {
-    requestId: 'test-request-id',
-    http: {
-      method: 'POST',
-      path: `/auctions/${auctionId}/activate`,
-      protocol: 'HTTP/1.1',
-      sourceIp: '127.0.0.1',
-      userAgent: 'test-agent',
-    },
-    stage: 'test',
-    time: '2024-01-01T00:00:00.000Z',
-    timeEpoch: 1704067200000,
-    domainName: 'api.example.com',
-    accountId: '123456789012',
-    apiId: 'api123',
-    routeKey: 'POST /auctions/{auctionId}/activate',
-  } as any,
-  body: null,
-  isBase64Encoded: false,
-});
 
 describe('activate-auction handler', () => {
   const validAuctionId = '123e4567-e89b-12d3-a456-426614174000';
@@ -127,7 +93,13 @@ describe('activate-auction handler', () => {
 
       mockActivateAuction.mockResolvedValueOnce(mockAuction);
 
-      const event = createMockEvent(validAuctionId, `Bearer ${validToken}`);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { auctionId: validAuctionId },
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: `/auctions/${validAuctionId}/activate`,
+        routeKey: 'POST /auctions/{auctionId}/activate'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -163,7 +135,13 @@ describe('activate-auction handler', () => {
       mockGetAuction.mockResolvedValueOnce({ ...mockAuction, status: 'pending' });
       mockActivateAuction.mockResolvedValueOnce(mockAuction);
 
-      const event = createMockEvent(validAuctionId, `Bearer ${validToken}`);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { auctionId: validAuctionId },
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: `/auctions/${validAuctionId}/activate`,
+        routeKey: 'POST /auctions/{auctionId}/activate'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -177,7 +155,13 @@ describe('activate-auction handler', () => {
 
   describe('❌ Invalid requests', () => {
     it('should return 400 for missing auction ID', async () => {
-      const event = createMockEvent(validAuctionId, `Bearer ${validToken}`);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { auctionId: validAuctionId },
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: `/auctions/${validAuctionId}/activate`,
+        routeKey: 'POST /auctions/{auctionId}/activate'
+      });
       event.pathParameters = {}; // Remove auctionId
 
       const result = await handler(event);
@@ -188,7 +172,13 @@ describe('activate-auction handler', () => {
     });
 
     it('should return 400 for invalid UUID format', async () => {
-      const event = createMockEvent('invalid-uuid', `Bearer ${validToken}`);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { auctionId: 'invalid-uuid' },
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: `/auctions/invalid-uuid/activate`,
+        routeKey: 'POST /auctions/{auctionId}/activate'
+      });
 
       mockGetAuction.mockRejectedValueOnce(new Error('invalid input syntax for type uuid'));
 
@@ -200,7 +190,13 @@ describe('activate-auction handler', () => {
     it('should return 404 when auction not found', async () => {
       mockGetAuction.mockRejectedValueOnce(new Error('Auction not found'));
 
-      const event = createMockEvent(validAuctionId, `Bearer ${validToken}`);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { auctionId: validAuctionId },
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: `/auctions/${validAuctionId}/activate`,
+        routeKey: 'POST /auctions/{auctionId}/activate'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(404);
@@ -211,7 +207,12 @@ describe('activate-auction handler', () => {
 
   describe('🔒 Authorization', () => {
     it('should return 401 without authorization header', async () => {
-      const event = createMockEvent(validAuctionId);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { auctionId: validAuctionId },
+        method: 'POST',
+        path: `/auctions/${validAuctionId}/activate`,
+        routeKey: 'POST /auctions/{auctionId}/activate'
+      });
 
       const result = await handler(event);
 
@@ -221,7 +222,13 @@ describe('activate-auction handler', () => {
     });
 
     it('should return 401 with invalid token format', async () => {
-      const event = createMockEvent(validAuctionId, 'invalid-token-no-bearer');
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { auctionId: validAuctionId },
+        headers: { authorization: 'invalid-token-no-bearer' },
+        method: 'POST',
+        path: `/auctions/${validAuctionId}/activate`,
+        routeKey: 'POST /auctions/{auctionId}/activate'
+      });
 
       const result = await handler(event);
 
@@ -232,7 +239,13 @@ describe('activate-auction handler', () => {
       const utils = await import('../../utils/index.js');
       vi.mocked(utils.verifyAccessToken).mockResolvedValueOnce(null as any);
 
-      const event = createMockEvent(validAuctionId, `Bearer ${validToken}`);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { auctionId: validAuctionId },
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: `/auctions/${validAuctionId}/activate`,
+        routeKey: 'POST /auctions/{auctionId}/activate'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(401);
@@ -258,7 +271,13 @@ describe('activate-auction handler', () => {
 
       mockGetAuction.mockResolvedValueOnce(mockAuction);
 
-      const event = createMockEvent(validAuctionId, `Bearer ${validToken}`);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { auctionId: validAuctionId },
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: `/auctions/${validAuctionId}/activate`,
+        routeKey: 'POST /auctions/{auctionId}/activate'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(403);
@@ -289,7 +308,13 @@ describe('activate-auction handler', () => {
 
       mockActivateAuction.mockRejectedValueOnce(new Error('Database connection failed'));
 
-      const event = createMockEvent(validAuctionId, `Bearer ${validToken}`);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { auctionId: validAuctionId },
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: `/auctions/${validAuctionId}/activate`,
+        routeKey: 'POST /auctions/{auctionId}/activate'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(500);
@@ -317,7 +342,13 @@ describe('activate-auction handler', () => {
 
       mockActivateAuction.mockRejectedValueOnce(new Error('Unexpected error'));
 
-      const event = createMockEvent(validAuctionId, `Bearer ${validToken}`);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { auctionId: validAuctionId },
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: `/auctions/${validAuctionId}/activate`,
+        routeKey: 'POST /auctions/{auctionId}/activate'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(500);

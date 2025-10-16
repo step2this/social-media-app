@@ -1,7 +1,7 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, functional/prefer-immutable-types */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { handler } from './like-post.js';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 
 // Mock dependencies
 vi.mock('../../utils/index.js', () => ({
@@ -30,37 +30,6 @@ vi.mock('@social-media-app/dal', async () => {
   };
 });
 
-// Test helper to create mock event
-const createMockEvent = (body?: string, authHeader?: string): APIGatewayProxyEventV2 => ({
-  version: '2.0',
-  routeKey: 'POST /likes',
-  rawPath: '/likes',
-  rawQueryString: '',
-  headers: {
-    'content-type': 'application/json',
-    ...(authHeader && { authorization: authHeader })
-  },
-  requestContext: {
-    requestId: 'test-request-id',
-    http: {
-      method: 'POST',
-      path: '/likes',
-      protocol: 'HTTP/1.1',
-      sourceIp: '127.0.0.1',
-      userAgent: 'test-agent'
-    },
-    stage: 'test',
-    time: '2024-01-01T00:00:00.000Z',
-    timeEpoch: 1704067200000,
-    domainName: 'api.example.com',
-    accountId: '123456789012',
-    apiId: 'api123',
-    routeKey: 'POST /likes',
-    domainPrefix: 'api'
-  },
-  body: body || '',
-  isBase64Encoded: false
-});
 
 const mockJWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItaWQifQ.test';
 const testPostId = '123e4567-e89b-12d3-a456-426614174001';
@@ -139,10 +108,10 @@ beforeEach(() => {
 describe('like-post handler', () => {
   describe('successful like', () => {
     it('should like a post successfully', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -153,10 +122,10 @@ describe('like-post handler', () => {
     });
 
     it('should use correct DynamoDB keys', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -168,10 +137,10 @@ describe('like-post handler', () => {
     });
 
     it('should include GSI2 keys for user queries', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -181,10 +150,10 @@ describe('like-post handler', () => {
     });
 
     it('should use conditional expression to prevent duplicates', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -195,10 +164,10 @@ describe('like-post handler', () => {
 
   describe('validation', () => {
     it('should return 400 for invalid request body', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ invalidField: 'value' }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { invalidField: 'value' },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -206,10 +175,10 @@ describe('like-post handler', () => {
     });
 
     it('should return 400 for missing postId', async () => {
-      const event = createMockEvent(
-        JSON.stringify({}),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: {},
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -217,10 +186,10 @@ describe('like-post handler', () => {
     });
 
     it('should return 400 for invalid JSON', async () => {
-      const event = createMockEvent(
-        'invalid json',
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        rawBody: 'invalid json',
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -230,9 +199,9 @@ describe('like-post handler', () => {
 
   describe('authentication', () => {
     it('should return 401 when no auth header provided', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId })
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId }
+      });
 
       const result = await handler(event);
 
@@ -240,10 +209,10 @@ describe('like-post handler', () => {
     });
 
     it('should return 401 when auth header does not start with Bearer', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId }),
-        'InvalidToken'
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId },
+        headers: { authorization: 'InvalidToken' }
+      });
 
       const result = await handler(event);
 
@@ -264,10 +233,10 @@ describe('like-post handler', () => {
         return { Item: { isLiked: true }, $metadata: {} };
       });
 
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -281,10 +250,10 @@ describe('like-post handler', () => {
 
   describe('post metadata extraction', () => {
     it('should fetch post to extract metadata before liking', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -300,10 +269,10 @@ describe('like-post handler', () => {
       mockPostServiceGetPostById.mockResolvedValue(null);
 
       const nonExistentPostId = '999e9999-e99b-99d9-a999-999999999999';
-      const event = createMockEvent(
-        JSON.stringify({ postId: nonExistentPostId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: nonExistentPostId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -336,10 +305,10 @@ describe('like-post handler', () => {
         GSI1SK: `USER#${postOwnerId}`
       });
 
-      const event = createMockEvent(
-        JSON.stringify({ postId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -377,10 +346,10 @@ describe('like-post handler', () => {
         GSI1SK: `USER#${postOwnerId}`
       });
 
-      const event = createMockEvent(
-        JSON.stringify({ postId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -396,10 +365,10 @@ describe('like-post handler', () => {
     it('should handle post fetch errors gracefully', async () => {
       mockPostServiceGetPostById.mockRejectedValue(new Error('DynamoDB error'));
 
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -412,10 +381,10 @@ describe('like-post handler', () => {
       mockPostServiceGetPostById.mockResolvedValue(null);
 
       const missingPostId = '888e8888-e88b-88d8-a888-888888888888';
-      const event = createMockEvent(
-        JSON.stringify({ postId: missingPostId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: missingPostId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -427,10 +396,10 @@ describe('like-post handler', () => {
 
   describe('notification creation', () => {
     it('should create notification when user likes another user\'s post', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -446,10 +415,10 @@ describe('like-post handler', () => {
     });
 
     it('should include correct actor information (userId, handle, displayName, avatarUrl)', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -466,10 +435,10 @@ describe('like-post handler', () => {
     });
 
     it('should include correct target information (type, id, url, preview)', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -485,10 +454,10 @@ describe('like-post handler', () => {
     });
 
     it('should include post preview in notification', async () => {
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -522,10 +491,10 @@ describe('like-post handler', () => {
         GSI1SK: 'USER#test-user-id'
       });
 
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -559,10 +528,10 @@ describe('like-post handler', () => {
         return { $metadata: {} };
       });
 
-      const event = createMockEvent(
-        JSON.stringify({ postId: testPostId }),
-        `Bearer ${mockJWT}`
-      );
+      const event = createMockAPIGatewayEvent({
+        body: { postId: testPostId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 

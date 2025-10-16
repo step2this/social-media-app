@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { handler } from './list-auctions.js';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 
 // Mock PostgreSQL Pool
 const mockPoolQuery = vi.fn();
@@ -41,37 +41,6 @@ vi.mock('../../utils/index.js', () => ({
 
 // Mock auction service method
 const mockListAuctions = vi.fn();
-
-// Test helper to create mock event
-const createMockEvent = (queryParams?: Record<string, string>): APIGatewayProxyEventV2 => ({
-  version: '2.0',
-  routeKey: 'GET /auctions',
-  rawPath: '/auctions',
-  rawQueryString: queryParams ? new URLSearchParams(queryParams).toString() : '',
-  headers: {
-    'content-type': 'application/json',
-  },
-  queryStringParameters: queryParams,
-  requestContext: {
-    requestId: 'test-request-id',
-    http: {
-      method: 'GET',
-      path: '/auctions',
-      protocol: 'HTTP/1.1',
-      sourceIp: '127.0.0.1',
-      userAgent: 'test-agent',
-    },
-    stage: 'test',
-    time: '2024-01-01T00:00:00.000Z',
-    timeEpoch: 1704067200000,
-    domainName: 'api.example.com',
-    accountId: '123456789012',
-    apiId: 'api123',
-    routeKey: 'GET /auctions',
-  } as any,
-  body: null,
-  isBase64Encoded: false,
-});
 
 const createMockAuction = (id: string, overrides?: any) => ({
   id,
@@ -110,7 +79,11 @@ describe('list-auctions handler', () => {
         nextCursor: undefined,
       });
 
-      const event = createMockEvent();
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/auctions',
+        routeKey: 'GET /auctions'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -132,7 +105,12 @@ describe('list-auctions handler', () => {
         nextCursor: undefined,
       });
 
-      const event = createMockEvent({ limit: '10' });
+      const event = createMockAPIGatewayEvent({
+        queryStringParameters: { limit: '10' },
+        method: 'GET',
+        path: '/auctions',
+        routeKey: 'GET /auctions'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -151,7 +129,11 @@ describe('list-auctions handler', () => {
         nextCursor: undefined,
       });
 
-      const event = createMockEvent();
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/auctions',
+        routeKey: 'GET /auctions'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -174,7 +156,12 @@ describe('list-auctions handler', () => {
         nextCursor: undefined,
       });
 
-      const event = createMockEvent({ status: 'active' });
+      const event = createMockAPIGatewayEvent({
+        queryStringParameters: { status: 'active' },
+        method: 'GET',
+        path: '/auctions',
+        routeKey: 'GET /auctions'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -200,7 +187,12 @@ describe('list-auctions handler', () => {
         nextCursor: undefined,
       });
 
-      const event = createMockEvent({ userId });
+      const event = createMockAPIGatewayEvent({
+        queryStringParameters: { userId },
+        method: 'GET',
+        path: '/auctions',
+        routeKey: 'GET /auctions'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -228,7 +220,12 @@ describe('list-auctions handler', () => {
         nextCursor: undefined,
       });
 
-      const event = createMockEvent({ status: 'completed', userId });
+      const event = createMockAPIGatewayEvent({
+        queryStringParameters: { status: 'completed', userId },
+        method: 'GET',
+        path: '/auctions',
+        routeKey: 'GET /auctions'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -253,7 +250,12 @@ describe('list-auctions handler', () => {
         nextCursor: '10',
       });
 
-      const event = createMockEvent({ cursor: '0', limit: '5' });
+      const event = createMockAPIGatewayEvent({
+        queryStringParameters: { cursor: '0', limit: '5' },
+        method: 'GET',
+        path: '/auctions',
+        routeKey: 'GET /auctions'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -275,7 +277,12 @@ describe('list-auctions handler', () => {
         nextCursor: undefined,
       });
 
-      const event = createMockEvent({ cursor: '20', limit: '10' });
+      const event = createMockAPIGatewayEvent({
+        queryStringParameters: { cursor: '20', limit: '10' },
+        method: 'GET',
+        path: '/auctions',
+        routeKey: 'GET /auctions'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -295,7 +302,12 @@ describe('list-auctions handler', () => {
         nextCursor: '24',
       });
 
-      const event = createMockEvent({ limit: '24' });
+      const event = createMockAPIGatewayEvent({
+        queryStringParameters: { limit: '24' },
+        method: 'GET',
+        path: '/auctions',
+        routeKey: 'GET /auctions'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -307,7 +319,12 @@ describe('list-auctions handler', () => {
 
   describe('❌ Invalid requests', () => {
     it('should reject invalid limit with 400', async () => {
-      const event = createMockEvent({ limit: 'invalid' });
+      const event = createMockAPIGatewayEvent({
+        queryStringParameters: { limit: 'invalid' },
+        method: 'GET',
+        path: '/auctions',
+        routeKey: 'GET /auctions'
+      });
       const result = await handler(event);
 
       // Should return 400 for invalid limit (NaN from parseInt)
@@ -317,7 +334,12 @@ describe('list-auctions handler', () => {
     });
 
     it('should reject invalid status value with 400', async () => {
-      const event = createMockEvent({ status: 'invalid-status' });
+      const event = createMockAPIGatewayEvent({
+        queryStringParameters: { status: 'invalid-status' },
+        method: 'GET',
+        path: '/auctions',
+        routeKey: 'GET /auctions'
+      });
       const result = await handler(event);
 
       // Should return 400 for invalid enum value
@@ -331,7 +353,11 @@ describe('list-auctions handler', () => {
     it('should handle database errors gracefully', async () => {
       mockListAuctions.mockRejectedValueOnce(new Error('Database connection failed'));
 
-      const event = createMockEvent();
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/auctions',
+        routeKey: 'GET /auctions'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(500);
@@ -342,7 +368,11 @@ describe('list-auctions handler', () => {
     it('should handle unexpected errors', async () => {
       mockListAuctions.mockRejectedValueOnce(new Error('Unexpected error'));
 
-      const event = createMockEvent();
+      const event = createMockAPIGatewayEvent({
+        method: 'GET',
+        path: '/auctions',
+        routeKey: 'GET /auctions'
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(500);

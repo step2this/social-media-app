@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { handler } from './create-auction.js';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 
 // Mock PostgreSQL Pool
 const mockPoolQuery = vi.fn();
@@ -48,37 +48,6 @@ vi.mock('../../utils/index.js', () => ({
 // Mock auction service method
 const mockCreateAuction = vi.fn();
 
-// Test helper to create mock event
-const createMockEvent = (body?: any, authHeader?: string): APIGatewayProxyEventV2 => ({
-  version: '2.0',
-  routeKey: 'POST /auctions',
-  rawPath: '/auctions',
-  rawQueryString: '',
-  headers: {
-    'content-type': 'application/json',
-    ...(authHeader && { authorization: authHeader }),
-  },
-  requestContext: {
-    requestId: 'test-request-id',
-    http: {
-      method: 'POST',
-      path: '/auctions',
-      protocol: 'HTTP/1.1',
-      sourceIp: '127.0.0.1',
-      userAgent: 'test-agent',
-    },
-    stage: 'test',
-    time: '2024-01-01T00:00:00.000Z',
-    timeEpoch: 1704067200000,
-    domainName: 'api.example.com',
-    accountId: '123456789012',
-    apiId: 'api123',
-    routeKey: 'POST /auctions',
-  } as any,
-  body: body ? JSON.stringify(body) : null,
-  isBase64Encoded: false,
-});
-
 describe('create-auction handler', () => {
   const mockUserId = 'user-123';
   const validToken = 'valid-jwt-token';
@@ -115,8 +84,8 @@ describe('create-auction handler', () => {
 
       mockCreateAuction.mockResolvedValueOnce(mockAuction);
 
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           title: 'Vintage Camera',
           description: 'Rare camera',
           startPrice: 100.0,
@@ -124,8 +93,11 @@ describe('create-auction handler', () => {
           startTime: '2025-10-15T00:00:00Z',
           endTime: '2025-10-16T00:00:00Z',
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/auctions',
+        routeKey: 'POST /auctions'
+      });
 
       const result = await handler(event);
 
@@ -167,15 +139,18 @@ describe('create-auction handler', () => {
 
       mockCreateAuction.mockResolvedValueOnce(mockAuction);
 
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           title: 'Simple Item',
           startPrice: 50.0,
           startTime: '2025-10-15T00:00:00Z',
           endTime: '2025-10-16T00:00:00Z',
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/auctions',
+        routeKey: 'POST /auctions'
+      });
 
       const result = await handler(event);
 
@@ -189,14 +164,17 @@ describe('create-auction handler', () => {
 
   describe('❌ Invalid requests - Missing fields', () => {
     it('should reject request with missing title', async () => {
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           startPrice: 100.0,
           startTime: '2025-10-15T00:00:00Z',
           endTime: '2025-10-16T00:00:00Z',
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/auctions',
+        routeKey: 'POST /auctions'
+      });
 
       const result = await handler(event);
 
@@ -206,14 +184,17 @@ describe('create-auction handler', () => {
     });
 
     it('should reject request with missing startPrice', async () => {
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           title: 'Test',
           startTime: '2025-10-15T00:00:00Z',
           endTime: '2025-10-16T00:00:00Z',
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/auctions',
+        routeKey: 'POST /auctions'
+      });
 
       const result = await handler(event);
 
@@ -221,13 +202,16 @@ describe('create-auction handler', () => {
     });
 
     it('should reject request with missing timestamps', async () => {
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           title: 'Test',
           startPrice: 100.0,
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/auctions',
+        routeKey: 'POST /auctions'
+      });
 
       const result = await handler(event);
 
@@ -237,15 +221,18 @@ describe('create-auction handler', () => {
 
   describe('❌ Invalid requests - Invalid values', () => {
     it('should reject empty title', async () => {
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           title: '',
           startPrice: 100.0,
           startTime: '2025-10-15T00:00:00Z',
           endTime: '2025-10-16T00:00:00Z',
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/auctions',
+        routeKey: 'POST /auctions'
+      });
 
       const result = await handler(event);
 
@@ -253,15 +240,18 @@ describe('create-auction handler', () => {
     });
 
     it('should reject negative price', async () => {
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           title: 'Test',
           startPrice: -10.0,
           startTime: '2025-10-15T00:00:00Z',
           endTime: '2025-10-16T00:00:00Z',
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/auctions',
+        routeKey: 'POST /auctions'
+      });
 
       const result = await handler(event);
 
@@ -269,15 +259,18 @@ describe('create-auction handler', () => {
     });
 
     it('should reject end time before start time', async () => {
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           title: 'Test',
           startPrice: 100.0,
           startTime: '2025-10-16T00:00:00Z',
           endTime: '2025-10-15T00:00:00Z', // Before start
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/auctions',
+        routeKey: 'POST /auctions'
+      });
 
       const result = await handler(event);
 
@@ -285,16 +278,19 @@ describe('create-auction handler', () => {
     });
 
     it('should reject reserve price less than start price', async () => {
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           title: 'Test',
           startPrice: 100.0,
           reservePrice: 50.0, // Less than start price
           startTime: '2025-10-15T00:00:00Z',
           endTime: '2025-10-16T00:00:00Z',
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/auctions',
+        routeKey: 'POST /auctions'
+      });
 
       const result = await handler(event);
 
@@ -302,9 +298,13 @@ describe('create-auction handler', () => {
     });
 
     it('should reject invalid JSON', async () => {
-      const event = createMockEvent();
-      event.body = 'not-json';
-      event.headers.authorization = `Bearer ${validToken}`;
+      const event = createMockAPIGatewayEvent({
+        rawBody: 'not-json',
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/auctions',
+        routeKey: 'POST /auctions'
+      });
 
       const result = await handler(event);
 
@@ -316,11 +316,16 @@ describe('create-auction handler', () => {
 
   describe('🔒 Authentication', () => {
     it('should reject request without authorization header', async () => {
-      const event = createMockEvent({
+      const event = createMockAPIGatewayEvent({
+        body: {
         title: 'Test',
         startPrice: 100.0,
         startTime: '2025-10-15T00:00:00Z',
         endTime: '2025-10-16T00:00:00Z',
+      },
+        method: 'POST',
+        path: '/auctions',
+        routeKey: 'POST /auctions'
       });
 
       const result = await handler(event);
@@ -331,15 +336,18 @@ describe('create-auction handler', () => {
     });
 
     it('should reject request with invalid token format', async () => {
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           title: 'Test',
           startPrice: 100.0,
           startTime: '2025-10-15T00:00:00Z',
           endTime: '2025-10-16T00:00:00Z',
         },
-        'invalid-token-no-bearer'
-      );
+        headers: { authorization: 'invalid-token-no-bearer' },
+        method: 'POST',
+        path: '/auctions',
+        routeKey: 'POST /auctions'
+      });
 
       const result = await handler(event);
 
@@ -350,15 +358,18 @@ describe('create-auction handler', () => {
       const utils = await import('../../utils/index.js');
       vi.mocked(utils.verifyAccessToken).mockResolvedValueOnce(null as any);
 
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           title: 'Test',
           startPrice: 100.0,
           startTime: '2025-10-15T00:00:00Z',
           endTime: '2025-10-16T00:00:00Z',
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/auctions',
+        routeKey: 'POST /auctions'
+      });
 
       const result = await handler(event);
 
@@ -370,15 +381,18 @@ describe('create-auction handler', () => {
     it('should handle database errors gracefully', async () => {
       mockCreateAuction.mockRejectedValueOnce(new Error('Database connection failed'));
 
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           title: 'Test',
           startPrice: 100.0,
           startTime: '2025-10-15T00:00:00Z',
           endTime: '2025-10-16T00:00:00Z',
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/auctions',
+        routeKey: 'POST /auctions'
+      });
 
       const result = await handler(event);
 

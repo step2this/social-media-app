@@ -1,7 +1,7 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, functional/prefer-immutable-types */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { handler } from './get-follow-status.js';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 
 // Mock dependencies
 vi.mock('../../utils/index.js', () => ({
@@ -15,38 +15,6 @@ vi.mock('../../utils/dynamodb.js', () => ({
   createDynamoDBClient: vi.fn(() => mockDynamoClient),
   getTableName: vi.fn(() => 'test-table')
 }));
-
-// Test helper to create mock event
-const createMockEvent = (userId?: string, authHeader?: string): APIGatewayProxyEventV2 => ({
-  version: '2.0',
-  routeKey: 'GET /follows/{userId}/status',
-  rawPath: `/follows/${userId}/status`,
-  rawQueryString: '',
-  headers: {
-    'content-type': 'application/json',
-    ...(authHeader && { authorization: authHeader })
-  },
-  pathParameters: userId ? { userId } : undefined,
-  requestContext: {
-    requestId: 'test-request-id',
-    http: {
-      method: 'GET',
-      path: `/follows/${userId}/status`,
-      protocol: 'HTTP/1.1',
-      sourceIp: '127.0.0.1',
-      userAgent: 'test-agent'
-    },
-    stage: 'test',
-    time: '2024-01-01T00:00:00.000Z',
-    timeEpoch: 1704067200000,
-    domainName: 'api.example.com',
-    accountId: '123456789012',
-    apiId: 'api123',
-    routeKey: 'GET /follows/{userId}/status',
-    domainPrefix: 'api'
-  },
-  isBase64Encoded: false
-});
 
 const mockJWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjdXJyZW50LXVzZXItaWQifQ.test';
 const testUserId = '123e4567-e89b-12d3-a456-426614174001';
@@ -75,7 +43,10 @@ beforeEach(() => {
 describe('get-follow-status handler', () => {
   describe('successful status check', () => {
     it('should return isFollowing false when not following', async () => {
-      const event = createMockEvent(testUserId, `Bearer ${mockJWT}`);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { userId: testUserId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -104,7 +75,10 @@ describe('get-follow-status handler', () => {
         return { $metadata: {} };
       });
 
-      const event = createMockEvent(testUserId, `Bearer ${mockJWT}`);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { userId: testUserId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -114,7 +88,10 @@ describe('get-follow-status handler', () => {
     });
 
     it('should use correct DynamoDB keys', async () => {
-      const event = createMockEvent(testUserId, `Bearer ${mockJWT}`);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { userId: testUserId },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       await handler(event);
 
@@ -127,7 +104,9 @@ describe('get-follow-status handler', () => {
 
   describe('validation', () => {
     it('should return 400 for missing userId in path', async () => {
-      const event = createMockEvent(undefined, `Bearer ${mockJWT}`);
+      const event = createMockAPIGatewayEvent({
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -137,7 +116,10 @@ describe('get-follow-status handler', () => {
     });
 
     it('should return 400 for invalid userId format', async () => {
-      const event = createMockEvent('not-a-uuid', `Bearer ${mockJWT}`);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { userId: 'not-a-uuid' },
+        headers: { authorization: `Bearer ${mockJWT}` }
+      });
 
       const result = await handler(event);
 
@@ -147,7 +129,9 @@ describe('get-follow-status handler', () => {
 
   describe('authentication', () => {
     it('should return 401 without authorization header', async () => {
-      const event = createMockEvent(testUserId);
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { userId: testUserId }
+      });
 
       const result = await handler(event);
 
@@ -155,7 +139,10 @@ describe('get-follow-status handler', () => {
     });
 
     it('should return 401 for invalid bearer token', async () => {
-      const event = createMockEvent(testUserId, 'InvalidToken');
+      const event = createMockAPIGatewayEvent({
+        pathParameters: { userId: testUserId },
+        headers: { authorization: 'InvalidToken' }
+      });
 
       const result = await handler(event);
 

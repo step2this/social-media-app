@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, type MockedFunction } from 'vitest';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { handler } from './create-post.js';
 import { PostService, ProfileService } from '@social-media-app/dal';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 import * as dynamoUtils from '../../utils/dynamodb.js';
 import * as jwtUtils from '../../utils/jwt.js';
 
@@ -76,35 +76,6 @@ describe('Create Post Handler', () => {
     isHandleAvailable: vi.fn()
   };
 
-  const createMockEvent = (body?: unknown, authHeader?: string): APIGatewayProxyEventV2 => ({
-    version: '2.0',
-    routeKey: 'POST /posts',
-    rawPath: '/posts',
-    rawQueryString: '',
-    headers: {
-      'content-type': 'application/json',
-      ...(authHeader && { authorization: authHeader })
-    },
-    requestContext: {
-      requestId: 'test-request-id',
-      http: {
-        method: 'POST',
-        path: '/posts',
-        protocol: 'HTTP/1.1',
-        sourceIp: '127.0.0.1',
-        userAgent: 'test-agent'
-      },
-      stage: 'test',
-      time: '2024-01-01T00:00:00.000Z',
-      timeEpoch: 1704067200000,
-      domainName: 'api.example.com',
-      accountId: '123456789012',
-      apiId: 'api123',
-      routeKey: 'POST /posts'
-    },
-    body: body ? JSON.stringify(body) : null,
-    isBase64Encoded: false
-  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -163,15 +134,15 @@ describe('Create Post Handler', () => {
     mockProfileService.generatePresignedUrl.mockResolvedValue(mockUploadData);
     mockPostService.createPost.mockResolvedValue(mockPost);
 
-    const event = createMockEvent(
-      {
+    const event = createMockAPIGatewayEvent({
+      body: {
         caption: 'Test caption',
         tags: ['test'],
         isPublic: true,
         fileType: 'image/jpeg'
       },
-      'Bearer valid-token'
-    );
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     const result = await handler(event);
 
@@ -205,7 +176,9 @@ describe('Create Post Handler', () => {
   });
 
   it('should return 401 when no authorization header', async () => {
-    const event = createMockEvent({ caption: 'Test', fileType: 'image/jpeg' });
+    const event = createMockAPIGatewayEvent({
+      body: { caption: 'Test', fileType: 'image/jpeg' }
+    });
 
     const result = await handler(event);
 
@@ -216,7 +189,10 @@ describe('Create Post Handler', () => {
   });
 
   it('should return 401 when invalid authorization header format', async () => {
-    const event = createMockEvent({ caption: 'Test', fileType: 'image/jpeg' }, 'InvalidToken');
+    const event = createMockAPIGatewayEvent({
+      body: { caption: 'Test', fileType: 'image/jpeg' },
+      headers: { authorization: 'InvalidToken' }
+    });
 
     const result = await handler(event);
 
@@ -229,7 +205,10 @@ describe('Create Post Handler', () => {
   it('should return 401 when token verification fails', async () => {
     mockVerifyAccessToken.mockResolvedValue(null);
 
-    const event = createMockEvent({ caption: 'Test', fileType: 'image/jpeg' }, 'Bearer invalid-token');
+    const event = createMockAPIGatewayEvent({
+      body: { caption: 'Test', fileType: 'image/jpeg' },
+      headers: { authorization: 'Bearer invalid-token' }
+    });
 
     const result = await handler(event);
 
@@ -248,7 +227,10 @@ describe('Create Post Handler', () => {
     mockVerifyAccessToken.mockResolvedValue(mockUser);
     mockProfileService.getProfileById.mockResolvedValue(null);
 
-    const event = createMockEvent({ caption: 'Test', fileType: 'image/jpeg' }, 'Bearer valid-token');
+    const event = createMockAPIGatewayEvent({
+      body: { caption: 'Test', fileType: 'image/jpeg' },
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     const result = await handler(event);
 
@@ -266,14 +248,14 @@ describe('Create Post Handler', () => {
 
     mockVerifyAccessToken.mockResolvedValue(mockUser);
 
-    const event = createMockEvent(
-      {
+    const event = createMockAPIGatewayEvent({
+      body: {
         caption: 123, // Invalid type
         tags: 'invalid', // Should be array
         isPublic: 'not-boolean' // Invalid type
       },
-      'Bearer valid-token'
-    );
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     const result = await handler(event);
 
@@ -284,10 +266,10 @@ describe('Create Post Handler', () => {
   });
 
   it('should handle malformed JSON body', async () => {
-    const event: APIGatewayProxyEventV2 = {
-      ...createMockEvent({ fileType: 'image/jpeg' }, 'Bearer valid-token'),
-      body: '{ invalid json'
-    };
+    const event = createMockAPIGatewayEvent({
+      rawBody: '{ invalid json',
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     const result = await handler(event);
 
@@ -313,7 +295,10 @@ describe('Create Post Handler', () => {
     mockProfileService.getProfileById.mockResolvedValue(mockProfile);
     mockProfileService.generatePresignedUrl.mockRejectedValue(new Error('S3 bucket not configured'));
 
-    const event = createMockEvent({ caption: 'Test', fileType: 'image/jpeg' }, 'Bearer valid-token');
+    const event = createMockAPIGatewayEvent({
+      body: { caption: 'Test', fileType: 'image/jpeg' },
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     const result = await handler(event);
 
@@ -332,7 +317,10 @@ describe('Create Post Handler', () => {
     mockVerifyAccessToken.mockResolvedValue(mockUser);
     mockProfileService.getProfileById.mockRejectedValue(new Error('Database connection failed'));
 
-    const event = createMockEvent({ caption: 'Test', fileType: 'image/jpeg' }, 'Bearer valid-token');
+    const event = createMockAPIGatewayEvent({
+      body: { caption: 'Test', fileType: 'image/jpeg' },
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     // Mock console.error to capture error logs
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -386,7 +374,10 @@ describe('Create Post Handler', () => {
     mockProfileService.generatePresignedUrl.mockResolvedValue(mockUploadData);
     mockPostService.createPost.mockResolvedValue(mockPost);
 
-    const event = createMockEvent({ fileType: 'image/jpeg' }, 'Bearer valid-token');
+    const event = createMockAPIGatewayEvent({
+      body: { fileType: 'image/jpeg' },
+      headers: { authorization: 'Bearer valid-token' }
+    });
 
     const result = await handler(event);
 

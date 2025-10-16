@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { handler } from './place-bid.js';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 
 // Mock PostgreSQL Pool
 const mockPoolQuery = vi.fn();
@@ -48,36 +48,7 @@ vi.mock('../../utils/index.js', () => ({
 // Mock auction service method
 const mockPlaceBid = vi.fn();
 
-// Test helper to create mock event
-const createMockEvent = (body?: any, authHeader?: string): APIGatewayProxyEventV2 => ({
-  version: '2.0',
-  routeKey: 'POST /bids',
-  rawPath: '/bids',
-  rawQueryString: '',
-  headers: {
-    'content-type': 'application/json',
-    ...(authHeader && { authorization: authHeader }),
-  },
-  requestContext: {
-    requestId: 'test-request-id',
-    http: {
-      method: 'POST',
-      path: '/bids',
-      protocol: 'HTTP/1.1',
-      sourceIp: '127.0.0.1',
-      userAgent: 'test-agent',
-    },
-    stage: 'test',
-    time: '2024-01-01T00:00:00.000Z',
-    timeEpoch: 1704067200000,
-    domainName: 'api.example.com',
-    accountId: '123456789012',
-    apiId: 'api123',
-    routeKey: 'POST /bids',
-  } as any,
-  body: body ? JSON.stringify(body) : null,
-  isBase64Encoded: false,
-});
+
 
 describe('place-bid handler', () => {
   const mockUserId = 'user-123';
@@ -125,13 +96,16 @@ describe('place-bid handler', () => {
 
       mockPlaceBid.mockResolvedValueOnce(mockResult);
 
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
           amount: 150.0,
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -178,13 +152,16 @@ describe('place-bid handler', () => {
 
       mockPlaceBid.mockResolvedValueOnce(mockResult);
 
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
           amount: 125.99,
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -222,13 +199,16 @@ describe('place-bid handler', () => {
 
       mockPlaceBid.mockResolvedValueOnce(mockResult);
 
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
           amount: 200.0,
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -240,12 +220,15 @@ describe('place-bid handler', () => {
 
   describe('❌ Invalid bids - Missing fields', () => {
     it('should reject request with missing auctionId', async () => {
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           amount: 150.0,
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -255,12 +238,15 @@ describe('place-bid handler', () => {
     });
 
     it('should reject request with missing amount', async () => {
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -268,7 +254,13 @@ describe('place-bid handler', () => {
     });
 
     it('should reject request with empty body', async () => {
-      const event = createMockEvent({}, `Bearer ${validToken}`);
+      const event = createMockAPIGatewayEvent({
+        body: {},
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -278,13 +270,16 @@ describe('place-bid handler', () => {
 
   describe('❌ Invalid bids - Invalid values', () => {
     it('should reject bid with invalid UUID format', async () => {
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: 'invalid-uuid',
           amount: 150.0,
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -294,13 +289,16 @@ describe('place-bid handler', () => {
     });
 
     it('should reject bid with zero amount', async () => {
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
           amount: 0,
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -308,13 +306,16 @@ describe('place-bid handler', () => {
     });
 
     it('should reject bid with negative amount', async () => {
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
           amount: -50.0,
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -322,13 +323,16 @@ describe('place-bid handler', () => {
     });
 
     it('should reject bid with too many decimal places', async () => {
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
           amount: 150.999, // 3 decimal places
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -336,9 +340,13 @@ describe('place-bid handler', () => {
     });
 
     it('should reject invalid JSON', async () => {
-      const event = createMockEvent();
-      event.body = 'not-json';
-      event.headers.authorization = `Bearer ${validToken}`;
+      const event = createMockAPIGatewayEvent({
+        rawBody: 'not-json',
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -352,13 +360,16 @@ describe('place-bid handler', () => {
     it('should return 404 for non-existent auction', async () => {
       mockPlaceBid.mockRejectedValueOnce(new Error('Auction not found or not active'));
 
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
           amount: 150.0,
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -370,13 +381,16 @@ describe('place-bid handler', () => {
     it('should return 404 for inactive auction', async () => {
       mockPlaceBid.mockRejectedValueOnce(new Error('Auction not found or not active'));
 
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
           amount: 150.0,
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -388,13 +402,16 @@ describe('place-bid handler', () => {
         new Error('Bid amount must be higher than current price')
       );
 
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
           amount: 90.0, // Lower than start price
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -408,13 +425,16 @@ describe('place-bid handler', () => {
         new Error('Bid amount must be higher than current price')
       );
 
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
           amount: 100.0, // Same as current price
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -424,9 +444,14 @@ describe('place-bid handler', () => {
 
   describe('🔒 Authentication', () => {
     it('should reject request without authorization header', async () => {
-      const event = createMockEvent({
+      const event = createMockAPIGatewayEvent({
+        body: {
         auctionId: mockAuctionId,
         amount: 150.0,
+      },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
       });
 
       const result = await handler(event);
@@ -437,13 +462,16 @@ describe('place-bid handler', () => {
     });
 
     it('should reject request with invalid token format', async () => {
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
           amount: 150.0,
         },
-        'invalid-token-no-bearer'
-      );
+        headers: { authorization: 'invalid-token-no-bearer' },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -454,13 +482,16 @@ describe('place-bid handler', () => {
       const utils = await import('../../utils/index.js');
       vi.mocked(utils.verifyAccessToken).mockResolvedValueOnce(null as any);
 
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
           amount: 150.0,
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -473,13 +504,16 @@ describe('place-bid handler', () => {
         email: 'test@example.com',
       } as any);
 
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
           amount: 150.0,
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -491,13 +525,16 @@ describe('place-bid handler', () => {
     it('should handle database errors gracefully', async () => {
       mockPlaceBid.mockRejectedValueOnce(new Error('Database connection failed'));
 
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
           amount: 150.0,
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -509,13 +546,16 @@ describe('place-bid handler', () => {
     it('should handle unexpected errors', async () => {
       mockPlaceBid.mockRejectedValueOnce(new Error('Unexpected error'));
 
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
           amount: 150.0,
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 
@@ -525,13 +565,16 @@ describe('place-bid handler', () => {
     it('should handle transaction errors gracefully', async () => {
       mockPlaceBid.mockRejectedValueOnce(new Error('Transaction failed'));
 
-      const event = createMockEvent(
-        {
+      const event = createMockAPIGatewayEvent({
+        body: {
           auctionId: mockAuctionId,
           amount: 150.0,
         },
-        `Bearer ${validToken}`
-      );
+        headers: { authorization: `Bearer ${validToken}` },
+        method: 'POST',
+        path: '/bids',
+        routeKey: 'POST /bids'
+      });
 
       const result = await handler(event);
 

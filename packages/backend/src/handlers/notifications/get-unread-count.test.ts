@@ -1,6 +1,7 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, functional/prefer-immutable-types */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { handler } from './get-unread-count.js';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
 import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 
 // Mock dependencies
@@ -23,37 +24,6 @@ vi.mock('../../utils/index.js', () => ({
     return { statusCode: 500, body: JSON.stringify({ error: 'Internal server error' }) };
   })
 }));
-
-// Test helper to create mock event
-const createMockEvent = (authHeader?: string): APIGatewayProxyEventV2 => ({
-  version: '2.0',
-  routeKey: 'GET /notifications/unread-count',
-  rawPath: '/notifications/unread-count',
-  rawQueryString: '',
-  headers: {
-    'content-type': 'application/json',
-    ...(authHeader && { authorization: authHeader })
-  },
-  requestContext: {
-    requestId: 'test-request-id',
-    http: {
-      method: 'GET',
-      path: '/notifications/unread-count',
-      protocol: 'HTTP/1.1',
-      sourceIp: '127.0.0.1',
-      userAgent: 'test-agent'
-    },
-    stage: 'test',
-    time: '2024-01-01T00:00:00.000Z',
-    timeEpoch: 1704067200000,
-    domainName: 'api.example.com',
-    accountId: '123456789012',
-    apiId: 'api123',
-    routeKey: 'GET /notifications/unread-count',
-    domainPrefix: 'api'
-  },
-  isBase64Encoded: false
-});
 
 const createAuthHeaders = (userId: string) => `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIke userId}In0.test`;
 
@@ -88,7 +58,9 @@ describe('get-unread-count handler', () => {
       const mockCount = 5;
       mockNotificationService.getUnreadCount.mockResolvedValue(mockCount);
 
-      const event = createMockEvent(mockJWT);
+      const event = createMockAPIGatewayEvent({
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -102,7 +74,9 @@ describe('get-unread-count handler', () => {
       const mockCount = 0;
       mockNotificationService.getUnreadCount.mockResolvedValue(mockCount);
 
-      const event = createMockEvent(mockJWT);
+      const event = createMockAPIGatewayEvent({
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -114,7 +88,9 @@ describe('get-unread-count handler', () => {
       const mockCount = 150;
       mockNotificationService.getUnreadCount.mockResolvedValue(mockCount);
 
-      const event = createMockEvent(mockJWT);
+      const event = createMockAPIGatewayEvent({
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -126,7 +102,9 @@ describe('get-unread-count handler', () => {
       const mockCount = 1;
       mockNotificationService.getUnreadCount.mockResolvedValue(mockCount);
 
-      const event = createMockEvent(mockJWT);
+      const event = createMockAPIGatewayEvent({
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -138,7 +116,9 @@ describe('get-unread-count handler', () => {
       const mockCount = 10;
       mockNotificationService.getUnreadCount.mockResolvedValue(mockCount);
 
-      const event = createMockEvent(mockJWT);
+      const event = createMockAPIGatewayEvent({
+        headers: { authorization: mockJWT }
+      });
       await handler(event);
 
       expect(mockNotificationService.getUnreadCount).toHaveBeenCalledTimes(1);
@@ -148,7 +128,7 @@ describe('get-unread-count handler', () => {
 
   describe('authentication', () => {
     it('should return 401 when no auth header provided', async () => {
-      const event = createMockEvent();
+      const event = createMockAPIGatewayEvent({});
       const result = await handler(event);
 
       expect(result.statusCode).toBe(401);
@@ -157,7 +137,9 @@ describe('get-unread-count handler', () => {
     });
 
     it('should return 401 when auth header does not start with Bearer', async () => {
-      const event = createMockEvent('InvalidToken');
+      const event = createMockAPIGatewayEvent({
+        headers: { authorization: 'InvalidToken' }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(401);
@@ -169,7 +151,9 @@ describe('get-unread-count handler', () => {
       const { authenticateRequest } = await import('../../utils/index.js');
       vi.mocked(authenticateRequest).mockResolvedValueOnce({ success: false, statusCode: 401, message: 'Unauthorized' });
 
-      const event = createMockEvent(mockJWT);
+      const event = createMockAPIGatewayEvent({
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(401);
@@ -179,7 +163,9 @@ describe('get-unread-count handler', () => {
       const { authenticateRequest } = await import('../../utils/index.js');
       vi.mocked(authenticateRequest).mockResolvedValueOnce({ success: false, statusCode: 401, message: 'Unauthorized' });
 
-      const event = createMockEvent(mockJWT);
+      const event = createMockAPIGatewayEvent({
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(401);
@@ -189,7 +175,9 @@ describe('get-unread-count handler', () => {
       const { authenticateRequest } = await import('../../utils/index.js');
       vi.mocked(authenticateRequest).mockResolvedValueOnce({ success: false, statusCode: 401, message: 'Invalid token' });
 
-      const event = createMockEvent(mockJWT);
+      const event = createMockAPIGatewayEvent({
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(401);
@@ -204,7 +192,9 @@ describe('get-unread-count handler', () => {
         new Error('DynamoDB connection failed')
       );
 
-      const event = createMockEvent(mockJWT);
+      const event = createMockAPIGatewayEvent({
+        headers: { authorization: mockJWT }
+      });
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const result = await handler(event);
@@ -223,7 +213,9 @@ describe('get-unread-count handler', () => {
       const mockCount = 42;
       mockNotificationService.getUnreadCount.mockResolvedValue(mockCount);
 
-      const event = createMockEvent(mockJWT);
+      const event = createMockAPIGatewayEvent({
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);
@@ -240,7 +232,9 @@ describe('get-unread-count handler', () => {
       const mockCount = 0;
       mockNotificationService.getUnreadCount.mockResolvedValue(mockCount);
 
-      const event = createMockEvent(mockJWT);
+      const event = createMockAPIGatewayEvent({
+        headers: { authorization: mockJWT }
+      });
       const result = await handler(event);
 
       expect(result.statusCode).toBe(200);

@@ -5,7 +5,8 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { handler } from './get-post.js';
-import { createMockLambdaEvent, createTestPost, setupTestEnvironment } from '../../test/utils/index.js';
+import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
+import { createTestPost, setupTestEnvironment } from '../../test/utils/index.js';
 import type { PostResponse } from '@social-media-app/shared';
 import { z } from 'zod';
 
@@ -73,7 +74,7 @@ describe('get-post handler', () => {
   describe('Parameter Validation', () => {
     it('should return 400 when postId is missing', async () => {
       // Arrange
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
         pathParameters: {},
       });
 
@@ -89,7 +90,7 @@ describe('get-post handler', () => {
 
     it('should return 400 when pathParameters is null', async () => {
       // Arrange
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
         pathParameters: null,
       });
 
@@ -113,7 +114,7 @@ describe('get-post handler', () => {
         .withCaption('Test post')
         .build();
 
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
         pathParameters: { postId: testPostId },
       });
 
@@ -132,7 +133,7 @@ describe('get-post handler', () => {
 
     it('should return 404 when post not found', async () => {
       // Arrange
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
         pathParameters: { postId: 'nonexistent-post-id' },
       });
 
@@ -153,7 +154,7 @@ describe('get-post handler', () => {
   describe('Error Handling', () => {
     it('should return 500 when PostService throws an error', async () => {
       // Arrange
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
         pathParameters: { postId: 'test-post-id' },
       });
 
@@ -171,7 +172,7 @@ describe('get-post handler', () => {
 
     it('should return 400 when Zod validation fails', async () => {
       // Arrange
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
         pathParameters: { postId: 'test-post-id' },
       });
 
@@ -193,7 +194,7 @@ describe('get-post handler', () => {
     it('should return properly formatted response with correct headers', async () => {
       // Arrange
       const testPost = createTestPost().build();
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
         pathParameters: { postId: testPost.id },
       });
 
@@ -225,7 +226,7 @@ describe('get-post handler', () => {
         .withTags(['tag1', 'tag2'])
         .build();
 
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
         pathParameters: { postId: validPostId },
       });
 
@@ -255,7 +256,7 @@ describe('get-post handler', () => {
     it('should initialize services with correct parameters', async () => {
       // Arrange
       const testPost = createTestPost().build();
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
         pathParameters: { postId: testPost.id },
       });
 
@@ -288,7 +289,7 @@ describe('get-post handler', () => {
   describe('Edge Cases', () => {
     it('should handle empty string postId as invalid', async () => {
       // Arrange
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
         pathParameters: { postId: '' },
       });
 
@@ -303,7 +304,7 @@ describe('get-post handler', () => {
 
     it('should handle whitespace-only postId as invalid', async () => {
       // Arrange
-      const event = createMockLambdaEvent({
+      const event = createMockAPIGatewayEvent({
         pathParameters: { postId: '   ' },
       });
 
