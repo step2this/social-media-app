@@ -1,8 +1,9 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, functional/prefer-immutable-types */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { DynamoDBStreamEvent, DynamoDBRecord } from 'aws-lambda';
+import type { DynamoDBStreamEvent } from 'aws-lambda';
 import { handler } from './like-counter.js';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import { createMockDynamoDBStreamEvent } from '@social-media-app/shared/test-utils';
 
 // Mock AWS SDK
 vi.mock('../../utils/dynamodb.js', () => ({
@@ -24,66 +25,27 @@ beforeEach(() => {
   } as unknown as DynamoDBDocumentClient;
 });
 
-/**
- * Helper to create a DynamoDB Stream record
- */
-const createStreamRecord = (
-  eventName: 'INSERT' | 'REMOVE',
-  newImage?: Record<string, any>,
-  oldImage?: Record<string, any>
-): DynamoDBRecord => ({
-  eventID: 'test-event-id',
-  eventName,
-  eventVersion: '1.1',
-  eventSource: 'aws:dynamodb',
-  awsRegion: 'us-east-1',
-  dynamodb: {
-    Keys: {
-      PK: { S: 'POST#post-123' },
-      SK: { S: 'LIKE#user-456' }
-    },
-    NewImage: newImage ? convertToAttributeValue(newImage) : undefined,
-    OldImage: oldImage ? convertToAttributeValue(oldImage) : undefined,
-    SequenceNumber: '123',
-    SizeBytes: 100,
-    StreamViewType: 'NEW_AND_OLD_IMAGES'
-  }
-});
-
-/**
- * Convert plain object to DynamoDB AttributeValue format
- */
-const convertToAttributeValue = (obj: Record<string, any>): any => {
-  const result: any = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (typeof value === 'string') {
-      result[key] = { S: value };
-    } else if (typeof value === 'number') {
-      result[key] = { N: String(value) };
-    } else if (typeof value === 'boolean') {
-      result[key] = { BOOL: value };
-    }
-  }
-  return result;
-};
-
 describe('like-counter stream processor', () => {
   describe('INSERT events (like added)', () => {
     it('should increment likesCount when LIKE entity is inserted', async () => {
-      const event: DynamoDBStreamEvent = {
-        Records: [
-          createStreamRecord('INSERT', {
-            PK: 'POST#post-123',
-            SK: 'LIKE#user-456',
-            entityType: 'LIKE',
-            userId: 'user-456',
-            postId: 'post-123',
-            createdAt: '2024-01-01T00:00:00.000Z',
-            postUserId: 'user-owner-123',
-            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
-          })
+      const event = createMockDynamoDBStreamEvent({
+        records: [
+          {
+            eventName: 'INSERT',
+            keys: { PK: 'POST#post-123', SK: 'LIKE#user-456' },
+            newImage: {
+              PK: 'POST#post-123',
+              SK: 'LIKE#user-456',
+              entityType: 'LIKE',
+              userId: 'user-456',
+              postId: 'post-123',
+              createdAt: '2024-01-01T00:00:00.000Z',
+              postUserId: 'user-owner-123',
+              postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
+            }
+          }
         ]
-      };
+      });
 
       await handler(event);
 
@@ -102,30 +64,38 @@ describe('like-counter stream processor', () => {
     });
 
     it('should process multiple INSERT events in batch', async () => {
-      const event: DynamoDBStreamEvent = {
-        Records: [
-          createStreamRecord('INSERT', {
-            PK: 'POST#post-123',
-            SK: 'LIKE#user-1',
-            entityType: 'LIKE',
-            userId: 'user-1',
-            postId: 'post-123',
-            createdAt: '2024-01-01T00:00:00.000Z',
-            postUserId: 'user-owner-123',
-            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
-          }),
-          createStreamRecord('INSERT', {
-            PK: 'POST#post-123',
-            SK: 'LIKE#user-2',
-            entityType: 'LIKE',
-            userId: 'user-2',
-            postId: 'post-123',
-            createdAt: '2024-01-01T00:00:01.000Z',
-            postUserId: 'user-owner-123',
-            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
-          })
+      const event = createMockDynamoDBStreamEvent({
+        records: [
+          {
+            eventName: 'INSERT',
+            keys: { PK: 'POST#post-123', SK: 'LIKE#user-1' },
+            newImage: {
+              PK: 'POST#post-123',
+              SK: 'LIKE#user-1',
+              entityType: 'LIKE',
+              userId: 'user-1',
+              postId: 'post-123',
+              createdAt: '2024-01-01T00:00:00.000Z',
+              postUserId: 'user-owner-123',
+              postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
+            }
+          },
+          {
+            eventName: 'INSERT',
+            keys: { PK: 'POST#post-123', SK: 'LIKE#user-2' },
+            newImage: {
+              PK: 'POST#post-123',
+              SK: 'LIKE#user-2',
+              entityType: 'LIKE',
+              userId: 'user-2',
+              postId: 'post-123',
+              createdAt: '2024-01-01T00:00:01.000Z',
+              postUserId: 'user-owner-123',
+              postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
+            }
+          }
         ]
-      };
+      });
 
       await handler(event);
 
@@ -140,20 +110,24 @@ describe('like-counter stream processor', () => {
 
   describe('REMOVE events (like removed)', () => {
     it('should decrement likesCount when LIKE entity is removed', async () => {
-      const event: DynamoDBStreamEvent = {
-        Records: [
-          createStreamRecord('REMOVE', undefined, {
-            PK: 'POST#post-123',
-            SK: 'LIKE#user-456',
-            entityType: 'LIKE',
-            userId: 'user-456',
-            postId: 'post-123',
-            createdAt: '2024-01-01T00:00:00.000Z',
-            postUserId: 'user-owner-123',
-            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
-          })
+      const event = createMockDynamoDBStreamEvent({
+        records: [
+          {
+            eventName: 'REMOVE',
+            keys: { PK: 'POST#post-123', SK: 'LIKE#user-456' },
+            oldImage: {
+              PK: 'POST#post-123',
+              SK: 'LIKE#user-456',
+              entityType: 'LIKE',
+              userId: 'user-456',
+              postId: 'post-123',
+              createdAt: '2024-01-01T00:00:00.000Z',
+              postUserId: 'user-owner-123',
+              postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
+            }
+          }
         ]
-      };
+      });
 
       await handler(event);
 
@@ -169,24 +143,32 @@ describe('like-counter stream processor', () => {
 
   describe('filtering and error handling', () => {
     it('should only process LIKE entities', async () => {
-      const event: DynamoDBStreamEvent = {
-        Records: [
-          createStreamRecord('INSERT', {
-            PK: 'POST#post-123',
-            SK: 'POST',
-            entityType: 'POST',
-            title: 'My Post'
-          }),
-          createStreamRecord('INSERT', {
-            PK: 'POST#post-123',
-            SK: 'LIKE#user-456',
-            entityType: 'LIKE',
-            userId: 'user-456',
-            postUserId: 'user-owner-123',
-            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
-          })
+      const event = createMockDynamoDBStreamEvent({
+        records: [
+          {
+            eventName: 'INSERT',
+            keys: { PK: 'POST#post-123', SK: 'POST' },
+            newImage: {
+              PK: 'POST#post-123',
+              SK: 'POST',
+              entityType: 'POST',
+              title: 'My Post'
+            }
+          },
+          {
+            eventName: 'INSERT',
+            keys: { PK: 'POST#post-123', SK: 'LIKE#user-456' },
+            newImage: {
+              PK: 'POST#post-123',
+              SK: 'LIKE#user-456',
+              entityType: 'LIKE',
+              userId: 'user-456',
+              postUserId: 'user-owner-123',
+              postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
+            }
+          }
         ]
-      };
+      });
 
       await handler(event);
 
@@ -195,14 +177,18 @@ describe('like-counter stream processor', () => {
     });
 
     it('should handle events without entityType gracefully', async () => {
-      const event: DynamoDBStreamEvent = {
-        Records: [
-          createStreamRecord('INSERT', {
-            PK: 'POST#post-123',
-            SK: 'COMMENT#comment-1'
-          })
+      const event = createMockDynamoDBStreamEvent({
+        records: [
+          {
+            eventName: 'INSERT',
+            keys: { PK: 'POST#post-123', SK: 'COMMENT#comment-1' },
+            newImage: {
+              PK: 'POST#post-123',
+              SK: 'COMMENT#comment-1'
+            }
+          }
         ]
-      };
+      });
 
       await handler(event);
 
@@ -215,26 +201,34 @@ describe('like-counter stream processor', () => {
         .mockRejectedValueOnce(new Error('DynamoDB error'))
         .mockResolvedValueOnce({ $metadata: {} });
 
-      const event: DynamoDBStreamEvent = {
-        Records: [
-          createStreamRecord('INSERT', {
-            PK: 'POST#post-123',
-            SK: 'LIKE#user-1',
-            entityType: 'LIKE',
-            userId: 'user-1',
-            postUserId: 'user-owner-123',
-            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
-          }),
-          createStreamRecord('INSERT', {
-            PK: 'POST#post-456',
-            SK: 'LIKE#user-2',
-            entityType: 'LIKE',
-            userId: 'user-2',
-            postUserId: 'user-owner-456',
-            postSK: 'POST#2024-01-01T00:00:00.000Z#post-456'
-          })
+      const event = createMockDynamoDBStreamEvent({
+        records: [
+          {
+            eventName: 'INSERT',
+            keys: { PK: 'POST#post-123', SK: 'LIKE#user-1' },
+            newImage: {
+              PK: 'POST#post-123',
+              SK: 'LIKE#user-1',
+              entityType: 'LIKE',
+              userId: 'user-1',
+              postUserId: 'user-owner-123',
+              postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
+            }
+          },
+          {
+            eventName: 'INSERT',
+            keys: { PK: 'POST#post-456', SK: 'LIKE#user-2' },
+            newImage: {
+              PK: 'POST#post-456',
+              SK: 'LIKE#user-2',
+              entityType: 'LIKE',
+              userId: 'user-2',
+              postUserId: 'user-owner-456',
+              postSK: 'POST#2024-01-01T00:00:00.000Z#post-456'
+            }
+          }
         ]
-      };
+      });
 
       await handler(event);
 
@@ -245,18 +239,22 @@ describe('like-counter stream processor', () => {
 
   describe('extracting postId from PK', () => {
     it('should correctly extract postId from PK', async () => {
-      const event: DynamoDBStreamEvent = {
-        Records: [
-          createStreamRecord('INSERT', {
-            PK: 'POST#abc-123-def-456',
-            SK: 'LIKE#user-789',
-            entityType: 'LIKE',
-            userId: 'user-789',
-            postUserId: 'user-owner-789',
-            postSK: 'POST#2024-01-01T00:00:00.000Z#abc-123-def-456'
-          })
+      const event = createMockDynamoDBStreamEvent({
+        records: [
+          {
+            eventName: 'INSERT',
+            keys: { PK: 'POST#abc-123-def-456', SK: 'LIKE#user-789' },
+            newImage: {
+              PK: 'POST#abc-123-def-456',
+              SK: 'LIKE#user-789',
+              entityType: 'LIKE',
+              userId: 'user-789',
+              postUserId: 'user-owner-789',
+              postSK: 'POST#2024-01-01T00:00:00.000Z#abc-123-def-456'
+            }
+          }
         ]
-      };
+      });
 
       await handler(event);
 
@@ -268,20 +266,24 @@ describe('like-counter stream processor', () => {
 
   describe('post metadata extraction (event-driven design)', () => {
     it('should extract post metadata from LIKE entity and update actual post', async () => {
-      const event: DynamoDBStreamEvent = {
-        Records: [
-          createStreamRecord('INSERT', {
-            PK: 'POST#post-123',
-            SK: 'LIKE#user-456',
-            entityType: 'LIKE',
-            userId: 'user-456',
-            postId: 'post-123',
-            createdAt: '2024-01-01T00:00:00.000Z',
-            postUserId: 'user-owner-123',
-            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
-          })
+      const event = createMockDynamoDBStreamEvent({
+        records: [
+          {
+            eventName: 'INSERT',
+            keys: { PK: 'POST#post-123', SK: 'LIKE#user-456' },
+            newImage: {
+              PK: 'POST#post-123',
+              SK: 'LIKE#user-456',
+              entityType: 'LIKE',
+              userId: 'user-456',
+              postId: 'post-123',
+              createdAt: '2024-01-01T00:00:00.000Z',
+              postUserId: 'user-owner-123',
+              postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
+            }
+          }
         ]
-      };
+      });
 
       await handler(event);
 
@@ -299,20 +301,24 @@ describe('like-counter stream processor', () => {
     });
 
     it('should NOT update zombie counter entity', async () => {
-      const event: DynamoDBStreamEvent = {
-        Records: [
-          createStreamRecord('INSERT', {
-            PK: 'POST#post-123',
-            SK: 'LIKE#user-456',
-            entityType: 'LIKE',
-            userId: 'user-456',
-            postId: 'post-123',
-            createdAt: '2024-01-01T00:00:00.000Z',
-            postUserId: 'user-owner-456',
-            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
-          })
+      const event = createMockDynamoDBStreamEvent({
+        records: [
+          {
+            eventName: 'INSERT',
+            keys: { PK: 'POST#post-123', SK: 'LIKE#user-456' },
+            newImage: {
+              PK: 'POST#post-123',
+              SK: 'LIKE#user-456',
+              entityType: 'LIKE',
+              userId: 'user-456',
+              postId: 'post-123',
+              createdAt: '2024-01-01T00:00:00.000Z',
+              postUserId: 'user-owner-456',
+              postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
+            }
+          }
         ]
-      };
+      });
 
       await handler(event);
 
@@ -333,19 +339,23 @@ describe('like-counter stream processor', () => {
     it('should handle missing postUserId gracefully', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const event: DynamoDBStreamEvent = {
-        Records: [
-          createStreamRecord('INSERT', {
-            PK: 'POST#post-123',
-            SK: 'LIKE#user-456',
-            entityType: 'LIKE',
-            userId: 'user-456',
-            postId: 'post-123',
-            createdAt: '2024-01-01T00:00:00.000Z'
-            // Missing postUserId and postSK
-          })
+      const event = createMockDynamoDBStreamEvent({
+        records: [
+          {
+            eventName: 'INSERT',
+            keys: { PK: 'POST#post-123', SK: 'LIKE#user-456' },
+            newImage: {
+              PK: 'POST#post-123',
+              SK: 'LIKE#user-456',
+              entityType: 'LIKE',
+              userId: 'user-456',
+              postId: 'post-123',
+              createdAt: '2024-01-01T00:00:00.000Z'
+              // Missing postUserId and postSK
+            }
+          }
         ]
-      };
+      });
 
       await handler(event);
 
@@ -364,20 +374,24 @@ describe('like-counter stream processor', () => {
     it('should handle missing postSK gracefully', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const event: DynamoDBStreamEvent = {
-        Records: [
-          createStreamRecord('INSERT', {
-            PK: 'POST#post-123',
-            SK: 'LIKE#user-456',
-            entityType: 'LIKE',
-            userId: 'user-456',
-            postId: 'post-123',
-            createdAt: '2024-01-01T00:00:00.000Z',
-            postUserId: 'user-owner-123'
-            // Missing postSK
-          })
+      const event = createMockDynamoDBStreamEvent({
+        records: [
+          {
+            eventName: 'INSERT',
+            keys: { PK: 'POST#post-123', SK: 'LIKE#user-456' },
+            newImage: {
+              PK: 'POST#post-123',
+              SK: 'LIKE#user-456',
+              entityType: 'LIKE',
+              userId: 'user-456',
+              postId: 'post-123',
+              createdAt: '2024-01-01T00:00:00.000Z',
+              postUserId: 'user-owner-123'
+              // Missing postSK
+            }
+          }
         ]
-      };
+      });
 
       await handler(event);
 
@@ -394,20 +408,24 @@ describe('like-counter stream processor', () => {
     });
 
     it('should update actual post entity for REMOVE events', async () => {
-      const event: DynamoDBStreamEvent = {
-        Records: [
-          createStreamRecord('REMOVE', undefined, {
-            PK: 'POST#post-123',
-            SK: 'LIKE#user-456',
-            entityType: 'LIKE',
-            userId: 'user-456',
-            postId: 'post-123',
-            createdAt: '2024-01-01T00:00:00.000Z',
-            postUserId: 'user-owner-789',
-            postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
-          })
+      const event = createMockDynamoDBStreamEvent({
+        records: [
+          {
+            eventName: 'REMOVE',
+            keys: { PK: 'POST#post-123', SK: 'LIKE#user-456' },
+            oldImage: {
+              PK: 'POST#post-123',
+              SK: 'LIKE#user-456',
+              entityType: 'LIKE',
+              userId: 'user-456',
+              postId: 'post-123',
+              createdAt: '2024-01-01T00:00:00.000Z',
+              postUserId: 'user-owner-789',
+              postSK: 'POST#2024-01-01T00:00:00.000Z#post-123'
+            }
+          }
         ]
-      };
+      });
 
       await handler(event);
 
