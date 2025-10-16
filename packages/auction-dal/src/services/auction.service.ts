@@ -32,7 +32,8 @@ export class AuctionService {
    */
   async createAuction(
     userId: string,
-    request: CreateAuctionRequest
+    request: CreateAuctionRequest,
+    imageUrl?: string
   ): Promise<Auction> {
     // Validate dates
     if (new Date(request.endTime) <= new Date(request.startTime)) {
@@ -42,16 +43,17 @@ export class AuctionService {
     const result = await this.pool.query(
       `
       INSERT INTO auctions (
-        user_id, title, description, start_price, reserve_price,
+        user_id, title, description, image_url, start_price, reserve_price,
         current_price, start_time, end_time
       )
-      VALUES ($1, $2, $3, $4, $5, $4, $6, $7)
+      VALUES ($1, $2, $3, $4, $5, $6, $5, $7, $8)
       RETURNING *
     `,
       [
         userId,
         request.title,
         request.description || null,
+        imageUrl || null,
         request.startPrice,
         request.reservePrice || null,
         request.startTime,
@@ -257,6 +259,7 @@ export class AuctionService {
       userId: row.user_id,
       title: row.title,
       description: row.description || undefined,
+      imageUrl: row.image_url || undefined,
       startPrice: parseFloat(row.start_price),
       reservePrice: row.reserve_price ? parseFloat(row.reserve_price) : undefined,
       currentPrice: parseFloat(row.current_price),
