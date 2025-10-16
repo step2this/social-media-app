@@ -1,11 +1,6 @@
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { GetCommand, UpdateCommand, QueryCommand, BatchGetCommand } from '@aws-sdk/lib-dynamodb';
-import {
-  S3Client,
-  PutObjectCommand,
-  type PutObjectCommandInput
-} from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { S3Client } from '@aws-sdk/client-s3';
 import type {
   Profile,
   PublicProfile,
@@ -13,7 +8,7 @@ import type {
   GetPresignedUrlRequest,
   GetPresignedUrlResponse
 } from '@social-media-app/shared';
-import { randomUUID } from 'crypto';
+import { generatePresignedUploadUrl } from '@social-media-app/shared';
 import {
   type UserProfileEntity,
   mapEntityToProfile,
@@ -308,42 +303,40 @@ export class ProfileService {
       throw new Error('S3 bucket not configured');
     }
 
-    const fileExtension = request.fileType.split('/')[1];
-    const uniqueId = randomUUID();
+    // Use shared utility for presigned URL and key generation
+    const result = await generatePresignedUploadUrl({
+      s3Client: this.s3Client,
+      bucketName: this.s3BucketName,
+      userId,
+      fileType: request.fileType,
+      purpose: request.purpose === 'profile-picture' ? 'profile-picture' : 'post-image',
+      cloudFrontDomain: this.cloudFrontDomain,
+      expiresIn: 3600,
+    });
 
-    let key: string;
-    let thumbnailKey: string | undefined;
-
-    if (request.purpose === 'profile-picture') {
-      key = `users/${userId}/profile/${uniqueId}.${fileExtension}`;
-      thumbnailKey = `users/${userId}/profile/${uniqueId}_thumb.${fileExtension}`;
-    } else {
-      key = `users/${userId}/posts/${uniqueId}.${fileExtension}`;
-      thumbnailKey = `users/${userId}/posts/${uniqueId}_thumb.${fileExtension}`;
-    }
-
-    const command: PutObjectCommandInput = {
-      Bucket: this.s3BucketName,
-      Key: key,
-      ContentType: request.fileType
-    };
-
-    const putObjectCommand = new PutObjectCommand(command);
-
-    const uploadUrl = await getSignedUrl(
-      this.s3Client,
-      putObjectCommand,
-      { expiresIn: 3600 }
-    );
-
+    // Use local getS3BaseUrl for environment-aware public URLs (respects LocalStack)
     const baseUrl = this.getBaseUrl();
 
     return {
-      uploadUrl,
-      publicUrl: `${baseUrl}/${key}`,
-      thumbnailUrl: thumbnailKey ? `${baseUrl}/${thumbnailKey}` : undefined,
-      expiresIn: 3600
+      uploadUrl: result.uploadUrl,
+      publicUrl: `${baseUrl}/${result.key}`,
+      thumbnailUrl: result.thumbnailUrl ? `${baseUrl}/${result.key.replace(/(\.[^.]+)$/, '_thumb$1')}` : undefined,
+      expiresIn: result.expiresIn,
     };
+  }
+
+  /**
+   * Get base URL for file storage based on environment configuration
+   * Uses environment-config utility for consistent URL generation
+   * Priority: CloudFront > LocalStack > AWS S3
+   */
+  private getBaseUrl(): string {
+    return getS3BaseUrl({
+      cloudFrontDomain: this.cloudFrontDomain,
+      s3BucketName: this.s3BucketName,
+      region: process.env.AWS_REGION,
+      localStackEndpoint: process.env.LOCALSTACK_ENDPOINT
+    });
   }
 
   /**
@@ -399,20 +392,6 @@ export class ProfileService {
         ':zero': 0
       }
     }));
-  }
-
-  /**
-   * Get base URL for file storage based on environment configuration
-   * Uses environment-config utility for consistent URL generation
-   * Priority: CloudFront > LocalStack > AWS S3
-   */
-  private getBaseUrl(): string {
-    return getS3BaseUrl({
-      cloudFrontDomain: this.cloudFrontDomain,
-      s3BucketName: this.s3BucketName,
-      region: process.env.AWS_REGION,
-      localStackEndpoint: process.env.LOCALSTACK_ENDPOINT
-    });
   }
 
 }

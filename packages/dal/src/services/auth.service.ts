@@ -7,7 +7,6 @@ import type {
   LoginRequest,
   LoginResponse,
   User,
-  AuthTokens,
   RefreshTokenRequest,
   RefreshTokenResponse
 } from '@social-media-app/shared';
