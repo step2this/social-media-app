@@ -1,17 +1,12 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { AuctionService } from '@social-media-app/auction-dal';
-import {
-  CreateAuctionRequestSchema,
-  CreateAuctionResponseSchema,
-  generatePresignedUploadUrl,
-} from '@social-media-app/shared';
+import { ActivateAuctionResponseSchema } from '@social-media-app/shared';
 import {
   errorResponse,
   successResponse,
   verifyAccessToken,
   getJWTConfigFromEnv,
 } from '../../utils/index.js';
-import { createS3Client, getS3BucketName, getCloudFrontDomain } from '../../utils/dynamodb.js';
 import { Pool } from 'pg';
 import { z } from 'zod';
 
@@ -35,25 +30,14 @@ function getPostgresPool(): Pool {
 }
 
 /**
- * Handler to create a new auction
+ * Handler to activate a pending auction
  *
- * @description Creates a new auction listing with validation
+ * @description Changes auction status from pending to active (owner only)
  */
 export const handler = async (
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> => {
   try {
-    // Parse request body
-    let body: unknown;
-    try {
-      body = JSON.parse(event.body || '{}');
-    } catch {
-      return errorResponse(400, 'Invalid JSON in request body');
-    }
-
-    // Validate request body
-    const validatedRequest = CreateAuctionRequestSchema.parse(body);
-
     // Verify authentication
     const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader?.startsWith('Bearer ')) {
@@ -68,52 +52,49 @@ export const handler = async (
       return errorResponse(401, 'Invalid token');
     }
 
+    // Get auction ID from path parameters
+    const auctionId = event.pathParameters?.auctionId;
+
+    if (!auctionId) {
+      return errorResponse(400, 'Auction ID is required');
+    }
+
     // Initialize AuctionService
     const pool = getPostgresPool();
     const auctionService = new AuctionService(pool);
 
-    // Generate presigned URL for image upload if fileType is provided
-    let uploadUrl: string | undefined;
-    let imageUrl: string | undefined;
+    // Check ownership - get current auction first
+    try {
+      const currentAuction = await auctionService.getAuction(auctionId);
 
-    if (validatedRequest.fileType) {
-      const s3Client = createS3Client();
-      const s3BucketName = getS3BucketName();
-      const cloudFrontDomain = getCloudFrontDomain();
-
-      const result = await generatePresignedUploadUrl({
-        s3Client,
-        bucketName: s3BucketName,
-        userId: decoded.userId,
-        fileType: validatedRequest.fileType,
-        purpose: 'auction-image',
-        cloudFrontDomain,
-        expiresIn: 3600,
-      });
-
-      uploadUrl = result.uploadUrl;
-      imageUrl = result.publicUrl;
+      // Verify user is the auction owner
+      if (currentAuction.userId !== decoded.userId) {
+        return errorResponse(403, 'Only auction owner can activate');
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === 'Auction not found') {
+          return errorResponse(404, 'Auction not found');
+        }
+        if (error.message.includes('invalid input syntax for type uuid')) {
+          return errorResponse(400, 'Invalid auction ID format');
+        }
+      }
+      throw error;
     }
 
-    // Create auction with imageUrl if provided
-    const auction = await auctionService.createAuction(
-      decoded.userId,
-      validatedRequest,
-      imageUrl
-    );
+    // Activate the auction
+    const auction = await auctionService.activateAuction(auctionId);
 
     // Validate response
-    const response = CreateAuctionResponseSchema.parse({
-      auction,
-      uploadUrl,
-    });
+    const response = ActivateAuctionResponseSchema.parse({ auction });
 
-    return successResponse(201, response);
+    return successResponse(200, response);
   } catch (error) {
-    console.error('Error creating auction:', error);
+    console.error('Error activating auction:', error);
 
     if (error instanceof z.ZodError) {
-      return errorResponse(400, 'Invalid request data', error.errors);
+      return errorResponse(400, 'Invalid response data', error.errors);
     }
 
     return errorResponse(500, 'Internal server error');

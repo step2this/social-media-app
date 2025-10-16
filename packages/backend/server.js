@@ -55,6 +55,12 @@ async function loadHandlers() {
       { name: 'notificationsMarkRead', path: './dist/handlers/notifications/mark-notification-read.js' },
       { name: 'notificationsMarkAllRead', path: './dist/handlers/notifications/mark-all-notifications-read.js' },
       { name: 'notificationsDelete', path: './dist/handlers/notifications/delete-notification.js' },
+      { name: 'auctionsCreate', path: './dist/handlers/auctions/create-auction.js' },
+      { name: 'auctionsGet', path: './dist/handlers/auctions/get-auction.js' },
+      { name: 'auctionsList', path: './dist/handlers/auctions/list-auctions.js' },
+      { name: 'auctionsActivate', path: './dist/handlers/auctions/activate-auction.js' },
+      { name: 'auctionsPlaceBid', path: './dist/handlers/auctions/place-bid.js' },
+      { name: 'auctionsGetBidHistory', path: './dist/handlers/auctions/get-bid-history.js' },
       { name: 'hello', path: './dist/handlers/hello.js' }
     ];
 
@@ -330,6 +336,14 @@ app.get('/notifications/unread-count', (req, res) => callHandler('notificationsG
 app.put('/notifications/:id/read', (req, res) => callHandler('notificationsMarkRead', req, res));
 app.put('/notifications/mark-all-read', (req, res) => callHandler('notificationsMarkAllRead', req, res));
 app.delete('/notifications/:id', (req, res) => callHandler('notificationsDelete', req, res));
+
+// Auction routes
+app.post('/auctions', (req, res) => callHandler('auctionsCreate', req, res));
+app.get('/auctions/:auctionId', (req, res) => callHandler('auctionsGet', req, res));
+app.get('/auctions', (req, res) => callHandler('auctionsList', req, res));
+app.post('/auctions/:auctionId/activate', (req, res) => callHandler('auctionsActivate', req, res));
+app.post('/bids', (req, res) => callHandler('auctionsPlaceBid', req, res));
+app.get('/auctions/:auctionId/bids', (req, res) => callHandler('auctionsGetBidHistory', req, res));
 
 // Hello endpoint
 app.get('/hello', (req, res) => callHandler('hello', req, res));
