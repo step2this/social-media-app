@@ -7,3 +7,4 @@
  */
 
 export { AuctionService } from './services/auction.service.js';
+export { createPostgresPool } from './utils/postgres.js';

@@ -28,6 +28,7 @@ import {
   NotificationService,
   createDefaultAuthService,
 } from '@social-media-app/dal';
+import { AuctionService, createPostgresPool } from '@social-media-app/auction-dal';
 import {
   createS3Client,
   getS3BucketName,
@@ -51,6 +52,7 @@ export interface Services {
   feedService: FeedService;
   notificationService: NotificationService;
   authService: ReturnType<typeof createDefaultAuthService>;
+  auctionService: AuctionService;
 }
 
 /**
@@ -138,6 +140,18 @@ export function createServices(
   );
 
   /**
+   * Create PostgreSQL pool for auction services
+   * Implements singleton pattern for efficient connection reuse
+   */
+  const pgPool = createPostgresPool();
+
+  /**
+   * Create AuctionService with PostgreSQL pool
+   * Handles auction and bid management with ACID transactions
+   */
+  const auctionService = new AuctionService(pgPool);
+
+  /**
    * Return all services as a cohesive unit
    * These services will be available via context.services in all resolvers
    */
@@ -150,5 +164,6 @@ export function createServices(
     feedService,
     notificationService,
     authService,
+    auctionService,
   };
 }

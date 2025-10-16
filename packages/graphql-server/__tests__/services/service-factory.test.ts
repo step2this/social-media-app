@@ -20,6 +20,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import type { S3Client } from '@aws-sdk/client-s3';
+import type { Pool } from 'pg';
 
 // Import service factory (will fail - doesn't exist yet)
 import { createServices, type Services } from '../../src/services/factory.js';
@@ -39,10 +40,17 @@ describe('Service Factory', () => {
     mockS3Client = {} as any;
     mockTableName = 'test-table';
 
-    // Set up environment variables
+    // Set up environment variables for DynamoDB services
     process.env.MEDIA_BUCKET_NAME = 'test-bucket';
     process.env.CLOUDFRONT_DOMAIN = 'https://test.cloudfront.net';
     process.env.AWS_REGION = 'us-east-1';
+
+    // Set up environment variables for PostgreSQL services
+    process.env.POSTGRES_HOST = 'localhost';
+    process.env.POSTGRES_PORT = '5432';
+    process.env.POSTGRES_DB = 'auctions_test';
+    process.env.POSTGRES_USER = 'postgres';
+    process.env.POSTGRES_PASSWORD = 'postgres';
 
     vi.clearAllMocks();
   });
@@ -63,6 +71,7 @@ describe('Service Factory', () => {
       expect(services).toHaveProperty('commentService');
       expect(services).toHaveProperty('feedService');
       expect(services).toHaveProperty('authService');
+      expect(services).toHaveProperty('auctionService');
     });
 
     it('should pass correct dependencies to ProfileService', () => {
@@ -127,6 +136,7 @@ describe('Service Factory', () => {
       // Type check - Services interface should have all service properties
       const serviceKeys = Object.keys(services).sort();
       expect(serviceKeys).toEqual([
+        'auctionService',
         'authService',
         'commentService',
         'feedService',
@@ -136,6 +146,23 @@ describe('Service Factory', () => {
         'postService',
         'profileService',
       ]);
+    });
+
+    it('should pass correct dependencies to AuctionService', () => {
+      const services = createServices(mockDynamoClient, mockTableName);
+
+      // AuctionService should be initialized with:
+      // - PostgreSQL pool from createPostgresPool()
+      expect(services.auctionService).toBeDefined();
+      expect(services.auctionService.constructor.name).toBe('AuctionService');
+    });
+
+    it('should create PostgreSQL pool for AuctionService', () => {
+      const services = createServices(mockDynamoClient, mockTableName);
+
+      // Verify AuctionService is created with a pool
+      expect(services.auctionService).toBeDefined();
+      expect(services.auctionService.constructor.name).toBe('AuctionService');
     });
   });
 
@@ -174,6 +201,7 @@ describe('Service Factory', () => {
       expect(mockContext.services.likeService).toBeDefined();
       expect(mockContext.services.followService).toBeDefined();
       expect(mockContext.services.commentService).toBeDefined();
+      expect(mockContext.services.auctionService).toBeDefined();
     });
 
     it('should use same dynamoClient as context', () => {
@@ -228,6 +256,7 @@ describe('Service Factory', () => {
       expect(request1Services.likeService).not.toBe(request2Services.likeService);
       expect(request1Services.followService).not.toBe(request2Services.followService);
       expect(request1Services.commentService).not.toBe(request2Services.commentService);
+      expect(request1Services.auctionService).not.toBe(request2Services.auctionService);
     });
 
     it('should not leak service state between requests', () => {
@@ -241,10 +270,13 @@ describe('Service Factory', () => {
       expect(request1Services.likeService).not.toBe(request2Services.likeService);
       expect(request1Services.followService).not.toBe(request2Services.followService);
       expect(request1Services.commentService).not.toBe(request2Services.commentService);
+      expect(request1Services.auctionService).not.toBe(request2Services.auctionService);
 
       // Verify both sets of services are valid
       expect(request1Services.profileService).toBeDefined();
       expect(request2Services.profileService).toBeDefined();
+      expect(request1Services.auctionService).toBeDefined();
+      expect(request2Services.auctionService).toBeDefined();
     });
   });
 
