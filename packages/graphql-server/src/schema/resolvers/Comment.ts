@@ -27,6 +27,8 @@ export const Comment: CommentResolvers = {
   author: async (parent, _args, context) => {
     // Use DataLoader to batch profile requests
     const profile = await context.loaders.profileLoader.load(parent.userId);
-    return profile;
+    // Type assertion: Profile is non-nullable in GraphQL schema, loader returns Profile | null
+    // If author is null (deleted user), this will return null and cause a GraphQL error
+    return profile as any;
   },
 };

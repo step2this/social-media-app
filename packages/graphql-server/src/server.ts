@@ -50,7 +50,7 @@ export function createApolloServer(): ApolloServer<GraphQLContext> {
     includeStacktraceInErrorResponses: process.env.NODE_ENV !== 'production',
 
     // Custom error formatting to ensure proper error codes
-    formatError: (formattedError, error) => {
+    formatError: (formattedError) => {
       // Check if this is a validation error from our security rules
       const message = formattedError.message.toLowerCase();
 

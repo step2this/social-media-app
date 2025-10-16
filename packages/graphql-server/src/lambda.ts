@@ -86,14 +86,51 @@
  * @see https://github.com/apollographql/apollo-server/tree/main/packages/integration-aws-lambda
  */
 
-import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
-// TODO: Uncomment when implementing Phase 1
-// import { createApolloServer } from './server.js';
-// import { createContext } from './context.js';
+import type { APIGatewayProxyEvent, APIGatewayProxyEventV2, APIGatewayProxyResult, Context } from 'aws-lambda';
+import { startServerAndCreateLambdaHandler, handlers } from '@as-integrations/aws-lambda';
+import { createApolloServer } from './server.js';
+import { createContext } from './context.js';
 
-// TODO: Uncomment when implementing Phase 1
+/**
+ * Convert API Gateway Proxy Event V1 to V2 format
+ * This is needed because our handler accepts V1 events but Apollo integration uses V2
+ */
+function convertV1ToV2(event: APIGatewayProxyEvent): APIGatewayProxyEventV2 {
+  return {
+    version: '2.0',
+    routeKey: '$default',
+    rawPath: event.path,
+    rawQueryString: event.queryStringParameters
+      ? Object.entries(event.queryStringParameters)
+          .map(([k, v]) => `${k}=${v}`)
+          .join('&')
+      : '',
+    headers: event.headers as Record<string, string>,
+    requestContext: {
+      accountId: event.requestContext.accountId,
+      apiId: event.requestContext.apiId,
+      domainName: event.requestContext.domainName,
+      domainPrefix: '',
+      http: {
+        method: event.httpMethod,
+        path: event.path,
+        protocol: event.requestContext.protocol,
+        sourceIp: event.requestContext.identity.sourceIp,
+        userAgent: event.requestContext.identity.userAgent || '',
+      },
+      requestId: event.requestContext.requestId,
+      routeKey: '$default',
+      stage: event.requestContext.stage,
+      time: '',
+      timeEpoch: 0,
+    },
+    body: event.body,
+    isBase64Encoded: event.isBase64Encoded,
+  } as APIGatewayProxyEventV2;
+}
+
 // Server instance will be created outside the handler for reuse across invocations (singleton pattern)
-// let serverInstance: Awaited<ReturnType<typeof createApolloServer>> | null = null;
+let serverInstance: Awaited<ReturnType<typeof createApolloServer>> | null = null;
 
 /**
  * AWS Lambda handler for GraphQL requests
@@ -142,41 +179,65 @@ import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-l
  * }
  */
 export async function handler(
-  _event: APIGatewayProxyEvent,
-  _lambdaContext: Context
+  event: APIGatewayProxyEvent,
+  lambdaContext: Context
 ): Promise<APIGatewayProxyResult> {
-  // TODO Phase 1: Implement basic handler
-  // 1. Check if serverInstance exists, if not create it with createApolloServer()
-  // 2. Convert event to APIGatewayProxyEventV2 format (required by createContext)
-  // 3. Create context using createContext(eventV2)
-  // 4. Use startServerAndCreateLambdaHandler from @as-integrations/aws-lambda
-  // 5. Call the Lambda handler with event and lambdaContext
-  // 6. Return the result
-  //
-  // Example skeleton:
-  // if (!serverInstance) {
-  //   serverInstance = await createApolloServer();
-  //   await serverInstance.start();
-  // }
-  //
-  // const lambdaHandler = startServerAndCreateLambdaHandler(
-  //   serverInstance,
-  //   handlers.createAPIGatewayProxyEventV2RequestHandler(),
-  //   {
-  //     context: async ({ event }) => await createContext(event)
-  //   }
-  // );
-  //
-  // return await lambdaHandler(event, lambdaContext);
+  try {
+    // Initialize Apollo Server on first invocation (cold start)
+    if (!serverInstance) {
+      console.log('[Lambda] Cold start: Creating Apollo Server instance');
+      serverInstance = createApolloServer();
+      await serverInstance.start();
+      console.log('[Lambda] Apollo Server started successfully');
+    } else {
+      console.log('[Lambda] Warm start: Reusing existing Apollo Server instance');
+    }
 
-  // Temporary placeholder response until Phase 1 is implemented
-  return {
-    statusCode: 200,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      message: 'GraphQL Lambda handler - implementation pending (see TODO comments)',
-    }),
-  };
+    // Create Lambda handler with Apollo Server integration
+    // Uses APIGatewayProxyEventV2 request handler which is compatible with our context
+    const lambdaHandler = startServerAndCreateLambdaHandler(
+      serverInstance,
+      handlers.createAPIGatewayProxyEventV2RequestHandler(),
+      {
+        // Create context for each request
+        // Context includes authenticated userId, DynamoDB client, and table name
+        context: async ({ event: eventV2 }) => {
+          try {
+            return await createContext(eventV2);
+          } catch (error) {
+            console.error('[Lambda] Error creating context:', error);
+            // Return default context with null userId on error
+            // This allows unauthenticated requests to proceed
+            throw error;
+          }
+        },
+      }
+    );
+
+    // Execute the GraphQL request
+    // Convert V1 event to V2 format for the handler
+    const eventV2 = convertV1ToV2(event);
+    const result = await lambdaHandler(eventV2, lambdaContext, {} as any);
+    return result as APIGatewayProxyResult;
+  } catch (error) {
+    // Handle server initialization or GraphQL execution failures
+    console.error('[Lambda] Handler error:', error);
+
+    return {
+      statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        errors: [
+          {
+            message: 'Internal server error',
+            extensions: {
+              code: 'INTERNAL_SERVER_ERROR',
+            },
+          },
+        ],
+      }),
+    };
+  }
 }

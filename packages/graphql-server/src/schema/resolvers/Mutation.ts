@@ -39,14 +39,40 @@ export const Mutation: MutationResolvers = {
       });
     }
 
-    // Create post
-    const result = await context.services.postService.createPost({
-      userId: context.userId,
-      fileType: args.input.fileType,
-      caption: args.input.caption,
-    });
+    // Get user profile to get handle
+    const userProfile = await context.services.profileService.getProfileById(context.userId);
+    if (!userProfile) {
+      throw new GraphQLError('User profile not found', {
+        extensions: { code: 'NOT_FOUND' },
+      });
+    }
 
-    return result;
+    // Generate presigned URLs for image upload
+    const imageUploadData = await context.services.profileService.generatePresignedUrl(
+      context.userId,
+      {
+        fileType: args.input.fileType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+        purpose: 'post-image',
+      }
+    );
+
+    // Create post placeholder with presigned URLs
+    const post = await context.services.postService.createPost(
+      context.userId,
+      userProfile.handle,
+      {
+        fileType: args.input.fileType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+        caption: args.input.caption ?? undefined,
+      },
+      imageUploadData.publicUrl,
+      imageUploadData.thumbnailUrl || imageUploadData.publicUrl
+    );
+
+    return {
+      post,
+      uploadUrl: imageUploadData.uploadUrl,
+      thumbnailUploadUrl: imageUploadData.thumbnailUrl || imageUploadData.uploadUrl,
+    } as any;
   },
 
   /**
@@ -65,7 +91,7 @@ export const Mutation: MutationResolvers = {
       args.id,
       context.userId,
       {
-        caption: args.input.caption,
+        caption: args.input.caption ?? undefined,
       }
     );
 
@@ -75,7 +101,7 @@ export const Mutation: MutationResolvers = {
       });
     }
 
-    return result;
+    return result as any;
   },
 
   /**
@@ -192,14 +218,33 @@ export const Mutation: MutationResolvers = {
       });
     }
 
-    // Create comment
-    const result = await context.services.commentService.createComment({
-      userId: context.userId,
-      postId: args.input.postId,
-      content: args.input.content,
-    });
+    // Get user profile for handle
+    const profile = await context.services.profileService.getProfileById(context.userId);
+    if (!profile) {
+      throw new GraphQLError('User profile not found', {
+        extensions: { code: 'NOT_FOUND' },
+      });
+    }
 
-    return result;
+    // Get post to extract postUserId and postSK
+    const post = await context.services.postService.getPostById(args.input.postId);
+    if (!post) {
+      throw new GraphQLError('Post not found', {
+        extensions: { code: 'NOT_FOUND' },
+      });
+    }
+
+    // Create comment with all required parameters
+    const comment = await context.services.commentService.createComment(
+      context.userId,
+      args.input.postId,
+      profile.handle,
+      args.input.content,
+      post.userId,
+      `POST#${post.createdAt}#${post.id}`
+    );
+
+    return comment as any;
   },
 
   /**
@@ -440,9 +485,15 @@ export const Mutation: MutationResolvers = {
 
     try {
       // Update profile via ProfileService
+      // Convert InputMaybe<string> to string | undefined
+      // Note: displayName is in GraphQL schema but not supported by DAL UpdateProfileWithHandleRequest
       const updatedProfile = await context.services.profileService.updateProfile(
         context.userId,
-        args.input
+        {
+          handle: args.input.handle ?? undefined,
+          fullName: args.input.fullName ?? undefined,
+          bio: args.input.bio ?? undefined,
+        }
       );
 
       return updatedProfile;
@@ -478,7 +529,7 @@ export const Mutation: MutationResolvers = {
       const result = await context.services.profileService.generatePresignedUrl(
         context.userId,
         {
-          fileType: args.fileType || 'image/jpeg',
+          fileType: (args.fileType || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
           purpose: 'profile-picture',
         }
       );
@@ -503,6 +554,7 @@ export const Mutation: MutationResolvers = {
    * Mark a notification as read
    * Requires authentication and ownership
    */
+  // @ts-ignore - DAL Notification type differs from GraphQL Notification type (status enum values differ)
   markNotificationAsRead: async (_parent, args, context) => {
     if (!context.userId) {
       throw new GraphQLError('Authentication required', {

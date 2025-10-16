@@ -1,7 +1,9 @@
 /**
  * Server Integration Tests
  *
- * End-to-end tests for the GraphQL server.
+ * Basic server instantiation test.
+ * See workflows.test.ts, field-resolution.test.ts, and error-handling.test.ts
+ * for comprehensive end-to-end integration tests.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -12,6 +14,4 @@ describe('Apollo Server Integration', () => {
     const server = createApolloServer();
     expect(server).toBeDefined();
   });
-
-  // Integration tests will be added here
 });
