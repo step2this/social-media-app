@@ -319,4 +319,96 @@ export const typeDefs = `
   type PresignedUrlResponse {
     uploadUrl: String!
   }
+
+  # ============================================================================
+  # Auction Types
+  # ============================================================================
+
+  type Auction {
+    id: ID!
+    userId: ID!
+    seller: Profile!
+    title: String!
+    description: String
+    imageUrl: String!
+    startPrice: Float!
+    reservePrice: Float
+    currentPrice: Float!
+    startTime: String!
+    endTime: String!
+    status: AuctionStatus!
+    winnerId: ID
+    winner: Profile
+    bidCount: Int!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  type Bid {
+    id: ID!
+    auctionId: ID!
+    userId: ID!
+    bidder: Profile!
+    amount: Float!
+    createdAt: String!
+  }
+
+  enum AuctionStatus {
+    PENDING
+    ACTIVE
+    COMPLETED
+    CANCELLED
+  }
+
+  extend type Query {
+    auction(id: ID!): Auction
+    auctions(limit: Int, cursor: String, status: AuctionStatus, userId: ID): AuctionConnection!
+    bids(auctionId: ID!, limit: Int, offset: Int): BidConnection!
+  }
+
+  extend type Mutation {
+    createAuction(input: CreateAuctionInput!): CreateAuctionPayload!
+    activateAuction(id: ID!): Auction!
+    placeBid(input: PlaceBidInput!): PlaceBidPayload!
+  }
+
+  input CreateAuctionInput {
+    title: String!
+    description: String
+    fileType: String!
+    startPrice: Float!
+    reservePrice: Float
+    startTime: String!
+    endTime: String!
+  }
+
+  input PlaceBidInput {
+    auctionId: ID!
+    amount: Float!
+  }
+
+  type AuctionConnection {
+    edges: [AuctionEdge!]!
+    pageInfo: PageInfo!
+  }
+
+  type AuctionEdge {
+    cursor: String!
+    node: Auction!
+  }
+
+  type BidConnection {
+    bids: [Bid!]!
+    total: Int!
+  }
+
+  type CreateAuctionPayload {
+    auction: Auction!
+    uploadUrl: String!
+  }
+
+  type PlaceBidPayload {
+    bid: Bid!
+    auction: Auction!
+  }
 `;
