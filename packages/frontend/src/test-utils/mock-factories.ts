@@ -1,4 +1,4 @@
-import type { Post, Comment, FeedPostItem, User, PublicProfile, Profile } from '@social-media-app/shared';
+import type { Post, Comment, FeedPostItem, User, PublicProfile, Profile, Auction, Bid } from '@social-media-app/shared';
 
 /**
  * Create a mock Post for testing
@@ -116,5 +116,49 @@ export const createMockProfile = (overrides?: Partial<Profile>): Profile => ({
   followingCount: 0,
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
+  ...overrides
+});
+
+/**
+ * Create a mock Auction for testing
+ * @param overrides - Partial Auction to override defaults
+ * @returns A complete Auction object with sensible defaults
+ */
+export const createMockAuction = (overrides?: Partial<Auction>): Auction => {
+  const now = new Date();
+  const startTime = new Date(now.getTime() - 1000 * 60 * 60); // 1 hour ago
+  const endTime = new Date(now.getTime() + 1000 * 60 * 60 * 24); // 24 hours from now
+
+  return {
+    id: 'test-auction-123',
+    userId: 'test-user-123',
+    title: 'Test Auction Item',
+    description: 'This is a test auction description',
+    imageUrl: 'https://example.com/auction-image.jpg',
+    startPrice: 10.00,
+    reservePrice: 50.00,
+    currentPrice: 10.00,
+    startTime: startTime.toISOString(),
+    endTime: endTime.toISOString(),
+    status: 'active',
+    winnerId: undefined,
+    bidCount: 0,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+    ...overrides
+  };
+};
+
+/**
+ * Create a mock Bid for testing
+ * @param overrides - Partial Bid to override defaults
+ * @returns A complete Bid object with sensible defaults
+ */
+export const createMockBid = (overrides?: Partial<Bid>): Bid => ({
+  id: 'test-bid-123',
+  auctionId: 'test-auction-123',
+  userId: 'test-user-123',
+  amount: 15.00,
+  createdAt: new Date().toISOString(),
   ...overrides
 });

@@ -189,3 +189,72 @@ export const createMockUseLikeReturn = (overrides?: Partial<UseLikeReturn>): Use
   clearError: vi.fn(),
   ...overrides
 });
+
+/**
+ * Return type for useAuctions hook
+ */
+export interface UseAuctionsReturn {
+  auctions: any[];
+  isLoading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+  hasMore: boolean;
+  loadMore: () => Promise<void>;
+}
+
+/**
+ * Return type for useAuctionDetail hook
+ */
+export interface UseAuctionDetailReturn {
+  auction: any | null;
+  bids: any[];
+  isLoading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+}
+
+/**
+ * Return type for usePlaceBid hook
+ */
+export interface UsePlaceBidReturn {
+  placeBid: (amount: number) => Promise<void>;
+  isLoading: boolean;
+  error: string | null;
+  clearError: () => void;
+}
+
+/**
+ * Create a mock return value for useAuctions hook
+ */
+export const createMockUseAuctionsReturn = (overrides?: Partial<UseAuctionsReturn>): UseAuctionsReturn => ({
+  auctions: [],
+  isLoading: false,
+  error: null,
+  refetch: vi.fn(),
+  hasMore: false,
+  loadMore: vi.fn(),
+  ...overrides
+});
+
+/**
+ * Create a mock return value for useAuctionDetail hook
+ */
+export const createMockUseAuctionDetailReturn = (overrides?: Partial<UseAuctionDetailReturn>): UseAuctionDetailReturn => ({
+  auction: null,
+  bids: [],
+  isLoading: false,
+  error: null,
+  refetch: vi.fn(),
+  ...overrides
+});
+
+/**
+ * Create a mock return value for usePlaceBid hook
+ */
+export const createMockUsePlaceBidReturn = (overrides?: Partial<UsePlaceBidReturn>): UsePlaceBidReturn => ({
+  placeBid: vi.fn(),
+  isLoading: false,
+  error: null,
+  clearError: vi.fn(),
+  ...overrides
+});
