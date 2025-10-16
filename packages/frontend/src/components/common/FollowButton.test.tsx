@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { FollowButton } from './FollowButton.js';
 import * as useFollowModule from '../../hooks/useFollow.js';
 import * as useAuthModule from '../../hooks/useAuth.js';
+import { createMockUseAuthReturn, createMockUseFollowReturn, createMockAuthenticatedUser } from '../../test-utils/hook-mocks.js';
 
 // Mock the hooks
 vi.mock('../../hooks/useFollow.js');
@@ -20,43 +21,23 @@ describe('FollowButton', () => {
     vi.clearAllMocks();
 
     // Default useFollow mock
-    vi.mocked(useFollowModule.useFollow).mockReturnValue({
-      isFollowing: false,
-      followersCount: 0,
-      followingCount: 0,
-      isLoading: false,
-      error: null,
-      followUser: mockFollowUser,
-      unfollowUser: mockUnfollowUser,
-      toggleFollow: mockToggleFollow,
-      fetchFollowStatus: mockFetchFollowStatus,
-      clearError: mockClearError
-    });
+    vi.mocked(useFollowModule.useFollow).mockReturnValue(
+      createMockUseFollowReturn({
+        followUser: mockFollowUser,
+        unfollowUser: mockUnfollowUser,
+        toggleFollow: mockToggleFollow,
+        fetchFollowStatus: mockFetchFollowStatus,
+        clearError: mockClearError
+      })
+    );
 
     // Default useAuth mock (authenticated but different user)
-    vi.mocked(useAuthModule.useAuth).mockReturnValue({
-      user: {
-        id: 'current-user-123',
-        email: 'current@example.com',
-        username: 'currentuser',
-        emailVerified: true,
-        createdAt: '2024-01-01T00:00:00.000Z',
-        updatedAt: '2024-01-01T00:00:00.000Z'
-      },
-      tokens: null,
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-      isHydrated: true,
-      register: vi.fn(),
-      login: vi.fn(),
-      logout: vi.fn(),
-      refreshToken: vi.fn(),
-      getProfile: vi.fn(),
-      updateProfile: vi.fn(),
-      checkSession: vi.fn(),
-      clearError: vi.fn()
-    });
+    vi.mocked(useAuthModule.useAuth).mockReturnValue(
+      createMockUseAuthReturn({
+        user: createMockAuthenticatedUser({ id: 'current-user-123' }),
+        isAuthenticated: true
+      })
+    );
   });
 
   describe('Rendering and State', () => {
@@ -69,18 +50,17 @@ describe('FollowButton', () => {
     });
 
     it('should render Following button when following', () => {
-      vi.mocked(useFollowModule.useFollow).mockReturnValue({
-        isFollowing: true,
-        followersCount: 1,
-        followingCount: 0,
-        isLoading: false,
-        error: null,
-        followUser: mockFollowUser,
-        unfollowUser: mockUnfollowUser,
-        toggleFollow: mockToggleFollow,
-        fetchFollowStatus: mockFetchFollowStatus,
-        clearError: mockClearError
-      });
+      vi.mocked(useFollowModule.useFollow).mockReturnValue(
+        createMockUseFollowReturn({
+          isFollowing: true,
+          followersCount: 1,
+          followUser: mockFollowUser,
+          unfollowUser: mockUnfollowUser,
+          toggleFollow: mockToggleFollow,
+          fetchFollowStatus: mockFetchFollowStatus,
+          clearError: mockClearError
+        })
+      );
 
       render(<FollowButton userId="target-user-123" />);
 
@@ -97,22 +77,12 @@ describe('FollowButton', () => {
     });
 
     it('should not render button when not authenticated', () => {
-      vi.mocked(useAuthModule.useAuth).mockReturnValue({
-        user: null,
-        tokens: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: null,
-        isHydrated: true,
-        register: vi.fn(),
-        login: vi.fn(),
-        logout: vi.fn(),
-        refreshToken: vi.fn(),
-        getProfile: vi.fn(),
-        updateProfile: vi.fn(),
-        checkSession: vi.fn(),
-        clearError: vi.fn()
-      });
+      vi.mocked(useAuthModule.useAuth).mockReturnValue(
+        createMockUseAuthReturn({
+          user: null,
+          isAuthenticated: false
+        })
+      );
 
       render(<FollowButton userId="target-user-123" />);
 
@@ -130,18 +100,17 @@ describe('FollowButton', () => {
     });
 
     it('should use TamaFriends button classes for Following state', () => {
-      vi.mocked(useFollowModule.useFollow).mockReturnValue({
-        isFollowing: true,
-        followersCount: 1,
-        followingCount: 0,
-        isLoading: false,
-        error: null,
-        followUser: mockFollowUser,
-        unfollowUser: mockUnfollowUser,
-        toggleFollow: mockToggleFollow,
-        fetchFollowStatus: mockFetchFollowStatus,
-        clearError: mockClearError
-      });
+      vi.mocked(useFollowModule.useFollow).mockReturnValue(
+        createMockUseFollowReturn({
+          isFollowing: true,
+          followersCount: 1,
+          followUser: mockFollowUser,
+          unfollowUser: mockUnfollowUser,
+          toggleFollow: mockToggleFollow,
+          fetchFollowStatus: mockFetchFollowStatus,
+          clearError: mockClearError
+        })
+      );
 
       render(<FollowButton userId="target-user-123" />);
 
@@ -170,18 +139,17 @@ describe('FollowButton', () => {
 
     it('should call unfollowUser when Following button is clicked', async () => {
       const user = userEvent.setup();
-      vi.mocked(useFollowModule.useFollow).mockReturnValue({
-        isFollowing: true,
-        followersCount: 1,
-        followingCount: 0,
-        isLoading: false,
-        error: null,
-        followUser: mockFollowUser,
-        unfollowUser: mockUnfollowUser,
-        toggleFollow: mockToggleFollow,
-        fetchFollowStatus: mockFetchFollowStatus,
-        clearError: mockClearError
-      });
+      vi.mocked(useFollowModule.useFollow).mockReturnValue(
+        createMockUseFollowReturn({
+          isFollowing: true,
+          followersCount: 1,
+          followUser: mockFollowUser,
+          unfollowUser: mockUnfollowUser,
+          toggleFollow: mockToggleFollow,
+          fetchFollowStatus: mockFetchFollowStatus,
+          clearError: mockClearError
+        })
+      );
 
       render(<FollowButton userId="target-user-123" />);
 
@@ -195,18 +163,17 @@ describe('FollowButton', () => {
   describe('Hover Behavior', () => {
     it('should show Unfollow text on hover when Following', async () => {
       const user = userEvent.setup();
-      vi.mocked(useFollowModule.useFollow).mockReturnValue({
-        isFollowing: true,
-        followersCount: 1,
-        followingCount: 0,
-        isLoading: false,
-        error: null,
-        followUser: mockFollowUser,
-        unfollowUser: mockUnfollowUser,
-        toggleFollow: mockToggleFollow,
-        fetchFollowStatus: mockFetchFollowStatus,
-        clearError: mockClearError
-      });
+      vi.mocked(useFollowModule.useFollow).mockReturnValue(
+        createMockUseFollowReturn({
+          isFollowing: true,
+          followersCount: 1,
+          followUser: mockFollowUser,
+          unfollowUser: mockUnfollowUser,
+          toggleFollow: mockToggleFollow,
+          fetchFollowStatus: mockFetchFollowStatus,
+          clearError: mockClearError
+        })
+      );
 
       render(<FollowButton userId="target-user-123" />);
 
@@ -223,18 +190,16 @@ describe('FollowButton', () => {
 
   describe('Loading State', () => {
     it('should disable button during loading', () => {
-      vi.mocked(useFollowModule.useFollow).mockReturnValue({
-        isFollowing: false,
-        followersCount: 0,
-        followingCount: 0,
-        isLoading: true,
-        error: null,
-        followUser: mockFollowUser,
-        unfollowUser: mockUnfollowUser,
-        toggleFollow: mockToggleFollow,
-        fetchFollowStatus: mockFetchFollowStatus,
-        clearError: mockClearError
-      });
+      vi.mocked(useFollowModule.useFollow).mockReturnValue(
+        createMockUseFollowReturn({
+          isLoading: true,
+          followUser: mockFollowUser,
+          unfollowUser: mockUnfollowUser,
+          toggleFollow: mockToggleFollow,
+          fetchFollowStatus: mockFetchFollowStatus,
+          clearError: mockClearError
+        })
+      );
 
       render(<FollowButton userId="target-user-123" />);
 
@@ -243,18 +208,16 @@ describe('FollowButton', () => {
     });
 
     it('should show loading indicator during API call', () => {
-      vi.mocked(useFollowModule.useFollow).mockReturnValue({
-        isFollowing: false,
-        followersCount: 0,
-        followingCount: 0,
-        isLoading: true,
-        error: null,
-        followUser: mockFollowUser,
-        unfollowUser: mockUnfollowUser,
-        toggleFollow: mockToggleFollow,
-        fetchFollowStatus: mockFetchFollowStatus,
-        clearError: mockClearError
-      });
+      vi.mocked(useFollowModule.useFollow).mockReturnValue(
+        createMockUseFollowReturn({
+          isLoading: true,
+          followUser: mockFollowUser,
+          unfollowUser: mockUnfollowUser,
+          toggleFollow: mockToggleFollow,
+          fetchFollowStatus: mockFetchFollowStatus,
+          clearError: mockClearError
+        })
+      );
 
       render(<FollowButton userId="target-user-123" />);
 
@@ -273,18 +236,16 @@ describe('FollowButton', () => {
 
   describe('Error Handling', () => {
     it('should display error message when follow fails', () => {
-      vi.mocked(useFollowModule.useFollow).mockReturnValue({
-        isFollowing: false,
-        followersCount: 0,
-        followingCount: 0,
-        isLoading: false,
-        error: 'Failed to follow user',
-        followUser: mockFollowUser,
-        unfollowUser: mockUnfollowUser,
-        toggleFollow: mockToggleFollow,
-        fetchFollowStatus: mockFetchFollowStatus,
-        clearError: mockClearError
-      });
+      vi.mocked(useFollowModule.useFollow).mockReturnValue(
+        createMockUseFollowReturn({
+          error: 'Failed to follow user',
+          followUser: mockFollowUser,
+          unfollowUser: mockUnfollowUser,
+          toggleFollow: mockToggleFollow,
+          fetchFollowStatus: mockFetchFollowStatus,
+          clearError: mockClearError
+        })
+      );
 
       render(<FollowButton userId="target-user-123" />);
 
@@ -294,18 +255,18 @@ describe('FollowButton', () => {
     });
 
     it('should display error message when unfollow fails', () => {
-      vi.mocked(useFollowModule.useFollow).mockReturnValue({
-        isFollowing: true,
-        followersCount: 1,
-        followingCount: 0,
-        isLoading: false,
-        error: 'Failed to unfollow user',
-        followUser: mockFollowUser,
-        unfollowUser: mockUnfollowUser,
-        toggleFollow: mockToggleFollow,
-        fetchFollowStatus: mockFetchFollowStatus,
-        clearError: mockClearError
-      });
+      vi.mocked(useFollowModule.useFollow).mockReturnValue(
+        createMockUseFollowReturn({
+          isFollowing: true,
+          followersCount: 1,
+          error: 'Failed to unfollow user',
+          followUser: mockFollowUser,
+          unfollowUser: mockUnfollowUser,
+          toggleFollow: mockToggleFollow,
+          fetchFollowStatus: mockFetchFollowStatus,
+          clearError: mockClearError
+        })
+      );
 
       render(<FollowButton userId="target-user-123" />);
 
@@ -316,18 +277,16 @@ describe('FollowButton', () => {
 
     it('should clear error when button is clicked again', async () => {
       const user = userEvent.setup();
-      vi.mocked(useFollowModule.useFollow).mockReturnValue({
-        isFollowing: false,
-        followersCount: 0,
-        followingCount: 0,
-        isLoading: false,
-        error: 'Failed to follow user',
-        followUser: mockFollowUser,
-        unfollowUser: mockUnfollowUser,
-        toggleFollow: mockToggleFollow,
-        fetchFollowStatus: mockFetchFollowStatus,
-        clearError: mockClearError
-      });
+      vi.mocked(useFollowModule.useFollow).mockReturnValue(
+        createMockUseFollowReturn({
+          error: 'Failed to follow user',
+          followUser: mockFollowUser,
+          unfollowUser: mockUnfollowUser,
+          toggleFollow: mockToggleFollow,
+          fetchFollowStatus: mockFetchFollowStatus,
+          clearError: mockClearError
+        })
+      );
 
       render(<FollowButton userId="target-user-123" />);
 
@@ -348,18 +307,17 @@ describe('FollowButton', () => {
     });
 
     it('should have proper ARIA labels for Following state', () => {
-      vi.mocked(useFollowModule.useFollow).mockReturnValue({
-        isFollowing: true,
-        followersCount: 1,
-        followingCount: 0,
-        isLoading: false,
-        error: null,
-        followUser: mockFollowUser,
-        unfollowUser: mockUnfollowUser,
-        toggleFollow: mockToggleFollow,
-        fetchFollowStatus: mockFetchFollowStatus,
-        clearError: mockClearError
-      });
+      vi.mocked(useFollowModule.useFollow).mockReturnValue(
+        createMockUseFollowReturn({
+          isFollowing: true,
+          followersCount: 1,
+          followUser: mockFollowUser,
+          unfollowUser: mockUnfollowUser,
+          toggleFollow: mockToggleFollow,
+          fetchFollowStatus: mockFetchFollowStatus,
+          clearError: mockClearError
+        })
+      );
 
       render(<FollowButton userId="target-user-123" />);
 

@@ -3,7 +3,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { CreatePostPage } from './CreatePostPage.js';
-import { useAuthStore } from '../../stores/authStore.js';
 import * as postService from '../../services/postService.js';
 import type { Post } from '@social-media-app/shared';
 
@@ -13,11 +12,6 @@ vi.mock('../../services/postService.js', () => ({
     createPost: vi.fn(),
     uploadPostImage: vi.fn()
   }
-}));
-
-// Mock the auth store
-vi.mock('../../stores/authStore.js', () => ({
-  useAuthStore: vi.fn()
 }));
 
 // Mock react-router-dom for navigation
@@ -48,21 +42,7 @@ const renderCreatePostPage = () => {
 };
 
 describe('CreatePostPage', () => {
-  const mockUser = {
-    id: 'user-123',
-    username: 'testuser',
-    handle: 'testuser',
-    email: 'test@example.com'
-  };
-
   beforeEach(() => {
-    // Setup auth store mock
-    vi.mocked(useAuthStore).mockReturnValue({
-      user: mockUser,
-      isAuthenticated: true,
-      isLoading: false
-    });
-
     // Clear all mocks
     vi.clearAllMocks();
     mockNavigate.mockClear();

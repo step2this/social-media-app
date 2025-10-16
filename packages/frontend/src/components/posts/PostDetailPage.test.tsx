@@ -6,6 +6,7 @@ import { PostDetailPage } from './PostDetailPage.js';
 import * as postService from '../../services/postService.js';
 import * as useAuthModule from '../../hooks/useAuth.js';
 import { createMockPost } from '../../test-utils/mock-factories.js';
+import { createMockUseAuthReturn, mockUseAuthAuthenticated, mockUseAuthUnauthenticated } from '../../test-utils/hook-mocks.js';
 import type { Post } from '@social-media-app/shared';
 
 // Mock the postService
@@ -40,10 +41,7 @@ vi.mock('../comments', () => ({
 
 // Mock useAuth hook
 vi.mock('../../hooks/useAuth', () => ({
-  useAuth: vi.fn(() => ({
-    user: null,
-    isAuthenticated: false
-  }))
+  useAuth: vi.fn(() => createMockUseAuthReturn())
 }));
 
 const mockPost: Post = createMockPost({
@@ -306,23 +304,9 @@ describe('PostDetailPage', () => {
     });
 
     it('should pass currentUserId to CommentList when authenticated', async () => {
-      const mockUser = { id: 'user-456', username: 'testuser', email: 'test@example.com' };
-      vi.mocked(useAuthModule.useAuth).mockReturnValue({
-        user: mockUser,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        isHydrated: true,
-        tokens: null,
-        register: vi.fn(),
-        login: vi.fn(),
-        logout: vi.fn(),
-        refreshToken: vi.fn(),
-        getProfile: vi.fn(),
-        updateProfile: vi.fn(),
-        checkSession: vi.fn(),
-        clearError: vi.fn()
-      });
+      vi.mocked(useAuthModule.useAuth).mockReturnValue(
+        mockUseAuthAuthenticated({ id: 'user-456', username: 'testuser' })
+      );
       vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
 
       renderPostDetailPage();
@@ -336,22 +320,7 @@ describe('PostDetailPage', () => {
     });
 
     it('should pass undefined currentUserId to CommentList when not authenticated', async () => {
-      vi.mocked(useAuthModule.useAuth).mockReturnValue({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: null,
-        isHydrated: true,
-        tokens: null,
-        register: vi.fn(),
-        login: vi.fn(),
-        logout: vi.fn(),
-        refreshToken: vi.fn(),
-        getProfile: vi.fn(),
-        updateProfile: vi.fn(),
-        checkSession: vi.fn(),
-        clearError: vi.fn()
-      });
+      vi.mocked(useAuthModule.useAuth).mockReturnValue(mockUseAuthUnauthenticated());
       vi.mocked(postService.postService.getPost).mockResolvedValue(mockPost);
 
       renderPostDetailPage();

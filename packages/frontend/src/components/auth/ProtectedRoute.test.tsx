@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import { ProtectedRoute } from './ProtectedRoute';
 import { useAuth } from '../../hooks/useAuth';
 import { renderWithRouter } from '../../test-utils/render-helpers';
+import { mockUseAuthAuthenticated, mockUseAuthUnauthenticated } from '../../test-utils/hook-mocks';
 
 // Mock useAuth hook
 vi.mock('../../hooks/useAuth', () => ({
@@ -32,12 +33,9 @@ describe('ProtectedRoute', () => {
   describe('Authenticated User Access', () => {
     it('should render protected content when user is authenticated', async () => {
       vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: true,
-        isLoading: false,
-        isHydrated: true,
-        tokens: { accessToken: 'test-token', refreshToken: 'test-refresh', expiresIn: 3600 },
+        ...mockUseAuthAuthenticated(),
         checkSession: vi.fn().mockResolvedValue(true)
-      } as any);
+      });
 
       renderWithRouter(
         <ProtectedRoute>
@@ -53,12 +51,9 @@ describe('ProtectedRoute', () => {
 
     it('should redirect authenticated users away from guest-only routes', async () => {
       vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: true,
-        isLoading: false,
-        isHydrated: true,
-        tokens: { accessToken: 'test-token', refreshToken: 'test-refresh', expiresIn: 3600 },
+        ...mockUseAuthAuthenticated(),
         checkSession: vi.fn().mockResolvedValue(true)
-      } as any);
+      });
 
       renderWithRouter(
         <ProtectedRoute requireAuth={false}>
@@ -78,13 +73,7 @@ describe('ProtectedRoute', () => {
 
   describe('Unauthenticated User Access', () => {
     it('should redirect unauthenticated users to login', () => {
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: false,
-        isLoading: false,
-        isHydrated: true,
-        tokens: null,
-        checkSession: vi.fn()
-      } as any);
+      vi.mocked(useAuth).mockReturnValue(mockUseAuthUnauthenticated());
 
       renderWithRouter(
         <ProtectedRoute>
@@ -99,13 +88,7 @@ describe('ProtectedRoute', () => {
     });
 
     it('should redirect to custom location when specified', () => {
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: false,
-        isLoading: false,
-        isHydrated: true,
-        tokens: null,
-        checkSession: vi.fn()
-      } as any);
+      vi.mocked(useAuth).mockReturnValue(mockUseAuthUnauthenticated());
 
       renderWithRouter(
         <ProtectedRoute redirectTo="/signin">
@@ -117,13 +100,7 @@ describe('ProtectedRoute', () => {
     });
 
     it('should allow unauthenticated users to access guest-only routes', () => {
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: false,
-        isLoading: false,
-        isHydrated: true,
-        tokens: null,
-        checkSession: vi.fn()
-      } as any);
+      vi.mocked(useAuth).mockReturnValue(mockUseAuthUnauthenticated());
 
       renderWithRouter(
         <ProtectedRoute requireAuth={false}>
