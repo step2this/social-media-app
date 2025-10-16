@@ -2,6 +2,8 @@ import { z } from 'zod';
 import {
   UUIDField,
   TimestampField,
+  URLField,
+  ImageFileTypeField,
   PaginationRequestSchema,
   PaginationResponseSchema,
   SuccessResponseSchema,
@@ -39,6 +41,7 @@ export const AuctionSchema = z.object({
   userId: z.string().min(1, 'User ID is required'), // References DynamoDB USER# key
   title: AuctionTitleField,
   description: AuctionDescriptionField,
+  imageUrl: URLField.optional(),
   startPrice: PriceField,
   reservePrice: OptionalPriceField,
   currentPrice: PriceField,
@@ -69,6 +72,7 @@ export const CreateAuctionRequestSchema = z
   .object({
     title: AuctionTitleField,
     description: AuctionDescriptionField,
+    fileType: ImageFileTypeField.optional(),
     startPrice: PriceField,
     reservePrice: OptionalPriceField,
     startTime: TimestampField,
@@ -118,7 +122,10 @@ export const AuctionResponseSchema = z.object({
   auction: AuctionSchema,
 });
 
-export const CreateAuctionResponseSchema = AuctionResponseSchema;
+export const CreateAuctionResponseSchema = z.object({
+  auction: AuctionSchema,
+  uploadUrl: URLField.optional(),
+});
 
 export const PlaceBidResponseSchema = z.object({
   bid: BidSchema,
