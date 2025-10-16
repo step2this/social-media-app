@@ -244,6 +244,44 @@ export class AuctionService {
   }
 
   /**
+   * Get multiple auctions by IDs (for DataLoader batching)
+   * Returns Map for efficient lookup, missing IDs return undefined
+   *
+   * @param ids - Array of auction IDs to fetch
+   * @returns Map of auctionId to Auction entity
+   *
+   * @example
+   * ```typescript
+   * const auctions = await auctionService.getAuctionsByIds(['id1', 'id2', 'id3']);
+   * const auction1 = auctions.get('id1'); // Auction or undefined
+   * ```
+   */
+  async getAuctionsByIds(ids: string[]): Promise<Map<string, Auction>> {
+    const auctionMap = new Map<string, Auction>();
+
+    // Return empty map if no IDs provided
+    if (ids.length === 0) {
+      return auctionMap;
+    }
+
+    // Query with WHERE id = ANY($1) for batch loading
+    const query = `
+      SELECT * FROM auctions
+      WHERE id = ANY($1)
+    `;
+
+    const result = await this.pool.query(query, [ids]);
+
+    // Convert to Map for DataLoader
+    for (const row of result.rows) {
+      const auction = this.mapRowToAuction(row);
+      auctionMap.set(auction.id, auction);
+    }
+
+    return auctionMap;
+  }
+
+  /**
    * Close the connection pool
    */
   async close(): Promise<void> {

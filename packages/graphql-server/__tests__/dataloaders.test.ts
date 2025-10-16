@@ -20,7 +20,8 @@
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { ProfileService, PostService, LikeService } from '@social-media-app/dal';
-import type { PublicProfile, Post } from '@social-media-app/shared';
+import { AuctionService } from '@social-media-app/auction-dal';
+import type { PublicProfile, Post, Auction } from '@social-media-app/shared';
 import type { GraphQLContext } from '../src/context.js';
 
 // Import DataLoader types and implementation (will fail initially - TDD RED)
@@ -34,6 +35,7 @@ describe('DataLoaders', () => {
   let mockProfileService: ProfileService;
   let mockPostService: PostService;
   let mockLikeService: LikeService;
+  let mockAuctionService: AuctionService;
 
   beforeEach(() => {
     mockContext = {
@@ -46,6 +48,7 @@ describe('DataLoaders', () => {
     mockProfileService = new ProfileService({} as any, 'test-table', 'test-bucket', 'test-domain', {} as any);
     mockPostService = new PostService({} as any, 'test-table', mockProfileService);
     mockLikeService = new LikeService({} as any, 'test-table');
+    mockAuctionService = new AuctionService({} as any);
 
     vi.clearAllMocks();
   });
@@ -100,6 +103,7 @@ describe('DataLoaders', () => {
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: mockAuctionService,
       }, 'test-user-123');
       const [profile1, profile2] = await Promise.all([
         loaders.profileLoader.load('user-1'),
@@ -140,6 +144,7 @@ describe('DataLoaders', () => {
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: mockAuctionService,
       }, 'test-user-123');
       const [profile1, profile2, profile3] = await Promise.all([
         loaders.profileLoader.load('user-1'),
@@ -182,6 +187,7 @@ describe('DataLoaders', () => {
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: mockAuctionService,
       }, 'test-user-123');
 
       // First load
@@ -231,6 +237,7 @@ describe('DataLoaders', () => {
         profileService: profileService1,
         postService: postService1,
         likeService: likeService1,
+        auctionService: mockAuctionService,
       }, 'test-user-1');
       await loaders1.profileLoader.load('user-1');
 
@@ -239,6 +246,7 @@ describe('DataLoaders', () => {
         profileService: profileService2,
         postService: postService2,
         likeService: likeService2,
+        auctionService: mockAuctionService,
       }, 'test-user-2');
       await loaders2.profileLoader.load('user-1');
 
@@ -272,6 +280,7 @@ describe('DataLoaders', () => {
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: mockAuctionService,
       }, 'test-user-123');
       const [profile1, profile2] = await Promise.all([
         loaders.profileLoader.load('user-1'),
@@ -335,6 +344,7 @@ describe('DataLoaders', () => {
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: mockAuctionService,
       }, 'test-user-123');
       const [post1, post2] = await Promise.all([
         loaders.postLoader.load('post-1'),
@@ -376,6 +386,7 @@ describe('DataLoaders', () => {
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: mockAuctionService,
       }, 'test-user-123');
       const [post1, post2, post3] = await Promise.all([
         loaders.postLoader.load('post-1'),
@@ -404,6 +415,7 @@ describe('DataLoaders', () => {
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: mockAuctionService,
       }, 'test-user-123');
       const post = await loaders.postLoader.load('nonexistent-post');
 
@@ -434,6 +446,7 @@ describe('DataLoaders', () => {
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: mockAuctionService,
       }, 'test-user-123');
       const [status1, status2, status3] = await Promise.all([
         loaders.likeStatusLoader.load('post-1'),
@@ -514,6 +527,7 @@ describe('DataLoaders', () => {
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: mockAuctionService,
       }, 'test-user-123');
       const [status1, status2, status3] = await Promise.all([
         loaders.likeStatusLoader.load('post-1'),
@@ -540,6 +554,7 @@ describe('DataLoaders', () => {
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: mockAuctionService,
       }, 'test-user-123');
 
       const status1 = await loaders.likeStatusLoader.load('post-1');
@@ -551,6 +566,251 @@ describe('DataLoaders', () => {
       // Assert: Both return same status
       expect(status1).toEqual(status2);
       expect(status1?.isLiked).toBe(true);
+    });
+  });
+
+  describe('AuctionLoader', () => {
+    it('should batch multiple auction loads into single DB call', async () => {
+      // Arrange: Mock AuctionService.getAuctionsByIds
+      const mockAuction1: Auction = {
+        id: 'auction-1',
+        userId: 'user-1',
+        title: 'Vintage Camera',
+        description: 'Rare 1960s camera',
+        imageUrl: 'https://example.com/camera.jpg',
+        startPrice: 100.0,
+        reservePrice: 500.0,
+        currentPrice: 150.0,
+        startTime: '2024-01-01T00:00:00.000Z',
+        endTime: '2024-01-02T00:00:00.000Z',
+        status: 'active',
+        winnerId: undefined,
+        bidCount: 3,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+
+      const mockAuction2: Auction = {
+        id: 'auction-2',
+        userId: 'user-2',
+        title: 'Antique Watch',
+        description: 'Swiss made',
+        imageUrl: 'https://example.com/watch.jpg',
+        startPrice: 200.0,
+        currentPrice: 250.0,
+        startTime: '2024-01-01T00:00:00.000Z',
+        endTime: '2024-01-03T00:00:00.000Z',
+        status: 'active',
+        winnerId: undefined,
+        bidCount: 5,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+
+      const getAuctionsByIdsSpy = vi
+        .spyOn(AuctionService.prototype, 'getAuctionsByIds')
+        .mockResolvedValue(
+          new Map([
+            ['auction-1', mockAuction1],
+            ['auction-2', mockAuction2],
+          ])
+        );
+
+      // Act: Load multiple auctions in parallel
+      const loaders = createLoaders({
+        profileService: mockProfileService,
+        postService: mockPostService,
+        likeService: mockLikeService,
+        auctionService: mockAuctionService,
+      }, 'test-user-123');
+      const [auction1, auction2] = await Promise.all([
+        loaders.auctionLoader.load('auction-1'),
+        loaders.auctionLoader.load('auction-2'),
+      ]);
+
+      // Assert: Should call DB only once (batching)
+      expect(getAuctionsByIdsSpy).toHaveBeenCalledTimes(1);
+      expect(getAuctionsByIdsSpy).toHaveBeenCalledWith(['auction-1', 'auction-2']);
+
+      // Assert: Should return correct auctions
+      expect(auction1).toEqual(mockAuction1);
+      expect(auction2).toEqual(mockAuction2);
+    });
+
+    it('should deduplicate identical auction requests', async () => {
+      // Arrange: Mock auction service
+      const mockAuction: Auction = {
+        id: 'auction-1',
+        userId: 'user-1',
+        title: 'Test Auction',
+        startPrice: 100.0,
+        currentPrice: 100.0,
+        startTime: '2024-01-01T00:00:00.000Z',
+        endTime: '2024-01-02T00:00:00.000Z',
+        status: 'pending',
+        winnerId: undefined,
+        bidCount: 0,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+
+      const getAuctionsByIdsSpy = vi
+        .spyOn(AuctionService.prototype, 'getAuctionsByIds')
+        .mockResolvedValue(new Map([['auction-1', mockAuction]]));
+
+      // Act: Load same auction multiple times
+      const loaders = createLoaders({
+        profileService: mockProfileService,
+        postService: mockPostService,
+        likeService: mockLikeService,
+        auctionService: mockAuctionService,
+      }, 'test-user-123');
+      const [auction1, auction2, auction3] = await Promise.all([
+        loaders.auctionLoader.load('auction-1'),
+        loaders.auctionLoader.load('auction-1'),
+        loaders.auctionLoader.load('auction-1'),
+      ]);
+
+      // Assert: Should call DB once with deduplicated keys
+      expect(getAuctionsByIdsSpy).toHaveBeenCalledTimes(1);
+      expect(getAuctionsByIdsSpy).toHaveBeenCalledWith(['auction-1']);
+
+      // Assert: All return same auction
+      expect(auction1).toEqual(mockAuction);
+      expect(auction2).toEqual(mockAuction);
+      expect(auction3).toEqual(mockAuction);
+    });
+
+    it('should cache auction results within request scope', async () => {
+      // Arrange: Mock auction service
+      const mockAuction: Auction = {
+        id: 'auction-1',
+        userId: 'user-1',
+        title: 'Cached Auction',
+        startPrice: 100.0,
+        currentPrice: 100.0,
+        startTime: '2024-01-01T00:00:00.000Z',
+        endTime: '2024-01-02T00:00:00.000Z',
+        status: 'active',
+        winnerId: undefined,
+        bidCount: 0,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+
+      const getAuctionsByIdsSpy = vi
+        .spyOn(AuctionService.prototype, 'getAuctionsByIds')
+        .mockResolvedValue(new Map([['auction-1', mockAuction]]));
+
+      // Act: Load auction, then load same auction again after first completes
+      const loaders = createLoaders({
+        profileService: mockProfileService,
+        postService: mockPostService,
+        likeService: mockLikeService,
+        auctionService: mockAuctionService,
+      }, 'test-user-123');
+
+      // First load
+      const auction1 = await loaders.auctionLoader.load('auction-1');
+
+      // Second load (should hit cache)
+      const auction2 = await loaders.auctionLoader.load('auction-1');
+
+      // Assert: Should only call DB once (second load uses cache)
+      expect(getAuctionsByIdsSpy).toHaveBeenCalledTimes(1);
+
+      // Assert: Both return same auction
+      expect(auction1).toEqual(mockAuction);
+      expect(auction2).toEqual(mockAuction);
+    });
+
+    it('should handle null/missing auctions gracefully', async () => {
+      // Arrange: Mock service returning only one auction
+      const mockAuction: Auction = {
+        id: 'auction-1',
+        userId: 'user-1',
+        title: 'Found Auction',
+        startPrice: 100.0,
+        currentPrice: 100.0,
+        startTime: '2024-01-01T00:00:00.000Z',
+        endTime: '2024-01-02T00:00:00.000Z',
+        status: 'active',
+        winnerId: undefined,
+        bidCount: 0,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+
+      // Return Map with only one auction (auction-2 is missing)
+      const getAuctionsByIdsSpy = vi
+        .spyOn(AuctionService.prototype, 'getAuctionsByIds')
+        .mockResolvedValue(new Map([['auction-1', mockAuction]]));
+
+      // Act: Load both existing and non-existing auctions
+      const loaders = createLoaders({
+        profileService: mockProfileService,
+        postService: mockPostService,
+        likeService: mockLikeService,
+        auctionService: mockAuctionService,
+      }, 'test-user-123');
+      const [auction1, auction2] = await Promise.all([
+        loaders.auctionLoader.load('auction-1'),
+        loaders.auctionLoader.load('auction-2'), // This one doesn't exist
+      ]);
+
+      // Assert: Should call DB once with both IDs
+      expect(getAuctionsByIdsSpy).toHaveBeenCalledTimes(1);
+      expect(getAuctionsByIdsSpy).toHaveBeenCalledWith(['auction-1', 'auction-2']);
+
+      // Assert: Existing auction returned, missing one is null
+      expect(auction1).toEqual(mockAuction);
+      expect(auction2).toBeNull();
+    });
+
+    it('should not cache across different contexts', async () => {
+      // Arrange: Create two separate service instances for different contexts
+      const auctionService1 = new AuctionService({} as any);
+      const auctionService2 = new AuctionService({} as any);
+
+      const mockAuction: Auction = {
+        id: 'auction-1',
+        userId: 'user-1',
+        title: 'Test Auction',
+        startPrice: 100.0,
+        currentPrice: 100.0,
+        startTime: '2024-01-01T00:00:00.000Z',
+        endTime: '2024-01-02T00:00:00.000Z',
+        status: 'active',
+        winnerId: undefined,
+        bidCount: 0,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+
+      const getAuctionsByIdsSpy = vi
+        .spyOn(AuctionService.prototype, 'getAuctionsByIds')
+        .mockResolvedValue(new Map([['auction-1', mockAuction]]));
+
+      // Act: Load auction in first context
+      const loaders1 = createLoaders({
+        profileService: mockProfileService,
+        postService: mockPostService,
+        likeService: mockLikeService,
+        auctionService: auctionService1,
+      }, 'test-user-1');
+      await loaders1.auctionLoader.load('auction-1');
+
+      // Act: Load same auction in second context
+      const loaders2 = createLoaders({
+        profileService: mockProfileService,
+        postService: mockPostService,
+        likeService: mockLikeService,
+        auctionService: auctionService2,
+      }, 'test-user-2');
+      await loaders2.auctionLoader.load('auction-1');
+
+      // Assert: Should call DB twice (different contexts, no shared cache)
+      expect(getAuctionsByIdsSpy).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -606,6 +866,7 @@ describe('DataLoaders', () => {
           profileService: mockProfileService,
           postService: mockPostService,
           likeService: mockLikeService,
+          auctionService: mockAuctionService,
         }, 'test-user-123'),
       };
 
@@ -674,6 +935,7 @@ describe('DataLoaders', () => {
           profileService: mockProfileService,
           postService: mockPostService,
           likeService: mockLikeService,
+          auctionService: mockAuctionService,
         }, 'test-user-123'),
       };
 
@@ -733,6 +995,7 @@ describe('DataLoaders', () => {
           profileService: mockProfileService,
           postService: mockPostService,
           likeService: mockLikeService,
+          auctionService: mockAuctionService,
         }, 'test-user-123'),
       };
 
@@ -783,6 +1046,7 @@ describe('DataLoaders', () => {
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: mockAuctionService,
       }, 'test-user-123');
       const [profile1, profile2] = await Promise.all([
         loaders.profileLoader.load('user-1'),
@@ -820,6 +1084,7 @@ describe('DataLoaders', () => {
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: mockAuctionService,
       }, 'test-user-123');
 
       let error: Error | null = null;
@@ -853,6 +1118,7 @@ describe('DataLoaders', () => {
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: mockAuctionService,
       }, 'test-user-123');
 
       await expect(loaders.profileLoader.load('user-1')).rejects.toThrow(

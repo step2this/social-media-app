@@ -59,6 +59,7 @@ export async function createContext(
       profileService: services.profileService,
       postService: services.postService,
       likeService: services.likeService,
+      auctionService: services.auctionService,
     },
     userId
   );

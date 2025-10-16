@@ -84,6 +84,7 @@ async function createExpressContext({ req }: { req: express.Request }): Promise<
       profileService: services.profileService,
       postService: services.postService,
       likeService: services.likeService,
+      auctionService: services.auctionService,
     },
     userId
   );

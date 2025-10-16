@@ -14,9 +14,11 @@ import type {
   PostService,
   LikeService
 } from '@social-media-app/dal';
+import type { AuctionService } from '@social-media-app/auction-dal';
 import type {
   PublicProfile,
-  Post
+  Post,
+  Auction
 } from '@social-media-app/shared';
 
 /**
@@ -38,11 +40,13 @@ export interface LikeStatus {
  * @property {DataLoader} profileLoader - Batches profile fetches by ID
  * @property {DataLoader} postLoader - Batches post fetches by ID
  * @property {DataLoader} likeStatusLoader - Batches like status fetches by post ID
+ * @property {DataLoader} auctionLoader - Batches auction fetches by ID
  */
 export interface DataLoaders {
   profileLoader: DataLoader<string, PublicProfile | null>;
   postLoader: DataLoader<string, Post | null>;
   likeStatusLoader: DataLoader<string, LikeStatus | null>;
+  auctionLoader: DataLoader<string, Auction | null>;
 }
 
 /**
@@ -52,11 +56,13 @@ export interface DataLoaders {
  * @property {ProfileService} profileService - Profile data access service
  * @property {PostService} postService - Post data access service
  * @property {LikeService} likeService - Like data access service
+ * @property {AuctionService} auctionService - Auction data access service
  */
 export interface Services {
   profileService: ProfileService;
   postService: PostService;
   likeService: LikeService;
+  auctionService: AuctionService;
 }
 
 /**
@@ -148,6 +154,28 @@ export function createLoaders(services: Services, userId: string | null): DataLo
 
         // DataLoader requires results in same order as input keys
         return postIds.map(postId => statuses.get(postId) || null);
+      },
+      {
+        cache: true, // Enable caching to prevent duplicate requests
+        batchScheduleFn: (callback) => setTimeout(callback, 10), // 10ms batch window
+      }
+    ),
+
+    /**
+     * Auction loader - batches auction fetches by auction ID
+     *
+     * Performance characteristics:
+     * - Batch window: 10ms
+     * - Caching: Enabled for request duration
+     * - Handles missing auctions gracefully (returns null)
+     */
+    auctionLoader: new DataLoader<string, Auction | null>(
+      async (ids) => {
+        // Convert readonly array to mutable array for service call
+        const auctions = await services.auctionService.getAuctionsByIds([...ids]);
+
+        // DataLoader requires results in same order as input keys
+        return ids.map(id => auctions.get(id) || null);
       },
       {
         cache: true, // Enable caching to prevent duplicate requests

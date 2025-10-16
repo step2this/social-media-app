@@ -444,4 +444,87 @@ describe('AuctionService', () => {
       expect(result.total).toBe(0);
     });
   });
+
+  describe('getAuctionsByIds - DataLoader Batch Method', () => {
+    it('should return map of auctions by IDs', async () => {
+      const auction1 = await service.createAuction(testUserId, {
+        title: 'Auction 1',
+        startPrice: 100.0,
+        startTime: new Date().toISOString(),
+        endTime: new Date(Date.now() + 86400000).toISOString(),
+      });
+
+      const auction2 = await service.createAuction(testUserId, {
+        title: 'Auction 2',
+        startPrice: 200.0,
+        startTime: new Date().toISOString(),
+        endTime: new Date(Date.now() + 86400000).toISOString(),
+      });
+
+      const auction3 = await service.createAuction(bidder1Id, {
+        title: 'Auction 3',
+        startPrice: 300.0,
+        startTime: new Date().toISOString(),
+        endTime: new Date(Date.now() + 86400000).toISOString(),
+      });
+
+      const result = await service.getAuctionsByIds([auction1.id, auction2.id, auction3.id]);
+
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(3);
+      expect(result.get(auction1.id)?.title).toBe('Auction 1');
+      expect(result.get(auction2.id)?.title).toBe('Auction 2');
+      expect(result.get(auction3.id)?.title).toBe('Auction 3');
+    });
+
+    it('should return empty map for empty IDs array', async () => {
+      const result = await service.getAuctionsByIds([]);
+
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(0);
+    });
+
+    it('should return map with only found auctions for partial matches', async () => {
+      const auction1 = await service.createAuction(testUserId, {
+        title: 'Found Auction',
+        startPrice: 100.0,
+        startTime: new Date().toISOString(),
+        endTime: new Date(Date.now() + 86400000).toISOString(),
+      });
+
+      const result = await service.getAuctionsByIds([
+        auction1.id,
+        '00000000-0000-0000-0000-000000000000',
+        '11111111-1111-1111-1111-111111111111',
+      ]);
+
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(1);
+      expect(result.get(auction1.id)?.title).toBe('Found Auction');
+      expect(result.has('00000000-0000-0000-0000-000000000000')).toBe(false);
+      expect(result.has('11111111-1111-1111-1111-111111111111')).toBe(false);
+    });
+
+    it('should maintain correct ID mapping', async () => {
+      const auction1 = await service.createAuction(testUserId, {
+        title: 'First',
+        startPrice: 100.0,
+        startTime: new Date().toISOString(),
+        endTime: new Date(Date.now() + 86400000).toISOString(),
+      });
+
+      const auction2 = await service.createAuction(bidder1Id, {
+        title: 'Second',
+        startPrice: 200.0,
+        startTime: new Date().toISOString(),
+        endTime: new Date(Date.now() + 86400000).toISOString(),
+      });
+
+      // Request in reverse order to test mapping
+      const result = await service.getAuctionsByIds([auction2.id, auction1.id]);
+
+      expect(result.get(auction1.id)?.title).toBe('First');
+      expect(result.get(auction2.id)?.title).toBe('Second');
+    });
+  });
 });
