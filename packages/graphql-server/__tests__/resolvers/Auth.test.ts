@@ -23,7 +23,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { GraphQLError } from 'graphql';
 import { Mutation } from '../../src/schema/resolvers/Mutation.js';
-import { createAuthService, type AuthServiceDependencies } from '@social-media-app/dal';
+import { createAuthService } from '@social-media-app/dal';
 import { ProfileService } from '@social-media-app/dal';
 import type { GraphQLContext } from '../../src/context.js';
 import type {
@@ -41,27 +41,19 @@ describe('Auth Mutation Resolvers', () => {
   let mockProfileService: ProfileService;
 
   beforeEach(() => {
-    // Create mock service instances
-    mockProfileService = new ProfileService({} as any, 'test-table', 'test-bucket', 'test-domain', {} as any);
+    // Create pure mock ProfileService (no real instantiation)
+    mockProfileService = {
+      getProfileById: vi.fn(),
+    } as unknown as ProfileService;
 
-    // Create minimal mock auth service with all required methods
-    const mockDeps: AuthServiceDependencies = {
-      dynamoClient: {} as any,
-      tableName: 'test-table',
-      timeProvider: () => new Date().toISOString(),
-      uuidProvider: () => crypto.randomUUID(),
-      jwtProvider: {
-        generateAccessToken: vi.fn(),
-        generateRefreshToken: vi.fn(),
-        verifyRefreshToken: vi.fn(),
-      },
-      hashProvider: {
-        hashPassword: vi.fn(),
-        generateSalt: vi.fn(),
-        verifyPassword: vi.fn(),
-      },
-    };
-    mockAuthService = createAuthService(mockDeps);
+    // Create pure mock AuthService (no real instantiation)
+    mockAuthService = {
+      register: vi.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshToken: vi.fn(),
+      verifyToken: vi.fn(),
+    } as unknown as ReturnType<typeof createAuthService>;
 
     // Create minimal mock context
     // Auth mutations do NOT require userId (they create authentication)
@@ -75,9 +67,11 @@ describe('Auth Mutation Resolvers', () => {
         likeService: {} as any,
         commentService: {} as any,
         followService: {} as any,
-        // Add authService to context (will need to update Services interface)
+        feedService: {} as any,
+        notificationService: {} as any,
         authService: mockAuthService,
-      } as any,
+        auctionService: {} as any,
+      },
       loaders: {} as any,
     };
 
@@ -118,10 +112,10 @@ describe('Auth Mutation Resolvers', () => {
       };
 
       // Mock the auth service register method
-      vi.spyOn(mockAuthService, 'register').mockResolvedValue(mockRegisterResponse);
+      (mockAuthService.register as ReturnType<typeof vi.fn>).mockResolvedValue(mockRegisterResponse);
 
       // Mock profile service to enrich user data with profile fields
-      vi.spyOn(ProfileService.prototype, 'getProfileById').mockResolvedValue({
+      (mockProfileService.getProfileById as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'user-new-123',
         handle: 'newhandle',
         username: 'newuser',
@@ -165,7 +159,7 @@ describe('Auth Mutation Resolvers', () => {
       };
 
       // Mock auth service to throw "Email already registered" error
-      vi.spyOn(mockAuthService, 'register').mockRejectedValue(
+      (mockAuthService.register as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Email already registered')
       );
 
@@ -196,7 +190,7 @@ describe('Auth Mutation Resolvers', () => {
       };
 
       // Mock auth service to throw "Username already taken" error
-      vi.spyOn(mockAuthService, 'register').mockRejectedValue(
+      (mockAuthService.register as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Username already taken')
       );
 
@@ -227,7 +221,7 @@ describe('Auth Mutation Resolvers', () => {
       };
 
       // Mock auth service to throw unexpected error
-      vi.spyOn(mockAuthService, 'register').mockRejectedValue(
+      (mockAuthService.register as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Database connection failed')
       );
 
@@ -272,10 +266,10 @@ describe('Auth Mutation Resolvers', () => {
       };
 
       // Mock the auth service login method
-      vi.spyOn(mockAuthService, 'login').mockResolvedValue(mockLoginResponse);
+      (mockAuthService.login as ReturnType<typeof vi.fn>).mockResolvedValue(mockLoginResponse);
 
       // Mock profile service to enrich user data with profile fields
-      vi.spyOn(ProfileService.prototype, 'getProfileById').mockResolvedValue({
+      (mockProfileService.getProfileById as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'user-456',
         handle: 'existinghandle',
         username: 'existinguser',
@@ -315,7 +309,7 @@ describe('Auth Mutation Resolvers', () => {
       };
 
       // Mock auth service to throw "Invalid email or password" error
-      vi.spyOn(mockAuthService, 'login').mockRejectedValue(
+      (mockAuthService.login as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Invalid email or password')
       );
 
@@ -343,7 +337,7 @@ describe('Auth Mutation Resolvers', () => {
       };
 
       // Mock auth service to throw "Invalid email or password" error
-      vi.spyOn(mockAuthService, 'login').mockRejectedValue(
+      (mockAuthService.login as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Invalid email or password')
       );
 
@@ -380,14 +374,14 @@ describe('Auth Mutation Resolvers', () => {
       };
 
       // Mock the auth service refreshToken method
-      vi.spyOn(mockAuthService, 'refreshToken').mockResolvedValue(mockRefreshResponse);
+      (mockAuthService.refreshToken as ReturnType<typeof vi.fn>).mockResolvedValue(mockRefreshResponse);
 
       // Extract userId from the refresh token to fetch profile
       // In a real scenario, the refresh token service would return userId
       const mockUserId = 'user-789';
 
       // Mock profile service to enrich response with user profile
-      vi.spyOn(ProfileService.prototype, 'getProfileById').mockResolvedValue({
+      (mockProfileService.getProfileById as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: mockUserId,
         handle: 'refreshuser',
         username: 'refreshuser',
@@ -401,15 +395,6 @@ describe('Auth Mutation Resolvers', () => {
         postsCount: 3,
         createdAt: '2023-06-01T00:00:00.000Z',
       });
-
-      // For refreshToken, we need to extract userId from token
-      // Mock the token verification to return userId
-      const mockJwtProvider = mockAuthService as any; // Access internal provider
-      if (mockJwtProvider.jwtProvider?.verifyRefreshToken) {
-        vi.spyOn(mockJwtProvider.jwtProvider, 'verifyRefreshToken').mockResolvedValue({
-          userId: mockUserId,
-        });
-      }
 
       const result = await Mutation.refreshToken(
         {},
@@ -430,7 +415,7 @@ describe('Auth Mutation Resolvers', () => {
       const invalidRefreshToken = 'invalid-token';
 
       // Mock auth service to throw "Invalid refresh token" error
-      vi.spyOn(mockAuthService, 'refreshToken').mockRejectedValue(
+      (mockAuthService.refreshToken as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Invalid refresh token')
       );
 
@@ -455,7 +440,7 @@ describe('Auth Mutation Resolvers', () => {
       const expiredRefreshToken = 'expired-token-xyz789';
 
       // Mock auth service to throw "Refresh token expired" error
-      vi.spyOn(mockAuthService, 'refreshToken').mockRejectedValue(
+      (mockAuthService.refreshToken as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Refresh token expired')
       );
 
@@ -480,7 +465,7 @@ describe('Auth Mutation Resolvers', () => {
       const validTokenForDeletedUser = 'valid-token-deleted-user';
 
       // Mock auth service to throw "User not found" error
-      vi.spyOn(mockAuthService, 'refreshToken').mockRejectedValue(
+      (mockAuthService.refreshToken as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('User not found')
       );
 
@@ -511,7 +496,7 @@ describe('Auth Mutation Resolvers', () => {
       };
 
       // Mock auth service logout method
-      vi.spyOn(mockAuthService, 'logout').mockResolvedValue(undefined);
+      (mockAuthService.logout as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
       const result = await Mutation.logout(
         {},
@@ -556,7 +541,7 @@ describe('Auth Mutation Resolvers', () => {
       };
 
       // Mock logout to succeed even if token not found (idempotent behavior)
-      vi.spyOn(mockAuthService, 'logout').mockResolvedValue(undefined);
+      (mockAuthService.logout as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
       const result = await Mutation.logout(
         {},

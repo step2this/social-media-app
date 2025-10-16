@@ -29,14 +29,26 @@ describe('Field Resolvers', () => {
   let mockProfileService: ProfileService;
   let mockPostService: PostService;
   let mockLikeService: LikeService;
+  let mockFollowService: FollowService;
 
   beforeEach(() => {
-    // Create mock service instances
-    mockProfileService = new ProfileService({} as any, 'test-table', 'test-bucket', 'test-domain', {} as any);
-    mockPostService = new PostService({} as any, 'test-table', mockProfileService);
-    mockLikeService = new LikeService({} as any, 'test-table');
-    const mockCommentService = new CommentService({} as any, 'test-table');
-    const mockFollowService = new FollowService({} as any, 'test-table');
+    // Create pure mock service objects (no real instantiation, no spies)
+    // Only mock methods that resolvers/loaders actually call
+    mockProfileService = {
+      getProfilesByIds: vi.fn(),
+    } as unknown as ProfileService;
+
+    mockPostService = {} as unknown as PostService;
+
+    mockLikeService = {
+      getLikeStatusesByPostIds: vi.fn(),
+    } as unknown as LikeService;
+
+    const mockCommentService = {} as unknown as CommentService;
+
+    mockFollowService = {
+      getFollowStatus: vi.fn(),
+    } as unknown as FollowService;
 
     mockContext = {
       userId: 'test-user-123',
@@ -48,11 +60,16 @@ describe('Field Resolvers', () => {
         likeService: mockLikeService,
         commentService: mockCommentService,
         followService: mockFollowService,
+        feedService: {} as any,
+        notificationService: {} as any,
+        authService: {} as any,
+        auctionService: {} as any,
       },
       loaders: createLoaders({
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: {} as any,
       }, 'test-user-123'),
     };
     vi.clearAllMocks();
@@ -76,7 +93,7 @@ describe('Field Resolvers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(FollowService.prototype, 'getFollowStatus').mockResolvedValue({
+      (mockFollowService.getFollowStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
         isFollowing: true,
         followersCount: 100,
         followingCount: 50,
@@ -105,7 +122,7 @@ describe('Field Resolvers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(FollowService.prototype, 'getFollowStatus').mockResolvedValue({
+      (mockFollowService.getFollowStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
         isFollowing: false,
         followersCount: 100,
         followingCount: 50,
@@ -208,7 +225,7 @@ describe('Field Resolvers', () => {
       };
 
       // Mock the batch method used by DataLoader
-      vi.spyOn(ProfileService.prototype, 'getProfilesByIds').mockResolvedValue(
+      (mockProfileService.getProfilesByIds as ReturnType<typeof vi.fn>).mockResolvedValue(
         new Map([['user-456', mockProfile]])
       );
 
@@ -239,7 +256,7 @@ describe('Field Resolvers', () => {
       };
 
       // Mock the batch method used by DataLoader (empty map = not found)
-      vi.spyOn(ProfileService.prototype, 'getProfilesByIds').mockResolvedValue(new Map());
+      (mockProfileService.getProfilesByIds as ReturnType<typeof vi.fn>).mockResolvedValue(new Map());
 
       const result = await PostResolver.author(
         parentPost as any,
@@ -269,7 +286,7 @@ describe('Field Resolvers', () => {
       };
 
       // Mock the batch method used by DataLoader
-      vi.spyOn(LikeService.prototype, 'getLikeStatusesByPostIds').mockResolvedValue(
+      (mockLikeService.getLikeStatusesByPostIds as ReturnType<typeof vi.fn>).mockResolvedValue(
         new Map([['post-123', { isLiked: true, likesCount: 5 }]])
       );
 
@@ -299,7 +316,7 @@ describe('Field Resolvers', () => {
       };
 
       // Mock the batch method used by DataLoader
-      vi.spyOn(LikeService.prototype, 'getLikeStatusesByPostIds').mockResolvedValue(
+      (mockLikeService.getLikeStatusesByPostIds as ReturnType<typeof vi.fn>).mockResolvedValue(
         new Map([['post-123', { isLiked: false, likesCount: 5 }]])
       );
 
@@ -375,7 +392,7 @@ describe('Field Resolvers', () => {
       };
 
       // Mock the batch method used by DataLoader
-      vi.spyOn(ProfileService.prototype, 'getProfilesByIds').mockResolvedValue(
+      (mockProfileService.getProfilesByIds as ReturnType<typeof vi.fn>).mockResolvedValue(
         new Map([['user-456', mockProfile]])
       );
 
@@ -402,7 +419,7 @@ describe('Field Resolvers', () => {
       };
 
       // Mock the batch method used by DataLoader (empty map = not found)
-      vi.spyOn(ProfileService.prototype, 'getProfilesByIds').mockResolvedValue(new Map());
+      (mockProfileService.getProfilesByIds as ReturnType<typeof vi.fn>).mockResolvedValue(new Map());
 
       const result = await CommentResolver.author(
         parentComment as any,

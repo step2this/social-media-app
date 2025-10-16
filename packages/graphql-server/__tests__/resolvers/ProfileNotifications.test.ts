@@ -35,10 +35,24 @@ describe('Profile & Notification Resolvers', () => {
   let mockFeedService: FeedService;
 
   beforeEach(() => {
-    // Create mock service instances
-    mockProfileService = new ProfileService({} as any, 'test-table', 'test-bucket', 'test-domain', {} as any);
-    mockNotificationService = new NotificationService({} as any, 'test-table');
-    mockFeedService = new FeedService({} as any, 'test-table');
+    // Create pure mock service objects (no real instantiation, no spies)
+    // Only mock methods that resolvers actually call
+    mockProfileService = {
+      updateProfile: vi.fn(),
+      generatePresignedUrl: vi.fn(),
+    } as unknown as ProfileService;
+
+    mockNotificationService = {
+      markAsRead: vi.fn(),
+      markAllAsRead: vi.fn(),
+      deleteNotification: vi.fn(),
+      getNotifications: vi.fn(),
+      getUnreadCount: vi.fn(),
+    } as unknown as NotificationService;
+
+    mockFeedService = {
+      markFeedItemsAsRead: vi.fn(),
+    } as unknown as FeedService;
 
     // Create minimal mock context
     mockContext = {
@@ -53,6 +67,8 @@ describe('Profile & Notification Resolvers', () => {
         likeService: {} as any,
         commentService: {} as any,
         followService: {} as any,
+        authService: {} as any,
+        auctionService: {} as any,
       },
       loaders: {} as any,
     };
@@ -92,7 +108,7 @@ describe('Profile & Notification Resolvers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'updateProfile').mockResolvedValue(mockUpdatedProfile);
+      (mockProfileService.updateProfile as ReturnType<typeof vi.fn>).mockResolvedValue(mockUpdatedProfile);
 
       const result = await Mutation.updateProfile(
         {},
@@ -107,7 +123,12 @@ describe('Profile & Notification Resolvers', () => {
       expect(result.bio).toBe('Updated bio text');
 
       // Verify service method called with correct parameters
-      expect(mockProfileService.updateProfile).toHaveBeenCalledWith('test-user-123', updateInput);
+      // Note: displayName is not passed to service (not supported by DAL)
+      expect(mockProfileService.updateProfile).toHaveBeenCalledWith('test-user-123', {
+        handle: 'newhandle',
+        fullName: 'New Full Name',
+        bio: 'Updated bio text',
+      });
     });
 
     it('should update profile with partial fields (only handle)', async () => {
@@ -130,7 +151,7 @@ describe('Profile & Notification Resolvers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'updateProfile').mockResolvedValue(mockUpdatedProfile);
+      (mockProfileService.updateProfile as ReturnType<typeof vi.fn>).mockResolvedValue(mockUpdatedProfile);
 
       const result = await Mutation.updateProfile(
         {},
@@ -175,7 +196,7 @@ describe('Profile & Notification Resolvers', () => {
         handle: 'takenhandle',
       };
 
-      vi.spyOn(ProfileService.prototype, 'updateProfile').mockRejectedValue(
+      (mockProfileService.updateProfile as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Handle is already taken')
       );
 
@@ -216,7 +237,7 @@ describe('Profile & Notification Resolvers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'updateProfile').mockResolvedValue(mockUpdatedProfile);
+      (mockProfileService.updateProfile as ReturnType<typeof vi.fn>).mockResolvedValue(mockUpdatedProfile);
 
       const result = await Mutation.updateProfile(
         {},
@@ -241,7 +262,7 @@ describe('Profile & Notification Resolvers', () => {
         expiresIn: 3600,
       };
 
-      vi.spyOn(ProfileService.prototype, 'generatePresignedUrl').mockResolvedValue(
+      (mockProfileService.generatePresignedUrl as ReturnType<typeof vi.fn>).mockResolvedValue(
         mockPresignedResponse
       );
 
@@ -269,7 +290,7 @@ describe('Profile & Notification Resolvers', () => {
         expiresIn: 3600,
       };
 
-      vi.spyOn(ProfileService.prototype, 'generatePresignedUrl').mockResolvedValue(
+      (mockProfileService.generatePresignedUrl as ReturnType<typeof vi.fn>).mockResolvedValue(
         mockPresignedResponse
       );
 
@@ -312,7 +333,7 @@ describe('Profile & Notification Resolvers', () => {
     });
 
     it('should handle S3 configuration errors gracefully', async () => {
-      vi.spyOn(ProfileService.prototype, 'generatePresignedUrl').mockRejectedValue(
+      (mockProfileService.generatePresignedUrl as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('S3 bucket not configured')
       );
 
@@ -364,7 +385,7 @@ describe('Profile & Notification Resolvers', () => {
         readAt: '2024-01-01T10:05:00.000Z',
       };
 
-      vi.spyOn(NotificationService.prototype, 'markAsRead').mockResolvedValue({
+      (mockNotificationService.markAsRead as ReturnType<typeof vi.fn>).mockResolvedValue({
         notification: mockNotification,
       });
 
@@ -409,7 +430,7 @@ describe('Profile & Notification Resolvers', () => {
     });
 
     it('should throw NOT_FOUND when notification does not exist', async () => {
-      vi.spyOn(NotificationService.prototype, 'markAsRead').mockRejectedValue(
+      (mockNotificationService.markAsRead as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Notification not found')
       );
 
@@ -431,7 +452,7 @@ describe('Profile & Notification Resolvers', () => {
     });
 
     it('should throw FORBIDDEN when user does not own notification', async () => {
-      vi.spyOn(NotificationService.prototype, 'markAsRead').mockRejectedValue(
+      (mockNotificationService.markAsRead as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Unauthorized: You can only modify your own notifications')
       );
 
@@ -458,7 +479,7 @@ describe('Profile & Notification Resolvers', () => {
   // ==========================================================================
   describe('Mutation.markAllNotificationsAsRead', () => {
     it('should successfully mark all notifications as read', async () => {
-      vi.spyOn(NotificationService.prototype, 'markAllAsRead').mockResolvedValue({
+      (mockNotificationService.markAllAsRead as ReturnType<typeof vi.fn>).mockResolvedValue({
         updatedCount: 15,
       });
 
@@ -479,7 +500,7 @@ describe('Profile & Notification Resolvers', () => {
     });
 
     it('should return zero when no unread notifications exist', async () => {
-      vi.spyOn(NotificationService.prototype, 'markAllAsRead').mockResolvedValue({
+      (mockNotificationService.markAllAsRead as ReturnType<typeof vi.fn>).mockResolvedValue({
         updatedCount: 0,
       });
 
@@ -523,7 +544,7 @@ describe('Profile & Notification Resolvers', () => {
     it('should successfully delete notification', async () => {
       const notificationId = 'notif-123';
 
-      vi.spyOn(NotificationService.prototype, 'deleteNotification').mockResolvedValue({
+      (mockNotificationService.deleteNotification as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: true,
       });
 
@@ -567,7 +588,7 @@ describe('Profile & Notification Resolvers', () => {
     });
 
     it('should be idempotent (succeeds if notification already deleted)', async () => {
-      vi.spyOn(NotificationService.prototype, 'deleteNotification').mockResolvedValue({
+      (mockNotificationService.deleteNotification as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: true,
       });
 
@@ -582,7 +603,7 @@ describe('Profile & Notification Resolvers', () => {
     });
 
     it('should throw FORBIDDEN when user does not own notification', async () => {
-      vi.spyOn(NotificationService.prototype, 'deleteNotification').mockRejectedValue(
+      (mockNotificationService.deleteNotification as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Unauthorized: You can only modify your own notifications')
       );
 
@@ -611,7 +632,7 @@ describe('Profile & Notification Resolvers', () => {
     it('should successfully mark multiple feed items as read', async () => {
       const postIds = ['post-1', 'post-2', 'post-3'];
 
-      vi.spyOn(FeedService.prototype, 'markFeedItemsAsRead').mockResolvedValue({
+      (mockFeedService.markFeedItemsAsRead as ReturnType<typeof vi.fn>).mockResolvedValue({
         updatedCount: 3,
       });
 
@@ -633,7 +654,7 @@ describe('Profile & Notification Resolvers', () => {
     });
 
     it('should handle empty postIds array', async () => {
-      vi.spyOn(FeedService.prototype, 'markFeedItemsAsRead').mockResolvedValue({
+      (mockFeedService.markFeedItemsAsRead as ReturnType<typeof vi.fn>).mockResolvedValue({
         updatedCount: 0,
       });
 
@@ -673,7 +694,7 @@ describe('Profile & Notification Resolvers', () => {
       const postIds = ['post-1', 'post-2', 'invalid-post'];
 
       // Service may return partial success
-      vi.spyOn(FeedService.prototype, 'markFeedItemsAsRead').mockResolvedValue({
+      (mockFeedService.markFeedItemsAsRead as ReturnType<typeof vi.fn>).mockResolvedValue({
         updatedCount: 2, // Only 2 succeeded
       });
 
@@ -688,7 +709,7 @@ describe('Profile & Notification Resolvers', () => {
     });
 
     it('should throw BAD_REQUEST for invalid UUID format', async () => {
-      vi.spyOn(FeedService.prototype, 'markFeedItemsAsRead').mockRejectedValue(
+      (mockFeedService.markFeedItemsAsRead as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Invalid UUID provided')
       );
 
@@ -761,7 +782,7 @@ describe('Profile & Notification Resolvers', () => {
         JSON.stringify({ PK: 'USER#test-user-123', SK: 'NOTIFICATION#2024-01-01T09:00:00.000Z#notif-2' })
       ).toString('base64');
 
-      vi.spyOn(NotificationService.prototype, 'getNotifications').mockResolvedValue({
+      (mockNotificationService.getNotifications as ReturnType<typeof vi.fn>).mockResolvedValue({
         notifications: mockNotifications,
         totalCount: 2,
         unreadCount: 2,
@@ -818,7 +839,7 @@ describe('Profile & Notification Resolvers', () => {
         },
       ];
 
-      vi.spyOn(NotificationService.prototype, 'getNotifications').mockResolvedValue({
+      (mockNotificationService.getNotifications as ReturnType<typeof vi.fn>).mockResolvedValue({
         notifications: mockNotifications,
         totalCount: 1,
         unreadCount: 3,
@@ -868,7 +889,7 @@ describe('Profile & Notification Resolvers', () => {
     });
 
     it('should handle empty notifications (no notifications)', async () => {
-      vi.spyOn(NotificationService.prototype, 'getNotifications').mockResolvedValue({
+      (mockNotificationService.getNotifications as ReturnType<typeof vi.fn>).mockResolvedValue({
         notifications: [],
         totalCount: 0,
         unreadCount: 0,
@@ -889,7 +910,7 @@ describe('Profile & Notification Resolvers', () => {
     });
 
     it('should default to limit 20 when not specified', async () => {
-      vi.spyOn(NotificationService.prototype, 'getNotifications').mockResolvedValue({
+      (mockNotificationService.getNotifications as ReturnType<typeof vi.fn>).mockResolvedValue({
         notifications: [],
         totalCount: 0,
         unreadCount: 0,
@@ -912,7 +933,7 @@ describe('Profile & Notification Resolvers', () => {
     });
 
     it('should throw BAD_REQUEST for invalid cursor', async () => {
-      vi.spyOn(NotificationService.prototype, 'getNotifications').mockRejectedValue(
+      (mockNotificationService.getNotifications as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Invalid cursor')
       );
 
@@ -939,7 +960,7 @@ describe('Profile & Notification Resolvers', () => {
   // ==========================================================================
   describe('Query.unreadNotificationsCount', () => {
     it('should return count of unread notifications', async () => {
-      vi.spyOn(NotificationService.prototype, 'getUnreadCount').mockResolvedValue(5);
+      (mockNotificationService.getUnreadCount as ReturnType<typeof vi.fn>).mockResolvedValue(5);
 
       const result = await Query.unreadNotificationsCount(
         {},
@@ -956,7 +977,7 @@ describe('Profile & Notification Resolvers', () => {
     });
 
     it('should return zero when no unread notifications', async () => {
-      vi.spyOn(NotificationService.prototype, 'getUnreadCount').mockResolvedValue(0);
+      (mockNotificationService.getUnreadCount as ReturnType<typeof vi.fn>).mockResolvedValue(0);
 
       const result = await Query.unreadNotificationsCount(
         {},
@@ -991,7 +1012,7 @@ describe('Profile & Notification Resolvers', () => {
     });
 
     it('should handle large counts correctly', async () => {
-      vi.spyOn(NotificationService.prototype, 'getUnreadCount').mockResolvedValue(999);
+      (mockNotificationService.getUnreadCount as ReturnType<typeof vi.fn>).mockResolvedValue(999);
 
       const result = await Query.unreadNotificationsCount(
         {},

@@ -266,7 +266,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -303,7 +307,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -345,7 +353,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -381,7 +393,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -419,7 +435,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -484,7 +504,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -524,7 +548,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -560,7 +588,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -593,7 +625,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -639,7 +675,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -672,7 +712,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -711,7 +755,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -750,7 +798,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -796,7 +848,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -832,7 +888,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -873,7 +933,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -914,7 +978,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }
@@ -954,7 +1022,11 @@ describe('GraphQL Feed Query Resolvers (TDD RED Phase)', () => {
               commentService: mockCommentService,
               followService: mockFollowService,
               likeService: mockLikeService,
-              postService: mockPostService
+              postService: mockPostService,
+              profileService: {} as any,
+              notificationService: {} as any,
+              authService: {} as any,
+              auctionService: {} as any
             }
           }
         }

@@ -30,12 +30,25 @@ describe('GraphQL Integration - Field Resolution', () => {
     server = createApolloServer();
     await server.start();
 
-    // Create mock service instances
-    mockProfileService = new ProfileService({} as any, 'test-table', 'test-bucket', 'test-domain', {} as any);
-    mockPostService = new PostService({} as any, 'test-table', mockProfileService);
-    mockLikeService = new LikeService({} as any, 'test-table');
-    const mockCommentService = new CommentService({} as any, 'test-table');
-    const mockFollowService = new FollowService({} as any, 'test-table');
+    // Create pure mock service objects (no real instantiation, no spies)
+    // Only mock methods that resolvers/loaders actually call
+    mockProfileService = {
+      getProfilesByIds: vi.fn(),
+      getProfileByHandle: vi.fn(),
+    } as unknown as ProfileService;
+
+    mockPostService = {
+      getPostById: vi.fn(),
+    } as unknown as PostService;
+
+    mockLikeService = {
+      getLikeStatusesByPostIds: vi.fn(),
+    } as unknown as LikeService;
+
+    const mockCommentService = {} as unknown as CommentService;
+    const mockFollowService = {
+      getFollowStatus: vi.fn(),
+    } as unknown as FollowService;
 
     mockContext = {
       userId: 'test-user-123',
@@ -47,11 +60,16 @@ describe('GraphQL Integration - Field Resolution', () => {
         likeService: mockLikeService,
         commentService: mockCommentService,
         followService: mockFollowService,
+        feedService: {} as any,
+        notificationService: {} as any,
+        authService: {} as any,
+        auctionService: {} as any,
       },
       loaders: createLoaders({
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: {} as any,
       }, 'test-user-123'),
     };
 
@@ -65,11 +83,16 @@ describe('GraphQL Integration - Field Resolution', () => {
         likeService: mockLikeService,
         commentService: mockCommentService,
         followService: mockFollowService,
+        feedService: {} as any,
+        notificationService: {} as any,
+        authService: {} as any,
+        auctionService: {} as any,
       },
       loaders: createLoaders({
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: {} as any,
       }, null),
     };
 
@@ -109,12 +132,12 @@ describe('GraphQL Integration - Field Resolution', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(PostService.prototype, 'getPostById').mockResolvedValue(mockPost);
+      (mockPostService.getPostById as ReturnType<typeof vi.fn>).mockResolvedValue(mockPost);
       // Mock batch methods used by DataLoaders
-      vi.spyOn(ProfileService.prototype, 'getProfilesByIds').mockResolvedValue(
+      (mockProfileService.getProfilesByIds as ReturnType<typeof vi.fn>).mockResolvedValue(
         new Map([['author-456', mockAuthor]])
       );
-      vi.spyOn(LikeService.prototype, 'getLikeStatusesByPostIds').mockResolvedValue(
+      (mockLikeService.getLikeStatusesByPostIds as ReturnType<typeof vi.fn>).mockResolvedValue(
         new Map([['post-123', { isLiked: true, likesCount: 5 }]])
       );
 
@@ -153,8 +176,8 @@ describe('GraphQL Integration - Field Resolution', () => {
       }
 
       // Verify batch methods were called by DataLoaders
-      expect(ProfileService.prototype.getProfilesByIds).toHaveBeenCalled();
-      expect(LikeService.prototype.getLikeStatusesByPostIds).toHaveBeenCalled();
+      expect(mockProfileService.getProfilesByIds).toHaveBeenCalled();
+      expect(mockLikeService.getLikeStatusesByPostIds).toHaveBeenCalled();
     });
 
     it('should resolve Post.author but return null for Post.isLiked (unauthenticated)', async () => {
@@ -184,12 +207,12 @@ describe('GraphQL Integration - Field Resolution', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(PostService.prototype, 'getPostById').mockResolvedValue(mockPost);
+      (mockPostService.getPostById as ReturnType<typeof vi.fn>).mockResolvedValue(mockPost);
       // Mock batch method used by DataLoader
-      vi.spyOn(ProfileService.prototype, 'getProfilesByIds').mockResolvedValue(
+      (mockProfileService.getProfilesByIds as ReturnType<typeof vi.fn>).mockResolvedValue(
         new Map([['author-456', mockAuthor]])
       );
-      const likeServiceSpy = vi.spyOn(LikeService.prototype, 'getLikeStatusesByPostIds');
+      const likeServiceSpy = (mockLikeService.getLikeStatusesByPostIds as ReturnType<typeof vi.fn>);
 
       const result = await server.executeOperation({
         query: `
@@ -235,8 +258,8 @@ describe('GraphQL Integration - Field Resolution', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue(mockProfile);
-      vi.spyOn(FollowService.prototype, 'getFollowStatus').mockResolvedValue({
+      (mockProfileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue(mockProfile);
+      (mockContext.services.followService.getFollowStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
         isFollowing: true,
         followersCount: 100,
         followingCount: 50,
@@ -265,7 +288,7 @@ describe('GraphQL Integration - Field Resolution', () => {
       }
 
       // Verify field resolver was called
-      expect(FollowService.prototype.getFollowStatus).toHaveBeenCalledWith('test-user-123', 'user-456');
+      expect(mockContext.services.followService.getFollowStatus).toHaveBeenCalledWith('test-user-123', 'user-456');
     });
 
     it('should return null for Profile.isFollowing when viewing own profile', async () => {
@@ -281,8 +304,8 @@ describe('GraphQL Integration - Field Resolution', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue(mockProfile);
-      const followServiceSpy = vi.spyOn(FollowService.prototype, 'getFollowStatus');
+      (mockProfileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue(mockProfile);
+      const followServiceSpy = (mockContext.services.followService.getFollowStatus as ReturnType<typeof vi.fn>);
 
       const result = await server.executeOperation({
         query: `
@@ -322,8 +345,8 @@ describe('GraphQL Integration - Field Resolution', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue(mockProfile);
-      const followServiceSpy = vi.spyOn(FollowService.prototype, 'getFollowStatus');
+      (mockProfileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue(mockProfile);
+      const followServiceSpy = (mockContext.services.followService.getFollowStatus as ReturnType<typeof vi.fn>);
 
       const result = await server.executeOperation({
         query: `

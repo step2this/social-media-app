@@ -41,7 +41,17 @@ describe('Query Limits Security', () => {
       userId: 'test-user',
       dynamoClient: {} as any,
       tableName: 'test-table',
-      services: {} as any,
+      services: {
+        profileService: {} as any,
+        postService: {} as any,
+        likeService: {} as any,
+        commentService: {} as any,
+        followService: {} as any,
+        feedService: {} as any,
+        notificationService: {} as any,
+        authService: {} as any,
+        auctionService: {} as any,
+      },
       loaders: {} as any,
     };
   });

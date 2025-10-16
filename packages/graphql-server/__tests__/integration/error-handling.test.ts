@@ -27,12 +27,23 @@ describe('GraphQL Integration - Error Handling', () => {
     server = createApolloServer();
     await server.start();
 
-    // Create mock service instances
-    const mockProfileService = new ProfileService({} as any, 'test-table', 'test-bucket', 'test-domain', {} as any);
-    const mockPostService = new PostService({} as any, 'test-table', mockProfileService);
-    const mockLikeService = new LikeService({} as any, 'test-table');
-    const mockCommentService = new CommentService({} as any, 'test-table');
-    const mockFollowService = new FollowService({} as any, 'test-table');
+    // Create pure mock service objects (no real instantiation, no spies)
+    // Only mock methods that resolvers actually call
+    const mockProfileService = {
+      getProfileByHandle: vi.fn(),
+    } as unknown as ProfileService;
+
+    const mockPostService = {
+      updatePost: vi.fn(),
+    } as unknown as PostService;
+
+    const mockLikeService = {} as unknown as LikeService;
+
+    const mockCommentService = {
+      deleteComment: vi.fn(),
+    } as unknown as CommentService;
+
+    const mockFollowService = {} as unknown as FollowService;
 
     mockContext = {
       userId: 'test-user-123',
@@ -44,11 +55,16 @@ describe('GraphQL Integration - Error Handling', () => {
         likeService: mockLikeService,
         commentService: mockCommentService,
         followService: mockFollowService,
+        feedService: {} as any,
+        notificationService: {} as any,
+        authService: {} as any,
+        auctionService: {} as any,
       },
       loaders: createLoaders({
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: {} as any,
       }, 'test-user-123'),
     };
 
@@ -62,11 +78,16 @@ describe('GraphQL Integration - Error Handling', () => {
         likeService: mockLikeService,
         commentService: mockCommentService,
         followService: mockFollowService,
+        feedService: {} as any,
+        notificationService: {} as any,
+        authService: {} as any,
+        auctionService: {} as any,
       },
       loaders: createLoaders({
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: {} as any,
       }, null),
     };
 
@@ -130,7 +151,7 @@ describe('GraphQL Integration - Error Handling', () => {
     });
 
     it('should allow public queries without authentication', async () => {
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue({
+      (mockContext.services.profileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'user-123',
         handle: 'publicuser',
         displayName: 'Public User',
@@ -164,7 +185,7 @@ describe('GraphQL Integration - Error Handling', () => {
 
   describe('Authorization Errors', () => {
     it('should return NOT_FOUND when updating non-existent post', async () => {
-      vi.spyOn(PostService.prototype, 'updatePost').mockResolvedValue(null);
+      (mockContext.services.postService.updatePost as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
       const result = await server.executeOperation({
         query: `
@@ -193,7 +214,7 @@ describe('GraphQL Integration - Error Handling', () => {
     });
 
     it('should return NOT_FOUND when deleting non-existent comment', async () => {
-      vi.spyOn(CommentService.prototype, 'deleteComment').mockResolvedValue(false);
+      (mockContext.services.commentService.deleteComment as ReturnType<typeof vi.fn>).mockResolvedValue(false);
 
       const result = await server.executeOperation({
         query: `
@@ -244,7 +265,7 @@ describe('GraphQL Integration - Error Handling', () => {
 
   describe('Validation Errors', () => {
     it('should return validation error for invalid cursor format', async () => {
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue({
+      (mockContext.services.profileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'user-123',
         handle: 'testuser',
         displayName: 'Test User',

@@ -31,18 +31,46 @@ describe('GraphQL Integration - Core Workflows', () => {
   let mockProfileService: ProfileService;
   let mockPostService: PostService;
   let mockLikeService: LikeService;
+  let mockCommentService: CommentService;
+  let mockFollowService: FollowService;
 
   beforeEach(async () => {
     server = createApolloServer();
     await server.start();
 
-    // Create mock service instances
-    mockProfileService = new ProfileService({} as any, 'test-table', 'test-bucket', 'test-domain', {} as any);
-    mockPostService = new PostService({} as any, 'test-table', mockProfileService);
-    mockLikeService = new LikeService({} as any, 'test-table');
+    // Create pure mock service objects (no real instantiation, no spies)
+    // Only mock methods that resolvers actually call
+    mockProfileService = {
+      getProfileById: vi.fn(),
+      getProfilesByIds: vi.fn(),
+      getProfileByHandle: vi.fn(),
+      generatePresignedUrl: vi.fn(),
+    } as unknown as ProfileService;
 
-    const mockCommentService = new CommentService({} as any, 'test-table');
-    const mockFollowService = new FollowService({} as any, 'test-table');
+    mockPostService = {
+      createPost: vi.fn(),
+      getPostById: vi.fn(),
+      updatePost: vi.fn(),
+      deletePost: vi.fn(),
+      getUserPosts: vi.fn(),
+    } as unknown as PostService;
+
+    mockLikeService = {
+      likePost: vi.fn(),
+      unlikePost: vi.fn(),
+      getLikeStatusesByPostIds: vi.fn(),
+    } as unknown as LikeService;
+
+    mockCommentService = {
+      createComment: vi.fn(),
+      deleteComment: vi.fn(),
+    } as unknown as CommentService;
+
+    mockFollowService = {
+      followUser: vi.fn(),
+      unfollowUser: vi.fn(),
+      getFollowStatus: vi.fn(),
+    } as unknown as FollowService;
 
     mockContext = {
       userId: 'test-user-123',
@@ -54,11 +82,16 @@ describe('GraphQL Integration - Core Workflows', () => {
         likeService: mockLikeService,
         commentService: mockCommentService,
         followService: mockFollowService,
+        feedService: {} as any,
+        notificationService: {} as any,
+        authService: {} as any,
+        auctionService: {} as any,
       },
       loaders: createLoaders({
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: {} as any,
       }, 'test-user-123'),
     };
 
@@ -72,11 +105,16 @@ describe('GraphQL Integration - Core Workflows', () => {
         likeService: mockLikeService,
         commentService: mockCommentService,
         followService: mockFollowService,
+        feedService: {} as any,
+        notificationService: {} as any,
+        authService: {} as any,
+        auctionService: {} as any,
       },
       loaders: createLoaders({
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
+        auctionService: {} as any,
       }, null),
     };
 
@@ -93,26 +131,43 @@ describe('GraphQL Integration - Core Workflows', () => {
       const postId = 'post-123';
       const userId = 'test-user-123';
 
-      // Step 1: Create post
-      const createPostResponse: CreatePostResponse = {
-        post: {
-          id: postId,
-          userId,
-          userHandle: 'testuser',
-          caption: 'Test post',
-          imageUrl: 'https://example.com/image.jpg',
-          thumbnailUrl: 'https://example.com/thumb.jpg',
-          likesCount: 0,
-          commentsCount: 0,
-          tags: [],
-          createdAt: '2024-01-01T00:00:00.000Z',
-          isLiked: false,
-        },
+      // Mock getProfileById (needed by createPost mutation)
+      (mockProfileService.getProfileById as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: 'test-user-123',
+        handle: 'testuser',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        bio: null,
+        profileImageUrl: null,
+        followersCount: 0,
+        followingCount: 0,
+        postsCount: 0,
+        createdAt: '2024-01-01T00:00:00.000Z',
+      });
+
+      // Mock generatePresignedUrl (needed by createPost mutation)
+      (mockProfileService.generatePresignedUrl as ReturnType<typeof vi.fn>).mockResolvedValue({
         uploadUrl: 'https://s3.example.com/upload',
-        thumbnailUploadUrl: 'https://s3.example.com/thumb-upload',
+        publicUrl: 'https://example.com/image.jpg',
+        thumbnailUrl: 'https://example.com/thumb.jpg',
+      });
+
+      // Step 1: Create post
+      const mockPost: Post = {
+        id: postId,
+        userId,
+        userHandle: 'testuser',
+        caption: 'Test post',
+        imageUrl: 'https://example.com/image.jpg',
+        thumbnailUrl: 'https://example.com/thumb.jpg',
+        likesCount: 0,
+        commentsCount: 0,
+        tags: [],
+        createdAt: '2024-01-01T00:00:00.000Z',
+        isLiked: false,
       };
 
-      vi.spyOn(PostService.prototype, 'createPost').mockResolvedValue(createPostResponse);
+      (mockPostService.createPost as ReturnType<typeof vi.fn>).mockResolvedValue(mockPost);
 
       const createResult = await server.executeOperation({
         query: `
@@ -141,20 +196,6 @@ describe('GraphQL Integration - Core Workflows', () => {
       }
 
       // Step 2: Get post with author profile resolution
-      const mockPost: Post = {
-        id: postId,
-        userId,
-        userHandle: 'testuser',
-        caption: 'Test post',
-        imageUrl: 'https://example.com/image.jpg',
-        thumbnailUrl: 'https://example.com/thumb.jpg',
-        likesCount: 0,
-        commentsCount: 0,
-        tags: [],
-        createdAt: '2024-01-01T00:00:00.000Z',
-        isLiked: false,
-      };
-
       const mockAuthor: PublicProfile = {
         id: userId,
         handle: 'testuser',
@@ -167,9 +208,9 @@ describe('GraphQL Integration - Core Workflows', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(PostService.prototype, 'getPostById').mockResolvedValue(mockPost);
+      (mockPostService.getPostById as ReturnType<typeof vi.fn>).mockResolvedValue(mockPost);
       // Mock batch method used by DataLoader
-      vi.spyOn(ProfileService.prototype, 'getProfilesByIds').mockResolvedValue(
+      (mockProfileService.getProfilesByIds as ReturnType<typeof vi.fn>).mockResolvedValue(
         new Map([[userId, mockAuthor]])
       );
 
@@ -202,7 +243,7 @@ describe('GraphQL Integration - Core Workflows', () => {
         caption: 'Updated caption',
       };
 
-      vi.spyOn(PostService.prototype, 'updatePost').mockResolvedValue(updatedPost);
+      (mockPostService.updatePost as ReturnType<typeof vi.fn>).mockResolvedValue(updatedPost);
 
       const updateResult = await server.executeOperation({
         query: `
@@ -226,7 +267,7 @@ describe('GraphQL Integration - Core Workflows', () => {
       }
 
       // Step 4: Delete post
-      vi.spyOn(PostService.prototype, 'deletePost').mockResolvedValue(true);
+      (mockPostService.deletePost as ReturnType<typeof vi.fn>).mockResolvedValue(true);
 
       const deleteResult = await server.executeOperation({
         query: `
@@ -252,7 +293,7 @@ describe('GraphQL Integration - Core Workflows', () => {
       const postId = 'post-123';
 
       // Step 1: Like post
-      vi.spyOn(LikeService.prototype, 'likePost').mockResolvedValue({
+      (mockLikeService.likePost as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: true,
         likesCount: 1,
         isLiked: true,
@@ -293,9 +334,9 @@ describe('GraphQL Integration - Core Workflows', () => {
         isLiked: false,
       };
 
-      vi.spyOn(PostService.prototype, 'getPostById').mockResolvedValue(mockPost);
+      (mockPostService.getPostById as ReturnType<typeof vi.fn>).mockResolvedValue(mockPost);
       // Mock batch method used by DataLoader
-      vi.spyOn(LikeService.prototype, 'getLikeStatusesByPostIds').mockResolvedValue(
+      (mockLikeService.getLikeStatusesByPostIds as ReturnType<typeof vi.fn>).mockResolvedValue(
         new Map([[postId, { isLiked: true, likesCount: 1 }]])
       );
 
@@ -319,7 +360,7 @@ describe('GraphQL Integration - Core Workflows', () => {
       }
 
       // Step 3: Unlike post
-      vi.spyOn(LikeService.prototype, 'unlikePost').mockResolvedValue({
+      (mockLikeService.unlikePost as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: true,
         likesCount: 0,
         isLiked: false,
@@ -351,7 +392,7 @@ describe('GraphQL Integration - Core Workflows', () => {
       const targetUserId = 'user-456';
 
       // Step 1: Follow user
-      vi.spyOn(FollowService.prototype, 'followUser').mockResolvedValue({
+      (mockFollowService.followUser as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: true,
         followersCount: 1,
         followingCount: 1,
@@ -390,8 +431,8 @@ describe('GraphQL Integration - Core Workflows', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue(mockProfile);
-      vi.spyOn(FollowService.prototype, 'getFollowStatus').mockResolvedValue({
+      (mockProfileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue(mockProfile);
+      (mockFollowService.getFollowStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
         isFollowing: true,
         followersCount: 1,
         followingCount: 0,
@@ -418,7 +459,7 @@ describe('GraphQL Integration - Core Workflows', () => {
       }
 
       // Step 3: Unfollow user
-      vi.spyOn(FollowService.prototype, 'unfollowUser').mockResolvedValue({
+      (mockFollowService.unfollowUser as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: true,
         followersCount: 0,
         followingCount: 0,
@@ -450,6 +491,35 @@ describe('GraphQL Integration - Core Workflows', () => {
       const postId = 'post-123';
       const commentId = 'comment-123';
 
+      // Mock getProfileById (needed by createComment mutation)
+      (mockProfileService.getProfileById as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: 'test-user-123',
+        handle: 'testuser',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        bio: null,
+        profileImageUrl: null,
+        followersCount: 0,
+        followingCount: 0,
+        postsCount: 0,
+        createdAt: '2024-01-01T00:00:00.000Z',
+      });
+
+      // Mock getPostById (needed by createComment mutation to get post details)
+      (mockPostService.getPostById as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: postId,
+        userId: 'other-user',
+        userHandle: 'otheruser',
+        caption: 'Original post',
+        imageUrl: 'https://example.com/image.jpg',
+        thumbnailUrl: 'https://example.com/thumb.jpg',
+        likesCount: 0,
+        commentsCount: 0,
+        tags: [],
+        createdAt: '2024-01-01T00:00:00.000Z',
+        isLiked: false,
+      });
+
       // Step 1: Create comment
       const mockComment: Comment = {
         id: commentId,
@@ -461,7 +531,7 @@ describe('GraphQL Integration - Core Workflows', () => {
         updatedAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(CommentService.prototype, 'createComment').mockResolvedValue(mockComment);
+      (mockCommentService.createComment as ReturnType<typeof vi.fn>).mockResolvedValue(mockComment);
 
       const createResult = await server.executeOperation({
         query: `
@@ -498,13 +568,11 @@ describe('GraphQL Integration - Core Workflows', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'getProfileById').mockResolvedValue(mockAuthor);
-
       // Note: We'd need a getCommentById query for this, but for now we verify
       // the comment includes userId which can be used to resolve author
 
       // Step 3: Delete comment
-      vi.spyOn(CommentService.prototype, 'deleteComment').mockResolvedValue(true);
+      (mockCommentService.deleteComment as ReturnType<typeof vi.fn>).mockResolvedValue(true);
 
       const deleteResult = await server.executeOperation({
         query: `
@@ -541,7 +609,7 @@ describe('GraphQL Integration - Core Workflows', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'getProfileById').mockResolvedValue(mockOwnProfile);
+      (mockProfileService.getProfileById as ReturnType<typeof vi.fn>).mockResolvedValue(mockOwnProfile);
 
       const meResult = await server.executeOperation({
         query: `
@@ -576,7 +644,7 @@ describe('GraphQL Integration - Core Workflows', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue(mockPublicProfile);
+      (mockProfileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue(mockPublicProfile);
 
       const profileResult = await server.executeOperation({
         query: `
@@ -618,7 +686,7 @@ describe('GraphQL Integration - Core Workflows', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue(mockProfile);
+      (mockProfileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue(mockProfile);
 
       // Step 2: Get first page of posts
       const mockPosts: Post[] = [
@@ -650,7 +718,7 @@ describe('GraphQL Integration - Core Workflows', () => {
         },
       ];
 
-      vi.spyOn(PostService.prototype, 'getUserPosts').mockResolvedValue({
+      (mockPostService.getUserPosts as ReturnType<typeof vi.fn>).mockResolvedValue({
         posts: mockPosts,
         hasMore: true,
         nextCursor: 'next-page-cursor',

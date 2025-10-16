@@ -29,14 +29,23 @@ describe('Query Resolvers', () => {
   let mockContext: GraphQLContext;
 
   beforeEach(() => {
-    // Create mock service instances
-    const mockProfileService = new ProfileService({} as any, 'test-table', 'test-bucket', 'test-domain', {} as any);
-    const mockPostService = new PostService({} as any, 'test-table', mockProfileService);
-    const mockLikeService = new LikeService({} as any, 'test-table');
-    const mockCommentService = new CommentService({} as any, 'test-table');
-    const mockFollowService = new FollowService({} as any, 'test-table');
+    // Create pure mock service objects (no real instantiation, no spies)
+    // Only mock methods that resolvers actually call
+    const mockProfileService = {
+      getProfileById: vi.fn(),
+      getProfileByHandle: vi.fn(),
+    } as unknown as ProfileService;
 
-    // Create minimal mock context (no DynamoDB mocking needed)
+    const mockPostService = {
+      getPostById: vi.fn(),
+      getUserPosts: vi.fn(),
+    } as unknown as PostService;
+
+    const mockLikeService = {} as unknown as LikeService;
+    const mockCommentService = {} as unknown as CommentService;
+    const mockFollowService = {} as unknown as FollowService;
+
+    // Create minimal mock context with pure mocks
     mockContext = {
       userId: 'test-user-123',
       dynamoClient: {} as any,
@@ -47,6 +56,10 @@ describe('Query Resolvers', () => {
         likeService: mockLikeService,
         commentService: mockCommentService,
         followService: mockFollowService,
+        feedService: {} as any,
+        notificationService: {} as any,
+        authService: {} as any,
+        auctionService: {} as any,
       },
       loaders: {} as any,
     };
@@ -75,7 +88,7 @@ describe('Query Resolvers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'getProfileById').mockResolvedValue(mockProfile);
+      (mockContext.services.profileService.getProfileById as ReturnType<typeof vi.fn>).mockResolvedValue(mockProfile);
 
       const result = await Query.me({}, {}, mockContext, {} as any);
 
@@ -110,7 +123,7 @@ describe('Query Resolvers', () => {
     });
 
     it('should throw NOT_FOUND error when profile does not exist', async () => {
-      vi.spyOn(ProfileService.prototype, 'getProfileById').mockResolvedValue(null);
+      (mockContext.services.profileService.getProfileById as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
       try {
         await Query.me({}, {}, mockContext, {} as any);
@@ -139,7 +152,7 @@ describe('Query Resolvers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue(
+      (mockContext.services.profileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue(
         mockPublicProfile
       );
 
@@ -158,7 +171,7 @@ describe('Query Resolvers', () => {
     });
 
     it('should return null when profile not found (not an error)', async () => {
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue(null);
+      (mockContext.services.profileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
       const result = await Query.profile(
         {},
@@ -188,7 +201,7 @@ describe('Query Resolvers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue(
+      (mockContext.services.profileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue(
         mockPublicProfile
       );
 
@@ -220,7 +233,7 @@ describe('Query Resolvers', () => {
         isLiked: false,
       };
 
-      vi.spyOn(PostService.prototype, 'getPostById').mockResolvedValue(mockPost);
+      (mockContext.services.postService.getPostById as ReturnType<typeof vi.fn>).mockResolvedValue(mockPost);
 
       const result = await Query.post({}, { id: 'post-123' }, mockContext, {} as any);
 
@@ -231,7 +244,7 @@ describe('Query Resolvers', () => {
     });
 
     it('should return null when post not found (not an error)', async () => {
-      vi.spyOn(PostService.prototype, 'getPostById').mockResolvedValue(null);
+      (mockContext.services.postService.getPostById as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
       const result = await Query.post(
         {},
@@ -263,7 +276,7 @@ describe('Query Resolvers', () => {
         isLiked: false,
       };
 
-      vi.spyOn(PostService.prototype, 'getPostById').mockResolvedValue(mockPost);
+      (mockContext.services.postService.getPostById as ReturnType<typeof vi.fn>).mockResolvedValue(mockPost);
 
       const result = await Query.post(
         {},
@@ -291,7 +304,7 @@ describe('Query Resolvers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue(
+      (mockContext.services.profileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue(
         mockProfile
       );
 
@@ -325,7 +338,7 @@ describe('Query Resolvers', () => {
         },
       ];
 
-      vi.spyOn(PostService.prototype, 'getUserPosts').mockResolvedValue({
+      (mockContext.services.postService.getUserPosts as ReturnType<typeof vi.fn>).mockResolvedValue({
         posts: mockPosts,
         hasMore: true,
         nextCursor: 'next-page-cursor',
@@ -370,11 +383,11 @@ describe('Query Resolvers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue(
+      (mockContext.services.profileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue(
         mockProfile
       );
 
-      vi.spyOn(PostService.prototype, 'getUserPosts').mockResolvedValue({
+      (mockContext.services.postService.getUserPosts as ReturnType<typeof vi.fn>).mockResolvedValue({
         posts: [],
         hasMore: false,
         nextCursor: undefined,
@@ -393,7 +406,7 @@ describe('Query Resolvers', () => {
     });
 
     it('should throw NOT_FOUND error when user does not exist', async () => {
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue(null);
+      (mockContext.services.profileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
       try {
         await Query.userPosts({}, { handle: 'nonexistent' }, mockContext, {} as any);
@@ -420,7 +433,7 @@ describe('Query Resolvers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue(
+      (mockContext.services.profileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue(
         mockProfile
       );
 
@@ -447,13 +460,11 @@ describe('Query Resolvers', () => {
       };
 
       // Mock getUserPosts to verify cursor is decoded and passed
-      const getUserPostsSpy = vi
-        .spyOn(PostService.prototype, 'getUserPosts')
-        .mockResolvedValue({
-          posts: [mockPost],
-          hasMore: false,
-          nextCursor: undefined,
-        });
+      (mockContext.services.postService.getUserPosts as ReturnType<typeof vi.fn>).mockResolvedValue({
+        posts: [mockPost],
+        hasMore: false,
+        nextCursor: undefined,
+      });
 
       const result = await Query.userPosts(
         {},
@@ -463,7 +474,7 @@ describe('Query Resolvers', () => {
       );
 
       // Verify cursor was passed as-is (base64 string) to service
-      expect(getUserPostsSpy).toHaveBeenCalledWith(
+      expect(mockContext.services.postService.getUserPosts).toHaveBeenCalledWith(
         'user-123',  // userId
         10,          // limit
         cursor       // cursor as base64 string
@@ -486,7 +497,7 @@ describe('Query Resolvers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue(
+      (mockContext.services.profileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue(
         mockProfile
       );
 
@@ -523,22 +534,20 @@ describe('Query Resolvers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(ProfileService.prototype, 'getProfileByHandle').mockResolvedValue(
+      (mockContext.services.profileService.getProfileByHandle as ReturnType<typeof vi.fn>).mockResolvedValue(
         mockProfile
       );
 
-      const getUserPostsSpy = vi
-        .spyOn(PostService.prototype, 'getUserPosts')
-        .mockResolvedValue({
-          posts: [],
-          hasMore: false,
-          nextCursor: undefined,
-        });
+      (mockContext.services.postService.getUserPosts as ReturnType<typeof vi.fn>).mockResolvedValue({
+        posts: [],
+        hasMore: false,
+        nextCursor: undefined,
+      });
 
       await Query.userPosts({}, { handle: 'testuser' }, mockContext, {} as any);
 
       // Verify default limit is 10
-      expect(getUserPostsSpy).toHaveBeenCalledWith(
+      expect(mockContext.services.postService.getUserPosts).toHaveBeenCalledWith(
         'user-123',  // userId
         10,          // limit
         undefined    // cursor

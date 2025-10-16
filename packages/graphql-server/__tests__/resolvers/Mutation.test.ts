@@ -37,14 +37,73 @@ describe('Mutation Resolvers', () => {
   let mockContext: GraphQLContext;
 
   beforeEach(() => {
-    // Create mock service instances
-    const mockProfileService = new ProfileService({} as any, 'test-table', 'test-bucket', 'test-domain', {} as any);
-    const mockPostService = new PostService({} as any, 'test-table', mockProfileService);
-    const mockLikeService = new LikeService({} as any, 'test-table');
-    const mockCommentService = new CommentService({} as any, 'test-table');
-    const mockFollowService = new FollowService({} as any, 'test-table');
+    // Create pure mock service objects (no real instantiation, no spies)
+    // Only mock methods that resolvers actually call
+    const mockProfileService = {
+      getProfileById: vi.fn().mockResolvedValue({
+        id: 'test-user-123',
+        handle: 'testuser',
+        username: 'test@example.com',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        fullName: 'Test User',
+        bio: null,
+        profilePictureUrl: null,
+        followersCount: 0,
+        followingCount: 0,
+        postsCount: 0,
+        createdAt: '2024-01-01T00:00:00.000Z',
+      }),
+      generatePresignedUrl: vi.fn().mockResolvedValue({
+        uploadUrl: 'https://s3.example.com/upload-url',
+        publicUrl: 'https://example.com/image.jpg',
+      }),
+      updateProfile: vi.fn(),
+    } as unknown as ProfileService;
 
-    // Create minimal mock context
+    const mockPostService = {
+      createPost: vi.fn(),
+      getPostById: vi.fn().mockResolvedValue({
+        id: 'post-123',
+        userId: 'test-user-123',
+        userHandle: 'testuser',
+        caption: 'Test post',
+        imageUrl: 'https://example.com/image.jpg',
+        thumbnailUrl: 'https://example.com/thumb.jpg',
+        likesCount: 0,
+        commentsCount: 0,
+        tags: [],
+        createdAt: '2024-01-01T00:00:00.000Z',
+        isLiked: false,
+      }),
+      updatePost: vi.fn(),
+      deletePost: vi.fn(),
+    } as unknown as PostService;
+
+    const mockLikeService = {
+      likePost: vi.fn(),
+      unlikePost: vi.fn(),
+    } as unknown as LikeService;
+
+    const mockCommentService = {
+      createComment: vi.fn(),
+      deleteComment: vi.fn(),
+      getCommentById: vi.fn().mockResolvedValue({
+        id: 'comment-123',
+        postId: 'post-123',
+        userId: 'test-user-123',
+        userHandle: 'testuser',
+        content: 'Test comment',
+        createdAt: '2024-01-01T00:00:00.000Z',
+      }),
+    } as unknown as CommentService;
+
+    const mockFollowService = {
+      followUser: vi.fn(),
+      unfollowUser: vi.fn(),
+    } as unknown as FollowService;
+
+    // Create minimal mock context with pure mocks
     mockContext = {
       userId: 'test-user-123',
       dynamoClient: {} as any,
@@ -55,6 +114,10 @@ describe('Mutation Resolvers', () => {
         likeService: mockLikeService,
         commentService: mockCommentService,
         followService: mockFollowService,
+        feedService: {} as any,
+        notificationService: {} as any,
+        authService: {} as any,
+        auctionService: {} as any,
       },
       loaders: {} as any,
     };
@@ -69,25 +132,22 @@ describe('Mutation Resolvers', () => {
 
   describe('createPost', () => {
     it('should create post when authenticated', async () => {
-      const mockResponse: CreatePostResponse = {
-        post: {
-          id: 'post-123',
-          userId: 'test-user-123',
-          userHandle: 'testuser',
-          caption: 'New post',
-          imageUrl: 'https://example.com/image.jpg',
-          thumbnailUrl: 'https://example.com/thumb.jpg',
-          likesCount: 0,
-          commentsCount: 0,
-          tags: [],
-          createdAt: '2024-01-01T00:00:00.000Z',
-          isLiked: false,
-        },
-        uploadUrl: 'https://s3.example.com/upload-url',
-        thumbnailUploadUrl: 'https://s3.example.com/thumbnail-upload-url',
+      const mockPost: Post = {
+        id: 'post-123',
+        userId: 'test-user-123',
+        userHandle: 'testuser',
+        caption: 'New post',
+        imageUrl: 'https://example.com/image.jpg',
+        thumbnailUrl: 'https://example.com/thumb.jpg',
+        likesCount: 0,
+        commentsCount: 0,
+        tags: [],
+        createdAt: '2024-01-01T00:00:00.000Z',
+        isLiked: false,
       };
 
-      vi.spyOn(PostService.prototype, 'createPost').mockResolvedValue(mockResponse);
+      // Mock the service method to return just a Post (resolver builds the response)
+      (mockContext.services.postService.createPost as ReturnType<typeof vi.fn>).mockResolvedValue(mockPost);
 
       const result = await Mutation.createPost(
         {},
@@ -96,9 +156,9 @@ describe('Mutation Resolvers', () => {
         {} as any
       );
 
-      expect(result).toEqual(mockResponse);
+      expect(result.post).toEqual(mockPost);
       expect(result.post.id).toBe('post-123');
-      expect(result.uploadUrl).toBeDefined();
+      expect(result.uploadUrl).toBe('https://s3.example.com/upload-url');
       expect(result.thumbnailUploadUrl).toBeDefined();
     });
 
@@ -149,7 +209,7 @@ describe('Mutation Resolvers', () => {
         isLiked: false,
       };
 
-      vi.spyOn(PostService.prototype, 'updatePost').mockResolvedValue(mockPost);
+      (mockContext.services.postService.updatePost as ReturnType<typeof vi.fn>).mockResolvedValue(mockPost);
 
       const result = await Mutation.updatePost(
         {},
@@ -193,7 +253,7 @@ describe('Mutation Resolvers', () => {
     });
 
     it('should throw NOT_FOUND when post does not exist', async () => {
-      vi.spyOn(PostService.prototype, 'updatePost').mockResolvedValue(null);
+      (mockContext.services.postService.updatePost as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
       try {
         await Mutation.updatePost(
@@ -215,7 +275,7 @@ describe('Mutation Resolvers', () => {
 
   describe('deletePost', () => {
     it('should delete post when user is the owner', async () => {
-      vi.spyOn(PostService.prototype, 'deletePost').mockResolvedValue(true);
+      (mockContext.services.postService.deletePost as ReturnType<typeof vi.fn>).mockResolvedValue(true);
 
       const result = await Mutation.deletePost(
         {},
@@ -248,7 +308,7 @@ describe('Mutation Resolvers', () => {
     });
 
     it('should throw NOT_FOUND when post does not exist', async () => {
-      vi.spyOn(PostService.prototype, 'deletePost').mockResolvedValue(false);
+      (mockContext.services.postService.deletePost as ReturnType<typeof vi.fn>).mockResolvedValue(false);
 
       try {
         await Mutation.deletePost({}, { id: 'nonexistent' }, mockContext, {} as any);
@@ -271,7 +331,7 @@ describe('Mutation Resolvers', () => {
         isLiked: true,
       };
 
-      vi.spyOn(LikeService.prototype, 'likePost').mockResolvedValue(mockResponse);
+      (mockContext.services.likeService.likePost as ReturnType<typeof vi.fn>).mockResolvedValue(mockResponse);
 
       const result = await Mutation.likePost(
         {},
@@ -315,7 +375,7 @@ describe('Mutation Resolvers', () => {
         isLiked: false,
       };
 
-      vi.spyOn(LikeService.prototype, 'unlikePost').mockResolvedValue(mockResponse);
+      (mockContext.services.likeService.unlikePost as ReturnType<typeof vi.fn>).mockResolvedValue(mockResponse);
 
       const result = await Mutation.unlikePost(
         {},
@@ -360,7 +420,7 @@ describe('Mutation Resolvers', () => {
         isFollowing: true,
       };
 
-      vi.spyOn(FollowService.prototype, 'followUser').mockResolvedValue(mockResponse);
+      (mockContext.services.followService.followUser as ReturnType<typeof vi.fn>).mockResolvedValue(mockResponse);
 
       const result = await Mutation.followUser(
         {},
@@ -422,7 +482,7 @@ describe('Mutation Resolvers', () => {
         isFollowing: false,
       };
 
-      vi.spyOn(FollowService.prototype, 'unfollowUser').mockResolvedValue(mockResponse);
+      (mockContext.services.followService.unfollowUser as ReturnType<typeof vi.fn>).mockResolvedValue(mockResponse);
 
       const result = await Mutation.unfollowUser(
         {},
@@ -469,7 +529,7 @@ describe('Mutation Resolvers', () => {
         updatedAt: '2024-01-01T00:00:00.000Z',
       };
 
-      vi.spyOn(CommentService.prototype, 'createComment').mockResolvedValue(mockComment);
+      (mockContext.services.commentService.createComment as ReturnType<typeof vi.fn>).mockResolvedValue(mockComment);
 
       const result = await Mutation.createComment(
         {},
@@ -516,7 +576,7 @@ describe('Mutation Resolvers', () => {
 
   describe('deleteComment', () => {
     it('should delete comment when user is the owner', async () => {
-      vi.spyOn(CommentService.prototype, 'deleteComment').mockResolvedValue(true);
+      (mockContext.services.commentService.deleteComment as ReturnType<typeof vi.fn>).mockResolvedValue(true);
 
       const result = await Mutation.deleteComment(
         {},
@@ -549,7 +609,7 @@ describe('Mutation Resolvers', () => {
     });
 
     it('should throw NOT_FOUND when comment does not exist', async () => {
-      vi.spyOn(CommentService.prototype, 'deleteComment').mockResolvedValue(false);
+      (mockContext.services.commentService.deleteComment as ReturnType<typeof vi.fn>).mockResolvedValue(false);
 
       try {
         await Mutation.deleteComment({}, { id: 'nonexistent' }, mockContext, {} as any);
