@@ -410,4 +410,66 @@ export const Query: QueryResolvers = {
 
     return count;
   },
+
+  /**
+   * Get auction by ID
+   * Public - no authentication required
+   */
+  // @ts-ignore - DAL Auction type differs from GraphQL Auction type (seller/winner field resolvers handle missing fields)
+  auction: async (_parent, args, context) => {
+    // Get auction by ID
+    const auction = await context.services.auctionService.getAuction(args.id);
+
+    // Return null if not found (not an error)
+    return auction || null;
+  },
+
+  /**
+   * Get paginated auctions
+   * Public - no authentication required
+   * Supports filtering by status and userId
+   */
+  // @ts-ignore - DAL Auction type differs from GraphQL Auction type (seller/winner field resolvers handle missing fields)
+  auctions: async (_parent, args, context) => {
+    // Get auctions from service
+    const result = await context.services.auctionService.listAuctions({
+      limit: args.limit || 20,
+      cursor: args.cursor,
+      status: args.status,
+      userId: args.userId,
+    });
+
+    // Transform to Relay connection
+    const edges = result.auctions.map((auction) => ({
+      node: auction,
+      cursor: Buffer.from(JSON.stringify({ id: auction.id, createdAt: auction.createdAt })).toString('base64'),
+    }));
+
+    return {
+      edges,
+      pageInfo: {
+        hasNextPage: result.hasMore,
+        hasPreviousPage: false,
+        startCursor: edges[0]?.cursor || null,
+        endCursor: edges[edges.length - 1]?.cursor || null,
+      },
+    };
+  },
+
+  /**
+   * Get bid history for an auction
+   * Public - no authentication required
+   */
+  bids: async (_parent, args, context) => {
+    // Get bid history from service
+    const result = await context.services.auctionService.getBidHistory(
+      args.auctionId,
+      { limit: args.limit || 50, offset: args.offset || 0 }
+    );
+
+    return {
+      bids: result.bids,
+      total: result.total,
+    };
+  },
 };

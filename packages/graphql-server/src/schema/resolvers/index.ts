@@ -10,6 +10,7 @@ import { Mutation } from './Mutation.js';
 import { Profile } from './Profile.js';
 import { Post } from './Post.js';
 import { Comment } from './Comment.js';
+import { Auction } from './Auction.js';
 
 /**
  * Combined resolvers object for Apollo Server
@@ -19,6 +20,7 @@ import { Comment } from './Comment.js';
  * - Profile: isFollowing
  * - Post: author, isLiked
  * - Comment: author
+ * - Auction: seller, winner
  */
 export const resolvers = {
   Query,
@@ -26,4 +28,5 @@ export const resolvers = {
   Profile,
   Post,
   Comment,
+  Auction,
 };

@@ -690,4 +690,94 @@ export const Mutation: MutationResolvers = {
       });
     }
   },
+
+  /**
+   * Create a new auction
+   * Requires authentication
+   * Returns auction with presigned S3 upload URL for image
+   */
+  // @ts-ignore - DAL Auction type differs from GraphQL Auction type (seller/winner field resolvers handle missing fields)
+  createAuction: async (_parent, args, context) => {
+    if (!context.userId) {
+      throw new GraphQLError('Authentication required', {
+        extensions: { code: 'UNAUTHENTICATED' },
+      });
+    }
+
+    // Generate S3 presigned URL for auction image upload (if fileType provided)
+    let uploadUrl: string | undefined;
+    let publicUrl: string | undefined;
+
+    if (args.input.fileType) {
+      // Use ProfileService to generate presigned URL (same pattern as createPost)
+      const imageUploadData = await context.services.profileService.generatePresignedUrl(
+        context.userId,
+        {
+          fileType: args.input.fileType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+          purpose: 'auction-image',
+        }
+      );
+
+      uploadUrl = imageUploadData.uploadUrl;
+      publicUrl = imageUploadData.publicUrl;
+    }
+
+    // Create auction with public URL
+    const auction = await context.services.auctionService.createAuction(
+      context.userId,
+      args.input,
+      publicUrl
+    );
+
+    return {
+      auction,
+      uploadUrl,
+    };
+  },
+
+  /**
+   * Activate an auction
+   * Requires authentication and ownership
+   * Transitions auction from 'pending' to 'active' status
+   */
+  // @ts-ignore - DAL Auction type differs from GraphQL Auction type (seller/winner field resolvers handle missing fields)
+  activateAuction: async (_parent, args, context) => {
+    if (!context.userId) {
+      throw new GraphQLError('Authentication required', {
+        extensions: { code: 'UNAUTHENTICATED' },
+      });
+    }
+
+    // Activate auction (service handles ownership check)
+    const auction = await context.services.auctionService.activateAuction(
+      args.id,
+      context.userId
+    );
+
+    return auction;
+  },
+
+  /**
+   * Place a bid on an auction
+   * Requires authentication
+   * Returns the created bid and updated auction
+   */
+  placeBid: async (_parent, args, context) => {
+    if (!context.userId) {
+      throw new GraphQLError('Authentication required', {
+        extensions: { code: 'UNAUTHENTICATED' },
+      });
+    }
+
+    // Place bid (service handles validation and updates auction)
+    const result = await context.services.auctionService.placeBid(
+      context.userId,
+      args.input
+    );
+
+    return {
+      bid: result.bid,
+      auction: result.auction,
+    } as any;
+  },
 };
