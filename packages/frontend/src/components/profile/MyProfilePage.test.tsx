@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { BrowserRouter } from 'react-router-dom';
 import { MyProfilePage } from './MyProfilePage';
 import { useAuth } from '../../hooks/useAuth';
 import { profileService } from '../../services/profileService';
+import { renderWithRouter } from '../../test-utils/render-helpers';
 
 // Mock dependencies
 vi.mock('../../hooks/useAuth');
@@ -16,14 +16,6 @@ vi.mock('../../services/profileService', () => ({
 }));
 
 const mockUseAuth = useAuth as MockedFunction<typeof useAuth>;
-
-const renderWithRouter = (component: React.ReactElement<any>) => {
-  return render(
-    <BrowserRouter>
-      {component}
-    </BrowserRouter>
-  );
-};
 
 describe('MyProfilePage Component', () => {
   const mockProfile = {

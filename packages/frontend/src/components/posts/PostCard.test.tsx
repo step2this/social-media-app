@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { screen } from '@testing-library/react';
 import { PostCard } from './PostCard';
 import type { Post } from '@social-media-app/shared';
+import { renderWithRouter } from '../../test-utils/render-helpers';
 
 // Mock the hooks and components
 vi.mock('../../hooks/useLike', () => ({
@@ -46,10 +46,6 @@ describe('PostCard', () => {
     createdAt: '2025-10-09T10:00:00Z',
     updatedAt: '2025-10-09T10:00:00Z',
     isLiked: false
-  };
-
-  const renderWithRouter = (component: React.ReactElement<any>) => {
-    return render(<BrowserRouter>{component}</BrowserRouter>);
   };
 
   beforeEach(() => {

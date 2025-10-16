@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { screen, waitFor } from '@testing-library/react';
 import { ProtectedRoute } from './ProtectedRoute';
 import { useAuth } from '../../hooks/useAuth';
+import { renderWithRouter } from '../../test-utils/render-helpers';
 
 // Mock useAuth hook
 vi.mock('../../hooks/useAuth', () => ({
@@ -23,14 +23,6 @@ vi.mock('react-router-dom', async () => {
 });
 
 const TestComponent = () => <div data-testid="protected-content">Protected Content</div>;
-
-const renderWithRouter = (component: React.ReactElement<any>) => {
-  return render(
-    <BrowserRouter>
-      {component}
-    </BrowserRouter>
-  );
-};
 
 describe('ProtectedRoute', () => {
   beforeEach(() => {

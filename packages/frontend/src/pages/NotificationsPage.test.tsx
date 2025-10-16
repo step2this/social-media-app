@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { NotificationsPage } from './NotificationsPage';
 import { notificationService } from '../services/notificationService';
 import type { Notification } from '@social-media-app/shared';
+import { renderWithRouter } from '../test-utils/render-helpers';
 
 // Mock the notification service
 vi.mock('../services/notificationService');
@@ -17,15 +17,6 @@ vi.mock('react-router-dom', async () => {
     useNavigate: () => mockNavigate
   };
 });
-
-/**
- * Helper function to render components with router context
- */
-const renderWithRouter = (component: React.ReactElement<any>) => render(
-    <BrowserRouter>
-      {component}
-    </BrowserRouter>
-  );
 
 /**
  * Helper function to create mock notifications

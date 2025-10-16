@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { CommentList } from './CommentList';
 import { commentService } from '../../services/commentService';
+import { renderWithRouter } from '../../test-utils/render-helpers';
 import type { Comment } from '@social-media-app/shared';
 
 // Mock commentService
@@ -14,11 +15,6 @@ vi.mock('../../services/commentService', () => ({
     deleteComment: vi.fn()
   }
 }));
-
-// Helper to render with router
-const renderWithRouter = (component: React.ReactElement<any>) => {
-  return render(<MemoryRouter>{component}</MemoryRouter>);
-};
 
 describe('CommentList', () => {
   const mockPostId = 'post-123';

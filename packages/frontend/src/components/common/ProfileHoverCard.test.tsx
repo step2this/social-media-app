@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import { ProfileHoverCard } from './ProfileHoverCard.js';
 import * as profileService from '../../services/profileService.js';
+import { renderWithRouter } from '../../test-utils/render-helpers.js';
 
 // Mock the profile service
 vi.mock('../../services/profileService.js', () => ({
@@ -47,10 +48,6 @@ vi.mock('../../hooks/useAuth.js', () => ({
     clearError: vi.fn()
   }))
 }));
-
-const renderWithRouter = (component: React.ReactElement<any>) => {
-  return render(<MemoryRouter>{component}</MemoryRouter>);
-};
 
 const mockProfile = {
   id: 'user-123',
@@ -494,9 +491,9 @@ describe('ProfileHoverCard', () => {
       );
 
       rerender(
-        <MemoryRouter>
+        <BrowserRouter>
           <ProfileHoverCard userId="user-456" userHandle="otheruser" isVisible={false} position={{ x: 0, y: 0 }} />
-        </MemoryRouter>
+        </BrowserRouter>
       );
 
       expect(profileService.profileService.getProfileByHandle).not.toHaveBeenCalled();
