@@ -3,11 +3,17 @@
  *
  * Implements all root-level Mutation resolvers for the GraphQL schema.
  * Handles write operations for auth, posts, comments, likes, and follows.
+ *
+ * Uses Zod schemas from @social-media-app/shared for business rule validation.
  */
 
 import { GraphQLError } from 'graphql';
 import type { MutationResolvers } from '../generated/types.js';
 import { QueryCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  CreateAuctionRequestSchema,
+  PlaceBidRequestSchema,
+} from '@social-media-app/shared';
 
 /**
  * Mutation resolvers
@@ -695,6 +701,12 @@ export const Mutation: MutationResolvers = {
    * Create a new auction
    * Requires authentication
    * Returns auction with presigned S3 upload URL for image
+   *
+   * Validates input with Zod schema to enforce business rules:
+   * - Title: 3-200 characters
+   * - Description: max 2000 characters
+   * - Prices: positive, max 2 decimal places
+   * - Times: endTime must be after startTime
    */
   // @ts-ignore - DAL Auction type differs from GraphQL Auction type (seller/winner field resolvers handle missing fields)
   createAuction: async (_parent, args, context) => {
@@ -704,16 +716,31 @@ export const Mutation: MutationResolvers = {
       });
     }
 
+    // ✅ Validate input with Zod schema (business rules)
+    const validationResult = CreateAuctionRequestSchema.safeParse(args.input);
+
+    if (!validationResult.success) {
+      throw new GraphQLError('Validation failed', {
+        extensions: {
+          code: 'BAD_USER_INPUT',
+          validationErrors: validationResult.error.format(),
+        },
+      });
+    }
+
+    // Use validated data (with Zod transformations applied)
+    const validatedInput = validationResult.data;
+
     // Generate S3 presigned URL for auction image upload (if fileType provided)
     let uploadUrl: string | undefined;
     let publicUrl: string | undefined;
 
-    if (args.input.fileType) {
+    if (validatedInput.fileType) {
       // Use ProfileService to generate presigned URL (same pattern as createPost)
       const imageUploadData = await context.services.profileService.generatePresignedUrl(
         context.userId,
         {
-          fileType: args.input.fileType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+          fileType: validatedInput.fileType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
           purpose: 'auction-image',
         }
       );
@@ -725,7 +752,7 @@ export const Mutation: MutationResolvers = {
     // Create auction with public URL
     const auction = await context.services.auctionService.createAuction(
       context.userId,
-      args.input,
+      validatedInput,
       publicUrl
     );
 
@@ -761,6 +788,10 @@ export const Mutation: MutationResolvers = {
    * Place a bid on an auction
    * Requires authentication
    * Returns the created bid and updated auction
+   *
+   * Validates input with Zod schema to enforce business rules:
+   * - Amount: positive number, max 2 decimal places
+   * - AuctionId: valid UUID format
    */
   placeBid: async (_parent, args, context) => {
     if (!context.userId) {
@@ -769,10 +800,25 @@ export const Mutation: MutationResolvers = {
       });
     }
 
+    // ✅ Validate input with Zod schema (business rules)
+    const validationResult = PlaceBidRequestSchema.safeParse(args.input);
+
+    if (!validationResult.success) {
+      throw new GraphQLError('Validation failed', {
+        extensions: {
+          code: 'BAD_USER_INPUT',
+          validationErrors: validationResult.error.format(),
+        },
+      });
+    }
+
+    // Use validated data (with Zod transformations applied)
+    const validatedInput = validationResult.data;
+
     // Place bid (service handles validation and updates auction)
     const result = await context.services.auctionService.placeBid(
       context.userId,
-      args.input
+      validatedInput
     );
 
     return {

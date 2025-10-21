@@ -35,7 +35,7 @@ export const POST_FRAGMENT = `
  */
 export const CREATE_POST_MUTATION = `
   ${POST_FRAGMENT}
-  
+
   mutation CreatePost($input: CreatePostInput!) {
     createPost(input: $input) {
       post {
@@ -52,7 +52,7 @@ export const CREATE_POST_MUTATION = `
  */
 export const GET_POST_QUERY = `
   ${POST_FRAGMENT}
-  
+
   query GetPost($id: ID!) {
     post(id: $id) {
       ...PostFields
@@ -65,7 +65,7 @@ export const GET_POST_QUERY = `
  */
 export const GET_USER_POSTS_QUERY = `
   ${POST_FRAGMENT}
-  
+
   query GetUserPosts($handle: String!, $limit: Int, $cursor: String) {
     userPosts(handle: $handle, limit: $limit, cursor: $cursor) {
       edges {
@@ -89,7 +89,7 @@ export const GET_USER_POSTS_QUERY = `
  */
 export const UPDATE_POST_MUTATION = `
   ${POST_FRAGMENT}
-  
+
   mutation UpdatePost($id: ID!, $input: UpdatePostInput!) {
     updatePost(id: $id, input: $input) {
       ...PostFields

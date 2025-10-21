@@ -1,6 +1,6 @@
 # Test Fixtures Refactoring Plan
 
-**Date**: 2025-10-21  
+**Date**: 2025-10-21
 **Goal**: DRY up AuctionService.test.ts by extracting reusable test fixtures
 
 ---
@@ -31,7 +31,7 @@ const mockAuction: Auction = {
 };
 ```
 
-**Repeated**: ~10 times throughout the file  
+**Repeated**: ~10 times throughout the file
 **Lines of code**: ~200 lines just for auction fixtures
 
 ### Problem 2: Repetitive Bid Objects
@@ -47,7 +47,7 @@ const mockBid: Bid = {
 };
 ```
 
-**Repeated**: ~4 times  
+**Repeated**: ~4 times
 **Lines of code**: ~30 lines just for bid fixtures
 
 ### Problem 3: Repetitive Profile Objects
@@ -62,7 +62,7 @@ seller: {
 }
 ```
 
-**Repeated**: ~15 times  
+**Repeated**: ~15 times
 **Lines of code**: ~75 lines just for profile fixtures
 
 ### Problem 4: Repetitive GraphQL Response Structures
@@ -79,7 +79,7 @@ client.setQueryResponse({
 });
 ```
 
-**Repeated**: ~7 times  
+**Repeated**: ~7 times
 **Lines of code**: ~100 lines just for response wrappers
 
 ---
@@ -123,7 +123,7 @@ import type { Profile } from '../../../graphql/operations/auctions.js';
 
 /**
  * Create a mock Profile with sensible defaults
- * 
+ *
  * @example
  * ```typescript
  * const seller = createMockProfile({ id: 'user-1', handle: 'seller' });
@@ -191,12 +191,12 @@ import { createMockSeller, createMockBidder } from './profileFixtures.js';
 
 /**
  * Create a mock Auction with sensible defaults
- * 
+ *
  * @example
  * ```typescript
  * // Basic auction
  * const auction = createMockAuction();
- * 
+ *
  * // Auction with specific fields
  * const activeAuction = createMockAuction({
  *   id: 'auction-123',
@@ -205,7 +205,7 @@ import { createMockSeller, createMockBidder } from './profileFixtures.js';
  *   currentPrice: 150,
  *   bidCount: 5
  * });
- * 
+ *
  * // Completed auction with winner
  * const completedAuction = createMockAuction({
  *   status: 'COMPLETED',
@@ -244,7 +244,7 @@ export function createMockAuction(
 
 /**
  * Create a mock Bid with sensible defaults
- * 
+ *
  * @example
  * ```typescript
  * const bid = createMockBid();
@@ -270,7 +270,7 @@ export function createMockBid(
 
 /**
  * Create multiple auctions quickly
- * 
+ *
  * @example
  * ```typescript
  * const auctions = createMockAuctions(5); // 5 auctions with unique IDs
@@ -354,7 +354,7 @@ export function createErrorState(
 
 /**
  * Create paginated auction connection
- * 
+ *
  * @example
  * ```typescript
  * const connection = createAuctionConnection(
@@ -526,7 +526,7 @@ test('should call GraphQL client with correct query', async () => {
 });
 ```
 
-**Result**: 
+**Result**:
 - 60% reduction in lines
 - More readable (focuses on what's being tested)
 - Less noise (defaults hidden)
@@ -671,9 +671,9 @@ test('should return bid and updated auction', async () => {
 ```typescript
 test('should return bid and updated auction', async () => {
   const bid = createMockBid({ amount: 150 });
-  const auction = createMockAuction({ 
-    currentPrice: 150, 
-    bidCount: 6 
+  const auction = createMockAuction({
+    currentPrice: 150,
+    bidCount: 6
   });
 
   client.setMutationResponse(createPlaceBidResponse(bid, auction));

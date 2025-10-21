@@ -1,6 +1,6 @@
 /**
  * Auction Service Behavior Tests (GraphQL Implementation)
- * 
+ *
  * Testing principles:
  * ✅ Test behavior (service contract), not implementation
  * ✅ Use MockGraphQLClient (DI pattern, NO spies)
@@ -64,7 +64,7 @@ describe('AuctionService Behavior (GraphQL)', () => {
       // Arrange
       const auction1 = createMockAuction({ id: '1', title: 'Auction 1' });
       const auction2 = createMockAuction({ id: '2', title: 'Auction 2' });
-      
+
       client.setQueryResponse(createListAuctionsResponse(
         [auction1, auction2],
         { hasNextPage: true, endCursor: 'cursor-2' }
@@ -344,7 +344,7 @@ describe('AuctionService Behavior (GraphQL)', () => {
       const bids = createMockBids(2, 'auction-1');
       bids[0].amount = 150;
       bids[1].amount = 175;
-      
+
       client.setQueryResponse(createGetBidsResponse(bids, 25));
 
       // Act
