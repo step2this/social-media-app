@@ -6,6 +6,23 @@
  */
 
 /**
+ * GraphQL Like Response Type
+ */
+export interface LikeResponse {
+  success: boolean;
+  likesCount: number;
+  isLiked: boolean;
+}
+
+/**
+ * GraphQL Like Status Type
+ */
+export interface LikeStatus {
+  isLiked: boolean;
+  likesCount: number;
+}
+
+/**
  * Mutation: Like a post
  */
 export const LIKE_POST_MUTATION = `

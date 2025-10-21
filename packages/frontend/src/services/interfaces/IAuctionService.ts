@@ -29,6 +29,9 @@
 import type { AsyncState } from '../../graphql/types.js';
 import type { Auction, Bid } from '../../graphql/operations/auctions.js';
 
+// Re-export types for consumers
+export type { Auction, Bid };
+
 /**
  * Options for listing auctions
  */

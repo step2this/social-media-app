@@ -5,22 +5,7 @@
  * Each factory provides sensible defaults with the ability to override specific fields.
  */
 
-/**
- * GraphQL Like Response Type
- */
-export interface LikeResponse {
-  success: boolean;
-  likesCount: number;
-  isLiked: boolean;
-}
-
-/**
- * GraphQL Like Status Type
- */
-export interface LikeStatus {
-  isLiked: boolean;
-  likesCount: number;
-}
+import type { LikeResponse, LikeStatus } from '../../../graphql/operations/likes';
 
 /**
  * Create a mock like response

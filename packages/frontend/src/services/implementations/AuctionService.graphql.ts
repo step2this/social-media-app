@@ -13,9 +13,9 @@
  */
 
 import type { IGraphQLClient } from '../../graphql/interfaces/IGraphQLClient.js';
-import type { IAuctionService, ListAuctionsOptions, AuctionsList, GetBidHistoryOptions, BidHistory, CreateAuctionInput, CreateAuctionResult, PlaceBidResult } from '../interfaces/IAuctionService.js';
+import type { IAuctionService, ListAuctionsOptions, AuctionsList, GetBidHistoryOptions, BidHistory, CreateAuctionInput, CreateAuctionResult, PlaceBidResult, Auction } from '../interfaces/IAuctionService.js';
 import type { AsyncState } from '../../graphql/types.js';
-import { isSuccess, isError } from '../../graphql/types.js';
+import { isSuccess } from '../../graphql/types.js';
 import {
     GET_AUCTION,
     LIST_AUCTIONS,
@@ -118,7 +118,7 @@ export class AuctionService implements IAuctionService {
             { input }
         );
 
-        if (isError(result)) {
+        if (!isSuccess(result)) {
             return result;
         }
 

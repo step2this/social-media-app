@@ -5,7 +5,7 @@
  * Follows the DRY principle with sensible defaults.
  */
 
-import type { Post } from '../../../graphql/types';
+import type { Post } from '../../interfaces/IPostService';
 import { createMockProfile } from './profileFixtures';
 
 /**
@@ -15,21 +15,21 @@ import { createMockProfile } from './profileFixtures';
  * @returns Complete Post object
  */
 export function createMockPost(overrides: Partial<Post> = {}): Post {
-  const now = new Date().toISOString();
-  return {
-    id: 'post-1',
-    userId: 'user-1',
-    author: createMockProfile({ id: 'user-1' }),
-    caption: 'Test post caption',
-    imageUrl: 'https://example.com/image.jpg',
-    thumbnailUrl: 'https://example.com/thumbnail.jpg',
-    likesCount: 0,
-    commentsCount: 0,
-    isLiked: false,
-    createdAt: now,
-    updatedAt: now,
-    ...overrides,
-  };
+    const now = new Date().toISOString();
+    return {
+        id: 'post-1',
+        userId: 'user-1',
+        author: createMockProfile({ id: 'user-1' }),
+        caption: 'Test post caption',
+        imageUrl: 'https://example.com/image.jpg',
+        thumbnailUrl: 'https://example.com/thumbnail.jpg',
+        likesCount: 0,
+        commentsCount: 0,
+        isLiked: false,
+        createdAt: now,
+        updatedAt: now,
+        ...overrides,
+    };
 }
 
 /**
@@ -40,21 +40,21 @@ export function createMockPost(overrides: Partial<Post> = {}): Post {
  * @returns Array of Post objects
  */
 export function createMockPosts(
-  count: number,
-  overrides: Partial<Post> = {}
+    count: number,
+    overrides: Partial<Post> = {}
 ): Post[] {
-  return Array.from({ length: count }, (_, index) =>
-    createMockPost({
-      id: `post-${index + 1}`,
-      userId: `user-${index + 1}`,
-      author: createMockProfile({
-        id: `user-${index + 1}`,
-        handle: `user${index + 1}`,
-      }),
-      caption: `Test post ${index + 1}`,
-      ...overrides,
-    })
-  );
+    return Array.from({ length: count }, (_, index) =>
+        createMockPost({
+            id: `post-${index + 1}`,
+            userId: `user-${index + 1}`,
+            author: createMockProfile({
+                id: `user-${index + 1}`,
+                handle: `user${index + 1}`,
+            }),
+            caption: `Test post ${index + 1}`,
+            ...overrides,
+        })
+    );
 }
 
 /**
@@ -65,10 +65,10 @@ export function createMockPosts(
  * @returns Post object with likes
  */
 export function createMockPostWithLikes(
-  likesCount: number = 10,
-  isLiked: boolean = false
+    likesCount: number = 10,
+    isLiked: boolean = false
 ): Post {
-  return createMockPost({ likesCount, isLiked });
+    return createMockPost({ likesCount, isLiked });
 }
 
 /**
@@ -78,7 +78,7 @@ export function createMockPostWithLikes(
  * @returns Post object with comments
  */
 export function createMockPostWithComments(commentsCount: number = 5): Post {
-  return createMockPost({ commentsCount });
+    return createMockPost({ commentsCount });
 }
 
 /**
@@ -89,75 +89,75 @@ export function createMockPostWithComments(commentsCount: number = 5): Post {
  * @returns Post object by the specified user
  */
 export function createMockPostByUser(userId: string, handle: string): Post {
-  return createMockPost({
-    userId,
-    author: createMockProfile({ id: userId, handle }),
-  });
+    return createMockPost({
+        userId,
+        author: createMockProfile({ id: userId, handle }),
+    });
 }
 
 /**
  * Create test data for CreatePostInput
  */
 export function createMockCreatePostInput(
-  overrides: Partial<{ fileType: string; caption?: string }> = {}
+    overrides: Partial<{ fileType: string; caption?: string }> = {}
 ) {
-  return {
-    fileType: 'image/jpeg',
-    caption: 'New post caption',
-    ...overrides,
-  };
+    return {
+        fileType: 'image/jpeg',
+        caption: 'New post caption',
+        ...overrides,
+    };
 }
 
 /**
  * Create test data for UpdatePostInput
  */
 export function createMockUpdatePostInput(
-  overrides: Partial<{ caption?: string }> = {}
+    overrides: Partial<{ caption?: string }> = {}
 ) {
-  return {
-    caption: 'Updated post caption',
-    ...overrides,
-  };
+    return {
+        caption: 'Updated post caption',
+        ...overrides,
+    };
 }
 
 /**
  * Create a mock CreatePostPayload
  */
 export function createMockCreatePostPayload(
-  overrides: Partial<{
-    post: Post;
-    uploadUrl: string;
-    thumbnailUploadUrl: string;
-  }> = {}
+    overrides: Partial<{
+        post: Post;
+        uploadUrl: string;
+        thumbnailUploadUrl: string;
+    }> = {}
 ) {
-  return {
-    post: createMockPost(),
-    uploadUrl: 'https://s3.amazonaws.com/upload/post-image',
-    thumbnailUploadUrl: 'https://s3.amazonaws.com/upload/post-thumbnail',
-    ...overrides,
-  };
+    return {
+        post: createMockPost(),
+        uploadUrl: 'https://s3.amazonaws.com/upload/post-image',
+        thumbnailUploadUrl: 'https://s3.amazonaws.com/upload/post-thumbnail',
+        ...overrides,
+    };
 }
 
 /**
  * Create a mock PostConnection for pagination
  */
 export function createMockPostConnection(
-  posts: Post[] = [],
-  hasNextPage: boolean = false
+    posts: Post[] = [],
+    hasNextPage: boolean = false
 ) {
-  return {
-    edges: posts.map((post, index) => ({
-      cursor: Buffer.from(`cursor-${index}`).toString('base64'),
-      node: post,
-    })),
-    pageInfo: {
-      hasNextPage,
-      hasPreviousPage: false,
-      startCursor: posts.length > 0 ? Buffer.from('cursor-0').toString('base64') : null,
-      endCursor:
-        posts.length > 0
-          ? Buffer.from(`cursor-${posts.length - 1}`).toString('base64')
-          : null,
-    },
-  };
+    return {
+        edges: posts.map((post, index) => ({
+            cursor: Buffer.from(`cursor-${index}`).toString('base64'),
+            node: post,
+        })),
+        pageInfo: {
+            hasNextPage,
+            hasPreviousPage: false,
+            startCursor: posts.length > 0 ? Buffer.from('cursor-0').toString('base64') : null,
+            endCursor:
+                posts.length > 0
+                    ? Buffer.from(`cursor-${posts.length - 1}`).toString('base64')
+                    : null,
+        },
+    };
 }

@@ -1,5 +1,5 @@
-import type { AsyncState } from '@/graphql/types';
-import type { LikeResponse, LikeStatus } from '../__tests__/fixtures/likeFixtures';
+import type { AsyncState } from '../../graphql/types';
+import type { LikeResponse, LikeStatus } from '../../graphql/operations/likes';
 
 /**
  * Like Service Interface

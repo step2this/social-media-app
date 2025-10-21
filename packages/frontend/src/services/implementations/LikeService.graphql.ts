@@ -8,11 +8,12 @@
 import type { IGraphQLClient } from '../../graphql/interfaces/IGraphQLClient';
 import type { AsyncState } from '../../graphql/types';
 import type { ILikeService } from '../interfaces/ILikeService';
-import type { LikeResponse, LikeStatus } from '../__tests__/fixtures/likeFixtures';
 import {
     LIKE_POST_MUTATION,
     UNLIKE_POST_MUTATION,
     GET_LIKE_STATUS_QUERY,
+    type LikeResponse,
+    type LikeStatus,
 } from '../../graphql/operations/likes';
 
 /**
