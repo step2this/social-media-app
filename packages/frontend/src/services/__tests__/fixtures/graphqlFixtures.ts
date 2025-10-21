@@ -1,20 +1,20 @@
 /**
  * Test fixtures for GraphQL responses
- * 
+ *
  * Provides helper functions for wrapping data in GraphQL response structures.
  * Handles AsyncState wrapping, pagination, and common response patterns.
- * 
+ *
  * @example
  * ```typescript
  * // Success state
  * const response = createSuccessState({ user: mockUser });
- * 
+ *
  * // Error state
  * const error = createErrorState('User not found', 'NOT_FOUND');
- * 
+ *
  * // Paginated auctions
  * const response = createListAuctionsResponse(auctions, { hasNextPage: true });
- * 
+ *
  * // Single auction
  * const response = createGetAuctionResponse(auction);
  * ```
@@ -32,7 +32,7 @@ import type {
 
 /**
  * Create success AsyncState wrapper
- * 
+ *
  * @param data - Data to wrap in success state
  * @returns AsyncState with status='success'
  */
@@ -42,7 +42,7 @@ export function createSuccessState<T>(data: T): AsyncState<T> {
 
 /**
  * Create error AsyncState wrapper
- * 
+ *
  * @param message - Error message
  * @param code - Error code (default: 'ERROR')
  * @returns AsyncState with status='error'
@@ -61,14 +61,62 @@ export function createErrorState(
 }
 
 /**
+ * Wrap data in GraphQL success response
+ *
+ * Generic wrapper for any GraphQL query/mutation success response.
+ * Returns AsyncState with status='success'.
+ *
+ * @param data - Response data
+ * @returns AsyncState with success status
+ *
+ * @example
+ * ```typescript
+ * mockClient.mockQueryOnce(wrapInGraphQLSuccess({ post: mockPost }));
+ * mockClient.mockMutateOnce(wrapInGraphQLSuccess({ createPost: payload }));
+ * ```
+ */
+export function wrapInGraphQLSuccess<T>(data: T): AsyncState<T> {
+  return { status: 'success', data };
+}
+
+/**
+ * Wrap error in GraphQL error response
+ *
+ * Generic wrapper for any GraphQL query/mutation error response.
+ * Returns AsyncState with status='error'.
+ *
+ * @param message - Error message
+ * @param code - Error code (default: 'ERROR')
+ * @returns AsyncState with error status
+ *
+ * @example
+ * ```typescript
+ * mockClient.mockQueryOnce(wrapInGraphQLError('Not found', 'NOT_FOUND'));
+ * mockClient.mockMutateOnce(wrapInGraphQLError('Forbidden', 'FORBIDDEN'));
+ * ```
+ */
+export function wrapInGraphQLError(
+  message: string,
+  code: string = 'ERROR'
+): AsyncState<never> {
+  return {
+    status: 'error',
+    error: {
+      message,
+      extensions: { code },
+    },
+  };
+}
+
+/**
  * Create paginated auction connection
- * 
+ *
  * Wraps auctions array in GraphQL connection structure with edges and pageInfo.
- * 
+ *
  * @param auctions - Array of auctions
  * @param pageInfo - Optional pagination info overrides
  * @returns AuctionConnection with edges and pageInfo
- * 
+ *
  * @example
  * ```typescript
  * const connection = createAuctionConnection(
@@ -100,9 +148,9 @@ export function createAuctionConnection(
 
 /**
  * Create bid connection
- * 
+ *
  * Wraps bids array in GraphQL connection structure.
- * 
+ *
  * @param bids - Array of bids
  * @param total - Total count (defaults to bids.length)
  * @returns BidConnection
@@ -119,13 +167,13 @@ export function createBidConnection(
 
 /**
  * Create ListAuctions GraphQL response
- * 
+ *
  * Complete response for listAuctions query including AsyncState wrapper.
- * 
+ *
  * @param auctions - Array of auctions to return
  * @param pageInfo - Optional pagination overrides
  * @returns AsyncState wrapped ListAuctions response
- * 
+ *
  * @example
  * ```typescript
  * const response = createListAuctionsResponse(
@@ -145,15 +193,15 @@ export function createListAuctionsResponse(
 
 /**
  * Create GetAuction GraphQL response
- * 
+ *
  * @param auction - Auction to return (or null if not found)
  * @returns AsyncState wrapped GetAuction response
- * 
+ *
  * @example
  * ```typescript
  * // Found
  * const response = createGetAuctionResponse(auction);
- * 
+ *
  * // Not found
  * const response = createGetAuctionResponse(null);
  * ```
@@ -166,11 +214,11 @@ export function createGetAuctionResponse(
 
 /**
  * Create GetBids GraphQL response
- * 
+ *
  * @param bids - Array of bids
  * @param total - Total bid count (defaults to bids.length)
  * @returns AsyncState wrapped GetBids response
- * 
+ *
  * @example
  * ```typescript
  * const bids = createMockBids(10, 'auction-1');
@@ -188,11 +236,11 @@ export function createGetBidsResponse(
 
 /**
  * Create CreateAuction GraphQL response
- * 
+ *
  * @param auction - Created auction
  * @param uploadUrl - S3 presigned upload URL (default: test URL)
  * @returns AsyncState wrapped CreateAuction response
- * 
+ *
  * @example
  * ```typescript
  * const auction = createMockAuction({ status: 'PENDING' });
@@ -210,11 +258,11 @@ export function createCreateAuctionResponse(
 
 /**
  * Create PlaceBid GraphQL response
- * 
+ *
  * @param bid - Placed bid
  * @param auction - Updated auction after bid
  * @returns AsyncState wrapped PlaceBid response
- * 
+ *
  * @example
  * ```typescript
  * const bid = createMockBid({ amount: 150 });
