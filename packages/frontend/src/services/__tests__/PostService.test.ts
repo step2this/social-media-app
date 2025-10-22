@@ -8,7 +8,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { IPostService } from '../interfaces/IPostService';
-import { PostServiceGraphQL } from '../implementations/PostService.graphql';
+import { PostServiceGraphQL } from '../implementations/PostService.graphql.ts';
 import { MockGraphQLClient } from '../../graphql/client.mock';
 import {
   createMockPost,
@@ -19,10 +19,40 @@ import {
   createMockCreatePostPayload,
   createMockPostConnection,
 } from './fixtures/postFixtures';
+import { wrapInGraphQLSuccess } from './fixtures/graphqlFixtures';
 import {
-  wrapInGraphQLSuccess,
-  wrapInGraphQLError,
-} from './fixtures/graphqlFixtures';
+  expectServiceError,
+  errorScenarios,
+} from './helpers/serviceTestHelpers';
+
+// Type definitions for mock client generic calls
+interface CreatePostVariables {
+  input: {
+    caption?: string;
+    fileType: string;
+  };
+}
+
+interface GetPostVariables {
+  id: string;
+}
+
+interface GetUserPostsVariables {
+  handle: string;
+  limit: number;
+  cursor?: string;
+}
+
+interface UpdatePostVariables {
+  id: string;
+  input: {
+    caption?: string;
+  };
+}
+
+interface DeletePostVariables {
+  id: string;
+}
 
 describe('PostService.graphql', () => {
   let service: IPostService;
@@ -79,38 +109,29 @@ describe('PostService.graphql', () => {
 
       await service.createPost(input);
 
-      const lastCall = mockClient.lastMutationCall;
+      const lastCall = mockClient.lastMutationCall<CreatePostVariables>();
       expect(lastCall).toBeDefined();
       expect(lastCall?.variables.input.fileType).toBe('image/png');
     });
 
     it('should handle errors during post creation', async () => {
       const input = createMockCreatePostInput();
-      mockClient.setMutationResponse(
-        wrapInGraphQLError('Failed to create post', 'INTERNAL_SERVER_ERROR')
+      await expectServiceError(
+        mockClient,
+        () => service.createPost(input),
+        errorScenarios.server.createPost.message,
+        errorScenarios.server.createPost.code
       );
-
-      const result = await service.createPost(input);
-
-      expect(result.status).toBe('error');
-      if (result.status === 'error') {
-        expect(result.error.message).toBe('Failed to create post');
-        expect(result.error.extensions?.code).toBe('INTERNAL_SERVER_ERROR');
-      }
     });
 
     it('should handle network errors', async () => {
       const input = createMockCreatePostInput();
-      mockClient.setMutationResponse(
-        wrapInGraphQLError('Network error', 'NETWORK_ERROR')
+      await expectServiceError(
+        mockClient,
+        () => service.createPost(input),
+        errorScenarios.network.error.message,
+        errorScenarios.network.error.code
       );
-
-      const result = await service.createPost(input);
-
-      expect(result.status).toBe('error');
-      if (result.status === 'error') {
-        expect(result.error.message).toContain('Network error');
-      }
     });
   });
 
@@ -135,23 +156,19 @@ describe('PostService.graphql', () => {
 
       await service.getPost('post-456');
 
-      const lastCall = mockClient.lastQueryCall;
+      const lastCall = mockClient.lastQueryCall<GetPostVariables>();
       expect(lastCall).toBeDefined();
       expect(lastCall?.variables.id).toBe('post-456');
     });
 
     it('should handle post not found', async () => {
-      mockClient.setQueryResponse(
-        wrapInGraphQLError('Post not found', 'NOT_FOUND')
+      await expectServiceError(
+        mockClient,
+        () => service.getPost('nonexistent'),
+        errorScenarios.notFound.post.message,
+        errorScenarios.notFound.post.code,
+        'query'
       );
-
-      const result = await service.getPost('nonexistent');
-
-      expect(result.status).toBe('error');
-      if (result.status === 'error') {
-        expect(result.error.message).toBe('Post not found');
-        expect(result.error.extensions?.code).toBe('NOT_FOUND');
-      }
     });
 
     it('should return post with likes and comments counts', async () => {
@@ -195,7 +212,7 @@ describe('PostService.graphql', () => {
 
       await service.getUserPosts('janedoe', 24);
 
-      const lastCall = mockClient.lastQueryCall;
+      const lastCall = mockClient.lastQueryCall<GetUserPostsVariables>();
       expect(lastCall).toBeDefined();
       expect(lastCall?.variables.handle).toBe('janedoe');
       expect(lastCall?.variables.limit).toBe(24);
@@ -208,7 +225,7 @@ describe('PostService.graphql', () => {
 
       await service.getUserPosts('johndoe');
 
-      const lastCall = mockClient.lastQueryCall;
+      const lastCall = mockClient.lastQueryCall<GetUserPostsVariables>();
       expect(lastCall?.variables.limit).toBe(24);
     });
 
@@ -229,7 +246,7 @@ describe('PostService.graphql', () => {
         expect(result.data.edges).toHaveLength(24);
       }
 
-      const lastCall = mockClient.lastQueryCall;
+      const lastCall = mockClient.lastQueryCall<GetUserPostsVariables>();
       expect(lastCall?.variables.cursor).toBe('encoded-cursor');
     });
 
@@ -286,7 +303,7 @@ describe('PostService.graphql', () => {
 
       await service.updatePost('post-456', input);
 
-      const lastCall = mockClient.lastMutationCall;
+      const lastCall = mockClient.lastMutationCall<UpdatePostVariables>();
       expect(lastCall).toBeDefined();
       expect(lastCall?.variables.id).toBe('post-456');
       expect(lastCall?.variables.input.caption).toBe('New caption');
@@ -294,31 +311,22 @@ describe('PostService.graphql', () => {
 
     it('should handle permission errors', async () => {
       const input = createMockUpdatePostInput();
-      mockClient.setMutationResponse(
-        wrapInGraphQLError('Not authorized to update this post', 'FORBIDDEN')
+      await expectServiceError(
+        mockClient,
+        () => service.updatePost('post-123', input),
+        errorScenarios.permission.forbiddenUpdate.message,
+        errorScenarios.permission.forbiddenUpdate.code
       );
-
-      const result = await service.updatePost('post-123', input);
-
-      expect(result.status).toBe('error');
-      if (result.status === 'error') {
-        expect(result.error.message).toBe('Not authorized to update this post');
-        expect(result.error.extensions?.code).toBe('FORBIDDEN');
-      }
     });
 
     it('should handle post not found during update', async () => {
       const input = createMockUpdatePostInput();
-      mockClient.setMutationResponse(
-        wrapInGraphQLError('Post not found', 'NOT_FOUND')
+      await expectServiceError(
+        mockClient,
+        () => service.updatePost('nonexistent', input),
+        errorScenarios.notFound.post.message,
+        errorScenarios.notFound.post.code
       );
-
-      const result = await service.updatePost('nonexistent', input);
-
-      expect(result.status).toBe('error');
-      if (result.status === 'error') {
-        expect(result.error.message).toBe('Post not found');
-      }
     });
   });
 
@@ -343,36 +351,27 @@ describe('PostService.graphql', () => {
 
       await service.deletePost('post-789');
 
-      const lastCall = mockClient.lastMutationCall;
+      const lastCall = mockClient.lastMutationCall<DeletePostVariables>();
       expect(lastCall).toBeDefined();
       expect(lastCall?.variables.id).toBe('post-789');
     });
 
     it('should handle permission errors', async () => {
-      mockClient.setMutationResponse(
-        wrapInGraphQLError('Not authorized to delete this post', 'FORBIDDEN')
+      await expectServiceError(
+        mockClient,
+        () => service.deletePost('post-123'),
+        errorScenarios.permission.forbiddenDelete.message,
+        errorScenarios.permission.forbiddenDelete.code
       );
-
-      const result = await service.deletePost('post-123');
-
-      expect(result.status).toBe('error');
-      if (result.status === 'error') {
-        expect(result.error.message).toBe('Not authorized to delete this post');
-        expect(result.error.extensions?.code).toBe('FORBIDDEN');
-      }
     });
 
     it('should handle post not found during deletion', async () => {
-      mockClient.setMutationResponse(
-        wrapInGraphQLError('Post not found', 'NOT_FOUND')
+      await expectServiceError(
+        mockClient,
+        () => service.deletePost('nonexistent'),
+        errorScenarios.notFound.post.message,
+        errorScenarios.notFound.post.code
       );
-
-      const result = await service.deletePost('nonexistent');
-
-      expect(result.status).toBe('error');
-      if (result.status === 'error') {
-        expect(result.error.message).toBe('Post not found');
-      }
     });
 
     it('should handle deletion failures', async () => {

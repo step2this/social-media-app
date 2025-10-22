@@ -14,7 +14,7 @@
 import { describe, test, expect, beforeEach } from 'vitest';
 import { AuctionService } from '../implementations/AuctionService.graphql.js';
 import { MockGraphQLClient } from '../../graphql/client.mock.js';
-import { isSuccess, isError } from '../../graphql/types.js';
+import { isSuccess, isError, assertSuccess } from '../../graphql/types.js';
 
 // Test fixtures (DRY)
 import { createMockAuction, createMockBid, createMockBids } from './fixtures/auctionFixtures.js';
@@ -73,15 +73,13 @@ describe('AuctionService Behavior (GraphQL)', () => {
       // Act
       const result = await service.listAuctions();
 
-      // Assert
-      expect(isSuccess(result)).toBe(true);
-      if (isSuccess(result)) {
-        expect(result.data.auctions).toHaveLength(2);
-        expect(result.data.auctions[0].title).toBe('Auction 1');
-        expect(result.data.auctions[1].title).toBe('Auction 2');
-        expect(result.data.nextCursor).toBe('cursor-2');
-        expect(result.data.hasMore).toBe(true);
-      }
+      // Assert - Use assertSuccess for cleaner type narrowing
+      assertSuccess(result);
+      expect(result.data.auctions).toHaveLength(2);
+      expect(result.data.auctions[0].title).toBe('Auction 1');
+      expect(result.data.auctions[1].title).toBe('Auction 2');
+      expect(result.data.nextCursor).toBe('cursor-2');
+      expect(result.data.hasMore).toBe(true);
     });
 
     test('should handle empty results', async () => {

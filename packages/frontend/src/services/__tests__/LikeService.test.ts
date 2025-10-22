@@ -16,10 +16,24 @@ import {
   createMockLikedStatus,
   createMockUnlikedStatus,
 } from './fixtures/likeFixtures';
+import { wrapInGraphQLSuccess } from './fixtures/graphqlFixtures';
 import {
-  wrapInGraphQLSuccess,
-  wrapInGraphQLError,
-} from './fixtures/graphqlFixtures';
+  expectServiceError,
+  errorScenarios,
+} from './helpers/serviceTestHelpers';
+
+// Type definitions for mock client generic calls
+interface LikePostVariables {
+  postId: string;
+}
+
+interface UnlikePostVariables {
+  postId: string;
+}
+
+interface GetLikeStatusVariables {
+  postId: string;
+}
 
 describe('LikeService.graphql', () => {
   let service: ILikeService;
@@ -51,7 +65,7 @@ describe('LikeService.graphql', () => {
 
       await service.likePost('post-456');
 
-      const lastCall = mockClient.lastMutationCall;
+      const lastCall = mockClient.lastMutationCall<LikePostVariables>();
       expect(lastCall).toBeDefined();
       expect(lastCall?.variables.postId).toBe('post-456');
     });
@@ -70,45 +84,30 @@ describe('LikeService.graphql', () => {
     });
 
     it('should handle errors during like', async () => {
-      mockClient.setMutationResponse(
-        wrapInGraphQLError('Failed to like post', 'INTERNAL_SERVER_ERROR')
+      await expectServiceError(
+        mockClient,
+        () => service.likePost('post-123'),
+        errorScenarios.server.likePost.message,
+        errorScenarios.server.likePost.code
       );
-
-      const result = await service.likePost('post-123');
-
-      expect(result.status).toBe('error');
-      if (result.status === 'error') {
-        expect(result.error.message).toBe('Failed to like post');
-        expect(result.error.extensions?.code).toBe('INTERNAL_SERVER_ERROR');
-      }
     });
 
     it('should handle post not found', async () => {
-      mockClient.setMutationResponse(
-        wrapInGraphQLError('Post not found', 'NOT_FOUND')
+      await expectServiceError(
+        mockClient,
+        () => service.likePost('nonexistent'),
+        errorScenarios.notFound.post.message,
+        errorScenarios.notFound.post.code
       );
-
-      const result = await service.likePost('nonexistent');
-
-      expect(result.status).toBe('error');
-      if (result.status === 'error') {
-        expect(result.error.message).toBe('Post not found');
-        expect(result.error.extensions?.code).toBe('NOT_FOUND');
-      }
     });
 
     it('should handle authentication errors', async () => {
-      mockClient.setMutationResponse(
-        wrapInGraphQLError('Not authenticated', 'UNAUTHENTICATED')
+      await expectServiceError(
+        mockClient,
+        () => service.likePost('post-123'),
+        errorScenarios.authentication.notAuthenticated.message,
+        errorScenarios.authentication.notAuthenticated.code
       );
-
-      const result = await service.likePost('post-123');
-
-      expect(result.status).toBe('error');
-      if (result.status === 'error') {
-        expect(result.error.message).toBe('Not authenticated');
-        expect(result.error.extensions?.code).toBe('UNAUTHENTICATED');
-      }
     });
   });
 
@@ -133,7 +132,7 @@ describe('LikeService.graphql', () => {
 
       await service.unlikePost('post-789');
 
-      const lastCall = mockClient.lastMutationCall;
+      const lastCall = mockClient.lastMutationCall<UnlikePostVariables>();
       expect(lastCall).toBeDefined();
       expect(lastCall?.variables.postId).toBe('post-789');
     });
@@ -152,45 +151,30 @@ describe('LikeService.graphql', () => {
     });
 
     it('should handle errors during unlike', async () => {
-      mockClient.setMutationResponse(
-        wrapInGraphQLError('Failed to unlike post', 'INTERNAL_SERVER_ERROR')
+      await expectServiceError(
+        mockClient,
+        () => service.unlikePost('post-123'),
+        errorScenarios.server.unlikePost.message,
+        errorScenarios.server.unlikePost.code
       );
-
-      const result = await service.unlikePost('post-123');
-
-      expect(result.status).toBe('error');
-      if (result.status === 'error') {
-        expect(result.error.message).toBe('Failed to unlike post');
-        expect(result.error.extensions?.code).toBe('INTERNAL_SERVER_ERROR');
-      }
     });
 
     it('should handle post not found', async () => {
-      mockClient.setMutationResponse(
-        wrapInGraphQLError('Post not found', 'NOT_FOUND')
+      await expectServiceError(
+        mockClient,
+        () => service.unlikePost('nonexistent'),
+        errorScenarios.notFound.post.message,
+        errorScenarios.notFound.post.code
       );
-
-      const result = await service.unlikePost('nonexistent');
-
-      expect(result.status).toBe('error');
-      if (result.status === 'error') {
-        expect(result.error.message).toBe('Post not found');
-        expect(result.error.extensions?.code).toBe('NOT_FOUND');
-      }
     });
 
     it('should handle authentication errors', async () => {
-      mockClient.setMutationResponse(
-        wrapInGraphQLError('Not authenticated', 'UNAUTHENTICATED')
+      await expectServiceError(
+        mockClient,
+        () => service.unlikePost('post-123'),
+        errorScenarios.authentication.notAuthenticated.message,
+        errorScenarios.authentication.notAuthenticated.code
       );
-
-      const result = await service.unlikePost('post-123');
-
-      expect(result.status).toBe('error');
-      if (result.status === 'error') {
-        expect(result.error.message).toBe('Not authenticated');
-        expect(result.error.extensions?.code).toBe('UNAUTHENTICATED');
-      }
     });
   });
 
@@ -240,37 +224,29 @@ describe('LikeService.graphql', () => {
 
       await service.getLikeStatus('post-999');
 
-      const lastCall = mockClient.lastQueryCall;
+      const lastCall = mockClient.lastQueryCall<GetLikeStatusVariables>();
       expect(lastCall).toBeDefined();
       expect(lastCall?.variables.postId).toBe('post-999');
     });
 
     it('should handle post not found', async () => {
-      mockClient.setQueryResponse(
-        wrapInGraphQLError('Post not found', 'NOT_FOUND')
+      await expectServiceError(
+        mockClient,
+        () => service.getLikeStatus('nonexistent'),
+        errorScenarios.notFound.post.message,
+        errorScenarios.notFound.post.code,
+        'query'
       );
-
-      const result = await service.getLikeStatus('nonexistent');
-
-      expect(result.status).toBe('error');
-      if (result.status === 'error') {
-        expect(result.error.message).toBe('Post not found');
-        expect(result.error.extensions?.code).toBe('NOT_FOUND');
-      }
     });
 
     it('should handle errors fetching like status', async () => {
-      mockClient.setQueryResponse(
-        wrapInGraphQLError('Failed to fetch like status', 'INTERNAL_SERVER_ERROR')
+      await expectServiceError(
+        mockClient,
+        () => service.getLikeStatus('post-123'),
+        errorScenarios.server.fetchLikeStatus.message,
+        errorScenarios.server.fetchLikeStatus.code,
+        'query'
       );
-
-      const result = await service.getLikeStatus('post-123');
-
-      expect(result.status).toBe('error');
-      if (result.status === 'error') {
-        expect(result.error.message).toBe('Failed to fetch like status');
-        expect(result.error.extensions?.code).toBe('INTERNAL_SERVER_ERROR');
-      }
     });
   });
 
