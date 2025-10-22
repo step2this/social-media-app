@@ -111,8 +111,8 @@ describe('CommentService.graphql', () => {
             await expectServiceError(
                 mockClient,
                 () => service.createComment('post-1', 'Test comment'),
-                errorScenarios.server.createFailed.message,
-                errorScenarios.server.createFailed.code
+                errorScenarios.server.createComment.message,
+                errorScenarios.server.createComment.code
             );
         });
 
@@ -280,8 +280,8 @@ describe('CommentService.graphql', () => {
             await expectServiceError(
                 mockClient,
                 () => service.getComments('post-1'),
-                errorScenarios.server.fetchFailed.message,
-                errorScenarios.server.fetchFailed.code,
+                errorScenarios.server.fetchComments.message,
+                errorScenarios.server.fetchComments.code,
                 'query'
             );
         });
@@ -357,8 +357,8 @@ describe('CommentService.graphql', () => {
             await expectServiceError(
                 mockClient,
                 () => service.deleteComment('comment-123'),
-                errorScenarios.server.deleteFailed.message,
-                errorScenarios.server.deleteFailed.code
+                errorScenarios.server.deleteComment.message,
+                errorScenarios.server.deleteComment.code
             );
         });
     });

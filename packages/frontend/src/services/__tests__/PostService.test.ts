@@ -13,13 +13,12 @@ import { MockGraphQLClient } from '../../graphql/client.mock';
 import {
   createMockPost,
   createMockPosts,
-  createMockPostByUser,
   createMockCreatePostInput,
   createMockUpdatePostInput,
   createMockCreatePostPayload,
   createMockPostConnection,
 } from './fixtures/postFixtures';
-import { wrapInGraphQLSuccess } from './fixtures/graphqlFixtures';
+import { wrapInGraphQLError, wrapInGraphQLSuccess } from './fixtures/graphqlFixtures';
 import {
   expectServiceError,
   errorScenarios,
