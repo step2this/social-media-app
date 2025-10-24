@@ -1,6 +1,10 @@
 import { useRef, useCallback, type RefObject } from 'react';
 import { useIntersectionObserver } from './useIntersectionObserver';
-import { feedService } from '../services/feedService';
+import { FeedServiceGraphQL } from '../services/implementations/FeedService.graphql';
+import { createGraphQLClient } from '../graphql/client';
+
+// Initialize feed service
+const feedService = new FeedServiceGraphQL(createGraphQLClient());
 
 /**
  * Custom hook to automatically mark a feed post as read
@@ -25,8 +29,8 @@ import { feedService } from '../services/feedService';
  * };
  * ```
  */
-export function useFeedItemAutoRead(postId: string): RefObject<HTMLDivElement> {
-  const elementRef = useRef<HTMLDivElement>(null);
+export function useFeedItemAutoRead(postId: string): RefObject<HTMLDivElement | null> {
+  const elementRef = useRef<HTMLDivElement | null>(null);
   // Use ref instead of state to prevent race conditions
   const isMarkedAsReadRef = useRef(false);
 
@@ -44,7 +48,7 @@ export function useFeedItemAutoRead(postId: string): RefObject<HTMLDivElement> {
     isMarkedAsReadRef.current = true;
 
     try {
-      await feedService.markPostsAsRead([postId]);
+      await feedService.markPostsAsRead({ postIds: [postId] });
     } catch (error) {
       // Log error but don't disrupt user experience
       console.error('Failed to mark post as read:', postId, error);
@@ -56,7 +60,7 @@ export function useFeedItemAutoRead(postId: string): RefObject<HTMLDivElement> {
 
   // Use IntersectionObserver to detect when post is 70% visible for 1 second
   useIntersectionObserver(
-    elementRef,
+    elementRef as RefObject<Element>,
     {
       threshold: 0.7,
       delay: 1000

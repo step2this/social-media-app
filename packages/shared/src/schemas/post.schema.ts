@@ -94,10 +94,11 @@ export const PostGridResponseSchema = PaginationResponseSchema.extend({
 });
 
 /**
- * Feed post item - data for Instagram-style vertical feed
- * Includes full image URL and author information for feed cards
+ * Post with author information - optimized for feed display
+ * Extends Post data with denormalized author fields to avoid N+1 queries
+ * This is a view model that combines Post data with author information
  */
-export const FeedPostItemSchema = PostSchema.pick({
+export const PostWithAuthorSchema = PostSchema.pick({
   id: true,
   userId: true,
   userHandle: true,
@@ -107,11 +108,12 @@ export const FeedPostItemSchema = PostSchema.pick({
   commentsCount: true,
   createdAt: true
 }).extend({
-  // Author display info for feed cards (aligned with Profile schema naming)
+  // Denormalized author data for efficient feed rendering
   authorId: z.string().uuid(),
   authorHandle: z.string(),
   authorFullName: z.string().optional(), // matches profile.fullName
   authorProfilePictureUrl: z.string().url().optional(), // matches profile.profilePictureUrl
+  // Feed-specific metadata
   isLiked: z.boolean().optional(),
   source: z.enum(['materialized', 'query-time']).optional(), // Feed item source type
   // Instagram-like read state
@@ -120,10 +122,18 @@ export const FeedPostItemSchema = PostSchema.pick({
 });
 
 /**
+ * @deprecated Use PostWithAuthorSchema instead
+ * Kept for backward compatibility during migration
+ */
+export const FeedPostItemSchema = PostWithAuthorSchema;
+
+/**
  * Type exports
  */
 export type Post = z.infer<typeof PostSchema>;
 export type PostGridItem = z.infer<typeof PostGridItemSchema>;
+export type PostWithAuthor = z.infer<typeof PostWithAuthorSchema>;
+/** @deprecated Use PostWithAuthor instead */
 export type FeedPostItem = z.infer<typeof FeedPostItemSchema>;
 export type CreatePostRequest = z.infer<typeof CreatePostRequestSchema>;
 export type UpdatePostRequest = z.infer<typeof UpdatePostRequestSchema>;

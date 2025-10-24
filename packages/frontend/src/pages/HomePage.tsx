@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { FeedPostItem } from '@social-media-app/shared';
-import { feedService } from '../services/feedService';
+import type { PostWithAuthor } from '@social-media-app/shared';
+import { FeedServiceGraphQL } from '../services/implementations/FeedService.graphql';
+import { createGraphQLClient } from '../graphql/client';
+import { isSuccess } from '../graphql/types';
 import { PostCard } from '../components/posts/PostCard';
 import { useFeedItemAutoRead } from '../hooks/useFeedItemAutoRead';
 import {
@@ -10,12 +12,15 @@ import {
 import { useAuthStore } from '../stores/authStore';
 import './HomePage.css';
 
+// Initialize feed service with GraphQL client
+const feedService = new FeedServiceGraphQL(createGraphQLClient());
+
 /**
  * Wrapper component for PostCard with auto-read functionality
  * Handles Instagram-like behavior where posts are marked as read after viewing
  */
 interface FeedItemWrapperProps {
-  post: FeedPostItem;
+  post: PostWithAuthor;
 }
 
 const FeedItemWrapper: React.FC<FeedItemWrapperProps> = ({ post }) => {
@@ -34,7 +39,7 @@ const FeedItemWrapper: React.FC<FeedItemWrapperProps> = ({ post }) => {
  * Home page - displays posts from followed users with infinite scroll
  */
 export const HomePage: React.FC = () => {
-  const [posts, setPosts] = useState<FeedPostItem[]>([]);
+  const [posts, setPosts] = useState<PostWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -51,19 +56,23 @@ export const HomePage: React.FC = () => {
    * Load initial feed posts
    */
   const loadInitialPosts = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await feedService.getFollowingFeed(24);
-      setPosts(response.posts);
-      setCursor(response.nextCursor);
-      setHasMore(response.hasMore);
-    } catch (err) {
-      console.error('Failed to load following feed:', err);
+    setLoading(true);
+    setError(null);
+
+    const result = await feedService.getFollowingFeed({ limit: 24 });
+
+    if (isSuccess(result)) {
+      setPosts(result.data.items);
+      setCursor(result.data.endCursor ?? undefined);
+      setHasMore(result.data.hasNextPage);
+    } else if (result.status === 'error') {
+      console.error('Failed to load following feed:', result.error);
+      setError(result.error.message || 'Failed to load your feed. Please try again.');
+    } else {
       setError('Failed to load your feed. Please try again.');
-    } finally {
-      setLoading(false);
     }
+
+    setLoading(false);
   }, []);
 
   /**
@@ -72,17 +81,19 @@ export const HomePage: React.FC = () => {
   const loadMorePosts = useCallback(async () => {
     if (!hasMore || loadingMore || !cursor) return;
 
-    try {
-      setLoadingMore(true);
-      const response = await feedService.getFollowingFeed(24, cursor);
-      setPosts(prev => [...prev, ...response.posts]);
-      setCursor(response.nextCursor);
-      setHasMore(response.hasMore);
-    } catch (err) {
-      console.error('Failed to load more posts:', err);
-    } finally {
-      setLoadingMore(false);
+    setLoadingMore(true);
+
+    const result = await feedService.getFollowingFeed({ limit: 24, cursor });
+
+    if (isSuccess(result)) {
+      setPosts(prev => [...prev, ...result.data.items]);
+      setCursor(result.data.endCursor ?? undefined);
+      setHasMore(result.data.hasNextPage);
+    } else if (result.status === 'error') {
+      console.error('Failed to load more posts:', result.error);
     }
+
+    setLoadingMore(false);
   }, [cursor, hasMore, loadingMore]);
 
   /**

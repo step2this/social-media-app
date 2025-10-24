@@ -1,6 +1,6 @@
 /**
  * Generalized Test Helpers for Service Tests
- * 
+ *
  * Provides reusable utilities to DRY up repetitive test patterns across
  * all service tests (Post, Like, Comment, Auction, etc.)
  */
@@ -15,7 +15,7 @@ import {
 
 /**
  * Helper to test error scenarios with consistent assertions
- * 
+ *
  * @example
  * await expectServiceError(
  *   mockClient,
@@ -32,7 +32,7 @@ export async function expectServiceError<T>(
     setupType: 'query' | 'mutation' = 'mutation'
 ): Promise<void> {
     const errorResponse = wrapInGraphQLError(expectedMessage, expectedCode);
-    
+
     if (setupType === 'query') {
         mockClient.setQueryResponse(errorResponse);
     } else {
@@ -50,7 +50,7 @@ export async function expectServiceError<T>(
 
 /**
  * Helper to test success scenarios with custom assertions
- * 
+ *
  * @example
  * await expectServiceSuccess(
  *   mockClient,
@@ -69,7 +69,7 @@ export async function expectServiceSuccess<T>(
     setupType: 'query' | 'mutation' = 'mutation'
 ): Promise<void> {
     const successResponse = wrapInGraphQLSuccess(mockResponse);
-    
+
     if (setupType === 'query') {
         mockClient.setQueryResponse(successResponse);
     } else {
@@ -87,7 +87,7 @@ export async function expectServiceSuccess<T>(
 /**
  * Helper to verify mutation call variables
  * Works with generic types for type-safe assertions
- * 
+ *
  * @example
  * expectMutationCalledWith<{ postId: string }>(
  *   mockClient,
@@ -100,7 +100,7 @@ export function expectMutationCalledWith<T>(
 ): void {
     const lastCall = mockClient.lastMutationCall<T>();
     expect(lastCall).toBeDefined();
-    
+
     for (const [key, value] of Object.entries(expectedVariables)) {
         expect((lastCall?.variables as any)[key]).toEqual(value);
     }
@@ -109,7 +109,7 @@ export function expectMutationCalledWith<T>(
 /**
  * Helper to verify query call variables
  * Works with generic types for type-safe assertions
- * 
+ *
  * @example
  * expectQueryCalledWith<{ id: string }>(
  *   mockClient,
@@ -122,7 +122,7 @@ export function expectQueryCalledWith<T>(
 ): void {
     const lastCall = mockClient.lastQueryCall<T>();
     expect(lastCall).toBeDefined();
-    
+
     for (const [key, value] of Object.entries(expectedVariables)) {
         expect((lastCall?.variables as any)[key]).toEqual(value);
     }
@@ -142,7 +142,7 @@ export const errorScenarios = {
             code: 'UNAUTHENTICATED',
         },
     },
-    
+
     /**
      * Validation error scenarios
      */
@@ -156,7 +156,7 @@ export const errorScenarios = {
             code: 'BAD_USER_INPUT',
         },
     },
-    
+
     /**
      * Not found error scenarios
      */
@@ -178,7 +178,7 @@ export const errorScenarios = {
             code: 'NOT_FOUND',
         },
     },
-    
+
     /**
      * Permission error scenarios
      */
@@ -196,7 +196,7 @@ export const errorScenarios = {
             code: 'FORBIDDEN',
         },
     },
-    
+
     /**
      * Server error scenarios
      */
@@ -249,8 +249,20 @@ export const errorScenarios = {
             message: 'Failed to fetch auction',
             code: 'INTERNAL_SERVER_ERROR',
         },
+        fetchExploreFeed: {
+            message: 'Failed to fetch explore feed',
+            code: 'INTERNAL_SERVER_ERROR',
+        },
+        fetchFollowingFeed: {
+            message: 'Failed to fetch following feed',
+            code: 'INTERNAL_SERVER_ERROR',
+        },
+        markPostsAsRead: {
+            message: 'Failed to mark posts as read',
+            code: 'INTERNAL_SERVER_ERROR',
+        },
     },
-    
+
     /**
      * Network error scenarios
      */

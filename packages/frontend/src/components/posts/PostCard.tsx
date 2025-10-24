@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Post, FeedPostItem } from '@social-media-app/shared';
+import type { Post, PostWithAuthor } from '@social-media-app/shared';
 import { MaterialIcon } from '../common/MaterialIcon';
 import { useLike } from '../../hooks/useLike';
 import { UserLink } from '../common/UserLink';
@@ -9,7 +9,7 @@ import { DevFeedSourceBadge, type FeedSource } from '../dev';
 import './PostCard.css';
 
 export interface PostCardProps {
-  post: Post | FeedPostItem;
+  post: Post | PostWithAuthor;
   currentUserId?: string;
   showComments?: boolean;
   compact?: boolean;
@@ -43,7 +43,7 @@ export const PostCard: React.FC<PostCardProps> = ({
     isLoading: likeLoading,
     toggleLike
   } = useLike(post.id, {
-    initialIsLiked: post.isLiked || false,
+    initialIsLiked: ('isLiked' in post ? post.isLiked : false) || false,
     initialLikesCount: post.likesCount || 0
   });
 
@@ -106,9 +106,9 @@ export const PostCard: React.FC<PostCardProps> = ({
         )}
 
         {/* Tags */}
-        {post.tags && post.tags.length > 0 && (
+        {'tags' in post && post.tags && post.tags.length > 0 && (
           <div className="post-card__tags">
-            {post.tags.map((tag, index) => (
+            {post.tags.map((tag: string, index: number) => (
               <span key={index} className="post-card__tag">
                 #{tag}
               </span>
