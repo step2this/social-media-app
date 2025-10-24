@@ -30,6 +30,36 @@ import {
 } from '../../graphql/operations/auctions.js';
 
 /**
+ * Helper to transform successful GraphQL responses
+ * Reduces boilerplate in service methods
+ */
+function transformResponse<TResponse, TData>(
+    result: AsyncState<TResponse>,
+    transformer: (response: TResponse) => TData
+): AsyncState<TData> {
+    if (isSuccess(result)) {
+        return {
+            status: 'success',
+            data: transformer(result.data),
+        };
+    }
+    return result;
+}
+
+/**
+ * Helper to create error states
+ */
+function createErrorState(message: string, code: string): AsyncState<never> {
+    return {
+        status: 'error',
+        error: {
+            message,
+            extensions: { code },
+        },
+    };
+}
+
+/**
  * GraphQL-based Auction Service
  *
  * @example
@@ -52,7 +82,6 @@ export class AuctionService implements IAuctionService {
     async listAuctions(
         options: ListAuctionsOptions = {}
     ): Promise<AsyncState<AuctionsList>> {
-        // Call GraphQL client
         const result = await this.client.query<ListAuctionsResponse>(
             LIST_AUCTIONS,
             {
@@ -63,20 +92,11 @@ export class AuctionService implements IAuctionService {
             }
         );
 
-        // Transform GraphQL response to service format
-        if (isSuccess(result)) {
-            return {
-                status: 'success',
-                data: {
-                    auctions: result.data.auctions.edges.map((edge) => edge.node),
-                    nextCursor: result.data.auctions.pageInfo.endCursor,
-                    hasMore: result.data.auctions.pageInfo.hasNextPage,
-                },
-            };
-        }
-
-        // Pass through errors
-        return result;
+        return transformResponse(result, (data) => ({
+            auctions: data.auctions.edges.map((edge) => edge.node),
+            nextCursor: data.auctions.pageInfo.endCursor,
+            hasMore: data.auctions.pageInfo.hasNextPage,
+        }));
     }
 
     /**
@@ -172,17 +192,10 @@ export class AuctionService implements IAuctionService {
             input: { auctionId, amount },
         });
 
-        if (isSuccess(result)) {
-            return {
-                status: 'success',
-                data: {
-                    bid: result.data.placeBid.bid,
-                    auction: result.data.placeBid.auction,
-                },
-            };
-        }
-
-        return result;
+        return transformResponse(result, (data) => ({
+            bid: data.placeBid.bid,
+            auction: data.placeBid.auction,
+        }));
     }
 
     /**
@@ -198,16 +211,9 @@ export class AuctionService implements IAuctionService {
             offset: options.offset,
         });
 
-        if (isSuccess(result)) {
-            return {
-                status: 'success',
-                data: {
-                    bids: result.data.bids.bids,
-                    total: result.data.bids.total,
-                },
-            };
-        }
-
-        return result;
+        return transformResponse(result, (data) => ({
+            bids: data.bids.bids,
+            total: data.bids.total,
+        }));
     }
 }
