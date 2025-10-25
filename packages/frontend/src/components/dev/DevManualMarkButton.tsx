@@ -1,13 +1,17 @@
 import { useActionState, useEffect, useRef } from 'react';
-import { feedService } from '../../services/feedService';
-import type { FeedPostItem } from '@social-media-app/shared';
+import { FeedServiceGraphQL } from '../../services/implementations/FeedService.graphql';
+import { createGraphQLClient } from '../../graphql/client';
+import type { PostWithAuthor } from '@social-media-app/shared';
 import './DevManualMarkButton.css';
+
+// Initialize feed service
+const feedService = new FeedServiceGraphQL(createGraphQLClient());
 
 /**
  * Props for DevManualMarkButton component
  */
 export interface DevManualMarkButtonProps {
-  post: FeedPostItem;
+  post: PostWithAuthor;
   onMarkComplete?: () => void;
 }
 
@@ -28,7 +32,7 @@ async function markAsReadAction(
   postId: string
 ): Promise<MarkActionState> {
   try {
-    await feedService.markPostsAsRead([postId]);
+    await feedService.markPostsAsRead({ postIds: [postId] });
     return { success: true, error: null };
   } catch (error) {
     return {

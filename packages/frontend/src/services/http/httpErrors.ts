@@ -21,22 +21,28 @@ export class ApiError extends Error {
 }
 
 /**
- * CORS-specific error
- */
-export class CorsError extends ApiError {
-    constructor(message: string, public origin?: string, public requestedUrl?: string) {
-        super(`CORS Error: ${message}`, undefined, 'CORS_ERROR');
-        this.name = 'CorsError';
-    }
-}
-
-/**
  * Network/connectivity error
  */
 export class NetworkError extends ApiError {
     constructor(message: string, public originalError?: unknown) {
         super(message, undefined, 'NETWORK_ERROR');
         this.name = 'NetworkError';
+    }
+}
+
+/**
+ * CORS-specific error
+ */
+export class CorsError extends NetworkError {
+    constructor(message: string, public origin?: string, public requestedUrl?: string) {
+        super(message, undefined);
+        this.name = 'CorsError';
+        this.code = 'CORS_ERROR';
+    }
+
+    // Add url getter for backwards compatibility
+    get url(): string | undefined {
+        return this.requestedUrl;
     }
 }
 
@@ -83,10 +89,11 @@ export const classifyNetworkError = (
 ): NetworkError | CorsError => {
     const errorName = (error as any).name;
     const errorMessage = (error as any).message || '';
+    const fullUrl = `${apiBaseUrl}${endpoint}`;
 
     // AbortError = timeout
     if (errorName === 'AbortError') {
-        return new NetworkError('Request timeout', error);
+        return new NetworkError(`Request timeout for ${fullUrl}`, error);
     }
 
     // Check for CORS issues - only if message explicitly mentions CORS
@@ -95,12 +102,12 @@ export const classifyNetworkError = (
         return new CorsError(
             `Failed to connect to API. This might be a CORS issue. Check that VITE_API_URL (${apiBaseUrl}) is correct and accessible.`,
             typeof window !== 'undefined' ? window.location.origin : undefined,
-            `${apiBaseUrl}${endpoint}`
+            fullUrl
         );
     }
 
-    // Default network error
-    return new NetworkError('Network connection failed', error);
+    // Default network error - include URL for debugging
+    return new NetworkError(`Network connection failed for ${fullUrl}`, error);
 };
 
 /**
@@ -118,4 +125,4 @@ export const createZodValidationError = (zodError: any): ValidationError =>
  * @returns Error message string
  */
 export const extractErrorMessage = (data: any, fallback: string): string =>
-    data.error || data.message || fallback;
+    data?.error || data?.message || fallback;
