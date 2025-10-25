@@ -199,3 +199,49 @@ export function assertError<T>(
     throw new Error(`Expected error state, got: ${state.status}`);
   }
 }
+
+/**
+ * Unwrap AsyncState to get data or throw error
+ * Simplifies handling of AsyncState in async contexts where you want to throw on error
+ *
+ * @example
+ * ```typescript
+ * // Before (verbose):
+ * const result = await service.getData();
+ * if (isSuccess(result)) {
+ *   return result.data;
+ * } else {
+ *   throw new Error(result.error.message);
+ * }
+ *
+ * // After (concise):
+ * return unwrap(await service.getData());
+ * ```
+ *
+ * @throws {Error} If state is error or not success
+ */
+export function unwrap<T>(state: AsyncState<T>): T {
+  if (isSuccess(state)) {
+    return state.data;
+  }
+  if (isError(state)) {
+    throw new Error(state.error.message);
+  }
+  throw new Error(`Cannot unwrap state with status: ${state.status}`);
+}
+
+/**
+ * Unwrap AsyncState or return null on error
+ * Useful when you want to handle errors gracefully without throwing
+ *
+ * @example
+ * ```typescript
+ * const data = unwrapOr(await service.getData(), null);
+ * if (data === null) {
+ *   // Handle error gracefully
+ * }
+ * ```
+ */
+export function unwrapOr<T, D>(state: AsyncState<T>, defaultValue: D): T | D {
+  return isSuccess(state) ? state.data : defaultValue;
+}

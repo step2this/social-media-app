@@ -4,7 +4,9 @@ import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { CreatePostRequestSchema, type CreatePostRequest } from '@social-media-app/shared';
-import { postService } from '../../services/postService.js';
+import { PostServiceGraphQL } from '../../services/implementations/PostService.graphql.js';
+import { createGraphQLClient } from '../../graphql/client.js';
+import { unwrap } from '../../graphql/types';
 import {
   validateCaptionLength,
   validateTags,
@@ -34,6 +36,8 @@ interface CreatePostActionState {
   success?: boolean;
   error?: string;
 }
+
+const postService = new PostServiceGraphQL(createGraphQLClient());
 
 const initialActionState: CreatePostActionState = {};
 
@@ -97,11 +101,22 @@ export const CreatePostPage: React.FC = () => {
       // Validate with schema
       const validatedData = CreatePostRequestSchema.parse(requestData);
 
-      // Create post
-      const createdPost = await postService.createPost(validatedData, selectedFile);
+      // Create post - returns CreatePostPayload with upload URLs
+      const createPayload = unwrap(await postService.createPost(validatedData));
+
+      // Upload image to S3 using the pre-signed URL
+      if (selectedFile) {
+        await fetch(createPayload.uploadUrl, {
+          method: 'PUT',
+          body: selectedFile,
+          headers: {
+            'Content-Type': selectedFile.type,
+          },
+        });
+      }
 
       // Navigate to the new post detail page on success
-      navigate(`/post/${createdPost.id}`);
+      navigate(`/post/${createPayload.post.id}`);
       setIsSubmitting(false);
       return { success: true };
     } catch (error) {
@@ -251,8 +266,7 @@ export const CreatePostPage: React.FC = () => {
             flushSync(() => {
               setIsSubmitting(true);
             });
-            const formDataObj = new FormData(e.currentTarget);
-            formAction(formDataObj);
+            formAction(formData);
           }}
           role="form"
           aria-label="Create post"

@@ -1,13 +1,35 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import type { PostGridItem } from '@social-media-app/shared';
-import { feedService } from '../../services/feedService';
+import type { PostGridItem, PostWithAuthor } from '@social-media-app/shared';
+import { FeedServiceGraphQL } from '../../services/implementations/FeedService.graphql.js';
 import { PostThumbnail } from '../profile/PostThumbnail';
 import { scramblePosts } from '../../utils/scramblePosts.js';
+import { unwrap } from '../../graphql/types';
 import './ExplorePage.css';
+import { createGraphQLClient } from '../../graphql/client.js';
 
 /**
  * Explore page - displays all public posts with infinite scroll
+ * @returns React component for the explore page
  */
+
+const feedService = new FeedServiceGraphQL(createGraphQLClient());
+
+/**
+ * Transform PostWithAuthor to PostGridItem for grid display
+ */
+function transformToGridItem(post: PostWithAuthor): PostGridItem {
+  return {
+    id: post.id,
+    userId: post.userId,
+    userHandle: post.userHandle,
+    thumbnailUrl: post.imageUrl, // Use full image as thumbnail
+    likesCount: post.likesCount,
+    commentsCount: post.commentsCount,
+    createdAt: post.createdAt,
+    caption: post.caption,
+  };
+}
+
 export const ExplorePage: React.FC = () => {
   const [posts, setPosts] = useState<PostGridItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,42 +45,57 @@ export const ExplorePage: React.FC = () => {
   const scrambledPosts = useMemo(() => scramblePosts(posts), [posts]);
 
   /**
-   * Load initial feed posts
+   * Shared feed loading logic
+   * @param isInitial - Whether this is initial load or loading more
    */
-  const loadInitialPosts = useCallback(async () => {
+  const loadFeed = useCallback(async (isInitial: boolean) => {
+    const currentCursor = isInitial ? undefined : cursor;
+
     try {
-      setLoading(true);
-      setError(null);
-      const response = await feedService.getFeedPosts(24);
-      setPosts(response.posts);
-      setCursor(response.nextCursor);
-      setHasMore(response.hasMore);
+      if (isInitial) {
+        setLoading(true);
+        setError(null);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const feedResult = unwrap(await feedService.getExploreFeed({ limit: 24, cursor: currentCursor }));
+      const gridItems = feedResult.items.map(transformToGridItem);
+
+      if (isInitial) {
+        setPosts(gridItems);
+      } else {
+        setPosts(prev => [...prev, ...gridItems]);
+      }
+
+      setCursor(feedResult.endCursor ?? undefined);
+      setHasMore(feedResult.hasNextPage);
     } catch (err) {
       console.error('Failed to load feed:', err);
-      setError('Failed to load feed. Please try again.');
+      if (isInitial) {
+        setError(err instanceof Error ? err.message : 'Failed to load feed. Please try again.');
+      }
     } finally {
-      setLoading(false);
+      if (isInitial) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
     }
-  }, []);
+  }, [cursor]);
+
+  /**
+   * Load initial feed posts
+   */
+  const loadInitialPosts = useCallback(() => loadFeed(true), [loadFeed]);
 
   /**
    * Load more posts (for infinite scroll)
    */
-  const loadMorePosts = useCallback(async () => {
+  const loadMorePosts = useCallback(() => {
     if (!hasMore || loadingMore || !cursor) return;
-
-    try {
-      setLoadingMore(true);
-      const response = await feedService.getFeedPosts(24, cursor);
-      setPosts(prev => [...prev, ...response.posts]);
-      setCursor(response.nextCursor);
-      setHasMore(response.hasMore);
-    } catch (err) {
-      console.error('Failed to load more posts:', err);
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [cursor, hasMore, loadingMore]);
+    return loadFeed(false);
+  }, [hasMore, loadingMore, cursor, loadFeed]);
 
   /**
    * Set up intersection observer for infinite scroll
