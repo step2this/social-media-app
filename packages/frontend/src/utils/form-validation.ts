@@ -42,12 +42,12 @@ const DEFAULT_MAX_IMAGE_SIZE_MB = 10;
 export const validateCaptionLength = (caption: string): ValidationResult => {
   if (caption.length > MAX_CAPTION_LENGTH) {
     return {
-      isValid: false,
+      valid: false,
       error: 'Caption must be 500 characters or less',
     };
   }
 
-  return { isValid: true };
+  return { valid: true };
 };
 
 /**
@@ -85,18 +85,18 @@ const parseTagsArray = (tagsString: string): string[] => {
  * }
  * ```
  */
-export const validateTags = (tagsString: string): ValidationResult => {
-  const tags = parseTagsArray(tagsString);
+export const validateTags = (tagsString: string | string[]): ValidationResult => {
+  const tags = Array.isArray(tagsString) ? tagsString : parseTagsArray(tagsString);
 
   // Empty tags are valid
   if (tags.length === 0) {
-    return { isValid: true };
+    return { valid: true };
   }
 
   // Check for # symbol (higher priority error)
   if (tags.some((tag) => tag.includes('#'))) {
     return {
-      isValid: false,
+      valid: false,
       error: 'Tags should not include # symbol',
     };
   }
@@ -104,12 +104,12 @@ export const validateTags = (tagsString: string): ValidationResult => {
   // Check max count
   if (tags.length > MAX_TAGS_COUNT) {
     return {
-      isValid: false,
+      valid: false,
       error: 'Maximum 5 tags allowed',
     };
   }
 
-  return { isValid: true };
+  return { valid: true };
 };
 
 /**
@@ -132,12 +132,12 @@ export const validateImageType = (mimeType: string): ValidationResult => {
 
   if (!validation.success) {
     return {
-      isValid: false,
+      valid: false,
       error: 'Please select a valid image file (JPEG, PNG, GIF, or WebP)',
     };
   }
 
-  return { isValid: true };
+  return { valid: true };
 };
 
 /**
@@ -164,12 +164,12 @@ export const validateImageSize = (
 
   if (file.size > maxSizeBytes) {
     return {
-      isValid: false,
+      valid: false,
       error: `Image size must be less than ${maxSizeMB}MB`,
     };
   }
 
-  return { isValid: true };
+  return { valid: true };
 };
 
 /**
@@ -196,15 +196,15 @@ export const validateImageFile = (
 ): ValidationResult => {
   // Validate type first (higher priority)
   const typeValidation = validateImageType(file.type);
-  if (!typeValidation.isValid) {
+  if (!typeValidation.valid) {
     return typeValidation;
   }
 
   // Then validate size
   const sizeValidation = validateImageSize(file, maxSizeMB);
-  if (!sizeValidation.isValid) {
+  if (!sizeValidation.valid) {
     return sizeValidation;
   }
 
-  return { isValid: true };
+  return { valid: true };
 };

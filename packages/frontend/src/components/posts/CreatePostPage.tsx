@@ -1,427 +1,267 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import { useActionState } from 'react';
 import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { z } from 'zod';
-import { CreatePostRequestSchema, type CreatePostRequest } from '@social-media-app/shared';
-import { PostServiceGraphQL } from '../../services/implementations/PostService.graphql.js';
-import { createGraphQLClient } from '../../graphql/client.js';
-import { unwrap } from '../../graphql/types';
-import {
-  validateCaptionLength,
-  validateTags,
-  validateImageFile,
-  createImagePreview,
-  revokeImagePreview,
-  parseTags,
-  formatTagsDisplay,
-  buildCreatePostRequest,
-} from '../../utils/index.js';
+import { MaterialIcon } from '../common/MaterialIcon';
+import { useImagePreview } from '../../hooks/useImagePreview';
+import { useCreatePostForm } from '../../hooks/useCreatePostForm';
+import { createPostAction, type CreatePostActionState } from './createPostAction';
 import './CreatePostPage.css';
 
-interface FormData {
-  caption: string;
-  tags: string;
-  isPublic: boolean;
-}
-
-interface FormErrors {
-  image?: string;
-  caption?: string;
-  tags?: string;
-  general?: string;
-}
-
-interface CreatePostActionState {
-  success?: boolean;
-  error?: string;
-}
-
-const postService = new PostServiceGraphQL(createGraphQLClient());
-
-const initialActionState: CreatePostActionState = {};
+// Initial action state
+const initialActionState: CreatePostActionState = {
+  success: false,
+  error: null,
+};
 
 export const CreatePostPage: React.FC = () => {
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Form state
-  const [formData, setFormData] = useState<FormData>({
-    caption: '',
-    tags: '',
-    isPublic: true,
-  });
+  // Image preview hook
+  const {
+    selectedFile,
+    previewUrl,
+    error: imageError,
+    fileInputRef,
+    handleFileSelect,
+    clearImage,
+  } = useImagePreview();
 
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<FormErrors>({});
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Form state and validation hook
+  const {
+    caption,
+    tags,
+    captionError,
+    tagsError,
+    setCaption,
+    setTags,
+    validateForm,
+    resetForm,
+    getFormData,
+  } = useCreatePostForm();
 
-  // Validation function (defined early for use in action)
-  const validateForm = useCallback((): boolean => {
-    const newErrors: FormErrors = {};
-
-    // Validate image
-    if (!selectedFile) {
-      newErrors.image = 'Image is required';
-    }
-
-    // Validate caption
-    const captionValidation = validateCaptionLength(formData.caption);
-    if (!captionValidation.isValid) {
-      newErrors.caption = captionValidation.error;
-    }
-
-    // Validate tags
-    const tagsValidation = validateTags(formData.tags);
-    if (!tagsValidation.isValid) {
-      newErrors.tags = tagsValidation.error;
-    }
-
-    setValidationErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [selectedFile, formData]);
-
-  // Action function for form submission
-  const createPostAction = useCallback(async (
-    prevState: CreatePostActionState,
-    _formData: FormData
-  ): Promise<CreatePostActionState> => {
-    // Validation using existing function
-    if (!validateForm() || !selectedFile) {
-      setIsSubmitting(false);
-      return { success: false, error: 'Please fix validation errors' };
-    }
-
-    try {
-      // Build request using utility function
-      const requestData = buildCreatePostRequest(formData, selectedFile.type);
-
-      // Validate with schema
-      const validatedData = CreatePostRequestSchema.parse(requestData);
-
-      // Create post - returns CreatePostPayload with upload URLs
-      const createPayload = unwrap(await postService.createPost(validatedData));
-
-      // Upload image to S3 using the pre-signed URL
-      if (selectedFile) {
-        await fetch(createPayload.uploadUrl, {
-          method: 'PUT',
-          body: selectedFile,
-          headers: {
-            'Content-Type': selectedFile.type,
-          },
-        });
+  // Form action state with useActionState
+  const [actionState, formAction, isSubmitting] = useActionState(
+    async (prevState: CreatePostActionState) => {
+      // Client-side validation
+      if (!validateForm()) {
+        return {
+          success: false,
+          error: 'Please fix validation errors',
+        };
       }
 
-      // Navigate to the new post detail page on success
-      navigate(`/post/${createPayload.post.id}`);
-      setIsSubmitting(false);
-      return { success: true };
-    } catch (error) {
-      console.error('Error creating post:', error);
-
-      setIsSubmitting(false);
-
-      if (error instanceof z.ZodError) {
-        return { success: false, error: 'Invalid request data' };
-      } else if (error instanceof Error) {
-        if (error.message.includes('Network')) {
-          return { success: false, error: 'Network error. Please try again.' };
-        }
-        return { success: false, error: 'Failed to create post. Please try again.' };
-      }
-      return { success: false, error: 'An unexpected error occurred' };
-    }
-  }, [validateForm, selectedFile, formData, navigate]);
-
-  const [actionState, formAction, isPending] = useActionState(createPostAction, initialActionState);
-
-  // Handle form input changes
-  const handleInputChange = useCallback(
-    (field: keyof FormData, value: string | boolean) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
-
-      // Clear related errors
-      if (validationErrors[field as keyof FormErrors]) {
-        setValidationErrors((prev) => ({ ...prev, [field]: undefined }));
+      if (!selectedFile) {
+        return {
+          success: false,
+          error: 'Please select an image',
+        };
       }
 
-      // Live validation for caption length
-      if (field === 'caption' && typeof value === 'string') {
-        const validation = validateCaptionLength(value);
-        if (!validation.isValid) {
-          setValidationErrors((prev) => ({ ...prev, caption: validation.error }));
-        }
-      }
-
-      // Live validation for tags
-      if (field === 'tags' && typeof value === 'string') {
-        const validation = validateTags(value);
-        if (!validation.isValid) {
-          setValidationErrors((prev) => ({ ...prev, tags: validation.error }));
-        } else {
-          setValidationErrors((prev) => ({ ...prev, tags: undefined }));
-        }
-      }
+      // Get form data and submit
+      const formData = getFormData();
+      return createPostAction(prevState, {
+        ...formData,
+        imageFile: selectedFile,
+      });
     },
-    [validationErrors]
+    initialActionState
   );
 
-  // Handle file selection
-  const handleFileSelect = useCallback((file: File) => {
-    // Validate file using utility function
-    const validation = validateImageFile(file);
-    if (!validation.isValid) {
-      setValidationErrors((prev) => ({ ...prev, image: validation.error }));
-      return;
+  // Handle successful post creation
+  useEffect(() => {
+    if (actionState.success && actionState.postId) {
+      // Reset form
+      resetForm();
+      clearImage();
+
+      // Navigate to new post
+      navigate(`/post/${actionState.postId}`);
     }
+  }, [actionState.success, actionState.postId, navigate, resetForm, clearImage]);
 
-    setSelectedFile(file);
-    setValidationErrors((prev) => ({ ...prev, image: undefined }));
-
-    // Create preview URL using utility function
-    const url = createImagePreview(file);
-    setPreviewUrl(url);
-
-    return () => {
-      revokeImagePreview(url);
-    };
-  }, []);
-
-  // Handle file input change
-  const handleFileInputChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (file) {
-        handleFileSelect(file);
-      }
-    },
-    [handleFileSelect]
-  );
-
-  // Handle drag and drop
-  const handleDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    setIsDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    setIsDragOver(false);
-  }, []);
-
-  const handleDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault();
-      setIsDragOver(false);
-
-      const file = event.dataTransfer.files[0];
-      if (file) {
-        handleFileSelect(file);
-      }
-    },
-    [handleFileSelect]
-  );
-
-  // Remove selected image
-  const handleRemoveImage = useCallback(() => {
-    if (previewUrl) {
-      revokeImagePreview(previewUrl);
-    }
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  }, [previewUrl]);
-
-  // Handle tags normalization on blur
-  const handleTagsBlur = useCallback(
-    (event: React.FocusEvent<HTMLInputElement>) => {
-      // Normalize tags on blur for better UX
-      const tags = parseTags(event.target.value);
-      const normalizedTags = formatTagsDisplay(tags);
-      if (normalizedTags !== event.target.value) {
-        handleInputChange('tags', normalizedTags);
-      }
-    },
-    [handleInputChange]
-  );
+  /**
+   * Handle form submission
+   */
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    flushSync(() => {
+      // Trigger form action
+      formAction();
+    });
+  };
 
   return (
-    <main className="create-post-page" data-testid="create-post-page">
+    <div className="create-post-page">
       <div className="create-post-container">
         <header className="create-post-header">
-          <h1 className="page-title">Create Post</h1>
-          <p className="page-subtitle">Share your pet's adventures with the world</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="retro-button secondary"
+            aria-label="Go back"
+          >
+            <MaterialIcon name="arrow_back" />
+          </button>
+          <h1>Create New Post</h1>
         </header>
+
+        {/* Display action errors */}
+        {actionState.error && (
+          <div className="error-banner" role="alert">
+            <MaterialIcon name="error" />
+            <span>{actionState.error}</span>
+          </div>
+        )}
 
         <form
           className="create-post-form retro-card"
           data-testid="create-post-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            flushSync(() => {
-              setIsSubmitting(true);
-            });
-            formAction(formData);
-          }}
+          onSubmit={handleSubmit}
           role="form"
           aria-label="Create post"
         >
-          {/* Image Upload */}
-          <div className="form-group">
-            <label htmlFor="image-upload" className="form-label">
-              Upload Image *
+          {/* Image Upload Section */}
+          <div className="form-section">
+            <label htmlFor="image-upload" className="form-label required">
+              Image
             </label>
 
-            <div
-              className={`image-upload-zone ${isDragOver ? 'drop-zone--active' : ''}`}
-              data-testid="image-upload-zone"
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              {previewUrl ? (
-                <div className="image-preview-container">
-                  <img
-                    src={previewUrl}
-                    alt="Post preview"
-                    className="image-preview"
-                    data-testid="image-preview"
-                  />
-                  <button
-                    type="button"
-                    className="remove-image-btn"
-                    onClick={handleRemoveImage}
-                    aria-label="Remove image"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : (
-                <div className="upload-placeholder">
-                  <div className="upload-icon">📷</div>
-                  <div className="upload-text">
-                    <p>Click to upload or drag and drop</p>
-                    <p className="upload-hint">PNG, JPG up to 10MB</p>
-                  </div>
-                </div>
-              )}
+            {!previewUrl ? (
+              <div className="image-upload-area">
+                <input
+                  ref={fileInputRef}
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="image-input"
+                  aria-label="Upload image"
+                  aria-describedby="image-upload-hint"
+                  required
+                />
+                <label htmlFor="image-upload" className="image-upload-button">
+                  <MaterialIcon name="add_photo_alternate" size="lg" />
+                  <span>Click to upload image</span>
+                  <span className="upload-hint" id="image-upload-hint">
+                    Supports JPG, PNG, GIF (Max 5MB)
+                  </span>
+                </label>
+              </div>
+            ) : (
+              <div className="image-preview-container">
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="image-preview"
+                />
+                <button
+                  type="button"
+                  onClick={clearImage}
+                  className="remove-image-button"
+                  aria-label="Remove image"
+                >
+                  <MaterialIcon name="close" />
+                </button>
+              </div>
+            )}
 
-              <input
-                ref={fileInputRef}
-                id="image-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleFileInputChange}
-                className="file-input"
-                aria-label="Upload image"
-              />
-            </div>
-
-            {validationErrors.image && (
-              <div className="error-message" role="alert" aria-live="polite">
-                {validationErrors.image}
+            {imageError && (
+              <div className="field-error" role="alert">
+                {imageError}
               </div>
             )}
           </div>
 
-          {/* Caption */}
-          <div className="form-group">
+          {/* Caption Section */}
+          <div className="form-section">
             <label htmlFor="caption" className="form-label">
               Caption
+              <span className="char-count">
+                {caption.length}/2200
+              </span>
             </label>
             <textarea
               id="caption"
-              className="form-textarea"
-              placeholder="Tell your story..."
-              value={formData.caption}
-              onChange={(e) => handleInputChange('caption', e.target.value)}
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="Write a caption..."
+              className="caption-textarea"
               rows={4}
+              maxLength={2200}
               aria-label="Post caption"
+              aria-describedby={captionError ? 'caption-error' : undefined}
             />
-            <div className="character-count">{formData.caption.length} / 500</div>
-            {validationErrors.caption && (
-              <div className="error-message" role="alert" aria-live="polite">
-                {validationErrors.caption}
+            {captionError && (
+              <div
+                id="caption-error"
+                className="field-error"
+                role="alert"
+              >
+                {captionError}
               </div>
             )}
           </div>
 
-          {/* Tags */}
-          <div className="form-group">
+          {/* Tags Section */}
+          <div className="form-section">
             <label htmlFor="tags" className="form-label">
               Tags
+              <span className="tags-hint">(comma-separated)</span>
             </label>
             <input
               id="tags"
               type="text"
-              className="form-input"
-              placeholder="adventure, cute, funny (max 5)"
-              value={formData.tags}
-              onChange={(e) => handleInputChange('tags', e.target.value)}
-              onBlur={handleTagsBlur}
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="nature, photography, sunset"
+              className="tags-input"
               aria-label="Post tags"
+              aria-describedby={tagsError ? 'tags-error' : undefined}
             />
-            <div className="form-hint">
-              Separate tags with commas. Do not include # symbol.
-            </div>
-            {validationErrors.tags && (
-              <div className="error-message" role="alert" aria-live="polite">
-                {validationErrors.tags}
+            {tagsError && (
+              <div
+                id="tags-error"
+                className="field-error"
+                role="alert"
+              >
+                {tagsError}
               </div>
             )}
-          </div>
-
-          {/* Privacy */}
-          <div className="form-group">
-            <div className="privacy-toggle">
-              <input
-                id="privacy"
-                type="checkbox"
-                checked={formData.isPublic}
-                onChange={(e) => handleInputChange('isPublic', e.target.checked)}
-                className="privacy-checkbox"
-                aria-label="Privacy setting"
-              />
-              <label htmlFor="privacy" className="privacy-label">
-                <span className="toggle-switch"></span>
-                <span className="privacy-text">
-                  {formData.isPublic ? 'Public' : 'Private'}
-                </span>
-              </label>
-            </div>
-            <div className="form-hint">
-              {formData.isPublic
-                ? 'Everyone can see this post'
-                : 'Only you can see this post'}
+            <div className="tags-hint-text">
+              Add up to 10 tags to help others discover your post
             </div>
           </div>
 
-          {/* General errors */}
-          {(validationErrors.general || actionState.error) && (
-            <div
-              className="error-message error-message--general"
-              role="alert"
-              aria-live="polite"
+          {/* Submit Button */}
+          <div className="form-actions">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="retro-button secondary"
+              disabled={isSubmitting}
             >
-              {validationErrors.general || actionState.error}
-            </div>
-          )}
-
-          {/* Submit button */}
-          <button
-            type="submit"
-            className="tama-btn tama-btn--automotive tama-btn--racing-red submit-btn"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Creating Post...' : 'Create Post'}
-          </button>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="retro-button primary"
+              disabled={isSubmitting || !selectedFile}
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="spinner" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <MaterialIcon name="publish" />
+                  Create Post
+                </>
+              )}
+            </button>
+          </div>
         </form>
       </div>
-    </main>
+    </div>
   );
 };
