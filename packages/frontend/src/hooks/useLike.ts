@@ -53,12 +53,16 @@ export const useLike = (
     setError(null);
 
     try {
-      const response = await likeService.likePost(postId);
+      const result = await likeService.likePost(postId);
 
-      // Confirm like status from server, but keep optimistic likesCount
-      // (server returns 0 because stream processor updates count async)
-      setIsLiked(response.isLiked);
-      setIsLoading(false);
+      if (result.status === 'success') {
+        // Confirm like status from server, but keep optimistic likesCount
+        // (server returns 0 because stream processor updates count async)
+        setIsLiked(result.data.isLiked);
+        setIsLoading(false);
+      } else {
+        throw new Error('Failed to like post');
+      }
     } catch (err) {
       // Rollback on error
       setIsLiked(originalIsLiked);
@@ -88,12 +92,16 @@ export const useLike = (
     setError(null);
 
     try {
-      const response = await likeService.unlikePost(postId);
+      const result = await likeService.unlikePost(postId);
 
-      // Confirm like status from server, but keep optimistic likesCount
-      // (server returns 0 because stream processor updates count async)
-      setIsLiked(response.isLiked);
-      setIsLoading(false);
+      if (result.status === 'success') {
+        // Confirm like status from server, but keep optimistic likesCount
+        // (server returns 0 because stream processor updates count async)
+        setIsLiked(result.data.isLiked);
+        setIsLoading(false);
+      } else {
+        throw new Error('Failed to unlike post');
+      }
     } catch (err) {
       // Rollback on error
       setIsLiked(originalIsLiked);
@@ -122,10 +130,15 @@ export const useLike = (
     setError(null);
 
     try {
-      const response = await likeService.getLikeStatus(postId);
-      setIsLiked(response.isLiked);
-      setLikesCount(response.likesCount);
-      setIsLoading(false);
+      const result = await likeService.getLikeStatus(postId);
+
+      if (result.status === 'success') {
+        setIsLiked(result.data.isLiked);
+        setLikesCount(result.data.likesCount);
+        setIsLoading(false);
+      } else {
+        throw new Error('Failed to fetch like status');
+      }
     } catch (err) {
       setError('Failed to fetch like status');
       setIsLoading(false);
