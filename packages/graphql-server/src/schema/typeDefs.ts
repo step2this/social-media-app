@@ -15,7 +15,7 @@ export const typeDefs = `
     me: Profile!
 
     # Profile
-    profile(handle: String!): Profile
+    profile(handle: String!): PublicProfile
 
     # Posts
     post(id: ID!): Post
@@ -75,12 +75,27 @@ export const typeDefs = `
   # Core Types
   # ============================================================================
 
+  # Profile type - complete profile for authenticated user viewing own profile
   type Profile {
     id: ID!
-    handle: String!
     username: String!
     email: String!
-    displayName: String
+    emailVerified: Boolean!
+    handle: String!
+    fullName: String
+    bio: String
+    profilePictureUrl: String
+    followersCount: Int!
+    followingCount: Int!
+    postsCount: Int!
+    createdAt: String!
+  }
+
+  # PublicProfile type - public profile for viewing other users
+  type PublicProfile {
+    id: ID!
+    username: String!
+    handle: String!
     fullName: String
     bio: String
     profilePictureUrl: String
@@ -94,7 +109,7 @@ export const typeDefs = `
   type Post {
     id: ID!
     userId: ID!
-    author: Profile!
+    author: PublicProfile!
     caption: String
     imageUrl: String!
     thumbnailUrl: String!
@@ -109,7 +124,7 @@ export const typeDefs = `
     id: ID!
     postId: ID!
     userId: ID!
-    author: Profile!
+    author: PublicProfile!
     content: String!
     createdAt: String!
   }
@@ -327,7 +342,7 @@ export const typeDefs = `
   type Auction {
     id: ID!
     userId: ID!
-    seller: Profile!
+    seller: PublicProfile!
     title: String!
     description: String
     imageUrl: String!
@@ -338,7 +353,7 @@ export const typeDefs = `
     endTime: String!
     status: AuctionStatus!
     winnerId: ID
-    winner: Profile
+    winner: PublicProfile
     bidCount: Int!
     createdAt: String!
     updatedAt: String!
@@ -348,7 +363,7 @@ export const typeDefs = `
     id: ID!
     auctionId: ID!
     userId: ID!
-    bidder: Profile!
+    bidder: PublicProfile!
     amount: Float!
     createdAt: String!
   }

@@ -31,7 +31,7 @@ function transformPostToPostWithAuthor(post: GraphQLPost): PostWithAuthor {
     createdAt: post.createdAt,
     authorId: post.author.id,
     authorHandle: post.author.handle,
-    authorFullName: post.author.displayName ?? undefined,
+    authorFullName: post.author.fullName ?? undefined,
     authorProfilePictureUrl: post.author.profilePictureUrl ?? undefined,
     isLiked: post.isLiked ?? undefined,
   };

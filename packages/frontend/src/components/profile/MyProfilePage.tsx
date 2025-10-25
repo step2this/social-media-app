@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import type { Profile } from '@social-media-app/shared';
 import { useAuth } from '../../hooks/useAuth';
-import { profileService } from '../../services/profileService';
+import { ProfileServiceGraphQL } from '../../services/implementations/ProfileService.graphql';
+import { createGraphQLClient } from '../../graphql/client';
+import { unwrap } from '../../graphql/types';
 import { ProfileDisplay } from './ProfileDisplay';
 import { LoadingSpinner, ErrorState } from '../common/LoadingStates';
 import { ProfileLayout } from '../layout/AppLayout';
@@ -16,6 +18,9 @@ import {
   type ProfileValidationErrors,
 } from '../../utils/index.js';
 import './MyProfilePage.css';
+
+// Initialize profile service
+const profileService = new ProfileServiceGraphQL(createGraphQLClient());
 
 /**
  * My profile page component for authenticated users
@@ -52,13 +57,16 @@ export const MyProfilePage: React.FC = () => {
 
   // Load profile data
   const loadProfile = async () => {
+    if (!user?.username) return;
+
     try {
       setLoading(true);
       setError(null);
-      const profile = await profileService.getCurrentProfile();
-      setProfile(profile);
+      // Use username as handle for now (they're the same initially)
+      const result = unwrap(await profileService.getProfileByHandle(user.username));
+      setProfile(result);
     } catch (err) {
-      setError('Failed to load profile');
+      setError(err instanceof Error ? err.message : 'Failed to load profile');
     } finally {
       setLoading(false);
     }
@@ -97,7 +105,8 @@ export const MyProfilePage: React.FC = () => {
     try {
       setEditError(null);
       const updateRequest = buildProfileUpdateRequest(editFormData);
-      const updatedProfile = await profileService.updateProfile(updateRequest);
+      const result = await profileService.updateProfile(updateRequest);
+      const updatedProfile = unwrap(result);
 
       setProfile(updatedProfile);
       setEditModalOpen(false);

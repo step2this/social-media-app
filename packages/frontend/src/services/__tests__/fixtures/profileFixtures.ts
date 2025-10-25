@@ -1,93 +1,102 @@
-/**
- * Test fixtures for Profile objects
- *
- * Provides factory functions for creating mock Profile objects with sensible defaults.
- * Reduces test boilerplate and ensures consistency across tests.
- *
- * @example
- * ```typescript
- * // Basic profile
- * const profile = createMockProfile();
- *
- * // Profile with overrides
- * const seller = createMockProfile({ id: 'user-1', handle: 'seller' });
- *
- * // Use specialized helpers
- * const seller = createMockSeller();
- * const bidder = createMockBidder({ id: 'user-2' });
- * ```
- */
-
-import type { Profile } from '../../../graphql/operations/auctions.js';
+import type { Profile } from '@social-media-app/shared';
+import type {
+  GetProfileByHandleResponse,
+  UpdateProfileResponse,
+} from '../../../graphql/operations/profiles';
 
 /**
- * Create a mock Profile with sensible defaults
- *
- * All fields can be overridden by passing partial Profile object.
- *
- * @param overrides - Partial Profile to override defaults
- * @returns Complete Profile object
+ * Create a mock profile for testing
  */
 export function createMockProfile(
   overrides: Partial<Profile> = {}
 ): Profile {
   return {
-    id: 'profile-1',
-    handle: 'testuser',
-    username: 'testuser',
-    displayName: null,
-    profilePictureUrl: null,
+    id: 'profile-123',
+    userId: 'user-123',
+    handle: 'johndoe',
+    fullName: 'John Doe',
+    bio: 'Software developer and coffee enthusiast',
+    profilePictureUrl: 'https://example.com/avatars/johndoe.jpg',
+    followersCount: 150,
+    followingCount: 200,
+    postsCount: 42,
+    isFollowing: false,
+    createdAt: '2024-01-15T10:00:00Z',
     ...overrides,
   };
 }
 
 /**
- * Create a seller profile (common pattern in auction tests)
- *
- * @param overrides - Partial Profile to override defaults
- * @returns Profile configured as a seller
+ * Create a mock GraphQL profile response for GetProfileByHandle query
  */
-export function createMockSeller(
-  overrides: Partial<Profile> = {}
-): Profile {
-  return createMockProfile({
-    id: 'seller-1',
-    handle: 'seller',
-    username: 'seller',
-    ...overrides,
-  });
+export function createMockGetProfileResponse(
+  profile: Partial<Profile> = {}
+): GetProfileByHandleResponse {
+  const mockProfile = createMockProfile(profile);
+  return {
+    profile: mockProfile,
+  };
 }
 
 /**
- * Create a bidder profile (common pattern in bid tests)
- *
- * @param overrides - Partial Profile to override defaults
- * @returns Profile configured as a bidder
+ * Create a mock GraphQL profile response for UpdateProfile mutation
  */
-export function createMockBidder(
-  overrides: Partial<Profile> = {}
-): Profile {
-  return createMockProfile({
-    id: 'bidder-1',
-    handle: 'bidder',
-    username: 'bidder',
-    ...overrides,
-  });
+export function createMockUpdateProfileResponse(
+  updates: Partial<Profile> = {}
+): UpdateProfileResponse {
+  const mockProfile = createMockProfile(updates);
+  return {
+    updateProfile: mockProfile,
+  };
 }
 
 /**
- * Create a winner profile (common pattern in completed auction tests)
- *
- * @param overrides - Partial Profile to override defaults
- * @returns Profile configured as a winner
+ * Create multiple mock profiles for testing
  */
-export function createMockWinner(
-  overrides: Partial<Profile> = {}
-): Profile {
-  return createMockProfile({
-    id: 'winner-1',
-    handle: 'winner',
-    username: 'winner',
-    ...overrides,
-  });
+export function createMockProfiles(count: number): Profile[] {
+  return Array.from({ length: count }, (_, i) => createMockProfile({
+    id: `profile-${i + 1}`,
+    userId: `user-${i + 1}`,
+    handle: `user${i + 1}`,
+    fullName: `User ${i + 1}`,
+    bio: `Bio for user ${i + 1}`,
+    profilePictureUrl: `https://example.com/avatars/user${i + 1}.jpg`,
+    followersCount: Math.floor(Math.random() * 1000),
+    followingCount: Math.floor(Math.random() * 500),
+    postsCount: Math.floor(Math.random() * 100),
+  }));
 }
+
+/**
+ * Mock profile for testing - your own profile
+ */
+export const mockOwnProfile = createMockProfile({
+  id: 'profile-me',
+  userId: 'user-me',
+  handle: 'myhandle',
+  fullName: 'My Name',
+  bio: 'This is my bio',
+  isFollowing: null, // Own profile doesn't have isFollowing
+});
+
+/**
+ * Mock profile for testing - another user's profile (you are following)
+ */
+export const mockFollowedProfile = createMockProfile({
+  id: 'profile-followed',
+  userId: 'user-followed',
+  handle: 'followeduser',
+  fullName: 'Followed User',
+  isFollowing: true,
+});
+
+/**
+ * Mock profile for testing - another user's profile (you are not following)
+ */
+export const mockUnfollowedProfile = createMockProfile({
+  id: 'profile-unfollowed',
+  userId: 'user-unfollowed',
+  handle: 'unfolloweduser',
+  fullName: 'Unfollowed User',
+  isFollowing: false,
+});

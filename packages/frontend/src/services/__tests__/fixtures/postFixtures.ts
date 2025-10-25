@@ -16,10 +16,17 @@ import { createMockProfile } from './profileFixtures';
  */
 export function createMockPost(overrides: Partial<Post> = {}): Post {
     const now = new Date().toISOString();
+    const profile = createMockProfile({ id: 'user-1' });
     return {
         id: 'post-1',
         userId: 'user-1',
-        author: createMockProfile({ id: 'user-1' }),
+        author: {
+            id: profile.id,
+            handle: profile.handle,
+            username: profile.username,
+            fullName: profile.fullName || null,
+            profilePictureUrl: profile.profilePictureUrl || null,
+        },
         caption: 'Test post caption',
         imageUrl: 'https://example.com/image.jpg',
         thumbnailUrl: 'https://example.com/thumbnail.jpg',
@@ -43,18 +50,25 @@ export function createMockPosts(
     count: number,
     overrides: Partial<Post> = {}
 ): Post[] {
-    return Array.from({ length: count }, (_, index) =>
-        createMockPost({
+    return Array.from({ length: count }, (_, index) => {
+        const profile = createMockProfile({
+            id: `user-${index + 1}`,
+            handle: `user${index + 1}`,
+        });
+        return createMockPost({
             id: `post-${index + 1}`,
             userId: `user-${index + 1}`,
-            author: createMockProfile({
-                id: `user-${index + 1}`,
-                handle: `user${index + 1}`,
-            }),
+            author: {
+                id: profile.id,
+                handle: profile.handle,
+                username: profile.username,
+                fullName: profile.fullName || null,
+                profilePictureUrl: profile.profilePictureUrl || null,
+            },
             caption: `Test post ${index + 1}`,
             ...overrides,
-        })
-    );
+        });
+    });
 }
 
 /**
@@ -89,9 +103,16 @@ export function createMockPostWithComments(commentsCount: number = 5): Post {
  * @returns Post object by the specified user
  */
 export function createMockPostByUser(userId: string, handle: string): Post {
+    const profile = createMockProfile({ id: userId, handle });
     return createMockPost({
         userId,
-        author: createMockProfile({ id: userId, handle }),
+        author: {
+            id: profile.id,
+            handle: profile.handle,
+            username: profile.username,
+            fullName: profile.fullName ?? null,
+            profilePictureUrl: profile.profilePictureUrl ?? null,
+        },
     });
 }
 

@@ -1,19 +1,27 @@
 /**
  * Profile Field Resolvers
  *
- * Implements field-level resolvers for the Profile type.
- * Handles computed/relational fields that require additional data fetching.
+ * Implements field-level resolvers for Profile and PublicProfile types.
+ * Profile: For authenticated user's own profile (no isFollowing field)
+ * PublicProfile: For viewing other users (includes isFollowing field)
  */
 
-import type { ProfileResolvers } from '../generated/types.js';
+import type { ProfileResolvers, PublicProfileResolvers } from '../generated/types.js';
 
 /**
- * Profile field resolvers
- *
+ * Profile field resolvers (authenticated user's own profile)
+ * All fields are direct mappings from data source, no custom resolvers needed
+ */
+export const Profile: ProfileResolvers = {
+  // All fields are direct mappings - TypeScript ensures type safety
+};
+
+/**
+ * PublicProfile field resolvers (viewing other users)
  * Implements:
  * - isFollowing: Whether the current user follows this profile
  */
-export const Profile: ProfileResolvers = {
+export const PublicProfile: PublicProfileResolvers = {
   /**
    * Check if the current authenticated user follows this profile
    * Returns null if:

@@ -17,7 +17,7 @@ export interface Post {
     id: string;
     handle: string;
     username: string;
-    displayName: string | null;
+    fullName: string | null;
     profilePictureUrl: string | null;
   };
   caption: string | null;
