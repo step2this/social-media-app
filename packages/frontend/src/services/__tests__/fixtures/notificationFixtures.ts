@@ -38,7 +38,7 @@ export const createMockNotifications = (
   count: number,
   overrides?: Partial<Notification>
 ): Notification[] => {
-  return Array.from({ length: count }, (_, index) => 
+  return Array.from({ length: count }, (_, index) =>
     createMockNotification({
       id: `notif-${index + 1}`,
       actorUsername: `user${index + 1}`,
@@ -70,8 +70,8 @@ export const createMockNotificationConnection = (
   ),
   pageInfo: {
     hasNextPage,
-    endCursor: notifications.length > 0 
-      ? `cursor-${notifications.length - 1}` 
+    endCursor: notifications.length > 0
+      ? `cursor-${notifications.length - 1}`
       : null,
   },
 });
