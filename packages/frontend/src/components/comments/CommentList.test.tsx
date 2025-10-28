@@ -58,9 +58,13 @@ describe('CommentList', () => {
   describe('Initial Rendering', () => {
     it('should render CommentForm', async () => {
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: [],
-        totalCount: 0,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: [],
+          totalCount: 0,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
       renderWithRouter(<CommentList postId={mockPostId} />);
@@ -72,9 +76,13 @@ describe('CommentList', () => {
 
     it('should have proper test ID', async () => {
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: [],
-        totalCount: 0,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: [],
+          totalCount: 0,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
       renderWithRouter(<CommentList postId={mockPostId} />);
@@ -88,9 +96,13 @@ describe('CommentList', () => {
   describe('Fetching Comments', () => {
     it('should fetch comments on mount', async () => {
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: mockComments,
-        totalCount: 3,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: mockComments,
+          totalCount: 3,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
       renderWithRouter(<CommentList postId={mockPostId} />);
@@ -103,9 +115,13 @@ describe('CommentList', () => {
     it('should show loading skeleton while fetching', () => {
       vi.mocked(commentService.getComments).mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve({
-          comments: mockComments,
-          totalCount: 3,
-          nextCursor: null
+          status: 'success',
+          data: {
+            comments: mockComments,
+            totalCount: 3,
+            hasMore: false,
+            nextCursor: null
+          }
         }), 100))
       );
 
@@ -117,9 +133,13 @@ describe('CommentList', () => {
 
     it('should hide loading skeleton after fetching', async () => {
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: mockComments,
-        totalCount: 3,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: mockComments,
+          totalCount: 3,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
       renderWithRouter(<CommentList postId={mockPostId} />);
@@ -133,9 +153,13 @@ describe('CommentList', () => {
   describe('Rendering Comments', () => {
     it('should render list of CommentItem components', async () => {
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: mockComments,
-        totalCount: 3,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: mockComments,
+          totalCount: 3,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
       renderWithRouter(<CommentList postId={mockPostId} currentUserId={mockCurrentUserId} />);
@@ -149,9 +173,13 @@ describe('CommentList', () => {
 
     it('should render comments in correct order', async () => {
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: mockComments,
-        totalCount: 3,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: mockComments,
+          totalCount: 3,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
       renderWithRouter(<CommentList postId={mockPostId} />);
@@ -164,9 +192,13 @@ describe('CommentList', () => {
 
     it('should pass currentUserId to CommentItem', async () => {
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: [mockComments[0]],
-        totalCount: 1,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: [mockComments[0]],
+          totalCount: 1,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
       renderWithRouter(<CommentList postId={mockPostId} currentUserId={mockCurrentUserId} />);
@@ -181,9 +213,13 @@ describe('CommentList', () => {
   describe('Empty State', () => {
     it('should show empty state when no comments', async () => {
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: [],
-        totalCount: 0,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: [],
+          totalCount: 0,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
       renderWithRouter(<CommentList postId={mockPostId} />);
@@ -197,9 +233,13 @@ describe('CommentList', () => {
 
     it('should not show empty state when comments exist', async () => {
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: mockComments,
-        totalCount: 3,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: mockComments,
+          totalCount: 3,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
       renderWithRouter(<CommentList postId={mockPostId} />);
@@ -215,9 +255,13 @@ describe('CommentList', () => {
       const user = userEvent.setup();
 
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: [],
-        totalCount: 0,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: [],
+          totalCount: 0,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
       const newComment: Comment = createMockComment({
@@ -231,8 +275,11 @@ describe('CommentList', () => {
       });
 
       vi.mocked(commentService.createComment).mockResolvedValue({
-        comment: newComment,
-        commentsCount: 1
+        status: 'success',
+        data: {
+          comment: newComment,
+          commentsCount: 1
+        }
       });
 
       renderWithRouter(<CommentList postId={mockPostId} currentUserId={mockCurrentUserId} />);
@@ -260,9 +307,13 @@ describe('CommentList', () => {
       const user = userEvent.setup();
 
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: [mockComments[0]],
-        totalCount: 1,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: [mockComments[0]],
+          totalCount: 1,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
       const newComment: Comment = createMockComment({
@@ -276,8 +327,11 @@ describe('CommentList', () => {
       });
 
       vi.mocked(commentService.createComment).mockResolvedValue({
-        comment: newComment,
-        commentsCount: 2
+        status: 'success',
+        data: {
+          comment: newComment,
+          commentsCount: 2
+        }
       });
 
       renderWithRouter(<CommentList postId={mockPostId} currentUserId={mockCurrentUserId} />);
@@ -314,12 +368,19 @@ describe('CommentList', () => {
       const user = userEvent.setup();
 
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: mockComments,
-        totalCount: 3,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: mockComments,
+          totalCount: 3,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
-      vi.mocked(commentService.deleteComment).mockResolvedValue({ success: true });
+      vi.mocked(commentService.deleteComment).mockResolvedValue({
+        status: 'success',
+        data: true
+      });
 
       renderWithRouter(<CommentList postId={mockPostId} currentUserId={mockCurrentUserId} />);
 
@@ -347,12 +408,19 @@ describe('CommentList', () => {
       const user = userEvent.setup();
 
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: [mockComments[0]],
-        totalCount: 1,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: [mockComments[0]],
+          totalCount: 1,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
-      vi.mocked(commentService.deleteComment).mockResolvedValue({ success: true });
+      vi.mocked(commentService.deleteComment).mockResolvedValue({
+        status: 'success',
+        data: true
+      });
 
       renderWithRouter(<CommentList postId={mockPostId} currentUserId={mockCurrentUserId} />);
 
@@ -424,9 +492,13 @@ describe('CommentList', () => {
       vi.mocked(commentService.getComments)
         .mockRejectedValueOnce(new Error('Network error'))
         .mockResolvedValueOnce({
-          comments: mockComments,
-          totalCount: 3,
-          nextCursor: null
+          status: 'success',
+          data: {
+            comments: mockComments,
+            totalCount: 3,
+            hasMore: false,
+            nextCursor: null
+          }
         });
 
       renderWithRouter(<CommentList postId={mockPostId} />);
@@ -470,9 +542,13 @@ describe('CommentList', () => {
       );
 
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: manyComments,
-        totalCount: 50,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: manyComments,
+          totalCount: 50,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
       renderWithRouter(<CommentList postId={mockPostId} />);
@@ -490,9 +566,13 @@ describe('CommentList', () => {
       ];
 
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: duplicateComments,
-        totalCount: 2,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: duplicateComments,
+          totalCount: 2,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
       // Should render without crashing (React key warning in console is expected)
@@ -511,9 +591,13 @@ describe('CommentList', () => {
   describe('Accessibility', () => {
     it('should have proper ARIA labels', async () => {
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: mockComments,
-        totalCount: 3,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: mockComments,
+          totalCount: 3,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
       renderWithRouter(<CommentList postId={mockPostId} />);
@@ -552,9 +636,13 @@ describe('CommentList', () => {
   describe('Performance', () => {
     it('should not refetch on every render', async () => {
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: mockComments,
-        totalCount: 3,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: mockComments,
+          totalCount: 3,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
       const { rerender } = renderWithRouter(<CommentList postId={mockPostId} />);
@@ -576,9 +664,13 @@ describe('CommentList', () => {
 
     it('should refetch when postId changes', async () => {
       vi.mocked(commentService.getComments).mockResolvedValue({
-        comments: mockComments,
-        totalCount: 3,
-        nextCursor: null
+        status: 'success',
+        data: {
+          comments: mockComments,
+          totalCount: 3,
+            hasMore: false,
+          nextCursor: null
+        }
       });
 
       const { rerender } = renderWithRouter(<CommentList postId={mockPostId} />);

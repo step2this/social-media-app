@@ -12,17 +12,70 @@ vi.mock('../../services/commentService', () => ({
   }
 }));
 
-describe('CommentForm', () => {
-  const mockPostId = 'post-123';
-  const mockOnCommentCreated = vi.fn();
+// Test data constants
+const TEST_POST_ID = 'post-123';
+const VALID_COMMENT = 'Great post!';
+const EXACTLY_MAX_COMMENT = 'a'.repeat(500);  // Edge case
+const WHITESPACE_PADDED = '   Great post!   ';
 
+/**
+ * Helper to create successful comment mock response
+ * Reduces duplication across tests
+ */
+function mockSuccessfulComment(overrides = {}) {
+  const mockData = {
+    comment: createMockComment({
+      id: 'comment-123',
+      postId: TEST_POST_ID,
+      content: VALID_COMMENT,
+      ...overrides
+    }),
+    commentsCount: 1
+  };
+
+  vi.mocked(commentService.createComment).mockResolvedValue({
+    status: 'success',
+    data: mockData
+  });
+
+  return mockData;
+}
+
+/**
+ * Helper to create delayed successful comment mock
+ * Used for testing loading states
+ */
+function mockDelayedComment(delayMs = 100, overrides = {}) {
+  const mockData = {
+    comment: createMockComment({
+      id: 'comment-123',
+      postId: TEST_POST_ID,
+      content: VALID_COMMENT,
+      ...overrides
+    }),
+    commentsCount: 1
+  };
+
+  vi.mocked(commentService.createComment).mockImplementation(
+    () => new Promise((resolve) =>
+      setTimeout(() => resolve({
+        status: 'success',
+        data: mockData
+      }), delayMs)
+    )
+  );
+
+  return mockData;
+}
+
+describe('CommentForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe('Basic Rendering', () => {
     it('should render textarea and submit button', () => {
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i });
       const submitButton = screen.getByRole('button', { name: /post comment/i });
@@ -31,16 +84,8 @@ describe('CommentForm', () => {
       expect(submitButton).toBeInTheDocument();
     });
 
-    it('should have proper test IDs', () => {
-      render(<CommentForm postId={mockPostId} />);
-
-      expect(screen.getByTestId('comment-form')).toBeInTheDocument();
-      expect(screen.getByTestId('comment-textarea')).toBeInTheDocument();
-      expect(screen.getByTestId('comment-submit-button')).toBeInTheDocument();
-    });
-
     it('should show character counter', () => {
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const counter = screen.getByTestId('comment-char-counter');
       expect(counter).toBeInTheDocument();
@@ -51,7 +96,7 @@ describe('CommentForm', () => {
   describe('Character Counter', () => {
     it('should update character counter as user types', async () => {
       const user = userEvent.setup();
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i });
       const counter = screen.getByTestId('comment-char-counter');
@@ -63,7 +108,7 @@ describe('CommentForm', () => {
 
     it('should show warning when approaching limit (>450 chars)', async () => {
       const user = userEvent.setup();
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i });
       const counter = screen.getByTestId('comment-char-counter');
@@ -77,7 +122,7 @@ describe('CommentForm', () => {
 
     it('should show error when exceeding limit (>500 chars)', async () => {
       const user = userEvent.setup();
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i });
       const counter = screen.getByTestId('comment-char-counter');
@@ -92,7 +137,7 @@ describe('CommentForm', () => {
 
   describe('Submit Button State', () => {
     it('should disable submit button when textarea is empty', () => {
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const submitButton = screen.getByRole('button', { name: /post comment/i });
       expect(submitButton).toBeDisabled();
@@ -100,19 +145,19 @@ describe('CommentForm', () => {
 
     it('should enable submit button when text is entered', async () => {
       const user = userEvent.setup();
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i });
       const submitButton = screen.getByRole('button', { name: /post comment/i });
 
-      await user.type(textarea, 'Great post!');
+      await user.type(textarea, VALID_COMMENT);
 
       expect(submitButton).toBeEnabled();
     });
 
     it('should disable submit button when exceeds 500 chars', async () => {
       const user = userEvent.setup();
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i });
       const submitButton = screen.getByRole('button', { name: /post comment/i });
@@ -125,26 +170,14 @@ describe('CommentForm', () => {
 
     it('should disable submit button during submission', async () => {
       const user = userEvent.setup();
-      const mockComment = {
-        comment: createMockComment({
-          id: 'comment-123',
-          postId: mockPostId,
-          content: 'Great post!'
-        }),
-        commentsCount: 1
-      };
+      mockDelayedComment(100);
 
-      // Mock delayed response
-      vi.mocked(commentService.createComment).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(mockComment), 100))
-      );
-
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i }) as HTMLTextAreaElement;
       const submitButton = screen.getByRole('button', { name: /post comment/i });
 
-      await user.type(textarea, 'Great post!');
+      await user.type(textarea, VALID_COMMENT);
       await user.click(submitButton);
 
       // Should be disabled immediately after click
@@ -163,51 +196,31 @@ describe('CommentForm', () => {
   describe('Form Submission', () => {
     it('should call commentService.createComment on submit', async () => {
       const user = userEvent.setup();
-      const mockComment = {
-        comment: createMockComment({
-          id: 'comment-123',
-          postId: mockPostId,
-          content: 'Great post!'
-        }),
-        commentsCount: 1
-      };
+      mockSuccessfulComment();
 
-      vi.mocked(commentService.createComment).mockResolvedValue(mockComment);
-
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i });
       const submitButton = screen.getByRole('button', { name: /post comment/i });
 
-      await user.type(textarea, 'Great post!');
+      await user.type(textarea, VALID_COMMENT);
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(commentService.createComment).toHaveBeenCalledWith(mockPostId, 'Great post!');
+        expect(commentService.createComment).toHaveBeenCalledWith(TEST_POST_ID, VALID_COMMENT);
       });
     });
 
     it('should show loading state during submission', async () => {
       const user = userEvent.setup();
-      const mockComment = {
-        comment: createMockComment({
-          id: 'comment-123',
-          postId: mockPostId,
-          content: 'Great post!'
-        }),
-        commentsCount: 1
-      };
+      mockDelayedComment(100);
 
-      vi.mocked(commentService.createComment).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(mockComment), 100))
-      );
-
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i });
       const submitButton = screen.getByRole('button', { name: /post comment/i });
 
-      await user.type(textarea, 'Great post!');
+      await user.type(textarea, VALID_COMMENT);
       await user.click(submitButton);
 
       // Should show loading text
@@ -220,50 +233,33 @@ describe('CommentForm', () => {
 
     it('should call onCommentCreated callback after success', async () => {
       const user = userEvent.setup();
-      const mockComment = {
-        comment: createMockComment({
-          id: 'comment-123',
-          postId: mockPostId,
-          content: 'Great post!'
-        }),
-        commentsCount: 1
-      };
+      const mockOnCommentCreated = vi.fn();  // Local scope
+      const mockData = mockSuccessfulComment();
 
-      vi.mocked(commentService.createComment).mockResolvedValue(mockComment);
-
-      render(<CommentForm postId={mockPostId} onCommentCreated={mockOnCommentCreated} />);
+      render(<CommentForm postId={TEST_POST_ID} onCommentCreated={mockOnCommentCreated} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i });
       const submitButton = screen.getByRole('button', { name: /post comment/i });
 
-      await user.type(textarea, 'Great post!');
+      await user.type(textarea, VALID_COMMENT);
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockOnCommentCreated).toHaveBeenCalledWith(mockComment.comment);
+        expect(mockOnCommentCreated).toHaveBeenCalledWith(mockData.comment);
       });
     });
 
     it('should clear input after successful submit', async () => {
       const user = userEvent.setup();
-      const mockComment = {
-        comment: createMockComment({
-          id: 'comment-123',
-          postId: mockPostId,
-          content: 'Great post!'
-        }),
-        commentsCount: 1
-      };
+      mockSuccessfulComment();
 
-      vi.mocked(commentService.createComment).mockResolvedValue(mockComment);
-
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i }) as HTMLTextAreaElement;
       const submitButton = screen.getByRole('button', { name: /post comment/i });
 
-      await user.type(textarea, 'Great post!');
-      expect(textarea.value).toBe('Great post!');
+      await user.type(textarea, VALID_COMMENT);
+      expect(textarea.value).toBe(VALID_COMMENT);
 
       await user.click(submitButton);
 
@@ -274,24 +270,15 @@ describe('CommentForm', () => {
 
     it('should reset character counter after successful submit', async () => {
       const user = userEvent.setup();
-      const mockComment = {
-        comment: createMockComment({
-          id: 'comment-123',
-          postId: mockPostId,
-          content: 'Great post!'
-        }),
-        commentsCount: 1
-      };
+      mockSuccessfulComment();
 
-      vi.mocked(commentService.createComment).mockResolvedValue(mockComment);
-
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i });
       const submitButton = screen.getByRole('button', { name: /post comment/i });
       const counter = screen.getByTestId('comment-char-counter');
 
-      await user.type(textarea, 'Great post!');
+      await user.type(textarea, VALID_COMMENT);
       expect(counter).toHaveTextContent('11/500');
 
       await user.click(submitButton);
@@ -303,18 +290,45 @@ describe('CommentForm', () => {
   });
 
   describe('Error Handling', () => {
+    it('should handle AsyncState error response', async () => {
+      const user = userEvent.setup();
+
+      // Mock AsyncState error (not rejected promise)
+      vi.mocked(commentService.createComment).mockResolvedValue({
+        status: 'error',
+        error: {
+          message: 'Service temporarily unavailable',
+          extensions: { code: 'SERVICE_ERROR' }
+        }
+      });
+
+      render(<CommentForm postId={TEST_POST_ID} />);
+
+      const textarea = screen.getByRole('textbox', { name: /add a comment/i });
+      const submitButton = screen.getByRole('button', { name: /post comment/i });
+
+      await user.type(textarea, VALID_COMMENT);
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        const errorMessage = screen.getByTestId('comment-form-error');
+        expect(errorMessage).toBeInTheDocument();
+        expect(errorMessage).toHaveTextContent(/failed to post comment/i);
+      });
+    });
+
     it('should show error message on submission failure', async () => {
       const user = userEvent.setup();
       vi.mocked(commentService.createComment).mockRejectedValue(
         new Error('Failed to create comment')
       );
 
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i });
       const submitButton = screen.getByRole('button', { name: /post comment/i });
 
-      await user.type(textarea, 'Great post!');
+      await user.type(textarea, VALID_COMMENT);
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -330,12 +344,12 @@ describe('CommentForm', () => {
         new Error('Failed to create comment')
       );
 
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i }) as HTMLTextAreaElement;
       const submitButton = screen.getByRole('button', { name: /post comment/i });
 
-      await user.type(textarea, 'Great post!');
+      await user.type(textarea, VALID_COMMENT);
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -343,7 +357,7 @@ describe('CommentForm', () => {
       });
 
       // Text should still be there
-      expect(textarea.value).toBe('Great post!');
+      expect(textarea.value).toBe(VALID_COMMENT);
     });
 
     it('should clear error message when user types again', async () => {
@@ -352,12 +366,12 @@ describe('CommentForm', () => {
         new Error('Failed to create comment')
       );
 
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i });
       const submitButton = screen.getByRole('button', { name: /post comment/i });
 
-      await user.type(textarea, 'Great post!');
+      await user.type(textarea, VALID_COMMENT);
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -374,14 +388,14 @@ describe('CommentForm', () => {
 
   describe('Accessibility', () => {
     it('should have proper ARIA labels', () => {
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i });
       expect(textarea).toHaveAttribute('aria-label', 'Add a comment');
     });
 
     it('should have proper ARIA attributes for character counter', () => {
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox');
       const counter = screen.getByTestId('comment-char-counter');
@@ -392,18 +406,9 @@ describe('CommentForm', () => {
 
     it('should be keyboard accessible', async () => {
       const user = userEvent.setup();
-      const mockComment = {
-        comment: createMockComment({
-          id: 'comment-123',
-          postId: mockPostId,
-          content: 'Great post!'
-        }),
-        commentsCount: 1
-      };
+      mockSuccessfulComment();
 
-      vi.mocked(commentService.createComment).mockResolvedValue(mockComment);
-
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i });
       const submitButton = screen.getByRole('button', { name: /post comment/i });
@@ -413,7 +418,7 @@ describe('CommentForm', () => {
       expect(textarea).toHaveFocus();
 
       // Type comment
-      await user.keyboard('Great post!');
+      await user.keyboard(VALID_COMMENT);
 
       // Tab to submit button
       await user.tab();
@@ -429,6 +434,28 @@ describe('CommentForm', () => {
   });
 
   describe('Edge Cases', () => {
+    it('should allow exactly 500 characters', async () => {
+      const user = userEvent.setup();
+      mockSuccessfulComment({ content: EXACTLY_MAX_COMMENT });
+
+      render(<CommentForm postId={TEST_POST_ID} />);
+
+      const textarea = screen.getByRole('textbox', { name: /add a comment/i });
+      const submitButton = screen.getByRole('button', { name: /post comment/i });
+      const counter = screen.getByTestId('comment-char-counter');
+
+      await user.type(textarea, EXACTLY_MAX_COMMENT);
+
+      expect(counter).toHaveTextContent('500/500');
+      expect(submitButton).toBeEnabled();
+
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(commentService.createComment).toHaveBeenCalled();
+      });
+    });
+
     it('should handle empty postId gracefully', () => {
       render(<CommentForm postId="" />);
 
@@ -438,33 +465,24 @@ describe('CommentForm', () => {
 
     it('should trim whitespace from comment content', async () => {
       const user = userEvent.setup();
-      const mockComment = {
-        comment: createMockComment({
-          id: 'comment-123',
-          postId: mockPostId,
-          content: 'Great post!'
-        }),
-        commentsCount: 1
-      };
+      mockSuccessfulComment();
 
-      vi.mocked(commentService.createComment).mockResolvedValue(mockComment);
-
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i });
       const submitButton = screen.getByRole('button', { name: /post comment/i });
 
-      await user.type(textarea, '   Great post!   ');
+      await user.type(textarea, WHITESPACE_PADDED);
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(commentService.createComment).toHaveBeenCalledWith(mockPostId, 'Great post!');
+        expect(commentService.createComment).toHaveBeenCalledWith(TEST_POST_ID, VALID_COMMENT);
       });
     });
 
     it('should disable submit button for whitespace-only input', async () => {
       const user = userEvent.setup();
-      render(<CommentForm postId={mockPostId} />);
+      render(<CommentForm postId={TEST_POST_ID} />);
 
       const textarea = screen.getByRole('textbox', { name: /add a comment/i });
       const submitButton = screen.getByRole('button', { name: /post comment/i });

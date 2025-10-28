@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { commentService } from '../../services/commentService';
+import { isSuccess, isError } from '../../graphql/types';
 import { CommentForm } from './CommentForm';
 import { CommentItem } from './CommentItem';
 import type { Comment } from '@social-media-app/shared';
@@ -32,8 +33,13 @@ export const CommentList = ({ postId, currentUserId }: CommentListProps) => {
     setError(null);
 
     try {
-      const response = await commentService.getComments(postId);
-      setComments(response.comments);
+      const result = await commentService.getComments(postId);
+
+      if (isSuccess(result)) {
+        setComments(result.data.comments);
+      } else if (isError(result)) {
+        setError(result.error.message);
+      }
     } catch (err) {
       setError('Failed to load comments. Please try again.');
       console.error('Failed to fetch comments:', err);

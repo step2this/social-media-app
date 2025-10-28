@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { followService } from '../services/followService.js';
+import { followService } from '../services/followService';
 import {
   calculateOptimisticFollowState,
   calculateOptimisticUnfollowState,
@@ -59,13 +59,18 @@ export const useFollow = (
     setError(null);
 
     try {
-      const response = await followService.getFollowStatus(userId);
-      setIsFollowing(response.isFollowing);
-      setFollowersCount(response.followersCount);
-      setFollowingCount(response.followingCount);
-      setIsLoading(false);
+      const result = await followService.getFollowStatus(userId);
+
+      if (result.status === 'success') {
+        setIsFollowing(result.data.isFollowing);
+        setFollowersCount(result.data.followersCount);
+        setFollowingCount(result.data.followingCount);
+        setIsLoading(false);
+      } else {
+        throw new Error('Failed to fetch follow status');
+      }
     } catch (err) {
-      setError(createFetchStatusErrorMessage());
+      setError('Failed to fetch follow status');
       setIsLoading(false);
     }
   }, [userId]);
@@ -109,12 +114,16 @@ export const useFollow = (
     setError(null);
 
     try {
-      const response = await followService.followUser(userId);
+      const result = await followService.followUser(userId);
 
-      // Confirm follow status from server, but keep optimistic followersCount
-      // (server returns 0 because stream processor updates count async)
-      setIsFollowing(response.isFollowing);
-      setIsLoading(false);
+      if (result.status === 'success') {
+        // Confirm follow status from server, but keep optimistic followersCount
+        // (server returns 0 because stream processor updates count async)
+        setIsFollowing(result.data.isFollowing);
+        setIsLoading(false);
+      } else {
+        throw new Error('Failed to follow user');
+      }
 
       // NOTE: We intentionally do NOT call onFollowStatusChange here.
       // This implements pure optimistic UI - the count increment persists
@@ -158,12 +167,16 @@ export const useFollow = (
     setError(null);
 
     try {
-      const response = await followService.unfollowUser(userId);
+      const result = await followService.unfollowUser(userId);
 
-      // Confirm follow status from server, but keep optimistic followersCount
-      // (server returns 0 because stream processor updates count async)
-      setIsFollowing(response.isFollowing);
-      setIsLoading(false);
+      if (result.status === 'success') {
+        // Confirm follow status from server, but keep optimistic followersCount
+        // (server returns 0 because stream processor updates count async)
+        setIsFollowing(result.data.isFollowing);
+        setIsLoading(false);
+      } else {
+        throw new Error('Failed to unfollow user');
+      }
 
       // NOTE: We intentionally do NOT call onFollowStatusChange here.
       // This implements pure optimistic UI - the count decrement persists

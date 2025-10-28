@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/auth/ProtectedRoute.js';
 import { AuthModal } from './components/auth/AuthModal.js';
 import { ProfilePage } from './components/profile/ProfilePage';
@@ -211,16 +211,11 @@ function AppContent() {
  */
 function App() {
   return (
-    <Router
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true
-      }}
-    >
+    <BrowserRouter>
       <ServiceProvider>
         <AppContent />
       </ServiceProvider>
-    </Router>
+    </BrowserRouter>
   );
 }
 

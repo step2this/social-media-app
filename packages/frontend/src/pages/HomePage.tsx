@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { PostWithAuthor } from '@social-media-app/shared';
-import { FeedServiceGraphQL } from '../services/implementations/FeedService.graphql';
-import { createGraphQLClient } from '../graphql/client';
+import { feedService } from '../services/feedService';
 import { isSuccess } from '../graphql/types';
 import { PostCard } from '../components/posts/PostCard';
 import { useFeedItemAutoRead } from '../hooks/useFeedItemAutoRead';
@@ -11,9 +10,6 @@ import {
 } from '../components/dev';
 import { useAuthStore } from '../stores/authStore';
 import './HomePage.css';
-
-// Initialize feed service with GraphQL client
-const feedService = new FeedServiceGraphQL(createGraphQLClient());
 
 /**
  * Wrapper component for PostCard with auto-read functionality

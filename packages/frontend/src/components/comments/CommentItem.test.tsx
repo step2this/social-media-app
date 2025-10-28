@@ -137,7 +137,10 @@ describe('CommentItem', () => {
 
     it('should call commentService.deleteComment when confirmed', async () => {
       const user = userEvent.setup();
-      vi.mocked(commentService.deleteComment).mockResolvedValue({ success: true });
+      vi.mocked(commentService.deleteComment).mockResolvedValue({
+        status: 'success',
+        data: true
+      });
 
       renderWithRouter(
         <CommentItem comment={mockComment} currentUserId="user-123" />
@@ -156,7 +159,10 @@ describe('CommentItem', () => {
 
     it('should call onCommentDeleted callback after successful deletion', async () => {
       const user = userEvent.setup();
-      vi.mocked(commentService.deleteComment).mockResolvedValue({ success: true });
+      vi.mocked(commentService.deleteComment).mockResolvedValue({
+        status: 'success',
+        data: true
+      });
 
       renderWithRouter(
         <CommentItem
@@ -182,7 +188,10 @@ describe('CommentItem', () => {
     it('should show loading state during deletion', async () => {
       const user = userEvent.setup();
       vi.mocked(commentService.deleteComment).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({ success: true }), 100))
+        () => new Promise((resolve) => setTimeout(() => resolve({
+          status: 'success',
+          data: true
+        }), 100))
       );
 
       renderWithRouter(
@@ -207,7 +216,10 @@ describe('CommentItem', () => {
     it('should disable buttons during deletion', async () => {
       const user = userEvent.setup();
       vi.mocked(commentService.deleteComment).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({ success: true }), 100))
+        () => new Promise((resolve) => setTimeout(() => resolve({
+          status: 'success',
+          data: true
+        }), 100))
       );
 
       renderWithRouter(
@@ -285,7 +297,10 @@ describe('CommentItem', () => {
       const user = userEvent.setup();
       vi.mocked(commentService.deleteComment)
         .mockRejectedValueOnce(new Error('Network error'))
-        .mockResolvedValueOnce({ success: true });
+        .mockResolvedValueOnce({
+          status: 'success',
+          data: true
+        });
 
       renderWithRouter(
         <CommentItem
@@ -367,7 +382,10 @@ describe('CommentItem', () => {
 
     it('should be keyboard accessible', async () => {
       const user = userEvent.setup();
-      vi.mocked(commentService.deleteComment).mockResolvedValue({ success: true });
+      vi.mocked(commentService.deleteComment).mockResolvedValue({
+        status: 'success',
+        data: true
+      });
 
       renderWithRouter(
         <CommentItem comment={mockComment} currentUserId="user-123" />

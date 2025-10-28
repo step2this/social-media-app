@@ -7,9 +7,28 @@
  * @module s3-helpers
  */
 
-import { randomUUID } from 'crypto';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { PutObjectCommand, type S3Client } from '@aws-sdk/client-s3';
+
+/**
+ * Generate a random UUID using the browser's crypto API or Node.js crypto module
+ * This function works in both browser and Node.js environments
+ */
+function generateUUID(): string {
+  // Browser environment
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+
+  // Node.js environment
+  if (typeof require !== 'undefined') {
+    const { randomUUID } = require('crypto');
+    return randomUUID();
+  }
+
+  // Fallback (should never reach here in modern environments)
+  throw new Error('No UUID generation method available');
+}
 
 /**
  * Upload purpose discriminated union type
@@ -243,7 +262,7 @@ export async function generatePresignedUploadUrl(
   }
 
   const fileExtension = parts[1];
-  const uniqueId = randomUUID();
+  const uniqueId = generateUUID();
 
   // Build S3 key for main file
   const key = buildS3Key({

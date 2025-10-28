@@ -1,6 +1,7 @@
 import { useState, useCallback, FormEvent, ChangeEvent, useActionState } from 'react';
 import { flushSync } from 'react-dom';
 import { commentService } from '../../services/commentService';
+import { isSuccess, isError } from '../../graphql/types';
 import type { Comment } from '@social-media-app/shared';
 import './CommentForm.css';
 
@@ -35,7 +36,7 @@ export const CommentForm = ({ postId, onCommentCreated }: CommentFormProps) => {
 
   // Action function for comment submission
   const createCommentAction = useCallback(async (
-    prevState: CommentFormActionState,
+    _prevState: CommentFormActionState,
     _formData: FormData
   ): Promise<CommentFormActionState> => {
     const trimmedContent = content.trim();
@@ -48,7 +49,15 @@ export const CommentForm = ({ postId, onCommentCreated }: CommentFormProps) => {
     }
 
     try {
-      const response = await commentService.createComment(postId, trimmedContent);
+      const result = await commentService.createComment(postId, trimmedContent);
+
+      // Check if the operation was successful
+      if (!isSuccess(result)) {
+        const errorMessage = isError(result)
+          ? result.error.message
+          : 'Failed to create comment';
+        throw new Error(errorMessage);
+      }
 
       // Clear input on success
       setContent('');
@@ -57,7 +66,7 @@ export const CommentForm = ({ postId, onCommentCreated }: CommentFormProps) => {
 
       // Call callback if provided
       if (onCommentCreated) {
-        onCommentCreated(response.comment);
+        onCommentCreated(result.data.comment);
       }
 
       return { success: true };
@@ -70,7 +79,7 @@ export const CommentForm = ({ postId, onCommentCreated }: CommentFormProps) => {
     }
   }, [postId, content, onCommentCreated]);
 
-  const [actionState, formAction, isPending] = useActionState(createCommentAction, initialActionState);
+  const [, formAction] = useActionState(createCommentAction, initialActionState);
 
   const charCount = content.length;
   const isOverLimit = charCount > MAX_COMMENT_LENGTH;
