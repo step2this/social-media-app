@@ -35,10 +35,21 @@
  */
 
 import { vi } from 'vitest';
-import type { User, AuthTokens } from '@social-media-app/shared';
+import type {
+  User,
+  AuthTokens,
+  RegisterRequest,
+  RegisterResponse,
+  LoginRequest,
+  LoginResponse,
+  UpdateUserRequest
+} from '@social-media-app/shared';
 
 /**
  * Return type for useAuth hook
+ *
+ * This interface matches the actual useAuth hook return type with proper typing.
+ * Type-safe alternative to using `unknown` for function return values.
  */
 export interface UseAuthReturn {
   user: User | null;
@@ -47,12 +58,12 @@ export interface UseAuthReturn {
   isLoading: boolean;
   error: string | null;
   isHydrated: boolean;
-  register: (userData: unknown) => Promise<unknown>;
-  login: (credentials: unknown) => Promise<unknown>;
+  register: (userData: RegisterRequest) => Promise<RegisterResponse>;
+  login: (credentials: LoginRequest) => Promise<LoginResponse>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<AuthTokens>;
   getProfile: () => Promise<User>;
-  updateProfile: (profileData: unknown) => Promise<User>;
+  updateProfile: (profileData: UpdateUserRequest) => Promise<User>;
   checkSession: () => Promise<boolean>;
   clearError: () => void;
 }
