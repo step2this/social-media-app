@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { MaterialIcon } from '../common/MaterialIcon';
-import { notificationService } from '../../services/notificationService';
+import { useServices } from '../../services/ServiceProvider';
 
 interface LeftSidebarProps {
   collapsed?: boolean;
@@ -21,6 +21,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 }) => {
   const location = useLocation();
   const { user, logout, isAuthenticated, isHydrated } = useAuth();
+  const { notificationDataService } = useServices();
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef<HTMLLIElement>(null);
@@ -60,8 +61,12 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
-        const response = await notificationService.getUnreadCount();
-        setUnreadCount(response.count);
+        const result = await notificationDataService.getUnreadCount();
+        if (result.status === 'success') {
+          setUnreadCount(result.data.count);
+        } else {
+          console.error('Failed to fetch unread count:', result.error.message);
+        }
       } catch (error) {
         console.error('Failed to fetch unread count:', error);
       }
@@ -75,7 +80,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     }
 
     return undefined;
-  }, [isAuthenticated, isHydrated]);
+  }, [isAuthenticated, isHydrated, notificationDataService]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
