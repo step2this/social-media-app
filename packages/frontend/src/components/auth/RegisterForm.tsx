@@ -1,6 +1,4 @@
 import React, { useState, useCallback } from 'react';
-import { useActionState } from 'react';
-import { flushSync } from 'react-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import type { RegisterRequest } from '@social-media-app/shared';
 
@@ -8,13 +6,6 @@ interface RegisterFormProps {
   onSuccess?: () => void;
   onSwitchToLogin?: () => void;
 }
-
-interface RegisterFormActionState {
-  success?: boolean;
-  error?: string;
-}
-
-const initialActionState: RegisterFormActionState = {};
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({
   onSuccess,
@@ -30,11 +21,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [displayError, setDisplayError] = useState<string | null>(null);
 
-  // Action function for registration
-  const registerAction = useCallback(async (
-    _prevState: RegisterFormActionState,
-    _formData: FormData
-  ): Promise<RegisterFormActionState> => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!passwordsMatch) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
     // eslint-disable-next-line no-console
     console.log('📝 RegisterForm: Form submitted with data:', {
       email: formData.email,
@@ -50,7 +45,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       setIsSubmitting(false);
       const errorMsg = 'Passwords do not match';
       setDisplayError(errorMsg);
-      return { success: false, error: errorMsg };
+      return;
     }
 
     // eslint-disable-next-line no-console
@@ -64,8 +59,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
       // Call success callback
       onSuccess?.();
-
-      return { success: true };
     } catch (error: unknown) {
       setIsSubmitting(false);
 
@@ -82,26 +75,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
       const errorMsg = error instanceof Error ? error.message : 'Registration failed. Please try again.';
       setDisplayError(errorMsg);
-      return { success: false, error: errorMsg };
     }
   }, [formData, confirmPassword, register, onSuccess]);
-
-  const [actionState, formAction] = useActionState(registerAction, initialActionState);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!passwordsMatch) {
-      return;
-    }
-
-    flushSync(() => {
-      setIsSubmitting(true);
-    });
-
-    const formDataObj = new FormData();
-    formAction(formDataObj);
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -212,11 +187,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           )}
         </div>
 
-        {(displayError || actionState.error) && (
+        {displayError && (
           <div className="tama-alert tama-alert--error" role="alert">
-            {displayError || actionState.error}
-            {((displayError || actionState.error)?.includes('email already exists') ||
-              (displayError || actionState.error)?.includes('username already exists')) && (
+            {displayError}
+            {(displayError.includes('email already exists') ||
+              displayError.includes('username already exists')) && (
               <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
                 <p>
                   <strong>Development tip:</strong> You can clear mock data by running:
