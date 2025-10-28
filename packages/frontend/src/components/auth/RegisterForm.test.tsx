@@ -1,8 +1,8 @@
-// import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { RegisterForm } from './RegisterForm.js';
 import { useAuth } from '../../hooks/useAuth.js';
+import { createMockUseAuthReturn } from '../../test-utils/hook-mocks.js';
 
 // Mock the useAuth hook
 vi.mock('../../hooks/useAuth.js', () => ({
@@ -13,16 +13,12 @@ const mockUseAuth = useAuth as any;
 
 describe('RegisterForm', () => {
   const mockRegister = vi.fn();
-  const mockClearError = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseAuth.mockReturnValue({
-      register: mockRegister,
-      isLoading: false,
-      error: null,
-      clearError: mockClearError
-    });
+    mockUseAuth.mockReturnValue(createMockUseAuthReturn({
+      register: mockRegister
+    }));
   });
 
   describe('Form Data Processing', () => {
