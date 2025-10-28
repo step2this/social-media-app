@@ -1,18 +1,10 @@
-import React, { useEffect } from 'react';
-import { useActionState } from 'react';
-import { flushSync } from 'react-dom';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MaterialIcon } from '../common/MaterialIcon';
 import { useImagePreview } from '../../hooks/useImagePreview';
 import { useCreatePostForm } from '../../hooks/useCreatePostForm';
-import { createPostAction, type CreatePostActionState } from './createPostAction';
+import { createPost, type CreatePostInput, type CreatePostResult } from './createPostAction';
 import './CreatePostPage.css';
-
-// Initial action state
-const initialActionState: CreatePostActionState = {
-  success: false,
-  error: null,
-};
 
 export const CreatePostPage: React.FC = () => {
   const navigate = useNavigate();
@@ -40,56 +32,51 @@ export const CreatePostPage: React.FC = () => {
     getFormData,
   } = useCreatePostForm();
 
-  // Form action state with useActionState
-  const [actionState, formAction, isSubmitting] = useActionState(
-    async (prevState: CreatePostActionState) => {
-      // Client-side validation
-      if (!validateForm()) {
-        return {
-          success: false,
-          error: 'Please fix validation errors',
-        };
-      }
+  // State for form submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-      if (!selectedFile) {
-        return {
-          success: false,
-          error: 'Please select an image',
-        };
-      }
+  /**
+   * Handle form submission
+   */
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
 
+    // Client-side validation
+    if (!validateForm()) {
+      setActionError('Please fix validation errors');
+      return;
+    }
+
+    if (!selectedFile) {
+      setActionError('Please select an image');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setActionError(null);
+
+    try {
       // Get form data and submit
       const formData = getFormData();
-      return createPostAction(prevState, {
+      const result = await createPost({
         ...formData,
         imageFile: selectedFile,
       });
-    },
-    initialActionState
-  );
 
-  // Handle successful post creation
-  useEffect(() => {
-    if (actionState.success && actionState.postId) {
       // Reset form
       resetForm();
       clearImage();
 
       // Navigate to new post
-      navigate(`/post/${actionState.postId}`);
+      if (result.postId) {
+        navigate(`/post/${result.postId}`);
+      }
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Failed to create post');
+      setIsSubmitting(false);
     }
-  }, [actionState.success, actionState.postId, navigate, resetForm, clearImage]);
-
-  /**
-   * Handle form submission
-   */
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    flushSync(() => {
-      // Trigger form action
-      formAction();
-    });
-  };
+  }, [validateForm, selectedFile, getFormData, resetForm, clearImage, navigate]);
 
   return (
     <div className="create-post-page">
@@ -106,10 +93,10 @@ export const CreatePostPage: React.FC = () => {
         </header>
 
         {/* Display action errors */}
-        {actionState.error && (
+        {actionError && (
           <div className="error-banner" role="alert">
             <MaterialIcon name="error" />
-            <span>{actionState.error}</span>
+            <span>{actionError}</span>
           </div>
         )}
 
