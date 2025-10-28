@@ -2,6 +2,7 @@ import type { INavigationService } from './INavigationService';
 import type { IAuthService } from './IAuthService';
 import type { IModalService } from './IModalService';
 import type { INotificationService } from './INotificationService';
+import type { INotificationDataService } from './INotificationDataService';
 
 /**
  * Service container interface - provides access to all application services
@@ -24,9 +25,14 @@ export interface IServiceContainer {
   readonly modalService: IModalService;
 
   /**
-   * Notification service for user feedback
+   * Notification service for user feedback (UI toasts)
    */
   readonly notificationService: INotificationService;
+
+  /**
+   * Notification data service for backend notification operations
+   */
+  readonly notificationDataService: INotificationDataService;
 }
 
 /**
@@ -36,5 +42,6 @@ export type {
   INavigationService,
   IAuthService,
   IModalService,
-  INotificationService
+  INotificationService,
+  INotificationDataService
 };
