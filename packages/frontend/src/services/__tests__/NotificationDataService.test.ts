@@ -10,7 +10,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { INotificationDataService } from '../interfaces/INotificationDataService';
-import { NotificationDataServiceGraphQL } from '../implementations/NotificationDataService.graphql';
+import { NotificationDataServiceGraphQL } from '../implementations/NotificationDataService.graphql.js';
 import { MockGraphQLClient } from '../../graphql/client.mock';
 import {
   createMockNotification,
