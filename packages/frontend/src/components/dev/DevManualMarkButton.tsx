@@ -1,4 +1,4 @@
-import { useActionState, useEffect, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { FeedServiceGraphQL } from '../../services/implementations/FeedService.graphql';
 import { createGraphQLClient } from '../../graphql/client';
 import type { PostWithAuthor } from '@social-media-app/shared';
@@ -16,37 +16,10 @@ export interface DevManualMarkButtonProps {
 }
 
 /**
- * State for the mark action
- */
-interface MarkActionState {
-  success: boolean;
-  error: string | null;
-}
-
-/**
- * Action function for marking posts as read
- * Must be defined outside component for stability with useActionState
- */
-async function markAsReadAction(
-  prevState: MarkActionState,
-  postId: string
-): Promise<MarkActionState> {
-  try {
-    await feedService.markPostsAsRead({ postIds: [postId] });
-    return { success: true, error: null };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to mark as read'
-    };
-  }
-}
-
-/**
  * DevManualMarkButton Component
  *
- * Manual mark-as-read button using React 19's useActionState hook.
- * Provides explicit control for testing read state tracking.
+ * Manual mark-as-read button for testing read state tracking.
+ * Provides explicit control over marking posts as read.
  *
  * @param props - Component props
  * @returns React component
@@ -55,27 +28,34 @@ export function DevManualMarkButton({
   post,
   onMarkComplete
 }: DevManualMarkButtonProps) {
-  const [state, formAction, isPending] = useActionState(markAsReadAction, {
-    success: false,
-    error: null
-  });
+  const [isPending, setIsPending] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const previousSuccessRef = useRef(false);
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  // Call onMarkComplete when state changes to success
-  useEffect(() => {
-    if (state.success && !previousSuccessRef.current && onMarkComplete) {
-      previousSuccessRef.current = true;
-      onMarkComplete();
+    setIsPending(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      await feedService.markPostsAsRead({ postIds: [post.id] });
+      setSuccess(true);
+      setIsPending(false);
+
+      if (onMarkComplete) {
+        onMarkComplete();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to mark as read');
+      setSuccess(false);
+      setIsPending(false);
     }
-  }, [state.success, onMarkComplete]);
-
-  const handleSubmit = (formData: FormData) => {
-    formAction(post.id);
-  };
+  }, [post.id, onMarkComplete]);
 
   return (
-    <form action={handleSubmit} className="dev-manual-mark-button">
+    <form onSubmit={handleSubmit} className="dev-manual-mark-button">
       <button
         type="submit"
         disabled={isPending}
@@ -93,15 +73,15 @@ export function DevManualMarkButton({
         )}
       </button>
 
-      {state.success && (
+      {success && (
         <span className="dev-manual-mark-button__message dev-manual-mark-button__message--success">
           ✓ Marked as read
         </span>
       )}
 
-      {state.error && (
+      {error && (
         <span className="dev-manual-mark-button__message dev-manual-mark-button__message--error">
-          ✗ {state.error}
+          ✗ {error}
         </span>
       )}
     </form>
