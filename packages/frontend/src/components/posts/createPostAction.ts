@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import { CreatePostRequestSchema, type CreatePostRequest } from '@social-media-app/shared';
 import { PostServiceGraphQL } from '../../services/implementations/PostService.graphql';
 import { createGraphQLClient } from '../../graphql/client';
