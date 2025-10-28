@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { LoginForm } from './LoginForm';
 import { useAuth } from '../../hooks/useAuth';
+import { createMockUseAuthReturn } from '../../test-utils/hook-mocks';
 
 // Mock the useAuth hook
 vi.mock('../../hooks/useAuth');
@@ -22,22 +23,9 @@ describe('LoginForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    vi.mocked(useAuth).mockReturnValue({
-      login: mockLogin,
-      logout: vi.fn(),
-      register: vi.fn(),
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-      tokens: null,
-      isHydrated: true,
-      refreshToken: vi.fn(),
-      getProfile: vi.fn(),
-      updateProfile: vi.fn(),
-      checkSession: vi.fn(),
-      clearError: vi.fn()
-    });
+    vi.mocked(useAuth).mockReturnValue(createMockUseAuthReturn({
+      login: mockLogin
+    }));
   });
 
   it('renders email and password inputs with submit button', () => {
