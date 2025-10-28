@@ -141,6 +141,10 @@ export const errorScenarios = {
             message: 'Not authenticated',
             code: 'UNAUTHENTICATED',
         },
+        unauthenticated: {
+            message: 'Not authenticated',
+            code: 'UNAUTHENTICATED',
+        },
     },
 
     /**
@@ -175,6 +179,10 @@ export const errorScenarios = {
         },
         auction: {
             message: 'Auction not found',
+            code: 'NOT_FOUND',
+        },
+        notification: {
+            message: 'Notification not found',
             code: 'NOT_FOUND',
         },
     },
