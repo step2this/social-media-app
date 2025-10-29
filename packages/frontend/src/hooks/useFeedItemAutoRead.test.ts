@@ -1,19 +1,43 @@
+/**
+ * useFeedItemAutoRead Hook Tests
+ *
+ * Tests the useFeedItemAutoRead hook using singleton injection pattern for feedService.
+ * NO vi.mock() for services - uses setFeedService() for proper DI testing.
+ * DOES mock useIntersectionObserver (hook, not a service singleton).
+ *
+ * Pattern: Inject MockGraphQLClient → FeedServiceGraphQL → setFeedService()
+ */
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useFeedItemAutoRead } from './useFeedItemAutoRead';
-import { feedService } from '../services/feedService';
+import { setFeedService, resetFeedService } from '../services/feedService.js';
+import { FeedServiceGraphQL } from '../services/implementations/FeedService.graphql.js';
+import { MockGraphQLClient } from '../graphql/client.mock.js';
+import { wrapInGraphQLSuccess, wrapInGraphQLError } from '../services/__tests__/fixtures/graphqlFixtures.js';
 
-// Mock dependencies
-vi.mock('../services/feedService');
+// Mock the useIntersectionObserver hook (not a service)
 vi.mock('./useIntersectionObserver');
 
 // Import the mocked hook to control its behavior
 import * as useIntersectionObserverModule from './useIntersectionObserver';
 
 describe('useFeedItemAutoRead', () => {
+  let mockClient: MockGraphQLClient;
+  let mockService: FeedServiceGraphQL;
   let mockUseIntersectionObserver: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    // Create mock GraphQL client
+    mockClient = new MockGraphQLClient();
+    
+    // Create service with mock client
+    mockService = new FeedServiceGraphQL(mockClient);
+    
+    // Inject mock service into singleton
+    setFeedService(mockService);
+
+    // Mock useIntersectionObserver hook (not a service - ok to mock)
     vi.clearAllMocks();
     vi.useFakeTimers();
 
@@ -29,6 +53,9 @@ describe('useFeedItemAutoRead', () => {
   });
 
   afterEach(() => {
+    // Cleanup singleton for next test
+    resetFeedService();
+    
     vi.restoreAllMocks();
     vi.clearAllTimers();
   });
@@ -51,8 +78,13 @@ describe('useFeedItemAutoRead', () => {
   });
 
   it('should mark post as read when visibility threshold is met', async () => {
-    const mockResponse = { success: true, markedCount: 1 };
-    vi.mocked(feedService.markPostsAsRead).mockResolvedValueOnce(mockResponse);
+    // Setup mock response using MockGraphQLClient
+    mockClient.setMutationResponse(wrapInGraphQLSuccess({
+      markPostsAsRead: {
+        success: true,
+        markedCount: 1
+      }
+    }));
 
     renderHook(() => useFeedItemAutoRead('post-123'));
 
@@ -62,12 +94,20 @@ describe('useFeedItemAutoRead', () => {
       await callback();
     });
 
-    expect(feedService.markPostsAsRead).toHaveBeenCalledWith(['post-123']);
+    // Verify service was called correctly
+    expect(mockClient.mutateCalls).toHaveLength(1);
+    expect(mockClient.mutateCalls[0].variables).toEqual({
+      input: { postIds: ['post-123'] }
+    });
   });
 
   it('should only mark post as read once', async () => {
-    const mockResponse = { success: true, markedCount: 1 };
-    vi.mocked(feedService.markPostsAsRead).mockResolvedValue(mockResponse);
+    mockClient.setMutationResponse(wrapInGraphQLSuccess({
+      markPostsAsRead: {
+        success: true,
+        markedCount: 1
+      }
+    }));
 
     renderHook(() => useFeedItemAutoRead('post-123'));
 
@@ -80,12 +120,14 @@ describe('useFeedItemAutoRead', () => {
       await callback();
     });
 
-    expect(feedService.markPostsAsRead).toHaveBeenCalledTimes(1);
+    // Should only call mutation once (idempotent)
+    expect(mockClient.mutateCalls).toHaveLength(1);
   });
 
   it('should handle API errors gracefully without crashing', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.mocked(feedService.markPostsAsRead).mockRejectedValueOnce(new Error('Network error'));
+    
+    mockClient.setMutationResponse(wrapInGraphQLError('Network error', 'NETWORK_ERROR'));
 
     renderHook(() => useFeedItemAutoRead('post-123'));
 
@@ -99,8 +141,12 @@ describe('useFeedItemAutoRead', () => {
   });
 
   it('should not make API call if already marked as read', async () => {
-    const mockResponse = { success: true, markedCount: 1 };
-    vi.mocked(feedService.markPostsAsRead).mockResolvedValue(mockResponse);
+    mockClient.setMutationResponse(wrapInGraphQLSuccess({
+      markPostsAsRead: {
+        success: true,
+        markedCount: 1
+      }
+    }));
 
     const { rerender } = renderHook(() => useFeedItemAutoRead('post-123'));
 
@@ -109,20 +155,24 @@ describe('useFeedItemAutoRead', () => {
       await callback();
     });
 
-    expect(feedService.markPostsAsRead).toHaveBeenCalledTimes(1);
+    expect(mockClient.mutateCalls).toHaveLength(1);
 
     // Trigger again
     await act(async () => {
       await callback();
     });
 
-    // Should still only be called once
-    expect(feedService.markPostsAsRead).toHaveBeenCalledTimes(1);
+    // Should still only be called once (idempotent)
+    expect(mockClient.mutateCalls).toHaveLength(1);
   });
 
   it('should handle different post IDs separately', async () => {
-    const mockResponse = { success: true, markedCount: 1 };
-    vi.mocked(feedService.markPostsAsRead).mockResolvedValue(mockResponse);
+    mockClient.setMutationResponse(wrapInGraphQLSuccess({
+      markPostsAsRead: {
+        success: true,
+        markedCount: 1
+      }
+    }));
 
     // First post
     const { result: result1 } = renderHook(() => useFeedItemAutoRead('post-123'));
@@ -137,9 +187,14 @@ describe('useFeedItemAutoRead', () => {
       await callback2();
     });
 
-    expect(feedService.markPostsAsRead).toHaveBeenCalledWith(['post-123']);
-    expect(feedService.markPostsAsRead).toHaveBeenCalledWith(['post-456']);
-    expect(feedService.markPostsAsRead).toHaveBeenCalledTimes(2);
+    // Should have called mutation twice with different post IDs
+    expect(mockClient.mutateCalls).toHaveLength(2);
+    expect(mockClient.mutateCalls[0].variables).toEqual({
+      input: { postIds: ['post-123'] }
+    });
+    expect(mockClient.mutateCalls[1].variables).toEqual({
+      input: { postIds: ['post-456'] }
+    });
   });
 
   it('should create unique refs for different post instances', () => {
@@ -151,8 +206,8 @@ describe('useFeedItemAutoRead', () => {
 
   it('should log error but continue execution on API failure', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const error = new Error('Failed to mark as read');
-    vi.mocked(feedService.markPostsAsRead).mockRejectedValueOnce(error);
+    
+    mockClient.setMutationResponse(wrapInGraphQLError('Failed to mark as read', 'OPERATION_FAILED'));
 
     renderHook(() => useFeedItemAutoRead('post-123'));
 
@@ -161,10 +216,11 @@ describe('useFeedItemAutoRead', () => {
       await callback();
     });
 
+    // Should log error with post ID
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       'Failed to mark post as read:',
       'post-123',
-      error
+      expect.any(Error)
     );
 
     consoleErrorSpy.mockRestore();
@@ -187,6 +243,6 @@ describe('useFeedItemAutoRead', () => {
     await vi.runAllTimersAsync();
 
     // API should not be called for empty string
-    expect(feedService.markPostsAsRead).not.toHaveBeenCalled();
+    expect(mockClient.mutateCalls).toHaveLength(0);
   });
 });

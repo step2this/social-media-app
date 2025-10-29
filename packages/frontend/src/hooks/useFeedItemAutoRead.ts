@@ -1,10 +1,6 @@
 import { useRef, useCallback, type RefObject } from 'react';
 import { useIntersectionObserver } from './useIntersectionObserver';
-import { FeedServiceGraphQL } from '../services/implementations/FeedService.graphql';
-import { createGraphQLClient } from '../graphql/client';
-
-// Initialize feed service
-const feedService = new FeedServiceGraphQL(createGraphQLClient());
+import { feedService } from '../services/feedService.js';
 
 /**
  * Custom hook to automatically mark a feed post as read
@@ -47,11 +43,12 @@ export function useFeedItemAutoRead(postId: string): RefObject<HTMLDivElement | 
     // Optimistically mark as read to prevent duplicate calls
     isMarkedAsReadRef.current = true;
 
-    try {
-      await feedService.markPostsAsRead({ postIds: [postId] });
-    } catch (error) {
+    const result = await feedService.markPostsAsRead({ postIds: [postId] });
+    
+    // Check for errors using AsyncState pattern
+    if (result.status === 'error') {
       // Log error but don't disrupt user experience
-      console.error('Failed to mark post as read:', postId, error);
+      console.error('Failed to mark post as read:', postId, new Error(result.error.message));
 
       // Revert optimistic update on failure
       isMarkedAsReadRef.current = false;
