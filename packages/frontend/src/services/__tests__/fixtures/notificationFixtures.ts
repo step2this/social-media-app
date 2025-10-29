@@ -21,13 +21,29 @@ export const createMockNotification = (
   overrides?: Partial<Notification>
 ): Notification => ({
   id: 'notif-1',
+  userId: 'user-123',
   type: 'like' as NotificationType,
-  actorId: 'user-123',
-  actorUsername: 'johndoe',
-  targetId: 'post-456',
+  status: 'unread',
+  title: 'New like',
   message: 'johndoe liked your post',
-  read: false,
+  priority: 'normal',
+  actor: {
+    userId: 'actor-123',
+    handle: 'johndoe',
+    displayName: 'John Doe',
+    avatarUrl: 'https://example.com/avatar.jpg'
+  },
+  target: {
+    type: 'post',
+    id: 'post-456',
+    url: '/posts/post-456',
+    preview: 'Check out this post'
+  },
+  deliveryChannels: ['in-app'],
+  soundEnabled: true,
+  vibrationEnabled: true,
   createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
   ...overrides,
 });
 
@@ -41,7 +57,12 @@ export const createMockNotifications = (
   return Array.from({ length: count }, (_, index) =>
     createMockNotification({
       id: `notif-${index + 1}`,
-      actorUsername: `user${index + 1}`,
+      actor: {
+        userId: `actor-${index + 1}`,
+        handle: `user${index + 1}`,
+        displayName: `User ${index + 1}`,
+        avatarUrl: `https://example.com/avatar-${index + 1}.jpg`
+      },
       ...overrides,
     })
   );
@@ -70,6 +91,8 @@ export const createMockNotificationConnection = (
   ),
   pageInfo: {
     hasNextPage,
+    hasPreviousPage: false,
+    startCursor: notifications.length > 0 ? 'cursor-0' : null,
     endCursor: notifications.length > 0
       ? `cursor-${notifications.length - 1}`
       : null,
@@ -104,7 +127,7 @@ export const createLikeNotification = (
   overrides?: Partial<Notification>
 ): Notification => createMockNotification({
   type: 'like',
-  message: `${overrides?.actorUsername || 'johndoe'} liked your post`,
+  message: `${overrides?.actor?.handle || 'johndoe'} liked your post`,
   ...overrides,
 });
 
@@ -112,7 +135,7 @@ export const createCommentNotification = (
   overrides?: Partial<Notification>
 ): Notification => createMockNotification({
   type: 'comment',
-  message: `${overrides?.actorUsername || 'johndoe'} commented on your post`,
+  message: `${overrides?.actor?.handle || 'johndoe'} commented on your post`,
   ...overrides,
 });
 
@@ -120,7 +143,7 @@ export const createFollowNotification = (
   overrides?: Partial<Notification>
 ): Notification => createMockNotification({
   type: 'follow',
-  message: `${overrides?.actorUsername || 'johndoe'} started following you`,
+  message: `${overrides?.actor?.handle || 'johndoe'} started following you`,
   ...overrides,
 });
 
@@ -128,6 +151,6 @@ export const createMentionNotification = (
   overrides?: Partial<Notification>
 ): Notification => createMockNotification({
   type: 'mention',
-  message: `${overrides?.actorUsername || 'johndoe'} mentioned you in a comment`,
+  message: `${overrides?.actor?.handle || 'johndoe'} mentioned you in a comment`,
   ...overrides,
 });

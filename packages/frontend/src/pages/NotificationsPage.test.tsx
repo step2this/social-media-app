@@ -64,8 +64,11 @@ describe('NotificationsPage', () => {
       renderPage();
 
       await waitFor(() => {
+        // Component uses getNotificationText() which formats with actor displayName
         notifications.forEach(notif => {
-          expect(screen.getByText(notif.message)).toBeInTheDocument();
+          const actorName = notif.actor?.displayName || notif.actor?.handle || 'Someone';
+          const expectedText = `${actorName} liked your post`;
+          expect(screen.getByText(expectedText)).toBeInTheDocument();
         });
       });
     });
@@ -88,9 +91,18 @@ describe('NotificationsPage', () => {
 
     it('should display different notification types correctly', async () => {
       const notifications = [
-        createMockNotification({ type: 'like', message: 'John liked your post' }),
-        createMockNotification({ type: 'comment', message: 'Sarah commented on your post' }),
-        createMockNotification({ type: 'follow', message: 'Mike started following you' }),
+        createMockNotification({
+          type: 'like',
+          actor: { userId: 'user-1', handle: 'john', displayName: 'John' }
+        }),
+        createMockNotification({
+          type: 'comment',
+          actor: { userId: 'user-2', handle: 'sarah', displayName: 'Sarah' }
+        }),
+        createMockNotification({
+          type: 'follow',
+          actor: { userId: 'user-3', handle: 'mike', displayName: 'Mike' }
+        }),
       ];
 
       mockNotificationDataService.getNotifications.mockResolvedValue({
@@ -119,12 +131,15 @@ describe('NotificationsPage', () => {
 
       renderPage();
 
+      const actorName = notification.actor?.displayName || notification.actor?.handle || 'Someone';
+      const expectedText = `${actorName} liked your post`;
+
       await waitFor(() => {
-        expect(screen.getByText(notification.message)).toBeInTheDocument();
+        expect(screen.getByText(expectedText)).toBeInTheDocument();
       });
 
       // Click the notification
-      const notificationElement = screen.getByText(notification.message);
+      const notificationElement = screen.getByText(expectedText);
       fireEvent.click(notificationElement);
 
       // Verify service was called
@@ -167,12 +182,15 @@ describe('NotificationsPage', () => {
 
       renderPage();
 
+      const actorName = notification.actor?.displayName || notification.actor?.handle || 'Someone';
+      const expectedText = `${actorName} liked your post`;
+
       await waitFor(() => {
-        expect(screen.getByText(notification.message)).toBeInTheDocument();
+        expect(screen.getByText(expectedText)).toBeInTheDocument();
       });
 
       // Click the notification
-      const notificationElement = screen.getByText(notification.message);
+      const notificationElement = screen.getByText(expectedText);
       fireEvent.click(notificationElement);
 
       // Should NOT call markAsRead for already-read notification
@@ -191,8 +209,11 @@ describe('NotificationsPage', () => {
 
       renderPage();
 
+      const actorName = notification.actor?.displayName || notification.actor?.handle || 'Someone';
+      const expectedText = `${actorName} liked your post`;
+
       await waitFor(() => {
-        expect(screen.getByText(notification.message)).toBeInTheDocument();
+        expect(screen.getByText(expectedText)).toBeInTheDocument();
       });
 
       // Find and click delete button
@@ -205,7 +226,7 @@ describe('NotificationsPage', () => {
     });
 
     it('should remove notification from list after successful deletion', async () => {
-      const notification = createMockNotification({ message: 'Test notification' });
+      const notification = createMockNotification({ title: 'Test notification' });
       mockNotificationDataService.getNotifications.mockResolvedValue({
         status: 'success',
         data: [notification]
@@ -214,8 +235,11 @@ describe('NotificationsPage', () => {
 
       renderPage();
 
+      const actorName = notification.actor?.displayName || notification.actor?.handle || 'Someone';
+      const expectedText = `${actorName} liked your post`;
+
       await waitFor(() => {
-        expect(screen.getByText('Test notification')).toBeInTheDocument();
+        expect(screen.getByText(expectedText)).toBeInTheDocument();
       });
 
       // Click delete
@@ -224,7 +248,7 @@ describe('NotificationsPage', () => {
 
       // Notification should be removed from UI
       await waitFor(() => {
-        expect(screen.queryByText('Test notification')).not.toBeInTheDocument();
+        expect(screen.queryByText(expectedText)).not.toBeInTheDocument();
       });
     });
   });
@@ -254,12 +278,15 @@ describe('NotificationsPage', () => {
 
       renderPage();
 
+      const actorName = notification.actor?.displayName || notification.actor?.handle || 'Someone';
+      const expectedText = `${actorName} liked your post`;
+
       await waitFor(() => {
-        expect(screen.getByText(notification.message)).toBeInTheDocument();
+        expect(screen.getByText(expectedText)).toBeInTheDocument();
       });
 
       // Click notification (will fail to mark as read)
-      const notificationElement = screen.getByText(notification.message);
+      const notificationElement = screen.getByText(expectedText);
       fireEvent.click(notificationElement);
 
       // Error should be logged (we're not asserting console.error here)
@@ -279,8 +306,11 @@ describe('NotificationsPage', () => {
 
       renderPage();
 
+      const actorName = notification.actor?.displayName || notification.actor?.handle || 'Someone';
+      const expectedText = `${actorName} liked your post`;
+
       await waitFor(() => {
-        expect(screen.getByText(notification.message)).toBeInTheDocument();
+        expect(screen.getByText(expectedText)).toBeInTheDocument();
       });
 
       // Click delete (will fail)
@@ -311,12 +341,15 @@ describe('NotificationsPage', () => {
 
       renderPage();
 
+      const actorName = notification.actor?.displayName || notification.actor?.handle || 'Someone';
+      const expectedText = `${actorName} liked your post`;
+
       await waitFor(() => {
-        expect(screen.getByText(notification.message)).toBeInTheDocument();
+        expect(screen.getByText(expectedText)).toBeInTheDocument();
       });
 
       // Click notification
-      const notificationElement = screen.getByText(notification.message);
+      const notificationElement = screen.getByText(expectedText);
       fireEvent.click(notificationElement);
 
       // Navigation should happen (tested via router mock in TestUtils)

@@ -142,6 +142,7 @@ export const NotificationsPage: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
   const navigate = useNavigate();
 
   /**
@@ -155,6 +156,8 @@ export const NotificationsPage: React.FC = () => {
 
       if (result.status === 'success') {
         setNotifications(result.data);
+        // If we got fewer than 10 notifications, assume there are no more
+        setHasMore(result.data.length >= 10);
       } else {
         setError('Failed to load notifications. Please try again.');
       }
@@ -226,7 +229,7 @@ export const NotificationsPage: React.FC = () => {
   /**
    * Render grouped notifications
    */
-  const renderGroupedNotifications = () => {
+  const renderGroupedNotifications = (): React.ReactElement[] => {
     const groups = groupNotificationsByTime(notifications);
     const groupTitles = {
       today: 'Today',
@@ -236,18 +239,18 @@ export const NotificationsPage: React.FC = () => {
       earlier: 'Earlier'
     };
 
-    return Object.entries(groups).map(([key, groupNotifications]) => {
-      if (groupNotifications.length === 0) return null;
-
-      return (
+    return Object.entries(groups)
+      .filter(([, groupNotifications]) => groupNotifications.length > 0)
+      .map(([key, groupNotifications]): React.ReactElement => (
         <div key={key} className="notifications-page__group">
           <h2 className="notifications-page__group-title">
             {groupTitles[key as keyof typeof groupTitles]}
           </h2>
           <div className="notifications-page__group-items">
-            {groupNotifications.map(notification => (
+            {(groupNotifications as Notification[]).map((notification): React.ReactElement => (
               <div
                 key={notification.id}
+                role="listitem"
                 className={`notification-item ${
                   notification.status === 'unread' ? 'notification-item--unread' : ''
                 }`}
@@ -255,7 +258,7 @@ export const NotificationsPage: React.FC = () => {
               >
                 {/* Unread indicator */}
                 {notification.status === 'unread' && (
-                  <div className="notification-item__unread-dot" />
+                  <div className="notification-item__unread-dot" aria-label="unread" />
                 )}
 
                 {/* Avatar or icon */}
@@ -289,10 +292,12 @@ export const NotificationsPage: React.FC = () => {
                 </div>
 
                 {/* Thumbnail (if post-related) */}
-                {notification.target?.type === 'post' && notification.metadata?.thumbnailUrl && (
+                {notification.target?.type === 'post' &&
+                 notification.metadata?.thumbnailUrl &&
+                 typeof notification.metadata.thumbnailUrl === 'string' && (
                   <div className="notification-item__thumbnail">
                     <img
-                      src={notification.metadata.thumbnailUrl as string}
+                      src={notification.metadata.thumbnailUrl}
                       alt="Post thumbnail"
                       className="notification-item__thumbnail-img"
                     />
@@ -311,8 +316,7 @@ export const NotificationsPage: React.FC = () => {
             ))}
           </div>
         </div>
-      );
-    });
+      ));
   };
 
   // Loading state
@@ -385,6 +389,36 @@ export const NotificationsPage: React.FC = () => {
         <div className="notifications-page__list">
           {renderGroupedNotifications()}
         </div>
+
+        {/* Load More button */}
+        {hasMore && (
+          <div className="notifications-page__load-more">
+            <button
+              onClick={async () => {
+                try {
+                  setLoading(true);
+                  const result = await notificationDataService.getNotifications({
+                    limit: 100
+                  });
+
+                  if (result.status === 'success') {
+                    setNotifications(prev => [...prev, ...result.data]);
+                    // If we got fewer than the limit, there are no more
+                    setHasMore(result.data.length >= 100);
+                  }
+                } catch (err) {
+                  console.error('Failed to load more:', err);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="notifications-page__load-more-btn"
+              disabled={loading}
+            >
+              Load more
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
