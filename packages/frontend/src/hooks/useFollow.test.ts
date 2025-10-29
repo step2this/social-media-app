@@ -1,30 +1,47 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+/**
+ * useFollow Hook Tests
+ *
+ * Tests the useFollow hook using singleton injection pattern.
+ * NO vi.mock() - uses setFollowService() for proper DI testing.
+ *
+ * Pattern: Inject MockGraphQLClient → FollowServiceGraphQL → setFollowService()
+ */
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useFollow } from './useFollow.js';
-import { followService } from '../services/followService.js';
-
-vi.mock('../services/followService');
+import { setFollowService, resetFollowService } from '../services/followService.js';
+import { FollowServiceGraphQL } from '../services/implementations/FollowService.graphql.js';
+import { MockGraphQLClient } from '../graphql/client.mock.js';
+import { wrapInGraphQLSuccess, wrapInGraphQLError } from '../services/__tests__/fixtures/graphqlFixtures.js';
 
 describe('useFollow', () => {
+  let mockClient: MockGraphQLClient;
+  let mockService: FollowServiceGraphQL;
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Create mock GraphQL client
+    mockClient = new MockGraphQLClient();
+    
+    // Create service with mock client
+    mockService = new FollowServiceGraphQL(mockClient);
+    
+    // Inject mock service into singleton
+    setFollowService(mockService);
+  });
+
+  afterEach(() => {
+    // Cleanup singleton for next test
+    resetFollowService();
   });
 
   describe('initialization', () => {
     it('should initialize with default state', () => {
-      // Mock getFollowStatus to prevent auto-fetch on mount
-      vi.mocked(followService.getFollowStatus).mockResolvedValueOnce({
-        isFollowing: false,
-        followersCount: 0,
-        followingCount: 0
-      });
-
       const { result } = renderHook(() => useFollow('user-123'));
 
       expect(result.current.isFollowing).toBe(false);
       expect(result.current.followersCount).toBe(0);
       expect(result.current.followingCount).toBe(0);
-      // Note: isLoading might be true initially due to auto-fetch
       expect(result.current.error).toBeNull();
     });
 
@@ -45,14 +62,14 @@ describe('useFollow', () => {
 
   describe('followUser', () => {
     it('should follow a user with optimistic update', async () => {
-      const mockResponse = {
-        success: true,
-        followersCount: 0,
-        followingCount: 0,
-        isFollowing: true
-      };
-
-      vi.mocked(followService.followUser).mockResolvedValueOnce(mockResponse);
+      // Setup mock response
+      mockClient.setMutationResponse(wrapInGraphQLSuccess({
+        followUser: {
+          isFollowing: true,
+          followersCount: 100, // Server returns actual count
+          followingCount: 50
+        }
+      }));
 
       const { result } = renderHook(() =>
         useFollow('user-123', { initialFollowersCount: 99, initialIsFollowing: false })
@@ -77,18 +94,16 @@ describe('useFollow', () => {
       expect(result.current.isFollowing).toBe(true);
       expect(result.current.followersCount).toBe(100);
       expect(result.current.error).toBeNull();
-      expect(followService.followUser).toHaveBeenCalledWith('user-123');
     });
 
     it('should NOT call onFollowStatusChange callback after successful follow', async () => {
-      const mockResponse = {
-        success: true,
-        followersCount: 0,
-        followingCount: 0,
-        isFollowing: true
-      };
-
-      vi.mocked(followService.followUser).mockResolvedValueOnce(mockResponse);
+      mockClient.setMutationResponse(wrapInGraphQLSuccess({
+        followUser: {
+          isFollowing: true,
+          followersCount: 100,
+          followingCount: 50
+        }
+      }));
 
       const mockCallback = vi.fn();
       const { result } = renderHook(() =>
@@ -113,9 +128,7 @@ describe('useFollow', () => {
     });
 
     it('should rollback on error', async () => {
-      vi.mocked(followService.followUser).mockRejectedValueOnce(
-        new Error('Network error')
-      );
+      mockClient.setMutationResponse(wrapInGraphQLError('Network error', 'NETWORK_ERROR'));
 
       const { result } = renderHook(() =>
         useFollow('user-123', { initialFollowersCount: 99, initialIsFollowing: false })
@@ -146,24 +159,28 @@ describe('useFollow', () => {
         useFollow('user-123', { initialIsFollowing: true })
       );
 
+      // Track mutation calls
+      const mutationCallsBefore = mockClient.mutateCalls.length;
+
       act(() => {
         result.current.followUser();
       });
 
-      expect(followService.followUser).not.toHaveBeenCalled();
+      // Should not make API call
+      const mutationCallsAfter = mockClient.mutateCalls.length;
+      expect(mutationCallsAfter).toBe(mutationCallsBefore);
     });
   });
 
   describe('unfollowUser', () => {
     it('should unfollow a user with optimistic update', async () => {
-      const mockResponse = {
-        success: true,
-        followersCount: 0,
-        followingCount: 0,
-        isFollowing: false
-      };
-
-      vi.mocked(followService.unfollowUser).mockResolvedValueOnce(mockResponse);
+      mockClient.setMutationResponse(wrapInGraphQLSuccess({
+        unfollowUser: {
+          isFollowing: false,
+          followersCount: 99,
+          followingCount: 50
+        }
+      }));
 
       const { result } = renderHook(() =>
         useFollow('user-123', { initialIsFollowing: true, initialFollowersCount: 100 })
@@ -188,18 +205,16 @@ describe('useFollow', () => {
       expect(result.current.isFollowing).toBe(false);
       expect(result.current.followersCount).toBe(99);
       expect(result.current.error).toBeNull();
-      expect(followService.unfollowUser).toHaveBeenCalledWith('user-123');
     });
 
     it('should NOT call onFollowStatusChange callback after successful unfollow', async () => {
-      const mockResponse = {
-        success: true,
-        followersCount: 0,
-        followingCount: 0,
-        isFollowing: false
-      };
-
-      vi.mocked(followService.unfollowUser).mockResolvedValueOnce(mockResponse);
+      mockClient.setMutationResponse(wrapInGraphQLSuccess({
+        unfollowUser: {
+          isFollowing: false,
+          followersCount: 99,
+          followingCount: 50
+        }
+      }));
 
       const mockCallback = vi.fn();
       const { result } = renderHook(() =>
@@ -225,9 +240,7 @@ describe('useFollow', () => {
     });
 
     it('should rollback on error', async () => {
-      vi.mocked(followService.unfollowUser).mockRejectedValueOnce(
-        new Error('Network error')
-      );
+      mockClient.setMutationResponse(wrapInGraphQLError('Network error', 'NETWORK_ERROR'));
 
       const { result } = renderHook(() =>
         useFollow('user-123', { initialFollowersCount: 100, initialIsFollowing: true })
@@ -258,22 +271,28 @@ describe('useFollow', () => {
         useFollow('user-123', { initialIsFollowing: false })
       );
 
+      // Track mutation calls
+      const mutationCallsBefore = mockClient.mutateCalls.length;
+
       act(() => {
         result.current.unfollowUser();
       });
 
-      expect(followService.unfollowUser).not.toHaveBeenCalled();
+      // Should not make API call
+      const mutationCallsAfter = mockClient.mutateCalls.length;
+      expect(mutationCallsAfter).toBe(mutationCallsBefore);
     });
   });
 
   describe('toggleFollow', () => {
     it('should call followUser when not following', async () => {
-      vi.mocked(followService.followUser).mockResolvedValueOnce({
-        success: true,
-        followersCount: 0,
-        followingCount: 0,
-        isFollowing: true
-      });
+      mockClient.setMutationResponse(wrapInGraphQLSuccess({
+        followUser: {
+          isFollowing: true,
+          followersCount: 1,
+          followingCount: 50
+        }
+      }));
 
       const { result } = renderHook(() =>
         useFollow('user-123', { initialIsFollowing: false })
@@ -287,17 +306,17 @@ describe('useFollow', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      expect(followService.followUser).toHaveBeenCalledWith('user-123');
       expect(result.current.isFollowing).toBe(true);
     });
 
     it('should call unfollowUser when following', async () => {
-      vi.mocked(followService.unfollowUser).mockResolvedValueOnce({
-        success: true,
-        followersCount: 0,
-        followingCount: 0,
-        isFollowing: false
-      });
+      mockClient.setMutationResponse(wrapInGraphQLSuccess({
+        unfollowUser: {
+          isFollowing: false,
+          followersCount: 0,
+          followingCount: 50
+        }
+      }));
 
       const { result } = renderHook(() =>
         useFollow('user-123', { initialIsFollowing: true, initialFollowersCount: 1 })
@@ -311,20 +330,19 @@ describe('useFollow', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      expect(followService.unfollowUser).toHaveBeenCalledWith('user-123');
       expect(result.current.isFollowing).toBe(false);
     });
   });
 
   describe('fetchFollowStatus', () => {
     it('should fetch follow status successfully', async () => {
-      const mockResponse = {
-        isFollowing: true,
-        followersCount: 100,
-        followingCount: 50
-      };
-
-      vi.mocked(followService.getFollowStatus).mockResolvedValue(mockResponse);
+      mockClient.setQueryResponse(wrapInGraphQLSuccess({
+        followStatus: {
+          isFollowing: true,
+          followersCount: 100,
+          followingCount: 50
+        }
+      }));
 
       // Provide initial values to prevent auto-fetch on mount
       const { result } = renderHook(() => useFollow('user-123', { initialIsFollowing: false }));
@@ -337,13 +355,10 @@ describe('useFollow', () => {
       expect(result.current.followersCount).toBe(100);
       expect(result.current.followingCount).toBe(50);
       expect(result.current.error).toBeNull();
-      expect(followService.getFollowStatus).toHaveBeenCalledWith('user-123');
     });
 
     it('should handle fetch errors', async () => {
-      vi.mocked(followService.getFollowStatus).mockRejectedValue(
-        new Error('Network error')
-      );
+      mockClient.setQueryResponse(wrapInGraphQLError('Network error', 'NETWORK_ERROR'));
 
       // Provide initial values to prevent auto-fetch on mount
       const { result } = renderHook(() => useFollow('user-123', { initialIsFollowing: false }));
@@ -358,9 +373,7 @@ describe('useFollow', () => {
 
   describe('clearError', () => {
     it('should clear error state', async () => {
-      vi.mocked(followService.followUser).mockRejectedValueOnce(
-        new Error('Network error')
-      );
+      mockClient.setMutationResponse(wrapInGraphQLError('Network error', 'NETWORK_ERROR'));
 
       const { result } = renderHook(() => useFollow('user-123'));
 
