@@ -50,29 +50,6 @@ const createFollowStatusResponse = (overrides = {}) => wrapInGraphQLSuccess({
   }
 });
 
-/** Helper to test optimistic updates with success */
-async function testOptimisticUpdate(
-  action: () => void,
-  expectedOptimisticState: { isFollowing: boolean; followersCount: number },
-  expectedFinalState: { isFollowing: boolean; followersCount: number }
-) {
-  return {
-    checkOptimistic: () => {
-      expect(expectedOptimisticState.isFollowing).toBeDefined();
-      expect(expectedOptimisticState.followersCount).toBeDefined();
-    },
-    waitForCompletion: async (result: any) => {
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-      
-      expect(result.current.isFollowing).toBe(expectedFinalState.isFollowing);
-      expect(result.current.followersCount).toBe(expectedFinalState.followersCount);
-      expect(result.current.error).toBeNull();
-    }
-  };
-}
-
 /** Helper to test error rollback */
 async function testErrorRollback(
   action: () => void,
