@@ -1,6 +1,6 @@
 /**
  * NotificationsPage Utils Tests
- * 
+ *
  * TDD approach: Write tests first, then implement utilities
  * Tests for helper functions extracted from NotificationsPage
  */
@@ -37,7 +37,7 @@ describe('NotificationsPage Utils', () => {
     it('should group notifications into yesterday', () => {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
-      
+
       const notification = createMockNotification({
         createdAt: yesterday.toISOString()
       });
@@ -52,7 +52,7 @@ describe('NotificationsPage Utils', () => {
     it('should group notifications into this week', () => {
       const threeDaysAgo = new Date();
       threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-      
+
       const notification = createMockNotification({
         createdAt: threeDaysAgo.toISOString()
       });
@@ -66,7 +66,7 @@ describe('NotificationsPage Utils', () => {
     it('should group notifications into this month', () => {
       const twoWeeksAgo = new Date();
       twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-      
+
       const notification = createMockNotification({
         createdAt: twoWeeksAgo.toISOString()
       });
@@ -80,7 +80,7 @@ describe('NotificationsPage Utils', () => {
     it('should group notifications into earlier', () => {
       const twoMonthsAgo = new Date();
       twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-      
+
       const notification = createMockNotification({
         createdAt: twoMonthsAgo.toISOString()
       });
@@ -227,42 +227,42 @@ describe('NotificationsPage Utils', () => {
   describe('formatTimestamp', () => {
     it('should return "just now" for timestamps less than 1 minute old', () => {
       const now = new Date().toISOString();
-      
+
       expect(formatTimestamp(now)).toBe('just now');
     });
 
     it('should return minutes for timestamps less than 1 hour old', () => {
       const fiveMinutesAgo = new Date();
       fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
-      
+
       expect(formatTimestamp(fiveMinutesAgo.toISOString())).toBe('5m');
     });
 
     it('should return hours for timestamps less than 24 hours old', () => {
       const threeHoursAgo = new Date();
       threeHoursAgo.setHours(threeHoursAgo.getHours() - 3);
-      
+
       expect(formatTimestamp(threeHoursAgo.toISOString())).toBe('3h');
     });
 
     it('should return days for timestamps less than 7 days old', () => {
       const twoDaysAgo = new Date();
       twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-      
+
       expect(formatTimestamp(twoDaysAgo.toISOString())).toBe('2d');
     });
 
     it('should return weeks for timestamps less than 4 weeks old', () => {
       const twoWeeksAgo = new Date();
       twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-      
+
       expect(formatTimestamp(twoWeeksAgo.toISOString())).toBe('2w');
     });
 
     it('should return months for timestamps older than 4 weeks', () => {
       const twoMonthsAgo = new Date();
       twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-      
+
       expect(formatTimestamp(twoMonthsAgo.toISOString())).toBe('2mo');
     });
   });

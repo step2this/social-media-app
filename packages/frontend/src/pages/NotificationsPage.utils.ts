@@ -1,6 +1,6 @@
 /**
  * NotificationsPage Utility Functions
- * 
+ *
  * Pure helper functions extracted from NotificationsPage component
  * Following Single Responsibility Principle and using advanced TypeScript types
  */
@@ -18,10 +18,10 @@ import type {
 
 /**
  * Group notifications by time periods
- * 
+ *
  * @param notifications - Array of notifications to group
  * @returns Notifications organized by time period (today, yesterday, etc.)
- * 
+ *
  * @example
  * ```ts
  * const groups = groupNotificationsByTime(notifications);
@@ -60,13 +60,13 @@ export const groupNotificationsByTime: GroupNotificationsFn = (notifications) =>
 
 /**
  * Get human-readable notification text based on notification type
- * 
+ *
  * Applies type-specific formatting using actor information
  * Falls back to message/title if actor is unavailable
- * 
+ *
  * @param notification - Notification to format
  * @returns Formatted human-readable text
- * 
+ *
  * @example
  * ```ts
  * const text = getNotificationText(notification);
@@ -98,12 +98,12 @@ export const getNotificationText: FormatNotificationTextFn = (notification) => {
 
 /**
  * Format timestamp to human-readable format
- * 
+ *
  * Returns relative time strings like "5m", "3h", "2d", etc.
- * 
+ *
  * @param timestamp - ISO 8601 timestamp string
  * @returns Human-readable relative time string
- * 
+ *
  * @example
  * ```ts
  * formatTimestamp(new Date().toISOString()); // "just now"
@@ -129,12 +129,12 @@ export const formatTimestamp: FormatTimestampFn = (timestamp) => {
 
 /**
  * Get Material Icon name for notification type
- * 
+ *
  * Maps notification types to appropriate Material Design icon names
- * 
+ *
  * @param type - Notification type
  * @returns Material Icon name string
- * 
+ *
  * @example
  * ```ts
  * getNotificationIcon('like'); // "favorite"
@@ -170,13 +170,13 @@ export const getNotificationIcon: GetIconNameFn = (type) => {
 
 /**
  * Get CSS color class for notification type
- * 
+ *
  * Returns BEM-style CSS class names for styling notification icons
  * Uses template literal type for type safety
- * 
+ *
  * @param type - Notification type
  * @returns CSS class name or empty string
- * 
+ *
  * @example
  * ```ts
  * getNotificationColor('like'); // "notification-icon--like"
