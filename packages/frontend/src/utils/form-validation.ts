@@ -42,12 +42,12 @@ const DEFAULT_MAX_IMAGE_SIZE_MB = 10;
 export const validateCaptionLength = (caption: string): ValidationResult => {
   if (caption.length > MAX_CAPTION_LENGTH) {
     return {
-      valid: false,
+      isValid: false,
       error: 'Caption must be 500 characters or less',
     };
   }
 
-  return { valid: true };
+  return { isValid: true };
 };
 
 /**
@@ -90,13 +90,13 @@ export const validateTags = (tagsString: string | string[]): ValidationResult =>
 
   // Empty tags are valid
   if (tags.length === 0) {
-    return { valid: true };
+    return { isValid: true };
   }
 
   // Check for # symbol (higher priority error)
   if (tags.some((tag) => tag.includes('#'))) {
     return {
-      valid: false,
+      isValid: false,
       error: 'Tags should not include # symbol',
     };
   }
@@ -104,12 +104,12 @@ export const validateTags = (tagsString: string | string[]): ValidationResult =>
   // Check max count
   if (tags.length > MAX_TAGS_COUNT) {
     return {
-      valid: false,
+      isValid: false,
       error: 'Maximum 5 tags allowed',
     };
   }
 
-  return { valid: true };
+  return { isValid: true };
 };
 
 /**
@@ -132,12 +132,12 @@ export const validateImageType = (mimeType: string): ValidationResult => {
 
   if (!validation.success) {
     return {
-      valid: false,
+      isValid: false,
       error: 'Please select a valid image file (JPEG, PNG, GIF, or WebP)',
     };
   }
 
-  return { valid: true };
+  return { isValid: true };
 };
 
 /**
@@ -164,12 +164,12 @@ export const validateImageSize = (
 
   if (file.size > maxSizeBytes) {
     return {
-      valid: false,
+      isValid: false,
       error: `Image size must be less than ${maxSizeMB}MB`,
     };
   }
 
-  return { valid: true };
+  return { isValid: true };
 };
 
 /**
@@ -196,15 +196,15 @@ export const validateImageFile = (
 ): ValidationResult => {
   // Validate type first (higher priority)
   const typeValidation = validateImageType(file.type);
-  if (!typeValidation.valid) {
+  if (!typeValidation.isValid) {
     return typeValidation;
   }
 
   // Then validate size
   const sizeValidation = validateImageSize(file, maxSizeMB);
-  if (!sizeValidation.valid) {
+  if (!sizeValidation.isValid) {
     return sizeValidation;
   }
 
-  return { valid: true };
+  return { isValid: true };
 };
