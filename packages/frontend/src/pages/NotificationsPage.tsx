@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { notificationService } from '../services/notificationService';
+import { useServices } from '../services/ServiceProvider';
 import type { Notification } from '@social-media-app/shared';
 import { MaterialIcon } from '../components/common/MaterialIcon';
 import { useNavigate } from 'react-router-dom';
@@ -138,6 +138,7 @@ function getNotificationColor(type: string): string {
  * Instagram-style notifications list page with time grouping and interaction
  */
 export const NotificationsPage: React.FC = () => {
+  const { notificationDataService } = useServices();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -150,15 +151,20 @@ export const NotificationsPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await notificationService.getNotifications(100);
-      setNotifications(response.notifications);
+      const result = await notificationDataService.getNotifications({ limit: 100 });
+
+      if (result.status === 'success') {
+        setNotifications(result.data);
+      } else {
+        setError('Failed to load notifications. Please try again.');
+      }
     } catch (err) {
       console.error('Failed to load notifications:', err);
       setError('Failed to load notifications. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [notificationDataService]);
 
   useEffect(() => {
     loadNotifications();
@@ -171,7 +177,7 @@ export const NotificationsPage: React.FC = () => {
     // Mark as read if unread
     if (notification.status === 'unread') {
       try {
-        await notificationService.markAsRead(notification.id);
+        await notificationDataService.markAsRead(notification.id);
         // Update local state
         setNotifications(prev => prev.map(n =>
           n.id === notification.id ? { ...n, status: 'read' as const } : n
@@ -192,7 +198,7 @@ export const NotificationsPage: React.FC = () => {
    */
   const handleMarkAllRead = async () => {
     try {
-      await notificationService.markAllAsRead();
+      await notificationDataService.markAllAsRead();
       // Update local state
       setNotifications(prev => prev.map(n => ({ ...n, status: 'read' as const })));
     } catch (err) {
@@ -208,7 +214,7 @@ export const NotificationsPage: React.FC = () => {
     event.stopPropagation(); // Prevent click from triggering navigation
 
     try {
-      await notificationService.deleteNotification(notificationId);
+      await notificationDataService.deleteNotification(notificationId);
       // Remove from local state
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
     } catch (err) {
