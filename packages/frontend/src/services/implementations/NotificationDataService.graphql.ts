@@ -133,7 +133,7 @@ export class NotificationDataServiceGraphQL implements INotificationDataService 
       });
   }
 
-  async deleteNotification(notificationId: string): Promise<AsyncState<{ success: boolean }>> {
+  async deleteNotification(_notificationId: string): Promise<AsyncState<{ success: boolean }>> {
     // Since DELETE_NOTIFICATION_MUTATION isn't imported yet, return mock for now
     // TODO: Add DELETE_NOTIFICATION_MUTATION to operations/notifications.ts
     return Promise.resolve({

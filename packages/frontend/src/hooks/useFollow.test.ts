@@ -7,7 +7,7 @@
  * Pattern: Inject MockGraphQLClient → FollowServiceGraphQL → setFollowService()
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useFollow } from './useFollow.js';
 import { setFollowService, resetFollowService } from '../services/followService.js';

@@ -11,22 +11,23 @@ import type { AsyncState } from './types.js';
  * GraphQL Connection edge structure (standard Relay pattern)
  */
 export interface Edge<T> {
-  node: T;
-  cursor: string;
+  readonly node: T;
+  readonly cursor: string;
 }
 
 /**
  * GraphQL Connection structure (standard Relay pattern)
+ * Uses readonly to accept both mutable and readonly arrays
  */
 export interface Connection<T> {
-  edges: Edge<T>[];
-  pageInfo: {
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-    startCursor: string | null;
-    endCursor: string | null;
+  readonly edges: readonly Edge<T>[];
+  readonly pageInfo: {
+    readonly hasNextPage: boolean;
+    readonly hasPreviousPage: boolean;
+    readonly startCursor: string | null;
+    readonly endCursor: string | null;
   };
-  totalCount?: number;
+  readonly totalCount?: number;
 }
 
 /**

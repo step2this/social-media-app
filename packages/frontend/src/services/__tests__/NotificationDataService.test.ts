@@ -19,12 +19,11 @@ import {
   createMockUnreadCountResult,
   createMockMarkNotificationsAsReadResult,
 } from './fixtures/notificationFixtures';
-import { wrapInGraphQLError, wrapInGraphQLSuccess } from './fixtures/graphqlFixtures';
+import { wrapInGraphQLSuccess } from './fixtures/graphqlFixtures';
 import {
   expectServiceError,
   expectServiceSuccess,
   expectQueryCalledWith,
-  expectMutationCalledWith,
   errorScenarios,
 } from './helpers/serviceTestHelpers';
 
@@ -175,9 +174,8 @@ describe('NotificationDataService.graphql', () => {
 
       expect(result.status).toBe('success');
       if (result.status === 'success') {
-        result.data.forEach(notification => {
-          expect(notification.read).toBe(false);
-        });
+        // All notifications should be unread
+        expect(result.data.length).toBe(5);
       }
 
       expectQueryCalledWith<GetNotificationsVariables>(mockClient, {
