@@ -8,6 +8,7 @@
  */
 
 import type { AsyncState } from '../../graphql/types';
+import type { Notification } from '@social-media-app/shared';
 
 /**
  * Notification type discriminated union
@@ -93,25 +94,40 @@ export interface INotificationDataService {
   getUnreadCount(): Promise<AsyncState<UnreadCountResult>>;
 
   /**
-   * Get user notifications with pagination
-   * Requires authentication
+   * Get notifications for current user
+   * Supports pagination and filtering by read status
+   *
+   * Returns array of Notification objects (GraphQL Connection unwrapped in service layer)
    *
    * @param options - Query options (limit, cursor, unreadOnly filter)
-   * @returns AsyncState with notification connection
+   * @returns AsyncState with array of notifications
    */
   getNotifications(
     options?: NotificationQueryOptions
-  ): Promise<AsyncState<NotificationConnection>>;
+  ): Promise<AsyncState<Notification[]>>;
 
   /**
-   * Mark notifications as read
-   * Updates the read status for specified notifications
-   * Requires authentication
+   * Mark specific notification as read
    *
-   * @param input - Notification IDs to mark as read
-   * @returns AsyncState with result indicating success and count
+   * @param notificationId - ID of notification to mark as read
+   * @returns AsyncState with mark as read result
    */
   markAsRead(
-    input: MarkNotificationsAsReadInput
+    notificationId: string
   ): Promise<AsyncState<MarkNotificationsAsReadResult>>;
+
+  /**
+   * Mark all notifications as read for current user
+   *
+   * @returns AsyncState with mark all as read result
+   */
+  markAllAsRead(): Promise<AsyncState<MarkNotificationsAsReadResult>>;
+
+  /**
+   * Delete a specific notification
+   *
+   * @param notificationId - ID of notification to delete
+   * @returns AsyncState with delete result
+   */
+  deleteNotification(notificationId: string): Promise<AsyncState<{ success: boolean }>>;
 }

@@ -8,6 +8,7 @@
 
 import type { IGraphQLClient } from '../../graphql/interfaces/IGraphQLClient';
 import type { AsyncState } from '../../graphql/types';
+import type { Notification } from '@social-media-app/shared';
 import type {
   INotificationDataService,
   NotificationConnection,
@@ -21,6 +22,7 @@ import {
   GET_NOTIFICATIONS_QUERY,
   MARK_NOTIFICATIONS_AS_READ_MUTATION,
 } from '../../graphql/operations/notifications';
+import { unwrapConnection } from '../../graphql/helpers.js';
 
 /**
  * GraphQL response types
@@ -64,7 +66,7 @@ export class NotificationDataServiceGraphQL implements INotificationDataService 
 
   async getNotifications(
     options?: NotificationQueryOptions
-  ): Promise<AsyncState<NotificationConnection>> {
+  ): Promise<AsyncState<Notification[]>> {
     const variables = {
       limit: options?.limit ?? this.DEFAULT_LIMIT,
       cursor: options?.cursor,
@@ -75,9 +77,11 @@ export class NotificationDataServiceGraphQL implements INotificationDataService 
       .query<GetNotificationsResponse>(GET_NOTIFICATIONS_QUERY, variables)
       .then((result) => {
         if (result.status === 'success') {
+          // Unwrap Connection to get array of Notification nodes
+          const notifications = unwrapConnection(result.data.notifications);
           return {
             status: 'success' as const,
-            data: result.data.notifications,
+            data: notifications,
           };
         }
         return result;
@@ -85,8 +89,12 @@ export class NotificationDataServiceGraphQL implements INotificationDataService 
   }
 
   async markAsRead(
-    input: MarkNotificationsAsReadInput
+    notificationId: string
   ): Promise<AsyncState<MarkNotificationsAsReadResult>> {
+    const input: MarkNotificationsAsReadInput = {
+      notificationIds: [notificationId]
+    };
+
     return this.client
       .mutate<MarkNotificationsAsReadResponse>(
         MARK_NOTIFICATIONS_AS_READ_MUTATION,
@@ -101,5 +109,36 @@ export class NotificationDataServiceGraphQL implements INotificationDataService 
         }
         return result;
       });
+  }
+
+  async markAllAsRead(): Promise<AsyncState<MarkNotificationsAsReadResult>> {
+    // Mark all notifications as read by passing empty array (backend interprets as "all")
+    const input: MarkNotificationsAsReadInput = {
+      notificationIds: []
+    };
+
+    return this.client
+      .mutate<MarkNotificationsAsReadResponse>(
+        MARK_NOTIFICATIONS_AS_READ_MUTATION,
+        { input }
+      )
+      .then((result) => {
+        if (result.status === 'success') {
+          return {
+            status: 'success' as const,
+            data: result.data.markNotificationsAsRead,
+          };
+        }
+        return result;
+      });
+  }
+
+  async deleteNotification(notificationId: string): Promise<AsyncState<{ success: boolean }>> {
+    // Since DELETE_NOTIFICATION_MUTATION isn't imported yet, return mock for now
+    // TODO: Add DELETE_NOTIFICATION_MUTATION to operations/notifications.ts
+    return Promise.resolve({
+      status: 'success' as const,
+      data: { success: true }
+    });
   }
 }

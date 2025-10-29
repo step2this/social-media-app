@@ -21,6 +21,7 @@ import {
     GET_FOLLOWING_FEED_QUERY,
     MARK_POSTS_AS_READ_MUTATION,
 } from '../../graphql/operations/feeds';
+import { unwrapConnection, getPageInfo } from '../../graphql/helpers.js';
 
 /**
  * GraphQL response types
@@ -64,10 +65,13 @@ function transformPostToPostWithAuthor(post: Post): PostWithAuthor {
  * Flattens the GraphQL edges/nodes structure to a cleaner interface
  */
 function transformPostConnection(connection: PostConnection): FeedResult {
+    const posts = unwrapConnection(connection);
+    const pageInfo = getPageInfo(connection);
+
     return {
-        items: connection.edges.map(edge => transformPostToPostWithAuthor(edge.node)),
-        hasNextPage: connection.pageInfo.hasNextPage,
-        endCursor: connection.pageInfo.endCursor,
+        items: posts.map(transformPostToPostWithAuthor),
+        hasNextPage: pageInfo.hasNextPage,
+        endCursor: pageInfo.endCursor,
     };
 }
 
