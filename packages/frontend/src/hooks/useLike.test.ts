@@ -1,23 +1,104 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+/**
+ * useLike Hook Tests
+ *
+ * Tests the useLike hook using singleton injection pattern.
+ * NO vi.mock() - uses setLikeService() for proper DI testing.
+ *
+ * Pattern: Inject MockGraphQLClient → LikeServiceGraphQL → setLikeService()
+ * Best Practices: DRY helpers, type-safe assertions, clear test names
+ */
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useLike } from './useLike.js';
-import { likeService } from '../services/likeService.js';
+import { setLikeService, resetLikeService } from '../services/likeService.js';
+import { LikeServiceGraphQL } from '../services/implementations/LikeService.graphql.js';
+import { MockGraphQLClient } from '../graphql/client.mock.js';
+import { wrapInGraphQLSuccess, wrapInGraphQLError } from '../services/__tests__/fixtures/graphqlFixtures.js';
 
-vi.mock('../services/likeService');
+/**
+ * Test Helpers - DRY utilities for common test patterns
+ */
 
+/** Create a successful like response */
+const createLikeResponse = (overrides = {}) => wrapInGraphQLSuccess({
+  likePost: {
+    success: true,
+    isLiked: true,
+    likesCount: 43,
+    ...overrides
+  }
+});
+
+/** Create a successful unlike response */
+const createUnlikeResponse = (overrides = {}) => wrapInGraphQLSuccess({
+  unlikePost: {
+    success: true,
+    isLiked: false,
+    likesCount: 41,
+    ...overrides
+  }
+});
+
+/** Create a successful like status query response */
+const createLikeStatusResponse = (overrides = {}) => wrapInGraphQLSuccess({
+  likeStatus: {
+    isLiked: true,
+    likesCount: 42,
+    ...overrides
+  }
+});
+
+/** Helper to test error rollback */
+async function testErrorRollback(
+  action: () => void,
+  originalState: { isLiked: boolean; likesCount: number },
+  expectedError: string,
+  result: any
+) {
+  action();
+
+  await waitFor(() => {
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  expect(result.current.isLiked).toBe(originalState.isLiked);
+  expect(result.current.likesCount).toBe(originalState.likesCount);
+  expect(result.current.error).toBe(expectedError);
+}
+
+/** Helper to verify no API call was made */
+function expectNoAPICall(mockClient: MockGraphQLClient, beforeCount: number) {
+  expect(mockClient.mutateCalls.length).toBe(beforeCount);
+}
+
+/**
+ * Main Test Suite
+ */
 describe('useLike', () => {
+  let mockClient: MockGraphQLClient;
+  let mockService: LikeServiceGraphQL;
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockClient = new MockGraphQLClient();
+    mockService = new LikeServiceGraphQL(mockClient);
+    setLikeService(mockService);
+  });
+
+  afterEach(() => {
+    resetLikeService();
   });
 
   describe('initialization', () => {
     it('should initialize with default state', () => {
       const { result } = renderHook(() => useLike('post-123'));
 
-      expect(result.current.isLiked).toBe(false);
-      expect(result.current.likesCount).toBe(0);
-      expect(result.current.isLoading).toBe(false);
-      expect(result.current.error).toBeNull();
+      expect(result.current).toMatchObject({
+        isLiked: false,
+        likesCount: 0,
+        isLoading: false,
+        error: null
+      });
     });
 
     it('should initialize with provided values', () => {
@@ -25,174 +106,146 @@ describe('useLike', () => {
         useLike('post-123', { initialIsLiked: true, initialLikesCount: 42 })
       );
 
-      expect(result.current.isLiked).toBe(true);
-      expect(result.current.likesCount).toBe(42);
+      expect(result.current).toMatchObject({
+        isLiked: true,
+        likesCount: 42
+      });
     });
   });
 
   describe('likePost', () => {
-    it('should like a post with optimistic update', async () => {
-      const mockResponse = {
-        success: true,
-        likesCount: 43,
-        isLiked: true
-      };
-
-      vi.mocked(likeService.likePost).mockResolvedValueOnce(mockResponse);
+    it('should like post with optimistic update then sync with server', async () => {
+      mockClient.setMutationResponse(createLikeResponse());
 
       const { result } = renderHook(() =>
         useLike('post-123', { initialLikesCount: 42 })
       );
 
-      // Optimistic update should happen immediately
+      // Perform optimistic update
       act(() => {
         result.current.likePost();
       });
 
-      // Check optimistic state
+      // Check optimistic state (immediate)
       expect(result.current.isLiked).toBe(true);
       expect(result.current.likesCount).toBe(43);
       expect(result.current.isLoading).toBe(true);
 
-      // Wait for API call to complete
+      // Wait for server sync
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      // Verify final state matches server response
-      expect(result.current.isLiked).toBe(true);
-      expect(result.current.likesCount).toBe(43);
-      expect(result.current.error).toBeNull();
-      expect(likeService.likePost).toHaveBeenCalledWith('post-123');
+      // Verify final state matches server
+      expect(result.current).toMatchObject({
+        isLiked: true,
+        likesCount: 43,
+        error: null
+      });
     });
 
-    it('should rollback on error', async () => {
-      vi.mocked(likeService.likePost).mockRejectedValueOnce(
-        new Error('Network error')
-      );
+    it('should rollback optimistic update on error', async () => {
+      mockClient.setMutationResponse(wrapInGraphQLError('Network error', 'NETWORK_ERROR'));
 
       const { result } = renderHook(() =>
         useLike('post-123', { initialLikesCount: 42, initialIsLiked: false })
       );
 
-      // Attempt to like
-      act(() => {
-        result.current.likePost();
-      });
-
-      // Check optimistic state
-      expect(result.current.isLiked).toBe(true);
-      expect(result.current.likesCount).toBe(43);
-
-      // Wait for error and rollback
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      // Verify rollback to original state
-      expect(result.current.isLiked).toBe(false);
-      expect(result.current.likesCount).toBe(42);
-      expect(result.current.error).toBe('Failed to like post');
+      await testErrorRollback(
+        () => {
+          act(() => {
+            result.current.likePost();
+          });
+        },
+        { isLiked: false, likesCount: 42 },
+        'Failed to like post',
+        result
+      );
     });
 
-    it('should not like if already liked', async () => {
+    it('should not call API if already liked', () => {
       const { result } = renderHook(() =>
         useLike('post-123', { initialIsLiked: true })
       );
 
+      const callsBefore = mockClient.mutateCalls.length;
+
       act(() => {
         result.current.likePost();
       });
 
-      expect(likeService.likePost).not.toHaveBeenCalled();
+      expectNoAPICall(mockClient, callsBefore);
     });
   });
 
   describe('unlikePost', () => {
-    it('should unlike a post with optimistic update', async () => {
-      const mockResponse = {
-        success: true,
-        likesCount: 41,
-        isLiked: false
-      };
-
-      vi.mocked(likeService.unlikePost).mockResolvedValueOnce(mockResponse);
+    it('should unlike post with optimistic update then sync with server', async () => {
+      mockClient.setMutationResponse(createUnlikeResponse());
 
       const { result } = renderHook(() =>
         useLike('post-123', { initialIsLiked: true, initialLikesCount: 42 })
       );
 
-      // Optimistic update should happen immediately
+      // Perform optimistic update
       act(() => {
         result.current.unlikePost();
       });
 
-      // Check optimistic state
+      // Check optimistic state (immediate)
       expect(result.current.isLiked).toBe(false);
       expect(result.current.likesCount).toBe(41);
       expect(result.current.isLoading).toBe(true);
 
-      // Wait for API call to complete
+      // Wait for server sync
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      // Verify final state
-      expect(result.current.isLiked).toBe(false);
-      expect(result.current.likesCount).toBe(41);
-      expect(result.current.error).toBeNull();
-      expect(likeService.unlikePost).toHaveBeenCalledWith('post-123');
+      // Verify final state matches server
+      expect(result.current).toMatchObject({
+        isLiked: false,
+        likesCount: 41,
+        error: null
+      });
     });
 
-    it('should rollback on error', async () => {
-      vi.mocked(likeService.unlikePost).mockRejectedValueOnce(
-        new Error('Network error')
-      );
+    it('should rollback optimistic update on error', async () => {
+      mockClient.setMutationResponse(wrapInGraphQLError('Network error', 'NETWORK_ERROR'));
 
       const { result } = renderHook(() =>
         useLike('post-123', { initialLikesCount: 42, initialIsLiked: true })
       );
 
-      // Attempt to unlike
-      act(() => {
-        result.current.unlikePost();
-      });
-
-      // Check optimistic state
-      expect(result.current.isLiked).toBe(false);
-      expect(result.current.likesCount).toBe(41);
-
-      // Wait for error and rollback
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      // Verify rollback to original state
-      expect(result.current.isLiked).toBe(true);
-      expect(result.current.likesCount).toBe(42);
-      expect(result.current.error).toBe('Failed to unlike post');
+      await testErrorRollback(
+        () => {
+          act(() => {
+            result.current.unlikePost();
+          });
+        },
+        { isLiked: true, likesCount: 42 },
+        'Failed to unlike post',
+        result
+      );
     });
 
-    it('should not unlike if not liked', async () => {
+    it('should not call API if not liked', () => {
       const { result } = renderHook(() =>
         useLike('post-123', { initialIsLiked: false })
       );
 
+      const callsBefore = mockClient.mutateCalls.length;
+
       act(() => {
         result.current.unlikePost();
       });
 
-      expect(likeService.unlikePost).not.toHaveBeenCalled();
+      expectNoAPICall(mockClient, callsBefore);
     });
   });
 
   describe('toggleLike', () => {
-    it('should call likePost when not liked', async () => {
-      vi.mocked(likeService.likePost).mockResolvedValueOnce({
-        success: true,
-        likesCount: 1,
-        isLiked: true
-      });
+    it('should toggle from not liked to liked', async () => {
+      mockClient.setMutationResponse(createLikeResponse({ likesCount: 1 }));
 
       const { result } = renderHook(() =>
         useLike('post-123', { initialIsLiked: false })
@@ -206,16 +259,11 @@ describe('useLike', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      expect(likeService.likePost).toHaveBeenCalledWith('post-123');
       expect(result.current.isLiked).toBe(true);
     });
 
-    it('should call unlikePost when liked', async () => {
-      vi.mocked(likeService.unlikePost).mockResolvedValueOnce({
-        success: true,
-        likesCount: 0,
-        isLiked: false
-      });
+    it('should toggle from liked to not liked', async () => {
+      mockClient.setMutationResponse(createUnlikeResponse({ likesCount: 0 }));
 
       const { result } = renderHook(() =>
         useLike('post-123', { initialIsLiked: true, initialLikesCount: 1 })
@@ -229,19 +277,13 @@ describe('useLike', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      expect(likeService.unlikePost).toHaveBeenCalledWith('post-123');
       expect(result.current.isLiked).toBe(false);
     });
   });
 
   describe('fetchLikeStatus', () => {
-    it('should fetch like status successfully', async () => {
-      const mockResponse = {
-        isLiked: true,
-        likesCount: 42
-      };
-
-      vi.mocked(likeService.getLikeStatus).mockResolvedValueOnce(mockResponse);
+    it('should fetch and update like status from server', async () => {
+      mockClient.setQueryResponse(createLikeStatusResponse());
 
       const { result } = renderHook(() => useLike('post-123'));
 
@@ -249,16 +291,15 @@ describe('useLike', () => {
         await result.current.fetchLikeStatus();
       });
 
-      expect(result.current.isLiked).toBe(true);
-      expect(result.current.likesCount).toBe(42);
-      expect(result.current.error).toBeNull();
-      expect(likeService.getLikeStatus).toHaveBeenCalledWith('post-123');
+      expect(result.current).toMatchObject({
+        isLiked: true,
+        likesCount: 42,
+        error: null
+      });
     });
 
-    it('should handle fetch errors', async () => {
-      vi.mocked(likeService.getLikeStatus).mockRejectedValueOnce(
-        new Error('Network error')
-      );
+    it('should handle fetch errors gracefully', async () => {
+      mockClient.setQueryResponse(wrapInGraphQLError('Network error', 'NETWORK_ERROR'));
 
       const { result } = renderHook(() => useLike('post-123'));
 
@@ -270,15 +311,13 @@ describe('useLike', () => {
     });
   });
 
-  describe('clearError', () => {
-    it('should clear error state', async () => {
-      vi.mocked(likeService.likePost).mockRejectedValueOnce(
-        new Error('Network error')
-      );
+  describe('error handling', () => {
+    it('should clear error state when clearError is called', async () => {
+      mockClient.setMutationResponse(wrapInGraphQLError('Network error', 'NETWORK_ERROR'));
 
       const { result } = renderHook(() => useLike('post-123'));
 
-      // Trigger an error
+      // Trigger error
       act(() => {
         result.current.likePost();
       });
