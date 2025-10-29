@@ -93,8 +93,8 @@ describe('useFollow', () => {
   describe('initialization', () => {
     it('should initialize with default state (auto-fetches on mount)', () => {
       // Hook auto-fetches when no initial values provided
-      mockClient.setQueryResponse(createFollowStatusResponse({ 
-        isFollowing: false, 
+      mockClient.setQueryResponse(createFollowStatusResponse({
+        isFollowing: false,
         followersCount: 0,
         followingCount: 0
       }));
@@ -335,7 +335,7 @@ describe('useFollow', () => {
     it('should fetch and update follow status from server', async () => {
       mockClient.setQueryResponse(createFollowStatusResponse());
 
-      const { result } = renderHook(() => 
+      const { result } = renderHook(() =>
         useFollow('user-123', { initialIsFollowing: false })
       );
 
@@ -354,7 +354,7 @@ describe('useFollow', () => {
     it('should handle fetch errors gracefully', async () => {
       mockClient.setQueryResponse(wrapInGraphQLError('Network error', 'NETWORK_ERROR'));
 
-      const { result } = renderHook(() => 
+      const { result } = renderHook(() =>
         useFollow('user-123', { initialIsFollowing: false })
       );
 

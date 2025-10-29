@@ -44,7 +44,7 @@ export function useFeedItemAutoRead(postId: string): RefObject<HTMLDivElement | 
     isMarkedAsReadRef.current = true;
 
     const result = await feedService.markPostsAsRead({ postIds: [postId] });
-    
+
     // Check for errors using AsyncState pattern
     if (result.status === 'error') {
       // Log error but don't disrupt user experience

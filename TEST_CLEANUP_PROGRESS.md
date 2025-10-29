@@ -1,14 +1,14 @@
 # Test Cleanup Progress Report
-**Date**: 2024-10-29  
+**Date**: 2024-10-29
 **Session**: Deep Architecture Refactoring
 
 ---
 
 ## Executive Summary
 
-**Starting Point**: 145 failing tests (85% pass rate)  
-**Current Status**: **31 failing tests (96.9% pass rate)**  
-**Tests Fixed**: **114 tests** ✅  
+**Starting Point**: 145 failing tests (85% pass rate)
+**Current Status**: **31 failing tests (96.9% pass rate)**
+**Tests Fixed**: **114 tests** ✅
 **Improvement**: **+11.9% pass rate**
 
 ---
@@ -44,7 +44,7 @@
 - **Git Commit**: `daaf648`
 
 ### Phase 5: useFeedItemAutoRead Hook (Completed ✅)
-- **Files**: 
+- **Files**:
   - `packages/frontend/src/hooks/useFeedItemAutoRead.test.ts`
   - `packages/frontend/src/hooks/useFeedItemAutoRead.ts`
 - **Tests Fixed**: 11 tests
@@ -75,9 +75,9 @@ describe('ServiceName', () => {
 
   it('should do something', async () => {
     mockClient.setMutationResponse(wrapInGraphQLSuccess({ ... }));
-    
+
     const result = await service.method();
-    
+
     expect(result.status).toBe('success');
     if (result.status === 'success') {
       expect(result.data.field).toBe('value');
@@ -110,13 +110,13 @@ describe('useHookName', () => {
 
   it('should do something', async () => {
     mockClient.setMutationResponse(wrapInGraphQLSuccess({ ... }));
-    
+
     const { result } = renderHook(() => useHookName('id-123'));
-    
+
     await act(async () => {
       await result.current.method();
     });
-    
+
     expect(result.current.state).toBe('expected');
   });
 });
@@ -124,7 +124,7 @@ describe('useHookName', () => {
 
 **Benefits**:
 - No vi.mock() for services (only for other hooks if needed)
-- Hooks use real singleton pattern  
+- Hooks use real singleton pattern
 - Services inject via `setXxxService()`
 - Tests verify actual behavior
 
@@ -159,8 +159,8 @@ export function useHook() {
 ### High Priority (22 tests)
 
 #### 1. useLike.test.ts (11 tests)
-**Pattern**: Same as useFollow  
-**Estimated Time**: 30 minutes  
+**Pattern**: Same as useFollow
+**Estimated Time**: 30 minutes
 **Steps**:
 1. Remove `vi.mock('../services/likeService')`
 2. Add `setLikeService()` / `resetLikeService()` in tests
@@ -171,8 +171,8 @@ export function useHook() {
 - `/packages/frontend/src/hooks/useLike.test.ts`
 
 #### 2. HomePage.test.tsx (8 tests)
-**Issues**: Auto-read integration and PostCard tests  
-**Estimated Time**: 1 hour  
+**Issues**: Auto-read integration and PostCard tests
+**Estimated Time**: 1 hour
 **Potential Causes**:
 - May use `vi.mock()` on feedService or postService
 - Auto-read tests may need feedService singleton injection
@@ -183,8 +183,8 @@ export function useHook() {
 - `/packages/frontend/src/pages/HomePage.tsx`
 
 #### 3. useAuctions.test.ts (Unknown count)
-**Pattern**: Likely same as useFollow  
-**Estimated Time**: 30 minutes  
+**Pattern**: Likely same as useFollow
+**Estimated Time**: 30 minutes
 **Steps**: Same singleton injection pattern
 
 **Files to check**:
@@ -194,8 +194,8 @@ export function useHook() {
 ### Medium Priority (10 tests)
 
 #### 4. NotificationsPage.test.tsx (10 tests)
-**Issues**: Component tests for mark-as-read, delete, navigation  
-**Estimated Time**: 1.5 hours  
+**Issues**: Component tests for mark-as-read, delete, navigation
+**Estimated Time**: 1.5 hours
 **Potential Causes**:
 - May use `vi.mock()` on notificationDataService
 - May need to update for `markAsRead(notificationId: string)` signature change
@@ -212,7 +212,7 @@ export function useHook() {
 - `authFlow.integration.test.ts`
 - `serviceFactory.integration.test.ts`
 
-**Estimated Time**: 1 hour  
+**Estimated Time**: 1 hour
 **Potential Issues**:
 - May use vi.mock() on services
 - May test actual HTTP/GraphQL client behavior
@@ -409,7 +409,7 @@ npm test <file>  # Verify specific file
 npm test         # Full suite check
 ```
 
-**Final Goal**: 
+**Final Goal**:
 ```
 Test Files  55 passed (55)
 Tests       988 passed (988)

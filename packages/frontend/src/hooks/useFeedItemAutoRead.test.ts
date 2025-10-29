@@ -30,10 +30,10 @@ describe('useFeedItemAutoRead', () => {
   beforeEach(() => {
     // Create mock GraphQL client
     mockClient = new MockGraphQLClient();
-    
+
     // Create service with mock client
     mockService = new FeedServiceGraphQL(mockClient);
-    
+
     // Inject mock service into singleton
     setFeedService(mockService);
 
@@ -55,7 +55,7 @@ describe('useFeedItemAutoRead', () => {
   afterEach(() => {
     // Cleanup singleton for next test
     resetFeedService();
-    
+
     vi.restoreAllMocks();
     vi.clearAllTimers();
   });
@@ -126,7 +126,7 @@ describe('useFeedItemAutoRead', () => {
 
   it('should handle API errors gracefully without crashing', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    
+
     mockClient.setMutationResponse(wrapInGraphQLError('Network error', 'NETWORK_ERROR'));
 
     renderHook(() => useFeedItemAutoRead('post-123'));
@@ -206,7 +206,7 @@ describe('useFeedItemAutoRead', () => {
 
   it('should log error but continue execution on API failure', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    
+
     mockClient.setMutationResponse(wrapInGraphQLError('Failed to mark as read', 'OPERATION_FAILED'));
 
     renderHook(() => useFeedItemAutoRead('post-123'));
