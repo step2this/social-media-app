@@ -5,7 +5,7 @@
  * Uses dependency injection and factory pattern for DRY testing.
  * Tests behavior, not implementation.
  *
- * TDD: Tests written first to define expected behavior
+ * Pattern: Constructor injection with MockGraphQLClient, NO vi.mock()
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -22,14 +22,13 @@ import {
 import { wrapInGraphQLError, wrapInGraphQLSuccess } from './fixtures/graphqlFixtures';
 import {
   expectServiceError,
+  expectServiceSuccess,
+  expectQueryCalledWith,
+  expectMutationCalledWith,
   errorScenarios,
 } from './helpers/serviceTestHelpers';
 
 // Type definitions for mock client generic calls
-interface GetUnreadCountVariables {
-  // No variables for unread count query
-}
-
 interface GetNotificationsVariables {
   limit?: number;
   cursor?: string;
@@ -54,26 +53,30 @@ describe('NotificationDataService.graphql', () => {
   describe('getUnreadCount', () => {
     it('should fetch unread notification count successfully', async () => {
       const unreadCount = createMockUnreadCountResult({ count: 5 });
-      mockClient.setQueryResponse(wrapInGraphQLSuccess({ unreadCount }));
 
-      const result = await service.getUnreadCount();
-
-      expect(result.status).toBe('success');
-      if (result.status === 'success') {
-        expect(result.data.count).toBe(5);
-      }
+      await expectServiceSuccess(
+        mockClient,
+        () => service.getUnreadCount(),
+        { unreadCount },
+        (data) => {
+          expect(data.count).toBe(5);
+        },
+        'query'
+      );
     });
 
     it('should return zero when no unread notifications', async () => {
       const unreadCount = createMockUnreadCountResult({ count: 0 });
-      mockClient.setQueryResponse(wrapInGraphQLSuccess({ unreadCount }));
 
-      const result = await service.getUnreadCount();
-
-      expect(result.status).toBe('success');
-      if (result.status === 'success') {
-        expect(result.data.count).toBe(0);
-      }
+      await expectServiceSuccess(
+        mockClient,
+        () => service.getUnreadCount(),
+        { unreadCount },
+        (data) => {
+          expect(data.count).toBe(0);
+        },
+        'query'
+      );
     });
 
     it('should handle authentication errors', async () => {
@@ -101,15 +104,16 @@ describe('NotificationDataService.graphql', () => {
     it('should fetch notifications successfully with default options', async () => {
       const notifications = createMockNotifications(3);
       const connection = createMockNotificationConnection(notifications);
-      mockClient.setQueryResponse(wrapInGraphQLSuccess({ notifications: connection }));
 
-      const result = await service.getNotifications();
-
-      expect(result.status).toBe('success');
-      if (result.status === 'success') {
-        expect(result.data.edges).toHaveLength(3);
-        expect(result.data.pageInfo.hasNextPage).toBe(false);
-      }
+      await expectServiceSuccess(
+        mockClient,
+        () => service.getNotifications(),
+        { notifications: connection },
+        (data) => {
+          expect(data).toHaveLength(3);
+        },
+        'query'
+      );
     });
 
     it('should pass limit option to query', async () => {
@@ -117,11 +121,14 @@ describe('NotificationDataService.graphql', () => {
       const connection = createMockNotificationConnection(notifications);
       mockClient.setQueryResponse(wrapInGraphQLSuccess({ notifications: connection }));
 
-      await service.getNotifications({ limit: 20 });
+      const result = await service.getNotifications({ limit: 20 });
 
-      const lastCall = mockClient.lastQueryCall<GetNotificationsVariables>();
-      expect(lastCall).toBeDefined();
-      expect(lastCall?.variables.limit).toBe(20);
+      expect(result.status).toBe('success');
+      if (result.status === 'success') {
+        expect(result.data).toHaveLength(20);
+      }
+
+      expectQueryCalledWith<GetNotificationsVariables>(mockClient, { limit: 20 });
     });
 
     it('should use default limit of 50 if not provided', async () => {
@@ -129,10 +136,14 @@ describe('NotificationDataService.graphql', () => {
       const connection = createMockNotificationConnection(notifications);
       mockClient.setQueryResponse(wrapInGraphQLSuccess({ notifications: connection }));
 
-      await service.getNotifications();
+      const result = await service.getNotifications();
 
-      const lastCall = mockClient.lastQueryCall<GetNotificationsVariables>();
-      expect(lastCall?.variables.limit).toBe(50);
+      expect(result.status).toBe('success');
+      if (result.status === 'success') {
+        expect(result.data).toHaveLength(50);
+      }
+
+      expectQueryCalledWith<GetNotificationsVariables>(mockClient, { limit: 50 });
     });
 
     it('should handle pagination with cursor', async () => {
@@ -147,12 +158,12 @@ describe('NotificationDataService.graphql', () => {
 
       expect(result.status).toBe('success');
       if (result.status === 'success') {
-        expect(result.data.pageInfo.hasNextPage).toBe(true);
-        expect(result.data.edges).toHaveLength(50);
+        expect(result.data).toHaveLength(50);
       }
 
-      const lastCall = mockClient.lastQueryCall<GetNotificationsVariables>();
-      expect(lastCall?.variables.cursor).toBe('encoded-cursor');
+      expectQueryCalledWith<GetNotificationsVariables>(mockClient, {
+        cursor: 'encoded-cursor',
+      });
     });
 
     it('should filter unread notifications only when specified', async () => {
@@ -164,26 +175,28 @@ describe('NotificationDataService.graphql', () => {
 
       expect(result.status).toBe('success');
       if (result.status === 'success') {
-        result.data.edges.forEach(edge => {
-          expect(edge.node.read).toBe(false);
+        result.data.forEach(notification => {
+          expect(notification.read).toBe(false);
         });
       }
 
-      const lastCall = mockClient.lastQueryCall<GetNotificationsVariables>();
-      expect(lastCall?.variables.unreadOnly).toBe(true);
+      expectQueryCalledWith<GetNotificationsVariables>(mockClient, {
+        unreadOnly: true,
+      });
     });
 
     it('should handle empty results', async () => {
       const connection = createMockNotificationConnection([]);
-      mockClient.setQueryResponse(wrapInGraphQLSuccess({ notifications: connection }));
 
-      const result = await service.getNotifications();
-
-      expect(result.status).toBe('success');
-      if (result.status === 'success') {
-        expect(result.data.edges).toHaveLength(0);
-        expect(result.data.pageInfo.hasNextPage).toBe(false);
-      }
+      await expectServiceSuccess(
+        mockClient,
+        () => service.getNotifications(),
+        { notifications: connection },
+        (data) => {
+          expect(data).toHaveLength(0);
+        },
+        'query'
+      );
     });
 
     it('should handle notifications with different types', async () => {
@@ -200,10 +213,10 @@ describe('NotificationDataService.graphql', () => {
 
       expect(result.status).toBe('success');
       if (result.status === 'success') {
-        expect(result.data.edges[0].node.type).toBe('like');
-        expect(result.data.edges[1].node.type).toBe('comment');
-        expect(result.data.edges[2].node.type).toBe('follow');
-        expect(result.data.edges[3].node.type).toBe('mention');
+        expect(result.data[0].type).toBe('like');
+        expect(result.data[1].type).toBe('comment');
+        expect(result.data[2].type).toBe('follow');
+        expect(result.data[3].type).toBe('mention');
       }
     });
 
@@ -219,75 +232,33 @@ describe('NotificationDataService.graphql', () => {
   });
 
   describe('markAsRead', () => {
-    it('should mark notifications as read successfully', async () => {
-      const result = createMockMarkNotificationsAsReadResult({
-        success: true,
-        markedCount: 3,
-      });
-      mockClient.setMutationResponse(wrapInGraphQLSuccess({ markNotificationsAsRead: result }));
-
-      const response = await service.markAsRead({
-        notificationIds: ['notif-1', 'notif-2', 'notif-3'],
-      });
-
-      expect(response.status).toBe('success');
-      if (response.status === 'success') {
-        expect(response.data.success).toBe(true);
-        expect(response.data.markedCount).toBe(3);
-      }
+    it('should mark single notification as read', async () => {
+      await expectServiceSuccess(
+        mockClient,
+        () => service.markAsRead('notif-1'),
+        { markNotificationsAsRead: createMockMarkNotificationsAsReadResult({ success: true, markedCount: 1 }) },
+        (data) => {
+          expect(data.success).toBe(true);
+          expect(data.markedCount).toBe(1);
+        }
+      );
     });
 
-    it('should pass notification IDs to mutation', async () => {
+    it('should pass notification ID to mutation (wrapped in array)', async () => {
       const result = createMockMarkNotificationsAsReadResult();
       mockClient.setMutationResponse(wrapInGraphQLSuccess({ markNotificationsAsRead: result }));
 
-      await service.markAsRead({
-        notificationIds: ['notif-1', 'notif-2'],
-      });
+      await service.markAsRead('notif-1');
 
       const lastCall = mockClient.lastMutationCall<MarkAsReadVariables>();
       expect(lastCall).toBeDefined();
-      expect(lastCall?.variables.input.notificationIds).toEqual(['notif-1', 'notif-2']);
-    });
-
-    it('should handle marking single notification as read', async () => {
-      const result = createMockMarkNotificationsAsReadResult({
-        success: true,
-        markedCount: 1,
-      });
-      mockClient.setMutationResponse(wrapInGraphQLSuccess({ markNotificationsAsRead: result }));
-
-      const response = await service.markAsRead({
-        notificationIds: ['notif-1'],
-      });
-
-      expect(response.status).toBe('success');
-      if (response.status === 'success') {
-        expect(response.data.markedCount).toBe(1);
-      }
-    });
-
-    it('should handle empty notification IDs', async () => {
-      const result = createMockMarkNotificationsAsReadResult({
-        success: true,
-        markedCount: 0,
-      });
-      mockClient.setMutationResponse(wrapInGraphQLSuccess({ markNotificationsAsRead: result }));
-
-      const response = await service.markAsRead({
-        notificationIds: [],
-      });
-
-      expect(response.status).toBe('success');
-      if (response.status === 'success') {
-        expect(response.data.markedCount).toBe(0);
-      }
+      expect(lastCall?.variables.input.notificationIds).toEqual(['notif-1']);
     });
 
     it('should handle authentication errors', async () => {
       await expectServiceError(
         mockClient,
-        () => service.markAsRead({ notificationIds: ['notif-1'] }),
+        () => service.markAsRead('notif-1'),
         errorScenarios.authentication.unauthenticated.message,
         errorScenarios.authentication.unauthenticated.code
       );
@@ -296,15 +267,49 @@ describe('NotificationDataService.graphql', () => {
     it('should handle notification not found errors', async () => {
       await expectServiceError(
         mockClient,
-        () => service.markAsRead({ notificationIds: ['nonexistent'] }),
+        () => service.markAsRead('nonexistent'),
         errorScenarios.notFound.notification.message,
         errorScenarios.notFound.notification.code
       );
     });
   });
 
+  describe('markAllAsRead', () => {
+    it('should mark all notifications as read', async () => {
+      await expectServiceSuccess(
+        mockClient,
+        () => service.markAllAsRead(),
+        { markNotificationsAsRead: createMockMarkNotificationsAsReadResult({ success: true, markedCount: 10 }) },
+        (data) => {
+          expect(data.success).toBe(true);
+          expect(data.markedCount).toBe(10);
+        }
+      );
+    });
+
+    it('should pass empty array to mutation (backend interprets as "all")', async () => {
+      const result = createMockMarkNotificationsAsReadResult();
+      mockClient.setMutationResponse(wrapInGraphQLSuccess({ markNotificationsAsRead: result }));
+
+      await service.markAllAsRead();
+
+      const lastCall = mockClient.lastMutationCall<MarkAsReadVariables>();
+      expect(lastCall).toBeDefined();
+      expect(lastCall?.variables.input.notificationIds).toEqual([]);
+    });
+
+    it('should handle authentication errors', async () => {
+      await expectServiceError(
+        mockClient,
+        () => service.markAllAsRead(),
+        errorScenarios.authentication.unauthenticated.message,
+        errorScenarios.authentication.unauthenticated.code
+      );
+    });
+  });
+
   describe('integration scenarios', () => {
-    it('should handle fetching notifications and marking them as read', async () => {
+    it('should handle fetching notifications and marking single one as read', async () => {
       // Fetch notifications
       const notifications = createMockNotifications(3, { read: false });
       const connection = createMockNotificationConnection(notifications);
@@ -313,20 +318,20 @@ describe('NotificationDataService.graphql', () => {
       const fetchResult = await service.getNotifications({ unreadOnly: true });
       expect(fetchResult.status).toBe('success');
 
-      // Mark them as read
+      // Mark first one as read
       const markResult = createMockMarkNotificationsAsReadResult({
         success: true,
-        markedCount: 3,
+        markedCount: 1,
       });
       mockClient.setMutationResponse(wrapInGraphQLSuccess({ markNotificationsAsRead: markResult }));
 
       if (fetchResult.status === 'success') {
-        const notificationIds = fetchResult.data.edges.map(edge => edge.node.id);
-        const markResponse = await service.markAsRead({ notificationIds });
+        const firstNotificationId = fetchResult.data[0].id;
+        const markResponse = await service.markAsRead(firstNotificationId);
 
         expect(markResponse.status).toBe('success');
         if (markResponse.status === 'success') {
-          expect(markResponse.data.markedCount).toBe(3);
+          expect(markResponse.data.markedCount).toBe(1);
         }
       }
     });
@@ -339,23 +344,23 @@ describe('NotificationDataService.graphql', () => {
       const initialResult = await service.getUnreadCount();
       expect(initialResult.status).toBe('success');
 
-      // Mark some as read
+      // Mark one as read
       const markResult = createMockMarkNotificationsAsReadResult({
         success: true,
-        markedCount: 3,
+        markedCount: 1,
       });
       mockClient.setMutationResponse(wrapInGraphQLSuccess({ markNotificationsAsRead: markResult }));
 
-      await service.markAsRead({ notificationIds: ['notif-1', 'notif-2', 'notif-3'] });
+      await service.markAsRead('notif-1');
 
       // Updated unread count
-      const updatedCount = createMockUnreadCountResult({ count: 2 });
+      const updatedCount = createMockUnreadCountResult({ count: 4 });
       mockClient.setQueryResponse(wrapInGraphQLSuccess({ unreadCount: updatedCount }));
 
       const updatedResult = await service.getUnreadCount();
       expect(updatedResult.status).toBe('success');
       if (updatedResult.status === 'success') {
-        expect(updatedResult.data.count).toBe(2);
+        expect(updatedResult.data.count).toBe(4);
       }
     });
   });

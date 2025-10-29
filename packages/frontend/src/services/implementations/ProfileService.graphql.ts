@@ -70,7 +70,7 @@ function transformPublicProfile(graphqlProfile: {
     postsCount: number;
     isFollowing: boolean | null;
     createdAt: string;
-}): Profile {
+}): Profile & { isFollowing?: boolean } {
     return {
         id: graphqlProfile.id,
         email: '', // PublicProfile doesn't have email
@@ -86,6 +86,7 @@ function transformPublicProfile(graphqlProfile: {
         postsCount: graphqlProfile.postsCount,
         createdAt: graphqlProfile.createdAt,
         updatedAt: graphqlProfile.createdAt, // PublicProfile doesn't have updatedAt
+        isFollowing: graphqlProfile.isFollowing ?? undefined, // Add isFollowing field
     };
 }
 

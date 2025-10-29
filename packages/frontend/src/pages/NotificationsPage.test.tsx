@@ -48,7 +48,7 @@ describe('NotificationsPage', () => {
       renderPage();
 
       await waitFor(() => {
-        expect(screen.getByText(/no notifications/i)).toBeInTheDocument();
+        expect(screen.getByText(/No notifications yet/i)).toBeInTheDocument();
       });
     });
   });
