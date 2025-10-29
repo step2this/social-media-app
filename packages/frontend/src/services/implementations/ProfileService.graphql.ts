@@ -80,6 +80,7 @@ function transformPublicProfile(graphqlProfile: {
         fullName: graphqlProfile.fullName ?? undefined,
         bio: graphqlProfile.bio ?? undefined,
         profilePictureUrl: graphqlProfile.profilePictureUrl ?? undefined,
+        profilePictureThumbnailUrl: undefined, // PublicProfile doesn't include thumbnail
         followersCount: graphqlProfile.followersCount,
         followingCount: graphqlProfile.followingCount,
         postsCount: graphqlProfile.postsCount,
