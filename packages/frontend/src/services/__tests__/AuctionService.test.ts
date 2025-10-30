@@ -94,6 +94,7 @@ describe('AuctionService Behavior (GraphQL)', () => {
             if (isSuccess(result)) {
                 expect(result.data.auctions).toHaveLength(0);
                 expect(result.data.hasMore).toBe(false);
+                // nextCursor is null for empty results (from pageInfo.endCursor)
                 expect(result.data.nextCursor).toBeNull();
             }
         });
