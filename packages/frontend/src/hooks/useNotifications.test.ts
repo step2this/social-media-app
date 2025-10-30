@@ -1,12 +1,12 @@
 /**
  * useNotifications Hook Tests
- * 
+ *
  * TDD approach: Write tests first
  * Tests the custom hook for fetching and managing notifications
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { useNotifications } from './useNotifications';
 import { createMockNotifications } from '../services/__tests__/fixtures/notificationFixtures';
 import type { INotificationDataService } from '../services/interfaces/INotificationDataService';
@@ -223,6 +223,54 @@ describe('useNotifications', () => {
       });
 
       expect(result.current.hasUnreadNotifications).toBe(false);
+    });
+  });
+
+  describe('State Setter Exposure', () => {
+    it('should expose setNotifications for external state updates', async () => {
+      vi.mocked(mockService.getNotifications).mockResolvedValue({
+        status: 'success',
+        data: []
+      });
+
+      const { result } = renderHook(() => useNotifications(mockService));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(typeof result.current.setNotifications).toBe('function');
+
+      // Test that external state updates work
+      const newNotifications = createMockNotifications(3);
+      act(() => {
+        result.current.setNotifications(newNotifications);
+      });
+
+      expect(result.current.notifications).toEqual(newNotifications);
+    });
+
+    it('should allow functional updates via setNotifications', async () => {
+      const initialNotifications = createMockNotifications(2);
+      vi.mocked(mockService.getNotifications).mockResolvedValue({
+        status: 'success',
+        data: initialNotifications
+      });
+
+      const { result } = renderHook(() => useNotifications(mockService));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      // Test functional update pattern
+      act(() => {
+        result.current.setNotifications(prev =>
+          prev.map(n => ({ ...n, status: 'read' as const }))
+        );
+      });
+
+      expect(result.current.notifications.every(n => n.status === 'read')).toBe(true);
     });
   });
 });

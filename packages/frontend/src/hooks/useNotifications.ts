@@ -1,12 +1,12 @@
 /**
  * useNotifications Custom Hook
- * 
+ *
  * Custom hook for fetching and managing notifications
  * Encapsulates notification loading logic with proper state management
- * 
+ *
  * @example
  * ```tsx
- * const { notifications, loading, error, retry, loadMore, hasMore, hasUnreadNotifications } = 
+ * const { notifications, loading, error, retry, loadMore, hasMore, hasUnreadNotifications } =
  *   useNotifications(notificationDataService);
  * ```
  */
@@ -17,7 +17,7 @@ import type { INotificationDataService } from '../services/interfaces/INotificat
 
 /**
  * useNotifications Hook Return Type
- * 
+ *
  * Provides notifications data, loading state, error handling, and utility functions
  */
 export interface UseNotificationsReturn {
@@ -28,20 +28,21 @@ export interface UseNotificationsReturn {
   readonly hasUnreadNotifications: boolean;
   readonly retry: () => void;
   readonly loadMore: () => Promise<void>;
+  readonly setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
 }
 
 /**
  * useNotifications Hook
- * 
+ *
  * Manages notification fetching, pagination, and state
- * 
+ *
  * Features:
  * - Automatic loading on mount
  * - Error handling with retry capability
  * - Pagination with loadMore function
  * - Unread notifications tracking
  * - Type-safe with advanced TypeScript patterns
- * 
+ *
  * @param notificationDataService - Service for fetching notifications
  * @returns Notifications data, loading state, and utility functions
  */
@@ -62,7 +63,7 @@ export const useNotifications = (
     try {
       setLoading(true);
       setError(null);
-      
+
       const result = await notificationDataService.getNotifications({ limit: 100 });
 
       if (result.status === 'success') {
@@ -87,7 +88,7 @@ export const useNotifications = (
   const loadMore = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       const result = await notificationDataService.getNotifications({ limit: 100 });
 
       if (result.status === 'success') {
@@ -129,5 +130,6 @@ export const useNotifications = (
     hasUnreadNotifications,
     retry,
     loadMore,
+    setNotifications,
   };
 };
