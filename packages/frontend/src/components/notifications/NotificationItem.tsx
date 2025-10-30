@@ -59,7 +59,7 @@ export const NotificationItem: React.FC<BaseNotificationItemProps> = ({
   };
 
   // Handle keyboard interaction
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onClick(notification);
@@ -70,7 +70,7 @@ export const NotificationItem: React.FC<BaseNotificationItemProps> = ({
     <div
       className={`notification-item ${isUnread ? 'notification-item--unread' : ''}`}
       onClick={handleClick}
-      onKeyPress={handleKeyPress}
+      onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
     >

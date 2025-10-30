@@ -309,7 +309,7 @@ describe('NotificationDataService.graphql', () => {
   describe('integration scenarios', () => {
     it('should handle fetching notifications and marking single one as read', async () => {
       // Fetch notifications
-      const notifications = createMockNotifications(3, { read: false });
+      const notifications = createMockNotifications(3, { status: 'unread' });
       const connection = createMockNotificationConnection(notifications);
       mockClient.setQueryResponse(wrapInGraphQLSuccess({ notifications: connection }));
 

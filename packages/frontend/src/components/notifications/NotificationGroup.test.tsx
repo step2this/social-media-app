@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { NotificationGroup } from './NotificationGroup';
 import { createMockNotifications } from '../../services/__tests__/fixtures/notificationFixtures';
 
@@ -116,9 +116,9 @@ describe('NotificationGroup', () => {
       // Click first notification
       const firstNotification = screen.getAllByText(/liked your post/i)[0];
       const notificationElement = firstNotification.closest('.notification-item');
-
+      
       if (notificationElement) {
-        notificationElement.click();
+        fireEvent.click(notificationElement);
         expect(mockOnClick).toHaveBeenCalledWith(notifications[0]);
       }
     });
