@@ -18,7 +18,7 @@ import './HomePage.css';
 
 /**
  * Home page - displays posts from followed users with infinite scroll
- * 
+ *
  * Refactored to use composite hook pattern (Phase 12):
  * - Business logic extracted to useHomePage hook
  * - Presentation components extracted to components/feed
@@ -27,7 +27,7 @@ import './HomePage.css';
 export const HomePage: React.FC = () => {
   const { feedService } = useServices();
   const user = useAuthStore((state) => state.user);
-  
+
   const {
     posts,
     loading,
