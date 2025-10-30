@@ -16,24 +16,24 @@ export interface FeedItemWrapperProps {
 
 /**
  * Wrapper component for PostCard with auto-read functionality
- * 
+ *
  * Handles Instagram-like behavior where posts are marked as read after viewing.
  * Uses intersection observer via useFeedItemAutoRead hook to track visibility.
- * 
+ *
  * @example
  * ```tsx
  * <FeedItemWrapper post={post} compact={true} />
  * ```
- * 
+ *
  * TypeScript patterns applied from SKILL.md:
  * - Readonly modifier for immutable props
  * - Explicit interface for better error messages
  * - Optional properties with default values
  * - JSDoc comments for documentation
  */
-export const FeedItemWrapper: React.FC<FeedItemWrapperProps> = ({ 
-  post, 
-  compact = true 
+export const FeedItemWrapper: React.FC<FeedItemWrapperProps> = ({
+  post,
+  compact = true
 }) => {
   const elementRef = useFeedItemAutoRead(post.id);
 
