@@ -25,3 +25,67 @@ export {
   type DynamoDBStreamRecordConfig,
   type DynamoDBStreamEventConfig
 } from './aws-mocks.js';
+
+export {
+  errorScenarios,
+  type ErrorScenario
+} from './error-scenarios.js';
+
+export {
+  createMockProfile,
+  createMockPublicProfile,
+  createMockProfiles,
+  mockOwnProfile,
+  mockFollowedProfile,
+  mockUnfollowedProfile,
+  createMockSeller,
+  createMockBidder,
+  createMockWinner
+} from './fixtures/profile-fixtures.js';
+
+export {
+  createMockPost,
+  createMockPosts,
+  createMockPostGridItem,
+  createMockPostGridItems,
+  createMockPostWithAuthor,
+  createMockPostsWithAuthor,
+  createMockPostWithLikes,
+  createMockPostWithComments,
+  createMockPostByUser,
+  createMockPostWithAuthorByUser,
+  createMockPostConnection
+} from './fixtures/post-fixtures.js';
+
+export {
+  createMockExploreFeed,
+  createMockFollowingFeed,
+  createMockEmptyExploreFeed,
+  createMockEmptyFollowingFeed,
+  createMockExploreFeedWithPostIds,
+  createMockFollowingFeedWithPostIds,
+  createMockMarkPostsAsReadInput,
+  createMockMarkPostsAsReadResult
+} from './fixtures/feed-fixtures.js';
+
+export {
+  type GraphQLResult,
+  type SingleResult,
+  type GraphQLErrorResponse,
+  assertSingleResult,
+  assertNoErrors,
+  assertHasErrors,
+  hasErrorCode,
+  getFirstErrorCode,
+  getAllErrorCodes,
+  extractData,
+  extractErrors
+} from './graphql/response-types.js';
+
+export {
+  createSuccessResponse,
+  createErrorResponse,
+  createMultiErrorResponse,
+  createPartialResponse,
+  createSingleResult
+} from './graphql/response-builders.js';
