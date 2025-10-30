@@ -1,6 +1,6 @@
 /**
  * Custom Hooks Barrel Export
- * 
+ *
  * Central export point for all custom hooks
  * Enables clean imports: import { useNotifications, useNotificationActions } from '@/hooks'
  */
@@ -11,8 +11,10 @@ export { useAuth } from './useAuth';
 // Notification hooks
 export { useNotifications } from './useNotifications';
 export { useNotificationActions } from './useNotificationActions';
+export { useNotificationsPage } from './useNotificationsPage';
 export type { UseNotificationsReturn } from './useNotifications';
 export type { UseNotificationActionsReturn } from './useNotificationActions';
+export type { UseNotificationsPageReturn } from './useNotificationsPage';
 
 // Social interaction hooks
 export { useLike } from './useLike';
