@@ -1,18 +1,26 @@
 /**
  * NotificationsPage Component
  *
- * Refactored to use atomic components and advanced TypeScript patterns
- * Following the composition pattern with type-safe component architecture
+ * Pure presentation component that delegates all logic to hooks
+ * Uses useNotificationsPage composite hook for complete functionality
  *
- * Phase 7: Complete refactoring using all created components
+ * Advanced TypeScript patterns:
+ * - Type inference from hook return
+ * - Discriminated unions for state rendering
+ * - Single Responsibility Principle (presentation only)
+ * - Hook composition pattern
+ *
+ * Phase 11: Refactored to use custom hooks
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { useServices } from '../services/ServiceProvider';
 import { useNavigate } from 'react-router-dom';
-import type { Notification } from '@social-media-app/shared';
 
-// Import all new components
+// Import composite hook
+import { useNotificationsPage } from '../hooks/useNotificationsPage';
+
+// Import all presentation components
 import { NotificationsHeader } from '../components/notifications/NotificationsHeader';
 import { NotificationsList } from '../components/notifications/NotificationsList';
 import { NotificationsLoading } from '../components/notifications/NotificationsLoading';
@@ -26,140 +34,36 @@ import './NotificationsPage.css';
 /**
  * NotificationsPage Component
  *
- * Main page component that:
- * - Fetches notifications from the service
- * - Manages loading, error, and empty states using discriminated unions
- * - Delegates rendering to specialized components
- * - Handles user interactions (click, delete, mark as read)
- * - Uses advanced TypeScript types for type safety
+ * Pure presentation component that:
+ * - Delegates all business logic to useNotificationsPage hook
+ * - Renders UI based on hook state using discriminated unions
+ * - Provides clean separation of concerns
+ * - Maintains type safety with TypeScript inference
  */
 export const NotificationsPage: React.FC = () => {
   const { notificationDataService } = useServices();
   const navigate = useNavigate();
 
-  // State management
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-
-  /**
-   * Load notifications on mount
-   * Uses useCallback to prevent unnecessary re-renders
-   */
-  const loadNotifications = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await notificationDataService.getNotifications({ limit: 100 });
-
-      if (result.status === 'success') {
-        setNotifications(result.data);
-        setHasMore(result.data.length >= 10);
-      } else {
-        setError('Failed to load notifications. Please try again.');
-      }
-    } catch (err) {
-      console.error('Failed to load notifications:', err);
-      setError('Failed to load notifications. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, [notificationDataService]);
-
-  // Load notifications on mount
-  useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
-
-  /**
-   * Handle notification click
-   * Mark as read if unread, then navigate to target
-   */
-  const handleNotificationClick = async (notification: Notification) => {
-    // Mark as read if unread
-    if (notification.status === 'unread') {
-      try {
-        await notificationDataService.markAsRead(notification.id);
-        // Optimistic update
-        setNotifications(prev => prev.map(n =>
-          n.id === notification.id ? { ...n, status: 'read' as const } : n
-        ));
-      } catch (err) {
-        console.error('Failed to mark as read:', err);
-      }
-    }
-
-    // Navigate to target if available
-    if (notification.target?.url) {
-      navigate(notification.target.url);
-    }
-  };
-
-  /**
-   * Handle mark all as read
-   * Updates all unread notifications to read status
-   */
-  const handleMarkAllRead = async () => {
-    try {
-      await notificationDataService.markAllAsRead();
-      // Optimistic update - mark all as read
-      setNotifications(prev => prev.map(n => ({ ...n, status: 'read' as const })));
-    } catch (err) {
-      console.error('Failed to mark all as read:', err);
-      setError('Failed to mark all as read. Please try again.');
-    }
-  };
-
-  /**
-   * Handle delete notification
-   * Removes notification from list
-   */
-  const handleDeleteNotification = async (notificationId: string, event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent navigation
-
-    try {
-      await notificationDataService.deleteNotification(notificationId);
-      // Optimistic update - remove from list
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-    } catch (err) {
-      console.error('Failed to delete notification:', err);
-      // Don't set loading to false here, keep showing the notification in UI on error
-      // Just log the error
-    }
-  };
-
-  /**
-   * Handle load more
-   * Fetches additional notifications for pagination
-   */
-  const handleLoadMore = async () => {
-    try {
-      setLoading(true);
-      const result = await notificationDataService.getNotifications({ limit: 100 });
-
-      if (result.status === 'success') {
-        setNotifications(prev => [...prev, ...result.data]);
-        setHasMore(result.data.length >= 100);
-      }
-    } catch (err) {
-      console.error('Failed to load more:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
-   * Check if there are any unread notifications
-   * Used to conditionally show "Mark all as read" button
-   */
-  const hasUnreadNotifications = notifications.some(n => n.status === 'unread');
+  // Single hook call provides all functionality
+  // TypeScript infers all types automatically from hook return
+  const {
+    notifications,
+    loading,
+    error,
+    hasMore,
+    hasUnreadNotifications,
+    retry,
+    loadMore,
+    handleClick,
+    markAllAsRead,
+    deleteNotification
+  } = useNotificationsPage(notificationDataService, navigate);
 
   // ============================================================================
   // RENDER - Using discriminated union pattern for state management
   // ============================================================================
 
-  // Loading state
+  // Loading state - Initial load
   if (loading && notifications.length === 0) {
     return (
       <div className="notifications-page">
@@ -177,7 +81,7 @@ export const NotificationsPage: React.FC = () => {
         <div className="notifications-page__container">
           <NotificationsError
             message={error}
-            onRetry={loadNotifications}
+            onRetry={retry}
           />
         </div>
       </div>
@@ -191,7 +95,7 @@ export const NotificationsPage: React.FC = () => {
         <div className="notifications-page__container">
           <NotificationsHeader
             hasUnreadNotifications={false}
-            onMarkAllAsRead={handleMarkAllRead}
+            onMarkAllAsRead={markAllAsRead}
           />
           <NotificationsEmpty />
         </div>
@@ -206,21 +110,21 @@ export const NotificationsPage: React.FC = () => {
         {/* Header with conditional "Mark all as read" button */}
         <NotificationsHeader
           hasUnreadNotifications={hasUnreadNotifications}
-          onMarkAllAsRead={handleMarkAllRead}
+          onMarkAllAsRead={markAllAsRead}
           disabled={loading}
         />
 
         {/* Grouped notifications list */}
         <NotificationsList
           notifications={notifications}
-          onClick={handleNotificationClick}
-          onDelete={handleDeleteNotification}
+          onClick={handleClick}
+          onDelete={deleteNotification}
         />
 
         {/* Load more button (pagination) */}
         {hasMore && (
           <LoadMoreButton
-            onClick={handleLoadMore}
+            onClick={loadMore}
             loading={loading}
           />
         )}
