@@ -16,6 +16,7 @@ import type { IGraphQLClient } from '../../graphql/interfaces/IGraphQLClient.js'
 import type { IAuctionService, ListAuctionsOptions, AuctionsList, GetBidHistoryOptions, BidHistory, CreateAuctionInput, CreateAuctionResult, PlaceBidResult, Auction } from '../interfaces/IAuctionService.js';
 import type { AsyncState } from '../../graphql/types.js';
 import { isSuccess } from '../../graphql/types.js';
+import { safeUnwrapConnection, safeGetPageInfo } from '../../graphql/helpers.js';
 import {
     GET_AUCTION,
     LIST_AUCTIONS,
@@ -92,11 +93,15 @@ export class AuctionServiceGraphQL implements IAuctionService {
             }
         );
 
-        return transformResponse(result, (data) => ({
-            auctions: data.auctions.edges.map((edge) => edge.node),
-            nextCursor: data.auctions.pageInfo.endCursor,
-            hasMore: data.auctions.pageInfo.hasNextPage,
-        }));
+        // Use safe helpers to handle potentially null/undefined connections
+        return transformResponse(result, (data) => {
+            const pageInfo = safeGetPageInfo(data.auctions);
+            return {
+                auctions: safeUnwrapConnection(data.auctions),
+                nextCursor: pageInfo.endCursor,
+                hasMore: pageInfo.hasNextPage,
+            };
+        });
     }
 
     /**
