@@ -1,21 +1,26 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { auctionService } from '../services/auctionService.js';
-import type { Auction } from '@social-media-app/shared';
+import type { Auction } from '../graphql/operations/auctions.js';
 
 /**
  * Options for useAuctions hook
+ * Status values match AuctionStatus enum (uppercase)
  */
 export interface UseAuctionsOptions {
-  status?: 'pending' | 'active' | 'completed' | 'cancelled';
+  status?: 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
   userId?: string;
 }
 
 /**
  * Hook for fetching and managing a list of auctions
  * Supports pagination and filtering
+ * Uses readonly arrays to prevent accidental mutations
  */
 export const useAuctions = (options: UseAuctionsOptions = {}) => {
-  const [auctions, setAuctions] = useState<Auction[]>([]);
+  // Destructure options for useCallback dependencies
+  const { status, userId } = options;
+  
+  const [auctions, setAuctions] = useState<readonly Auction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
@@ -31,11 +36,13 @@ export const useAuctions = (options: UseAuctionsOptions = {}) => {
 
       try {
         const response = await auctionService.listAuctions({
-          ...options,
+          status,
+          userId,
           cursor
         });
 
         if (response.status === 'success') {
+          // Direct assignment - readonly arrays work with React state
           if (append) {
             setAuctions(prev => [...prev, ...response.data.auctions]);
           } else {
@@ -55,7 +62,7 @@ export const useAuctions = (options: UseAuctionsOptions = {}) => {
         setIsLoading(false);
       }
     },
-    [options.status, options.userId]
+    [status, userId]
   );
 
   /**
