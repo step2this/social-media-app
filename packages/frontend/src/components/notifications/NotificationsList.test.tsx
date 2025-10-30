@@ -5,7 +5,7 @@
  * Tests the main container component that renders all notification groups
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { NotificationsList } from './NotificationsList';
 import { createMockNotifications } from '../../services/__tests__/fixtures/notificationFixtures';

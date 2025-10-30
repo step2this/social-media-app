@@ -65,7 +65,7 @@ function createErrorState(message: string, code: string): AsyncState<never> {
  * @example
  * ```typescript
  * const client = createGraphQLClient();
- * const service = new AuctionService(client);
+ * const service = new AuctionServiceGraphQL(client);
  *
  * const result = await service.listAuctions({ limit: 20 });
  * if (isSuccess(result)) {
@@ -73,7 +73,7 @@ function createErrorState(message: string, code: string): AsyncState<never> {
  * }
  * ```
  */
-export class AuctionService implements IAuctionService {
+export class AuctionServiceGraphQL implements IAuctionService {
     constructor(private readonly client: IGraphQLClient) { }
 
     /**

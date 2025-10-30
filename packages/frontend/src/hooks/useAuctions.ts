@@ -35,18 +35,23 @@ export const useAuctions = (options: UseAuctionsOptions = {}) => {
           cursor
         });
 
-        if (append) {
-          setAuctions(prev => [...prev, ...response.auctions]);
-        } else {
-          setAuctions(response.auctions);
-        }
+        if (response.status === 'success') {
+          if (append) {
+            setAuctions(prev => [...prev, ...response.data.auctions]);
+          } else {
+            setAuctions(response.data.auctions);
+          }
 
-        setNextCursor(response.nextCursor);
-        setHasMore(response.hasMore);
-        setIsLoading(false);
+          setNextCursor(response.data.nextCursor ?? undefined);
+          setHasMore(response.data.hasMore);
+          setError(null);
+        } else if (response.status === 'error') {
+          setError(response.error.message);
+        }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch auctions';
         setError(errorMessage);
+      } finally {
         setIsLoading(false);
       }
     },

@@ -5,7 +5,7 @@
  * Tests the composite notification item that combines all atomic components
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { NotificationItem } from './NotificationItem';
 import { createMockNotification } from '../../services/__tests__/fixtures/notificationFixtures';

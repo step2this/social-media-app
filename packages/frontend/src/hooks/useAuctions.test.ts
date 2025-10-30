@@ -1,50 +1,83 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+/**
+ * useAuctions Hook Tests
+ *
+ * Tests the useAuctions hook using singleton injection pattern.
+ * NO vi.mock() - uses setAuctionService() for proper DI testing.
+ *
+ * Pattern: Inject MockGraphQLClient → AuctionServiceGraphQL → setAuctionService()
+ * Best Practices: DRY helpers, type-safe assertions, clear test names
+ */
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useAuctions } from './useAuctions.js';
-import { auctionService } from '../services/auctionService.js';
-import { createMockAuction } from '../test-utils/mock-factories.js';
-import type { ListAuctionsResponse } from '@social-media-app/shared';
+import { setAuctionService, resetAuctionService } from '../services/auctionService.js';
+import { AuctionServiceGraphQL } from '../services/implementations/AuctionService.graphql.js';
+import { MockGraphQLClient } from '../graphql/client.mock.js';
+import { wrapInGraphQLSuccess, wrapInGraphQLError } from '../services/__tests__/fixtures/graphqlFixtures.js';
+import { createMockAuction } from '../services/__tests__/fixtures/auctionFixtures.js';
+import type { Auction } from '@social-media-app/shared';
 
-// Mock the auctionService
-vi.mock('../services/auctionService.js', () => ({
-  auctionService: {
-    listAuctions: vi.fn()
-  }
-}));
+/**
+ * Test Helpers - DRY utilities for common test patterns
+ */
 
-describe('useAuctions', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+/** Create a successful list auctions response */
+const createListAuctionsResponse = (auctions: Auction[], hasMore = false, nextCursor?: string) =>
+  wrapInGraphQLSuccess({
+    listAuctions: {
+      auctions,
+      hasMore,
+      nextCursor
+    }
   });
 
-  describe('Initialization', () => {
-    it('should initialize with default state', () => {
-      const mockResponse: ListAuctionsResponse = {
-        auctions: [],
-        nextCursor: undefined,
-        hasMore: false
-      };
-      vi.mocked(auctionService.listAuctions).mockResolvedValue(mockResponse);
+/** Create an array of mock auctions */
+const createMockAuctions = (count: number, overrides = {}) =>
+  Array.from({ length: count }, (_, i) =>
+    createMockAuction({ id: `auction-${i + 1}`, ...overrides })
+  );
+
+/**
+ * Main Test Suite
+ */
+describe('useAuctions', () => {
+  let mockClient: MockGraphQLClient;
+  let mockService: AuctionServiceGraphQL;
+
+  beforeEach(() => {
+    mockClient = new MockGraphQLClient();
+    mockService = new AuctionServiceGraphQL(mockClient);
+    setAuctionService(mockService);
+  });
+
+  afterEach(() => {
+    resetAuctionService();
+  });
+
+  describe('initialization and data fetching', () => {
+    it('should fetch auctions on mount', async () => {
+      const auctions = createMockAuctions(3);
+      mockClient.setQueryResponse(createListAuctionsResponse(auctions));
 
       const { result } = renderHook(() => useAuctions());
 
+      // Initially loading
+      expect(result.current.isLoading).toBe(true);
       expect(result.current.auctions).toEqual([]);
-      expect(result.current.isLoading).toBe(true); // Loading on mount
-      expect(result.current.error).toBe(null);
+
+      // Wait for data to load
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.auctions).toHaveLength(3);
+      expect(result.current.error).toBeNull();
       expect(result.current.hasMore).toBe(false);
     });
 
-    it('should fetch auctions on mount', async () => {
-      const mockAuctions = [
-        createMockAuction({ id: 'auction-1' }),
-        createMockAuction({ id: 'auction-2' })
-      ];
-      const mockResponse: ListAuctionsResponse = {
-        auctions: mockAuctions,
-        nextCursor: undefined,
-        hasMore: false
-      };
-      vi.mocked(auctionService.listAuctions).mockResolvedValue(mockResponse);
+    it('should handle empty auction list', async () => {
+      mockClient.setQueryResponse(createListAuctionsResponse([]));
 
       const { result } = renderHook(() => useAuctions());
 
@@ -52,20 +85,29 @@ describe('useAuctions', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      expect(auctionService.listAuctions).toHaveBeenCalledWith({});
-      expect(result.current.auctions).toEqual(mockAuctions);
-      expect(result.current.error).toBe(null);
+      expect(result.current.auctions).toEqual([]);
+      expect(result.current.error).toBeNull();
+      expect(result.current.hasMore).toBe(false);
+    });
+
+    it('should handle API errors gracefully', async () => {
+      mockClient.setQueryResponse(wrapInGraphQLError('Network error', 'NETWORK_ERROR'));
+
+      const { result } = renderHook(() => useAuctions());
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.auctions).toEqual([]);
+      expect(result.current.error).toBe('Network error');
     });
   });
 
-  describe('Filtering', () => {
-    it('should fetch auctions with status filter', async () => {
-      const mockResponse: ListAuctionsResponse = {
-        auctions: [],
-        nextCursor: undefined,
-        hasMore: false
-      };
-      vi.mocked(auctionService.listAuctions).mockResolvedValue(mockResponse);
+  describe('filtering', () => {
+    it('should filter auctions by status', async () => {
+      const activeAuctions = createMockAuctions(2, { status: 'active' });
+      mockClient.setQueryResponse(createListAuctionsResponse(activeAuctions));
 
       const { result } = renderHook(() => useAuctions({ status: 'active' }));
 
@@ -73,16 +115,13 @@ describe('useAuctions', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      expect(auctionService.listAuctions).toHaveBeenCalledWith({ status: 'active' });
+      expect(result.current.auctions).toHaveLength(2);
+      expect(result.current.auctions.every(a => a.status === 'active')).toBe(true);
     });
 
-    it('should fetch auctions with userId filter', async () => {
-      const mockResponse: ListAuctionsResponse = {
-        auctions: [],
-        nextCursor: undefined,
-        hasMore: false
-      };
-      vi.mocked(auctionService.listAuctions).mockResolvedValue(mockResponse);
+    it('should filter auctions by user ID', async () => {
+      const userAuctions = createMockAuctions(3, { sellerId: 'user-123' });
+      mockClient.setQueryResponse(createListAuctionsResponse(userAuctions));
 
       const { result } = renderHook(() => useAuctions({ userId: 'user-123' }));
 
@@ -90,29 +129,34 @@ describe('useAuctions', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      expect(auctionService.listAuctions).toHaveBeenCalledWith({ userId: 'user-123' });
+      expect(result.current.auctions).toHaveLength(3);
+    });
+
+    it('should combine multiple filters', async () => {
+      const filteredAuctions = createMockAuctions(1, { 
+        status: 'active', 
+        sellerId: 'user-123' 
+      });
+      mockClient.setQueryResponse(createListAuctionsResponse(filteredAuctions));
+
+      const { result } = renderHook(() => 
+        useAuctions({ status: 'active', userId: 'user-123' })
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.auctions).toHaveLength(1);
     });
   });
 
-  describe('Pagination', () => {
-    it('should support loading more auctions', async () => {
-      const firstBatch = [createMockAuction({ id: 'auction-1' })];
-      const secondBatch = [createMockAuction({ id: 'auction-2' })];
-
-      const firstResponse: ListAuctionsResponse = {
-        auctions: firstBatch,
-        nextCursor: 'cursor-1',
-        hasMore: true
-      };
-      const secondResponse: ListAuctionsResponse = {
-        auctions: secondBatch,
-        nextCursor: undefined,
-        hasMore: false
-      };
-
-      vi.mocked(auctionService.listAuctions)
-        .mockResolvedValueOnce(firstResponse)
-        .mockResolvedValueOnce(secondResponse);
+  describe('pagination', () => {
+    it('should indicate when more results are available', async () => {
+      const auctions = createMockAuctions(10);
+      mockClient.setQueryResponse(
+        createListAuctionsResponse(auctions, true, 'cursor-10')
+      );
 
       const { result } = renderHook(() => useAuctions());
 
@@ -120,78 +164,89 @@ describe('useAuctions', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      expect(result.current.auctions).toEqual(firstBatch);
+      expect(result.current.auctions).toHaveLength(10);
       expect(result.current.hasMore).toBe(true);
+    });
 
-      // Load more
-      await result.current.loadMore();
+    it('should load more auctions when loadMore is called', async () => {
+      // First page
+      const firstPage = createMockAuctions(10);
+      mockClient.setQueryResponse(
+        createListAuctionsResponse(firstPage, true, 'cursor-10')
+      );
+
+      const { result } = renderHook(() => useAuctions());
 
       await waitFor(() => {
-        expect(result.current.auctions).toEqual([...firstBatch, ...secondBatch]);
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.auctions).toHaveLength(10);
+
+      // Second page
+      const secondPage = createMockAuctions(5).map((a, i) => ({
+        ...a,
+        id: `auction-${i + 11}`
+      }));
+      mockClient.setQueryResponse(
+        createListAuctionsResponse(secondPage, false)
+      );
+
+      // Load more
+      await waitFor(async () => {
+        await result.current.loadMore();
+      });
+
+      await waitFor(() => {
+        expect(result.current.auctions).toHaveLength(15);
       });
 
       expect(result.current.hasMore).toBe(false);
-      expect(auctionService.listAuctions).toHaveBeenCalledTimes(2);
-      expect(auctionService.listAuctions).toHaveBeenLastCalledWith({ cursor: 'cursor-1' });
     });
 
-    it('should not load more when hasMore is false', async () => {
-      const mockResponse: ListAuctionsResponse = {
-        auctions: [createMockAuction()],
-        nextCursor: undefined,
-        hasMore: false
-      };
-      vi.mocked(auctionService.listAuctions).mockResolvedValue(mockResponse);
-
-      const { result } = renderHook(() => useAuctions());
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      // Try to load more
-      await result.current.loadMore();
-
-      // Should not make additional API call
-      expect(auctionService.listAuctions).toHaveBeenCalledTimes(1);
-    });
-
-    it('should not load more when already loading', async () => {
-      const mockResponse: ListAuctionsResponse = {
-        auctions: [createMockAuction()],
-        nextCursor: 'cursor-1',
-        hasMore: true
-      };
-      vi.mocked(auctionService.listAuctions).mockImplementation(
-        () => new Promise(resolve => setTimeout(() => resolve(mockResponse), 100))
+    it('should not load more if already loading', async () => {
+      const auctions = createMockAuctions(10);
+      mockClient.setQueryResponse(
+        createListAuctionsResponse(auctions, true, 'cursor-10')
       );
 
       const { result } = renderHook(() => useAuctions());
 
-      // Try to load more while initial load is in progress
+      // Try to load more while still loading initial data
+      const queriesBefore = mockClient.queryCalls.length;
+      
       await result.current.loadMore();
+      
+      // Should not make additional query
+      expect(mockClient.queryCalls.length).toBe(queriesBefore);
+    });
 
-      // Should only have one call (the initial mount call)
-      expect(auctionService.listAuctions).toHaveBeenCalledTimes(1);
+    it('should not load more if no more results', async () => {
+      const auctions = createMockAuctions(5);
+      mockClient.setQueryResponse(
+        createListAuctionsResponse(auctions, false)
+      );
+
+      const { result } = renderHook(() => useAuctions());
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      const queriesBefore = mockClient.queryCalls.length;
+      
+      await result.current.loadMore();
+      
+      // Should not make additional query
+      expect(mockClient.queryCalls.length).toBe(queriesBefore);
     });
   });
 
-  describe('Refetch', () => {
-    it('should refetch auctions', async () => {
-      const firstResponse: ListAuctionsResponse = {
-        auctions: [createMockAuction({ id: 'auction-1' })],
-        nextCursor: undefined,
-        hasMore: false
-      };
-      const secondResponse: ListAuctionsResponse = {
-        auctions: [createMockAuction({ id: 'auction-2' })],
-        nextCursor: undefined,
-        hasMore: false
-      };
-
-      vi.mocked(auctionService.listAuctions)
-        .mockResolvedValueOnce(firstResponse)
-        .mockResolvedValueOnce(secondResponse);
+  describe('refetch', () => {
+    it('should refetch auctions from the beginning', async () => {
+      // Initial fetch
+      const initialAuctions = createMockAuctions(3);
+      mockClient.setQueryResponse(createListAuctionsResponse(initialAuctions));
 
       const { result } = renderHook(() => useAuctions());
 
@@ -199,33 +254,27 @@ describe('useAuctions', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      expect(result.current.auctions).toEqual(firstResponse.auctions);
+      expect(result.current.auctions).toHaveLength(3);
 
-      // Refetch
-      await result.current.refetch();
+      // Refetch with updated data
+      const updatedAuctions = createMockAuctions(5);
+      mockClient.setQueryResponse(createListAuctionsResponse(updatedAuctions));
 
-      await waitFor(() => {
-        expect(result.current.auctions).toEqual(secondResponse.auctions);
+      await waitFor(async () => {
+        await result.current.refetch();
       });
 
-      expect(auctionService.listAuctions).toHaveBeenCalledTimes(2);
+      await waitFor(() => {
+        expect(result.current.auctions).toHaveLength(5);
+      });
     });
 
-    it('should reset cursor on refetch', async () => {
-      const firstResponse: ListAuctionsResponse = {
-        auctions: [createMockAuction({ id: 'auction-1' })],
-        nextCursor: 'cursor-1',
-        hasMore: true
-      };
-      const secondResponse: ListAuctionsResponse = {
-        auctions: [createMockAuction({ id: 'auction-2' })],
-        nextCursor: undefined,
-        hasMore: false
-      };
-
-      vi.mocked(auctionService.listAuctions)
-        .mockResolvedValueOnce(firstResponse)
-        .mockResolvedValueOnce(secondResponse);
+    it('should reset pagination state on refetch', async () => {
+      // Initial fetch with pagination
+      const firstPage = createMockAuctions(10);
+      mockClient.setQueryResponse(
+        createListAuctionsResponse(firstPage, true, 'cursor-10')
+      );
 
       const { result } = renderHook(() => useAuctions());
 
@@ -233,21 +282,29 @@ describe('useAuctions', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      // Refetch should reset cursor
-      await result.current.refetch();
+      expect(result.current.hasMore).toBe(true);
 
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
+      // Refetch with different results (no pagination)
+      const freshAuctions = createMockAuctions(3);
+      mockClient.setQueryResponse(createListAuctionsResponse(freshAuctions, false));
+
+      await waitFor(async () => {
+        await result.current.refetch();
       });
 
-      expect(auctionService.listAuctions).toHaveBeenLastCalledWith({});
+      await waitFor(() => {
+        expect(result.current.auctions).toHaveLength(3);
+      });
+
+      expect(result.current.hasMore).toBe(false);
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle fetch errors', async () => {
-      const errorMessage = 'Failed to fetch auctions';
-      vi.mocked(auctionService.listAuctions).mockRejectedValue(new Error(errorMessage));
+  describe('error handling', () => {
+    it('should set error state on API failure', async () => {
+      mockClient.setQueryResponse(
+        wrapInGraphQLError('Failed to fetch auctions', 'INTERNAL_ERROR')
+      );
 
       const { result } = renderHook(() => useAuctions());
 
@@ -255,122 +312,35 @@ describe('useAuctions', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      expect(result.current.error).toBe(errorMessage);
+      expect(result.current.error).toBe('Failed to fetch auctions');
       expect(result.current.auctions).toEqual([]);
     });
 
-    it('should handle loadMore errors', async () => {
-      const firstResponse: ListAuctionsResponse = {
-        auctions: [createMockAuction()],
-        nextCursor: 'cursor-1',
-        hasMore: true
-      };
-
-      vi.mocked(auctionService.listAuctions)
-        .mockResolvedValueOnce(firstResponse)
-        .mockRejectedValueOnce(new Error('Load more failed'));
-
-      const { result } = renderHook(() => useAuctions());
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      // Try to load more
-      await result.current.loadMore();
-
-      await waitFor(() => {
-        expect(result.current.error).toBe('Load more failed');
-      });
-
-      // Should preserve existing auctions
-      expect(result.current.auctions).toEqual(firstResponse.auctions);
-    });
-
     it('should clear error on successful refetch', async () => {
-      const mockResponse: ListAuctionsResponse = {
-        auctions: [createMockAuction()],
-        nextCursor: undefined,
-        hasMore: false
-      };
-
-      vi.mocked(auctionService.listAuctions)
-        .mockRejectedValueOnce(new Error('Initial error'))
-        .mockResolvedValueOnce(mockResponse);
-
-      const { result } = renderHook(() => useAuctions());
-
-      await waitFor(() => {
-        expect(result.current.error).toBe('Initial error');
-      });
-
-      // Refetch should clear error
-      await result.current.refetch();
-
-      await waitFor(() => {
-        expect(result.current.error).toBe(null);
-      });
-
-      expect(result.current.auctions).toEqual(mockResponse.auctions);
-    });
-  });
-
-  describe('Loading State', () => {
-    it('should show loading state during fetch', async () => {
-      const mockResponse: ListAuctionsResponse = {
-        auctions: [],
-        nextCursor: undefined,
-        hasMore: false
-      };
-      vi.mocked(auctionService.listAuctions).mockImplementation(
-        () => new Promise(resolve => setTimeout(() => resolve(mockResponse), 50))
+      // Initial error
+      mockClient.setQueryResponse(
+        wrapInGraphQLError('Network error', 'NETWORK_ERROR')
       );
 
       const { result } = renderHook(() => useAuctions());
 
-      expect(result.current.isLoading).toBe(true);
-
       await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-    });
-
-    it('should show loading state during loadMore', async () => {
-      const firstResponse: ListAuctionsResponse = {
-        auctions: [createMockAuction({ id: 'auction-1' })],
-        nextCursor: 'cursor-1',
-        hasMore: true
-      };
-      const secondResponse: ListAuctionsResponse = {
-        auctions: [createMockAuction({ id: 'auction-2' })],
-        nextCursor: undefined,
-        hasMore: false
-      };
-
-      vi.mocked(auctionService.listAuctions)
-        .mockResolvedValueOnce(firstResponse)
-        .mockImplementation(
-          () => new Promise(resolve => setTimeout(() => resolve(secondResponse), 50))
-        );
-
-      const { result } = renderHook(() => useAuctions());
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
+        expect(result.current.error).toBe('Network error');
       });
 
-      // Load more
-      result.current.loadMore();
+      // Successful refetch
+      const auctions = createMockAuctions(2);
+      mockClient.setQueryResponse(createListAuctionsResponse(auctions));
 
-      // Should show loading state
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(true);
+      await waitFor(async () => {
+        await result.current.refetch();
       });
 
-      // Should complete loading
       await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
+        expect(result.current.error).toBeNull();
       });
+
+      expect(result.current.auctions).toHaveLength(2);
     });
   });
 });

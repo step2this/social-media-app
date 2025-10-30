@@ -135,10 +135,11 @@ export const useLike = (
       if (result.status === 'success') {
         setIsLiked(result.data.isLiked);
         setLikesCount(result.data.likesCount);
-        setIsLoading(false);
-      } else {
-        throw new Error('Failed to fetch like status');
+      } else if (result.status === 'error') {
+        setError('Failed to fetch like status');
       }
+        
+      setIsLoading(false);
     } catch (err) {
       setError('Failed to fetch like status');
       setIsLoading(false);

@@ -6,13 +6,10 @@
  */
 
 import type {
-  Notification,
-  NotificationType,
   NotificationConnection,
   NotificationEdge,
-  UnreadCountResult,
-  MarkNotificationsAsReadResult,
 } from '../../interfaces/INotificationDataService';
+import type { Notification, NotificationType } from '@social-media-app/shared';
 
 /**
  * Create a mock notification with optional overrides
@@ -99,26 +96,6 @@ export const createMockNotificationConnection = (
   },
 });
 
-/**
- * Create a mock unread count result
- */
-export const createMockUnreadCountResult = (
-  overrides?: Partial<UnreadCountResult>
-): UnreadCountResult => ({
-  count: 0,
-  ...overrides,
-});
-
-/**
- * Create a mock mark notifications as read result
- */
-export const createMockMarkNotificationsAsReadResult = (
-  overrides?: Partial<MarkNotificationsAsReadResult>
-): MarkNotificationsAsReadResult => ({
-  success: true,
-  markedCount: 0,
-  ...overrides,
-});
 
 /**
  * Create notification by type
@@ -153,4 +130,19 @@ export const createMentionNotification = (
   type: 'mention',
   message: `${overrides?.actor?.handle || 'johndoe'} mentioned you in a comment`,
   ...overrides,
+});
+
+/**
+ * Create mock unread count result
+ */
+export const createMockUnreadCountResult = (count: number = 0) => ({
+  count
+});
+
+/**
+ * Create mock mark notifications as read result
+ */
+export const createMockMarkNotificationsAsReadResult = (markedCount: number = 0) => ({
+  success: true,
+  markedCount
 });

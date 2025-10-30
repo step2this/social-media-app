@@ -12,350 +12,350 @@
  * ❌ NO spying on internal methods
  */
 import { describe, test, expect, beforeEach } from 'vitest';
-import { AuctionService } from '../implementations/AuctionService.graphql.js';
+import { AuctionServiceGraphQL } from '../implementations/AuctionService.graphql.js';
 import { MockGraphQLClient } from '../../graphql/client.mock.js';
 import { isSuccess, isError, assertSuccess } from '../../graphql/types.js';
 
 // Test fixtures (DRY)
 import { createMockAuction, createMockBid, createMockBids } from './fixtures/auctionFixtures.js';
 import {
-  createListAuctionsResponse,
-  createGetAuctionResponse,
-  createCreateAuctionResponse,
-  createPlaceBidResponse,
-  createGetBidsResponse,
-  createErrorState,
+    createListAuctionsResponse,
+    createGetAuctionResponse,
+    createCreateAuctionResponse,
+    createPlaceBidResponse,
+    createGetBidsResponse,
+    createErrorState,
 } from './fixtures/graphqlFixtures.js';
 
 describe('AuctionService Behavior (GraphQL)', () => {
-  let client: MockGraphQLClient;
-  let service: AuctionService;
+    let client: MockGraphQLClient;
+    let service: AuctionServiceGraphQL;
 
-  beforeEach(() => {
-    // ✅ DI: Inject mock client (NOT spy)
-    client = new MockGraphQLClient();
-    service = new AuctionService(client);
-  });
-
-  describe('listAuctions behavior', () => {
-    test('should call GraphQL client with correct query and variables', async () => {
-      // Arrange
-      const auction = createMockAuction();
-      client.setQueryResponse(createListAuctionsResponse([auction], {
-        hasNextPage: true,
-        endCursor: 'cursor-1',
-      }));
-
-      // Act
-      await service.listAuctions({ limit: 20, status: 'ACTIVE' });
-
-      // Assert
-      expect(client.queryCalls).toHaveLength(1);
-      expect(client.queryCalls[0].query).toContain('query ListAuctions');
-      expect(client.queryCalls[0].variables).toEqual({
-        limit: 20,
-        cursor: undefined,
-        status: 'ACTIVE',
-        userId: undefined,
-      });
+    beforeEach(() => {
+        // ✅ DI: Inject mock client (NOT spy)
+        client = new MockGraphQLClient();
+        service = new AuctionServiceGraphQL(client);
     });
 
-    test('should transform GraphQL response to service format', async () => {
-      // Arrange
-      const auction1 = createMockAuction({ id: '1', title: 'Auction 1' });
-      const auction2 = createMockAuction({ id: '2', title: 'Auction 2' });
+    describe('listAuctions behavior', () => {
+        test('should call GraphQL client with correct query and variables', async () => {
+            // Arrange
+            const auction = createMockAuction();
+            client.setQueryResponse(createListAuctionsResponse([auction], {
+                hasNextPage: true,
+                endCursor: 'cursor-1',
+            }));
 
-      client.setQueryResponse(createListAuctionsResponse(
-        [auction1, auction2],
-        { hasNextPage: true, endCursor: 'cursor-2' }
-      ));
+            // Act
+            await service.listAuctions({ limit: 20, status: 'ACTIVE' });
 
-      // Act
-      const result = await service.listAuctions();
+            // Assert
+            expect(client.queryCalls).toHaveLength(1);
+            expect(client.queryCalls[0].query).toContain('query ListAuctions');
+            expect(client.queryCalls[0].variables).toEqual({
+                limit: 20,
+                cursor: undefined,
+                status: 'ACTIVE',
+                userId: undefined,
+            });
+        });
 
-      // Assert - Use assertSuccess for cleaner type narrowing
-      assertSuccess(result);
-      expect(result.data.auctions).toHaveLength(2);
-      expect(result.data.auctions[0].title).toBe('Auction 1');
-      expect(result.data.auctions[1].title).toBe('Auction 2');
-      expect(result.data.nextCursor).toBe('cursor-2');
-      expect(result.data.hasMore).toBe(true);
+        test('should transform GraphQL response to service format', async () => {
+            // Arrange
+            const auction1 = createMockAuction({ id: '1', title: 'Auction 1' });
+            const auction2 = createMockAuction({ id: '2', title: 'Auction 2' });
+
+            client.setQueryResponse(createListAuctionsResponse(
+                [auction1, auction2],
+                { hasNextPage: true, endCursor: 'cursor-2' }
+            ));
+
+            // Act
+            const result = await service.listAuctions();
+
+            // Assert - Use assertSuccess for cleaner type narrowing
+            assertSuccess(result);
+            expect(result.data.auctions).toHaveLength(2);
+            expect(result.data.auctions[0].title).toBe('Auction 1');
+            expect(result.data.auctions[1].title).toBe('Auction 2');
+            expect(result.data.nextCursor).toBe('cursor-2');
+            expect(result.data.hasMore).toBe(true);
+        });
+
+        test('should handle empty results', async () => {
+            // Arrange
+            client.setQueryResponse(createListAuctionsResponse([]));
+
+            // Act
+            const result = await service.listAuctions();
+
+            // Assert
+            expect(isSuccess(result)).toBe(true);
+            if (isSuccess(result)) {
+                expect(result.data.auctions).toHaveLength(0);
+                expect(result.data.hasMore).toBe(false);
+                expect(result.data.nextCursor).toBeNull();
+            }
+        });
+
+        test('should propagate errors from GraphQL client', async () => {
+            // Arrange
+            client.setQueryResponse(createErrorState('Server error', 'INTERNAL_SERVER_ERROR'));
+
+            // Act
+            const result = await service.listAuctions();
+
+            // Assert
+            expect(isError(result)).toBe(true);
+            if (isError(result)) {
+                expect(result.error.message).toBe('Server error');
+                expect(result.error.extensions?.code).toBe('INTERNAL_SERVER_ERROR');
+            }
+        });
     });
 
-    test('should handle empty results', async () => {
-      // Arrange
-      client.setQueryResponse(createListAuctionsResponse([]));
+    describe('getAuction behavior', () => {
+        test('should call GraphQL client with auction ID', async () => {
+            // Arrange
+            const auction = createMockAuction({
+                id: 'auction-123',
+                title: 'Test Auction',
+                currentPrice: 150,
+                bidCount: 5,
+            });
 
-      // Act
-      const result = await service.listAuctions();
+            client.setQueryResponse(createGetAuctionResponse(auction));
 
-      // Assert
-      expect(isSuccess(result)).toBe(true);
-      if (isSuccess(result)) {
-        expect(result.data.auctions).toHaveLength(0);
-        expect(result.data.hasMore).toBe(false);
-        expect(result.data.nextCursor).toBeNull();
-      }
+            // Act
+            const result = await service.getAuction('auction-123');
+
+            // Assert
+            expect(client.queryCalls).toHaveLength(1);
+            expect(client.queryCalls[0].query).toContain('query GetAuction');
+            expect(client.queryCalls[0].variables).toEqual({ id: 'auction-123' });
+
+            expect(isSuccess(result)).toBe(true);
+            if (isSuccess(result)) {
+                expect(result.data.id).toBe('auction-123');
+                expect(result.data.title).toBe('Test Auction');
+            }
+        });
+
+        test('should return error when auction not found', async () => {
+            // Arrange: GraphQL returns null
+            client.setQueryResponse(createGetAuctionResponse(null));
+
+            // Act
+            const result = await service.getAuction('nonexistent');
+
+            // Assert: Service transforms null to error
+            expect(isError(result)).toBe(true);
+            if (isError(result)) {
+                expect(result.error.message).toBe('Auction not found');
+                expect(result.error.extensions?.code).toBe('NOT_FOUND');
+            }
+        });
     });
 
-    test('should propagate errors from GraphQL client', async () => {
-      // Arrange
-      client.setQueryResponse(createErrorState('Server error', 'INTERNAL_SERVER_ERROR'));
+    describe('createAuction behavior', () => {
+        test('should call mutation with correct input', async () => {
+            // Arrange
+            const auction = createMockAuction({
+                id: 'new-auction',
+                title: 'New Auction',
+                status: 'PENDING',
+            });
 
-      // Act
-      const result = await service.listAuctions();
+            client.setMutationResponse(createCreateAuctionResponse(auction));
 
-      // Assert
-      expect(isError(result)).toBe(true);
-      if (isError(result)) {
-        expect(result.error.message).toBe('Server error');
-        expect(result.error.extensions?.code).toBe('INTERNAL_SERVER_ERROR');
-      }
-    });
-  });
+            const input = {
+                title: 'New Auction',
+                fileType: 'image/jpeg',
+                startPrice: 100,
+                startTime: '2024-01-01T00:00:00Z',
+                endTime: '2024-01-08T00:00:00Z',
+            };
 
-  describe('getAuction behavior', () => {
-    test('should call GraphQL client with auction ID', async () => {
-      // Arrange
-      const auction = createMockAuction({
-        id: 'auction-123',
-        title: 'Test Auction',
-        currentPrice: 150,
-        bidCount: 5,
-      });
+            const imageFile = new File(['dummy'], 'image.jpg', { type: 'image/jpeg' });
 
-      client.setQueryResponse(createGetAuctionResponse(auction));
+            // Mock fetch for S3 upload
+            global.fetch = async (url: string | URL | Request) => {
+                if (typeof url === 'string' && url.includes('s3.example.com')) {
+                    return new Response(null, { status: 200 });
+                }
+                throw new Error('Unexpected fetch call');
+            };
 
-      // Act
-      const result = await service.getAuction('auction-123');
+            // Act
+            const result = await service.createAuction(input, imageFile);
 
-      // Assert
-      expect(client.queryCalls).toHaveLength(1);
-      expect(client.queryCalls[0].query).toContain('query GetAuction');
-      expect(client.queryCalls[0].variables).toEqual({ id: 'auction-123' });
+            // Assert
+            expect(client.mutateCalls).toHaveLength(1);
+            expect(client.mutateCalls[0].mutation).toContain('mutation CreateAuction');
+            expect(client.mutateCalls[0].variables).toEqual({ input });
 
-      expect(isSuccess(result)).toBe(true);
-      if (isSuccess(result)) {
-        expect(result.data.id).toBe('auction-123');
-        expect(result.data.title).toBe('Test Auction');
-      }
-    });
+            expect(isSuccess(result)).toBe(true);
+            if (isSuccess(result)) {
+                expect(result.data.auction.id).toBe('new-auction');
+                expect(result.data.uploadUrl).toBe('https://s3.example.com/upload');
+            }
+        });
 
-    test('should return error when auction not found', async () => {
-      // Arrange: GraphQL returns null
-      client.setQueryResponse(createGetAuctionResponse(null));
+        test('should upload image to S3 after successful creation', async () => {
+            // Arrange
+            const auction = createMockAuction({
+                id: 'new-auction',
+                imageUrl: 'https://example.com/final-image.jpg',
+            });
 
-      // Act
-      const result = await service.getAuction('nonexistent');
+            client.setMutationResponse(createCreateAuctionResponse(
+                auction,
+                'https://s3.example.com/upload?signature=abc'
+            ));
 
-      // Assert: Service transforms null to error
-      expect(isError(result)).toBe(true);
-      if (isError(result)) {
-        expect(result.error.message).toBe('Auction not found');
-        expect(result.error.extensions?.code).toBe('NOT_FOUND');
-      }
-    });
-  });
+            const input = {
+                title: 'New Auction',
+                fileType: 'image/jpeg',
+                startPrice: 100,
+                startTime: '2024-01-01T00:00:00Z',
+                endTime: '2024-01-08T00:00:00Z',
+            };
 
-  describe('createAuction behavior', () => {
-    test('should call mutation with correct input', async () => {
-      // Arrange
-      const auction = createMockAuction({
-        id: 'new-auction',
-        title: 'New Auction',
-        status: 'PENDING',
-      });
+            const imageFile = new File(['dummy'], 'image.jpg', { type: 'image/jpeg' });
 
-      client.setMutationResponse(createCreateAuctionResponse(auction));
+            // Mock fetch for S3 upload
+            global.fetch = async (url: string | URL | Request) => {
+                if (typeof url === 'string' && url.includes('s3.example.com')) {
+                    return new Response(null, { status: 200 });
+                }
+                throw new Error('Unexpected fetch call');
+            };
 
-      const input = {
-        title: 'New Auction',
-        fileType: 'image/jpeg',
-        startPrice: 100,
-        startTime: '2024-01-01T00:00:00Z',
-        endTime: '2024-01-08T00:00:00Z',
-      };
+            // Act
+            const result = await service.createAuction(input, imageFile);
 
-      const imageFile = new File(['dummy'], 'image.jpg', { type: 'image/jpeg' });
+            // Assert
+            expect(isSuccess(result)).toBe(true);
+            if (isSuccess(result)) {
+                expect(result.data.auction.id).toBe('new-auction');
+            }
+        });
 
-      // Mock fetch for S3 upload
-      global.fetch = async (url: string | URL | Request) => {
-        if (typeof url === 'string' && url.includes('s3.example.com')) {
-          return new Response(null, { status: 200 });
-        }
-        throw new Error('Unexpected fetch call');
-      };
+        test('should handle S3 upload failure gracefully', async () => {
+            // Arrange
+            const auction = createMockAuction({ id: 'new-auction' });
+            client.setMutationResponse(createCreateAuctionResponse(auction));
 
-      // Act
-      const result = await service.createAuction(input, imageFile);
+            const input = {
+                title: 'New Auction',
+                fileType: 'image/jpeg',
+                startPrice: 100,
+                startTime: '2024-01-01T00:00:00Z',
+                endTime: '2024-01-08T00:00:00Z',
+            };
 
-      // Assert
-      expect(client.mutateCalls).toHaveLength(1);
-      expect(client.mutateCalls[0].mutation).toContain('mutation CreateAuction');
-      expect(client.mutateCalls[0].variables).toEqual({ input });
+            const imageFile = new File(['dummy'], 'image.jpg', { type: 'image/jpeg' });
 
-      expect(isSuccess(result)).toBe(true);
-      if (isSuccess(result)) {
-        expect(result.data.auction.id).toBe('new-auction');
-        expect(result.data.uploadUrl).toBe('https://s3.example.com/upload');
-      }
-    });
+            // Mock fetch to fail S3 upload
+            global.fetch = async () => {
+                return new Response(null, { status: 500 });
+            };
 
-    test('should upload image to S3 after successful creation', async () => {
-      // Arrange
-      const auction = createMockAuction({
-        id: 'new-auction',
-        imageUrl: 'https://example.com/final-image.jpg',
-      });
+            // Act
+            const result = await service.createAuction(input, imageFile);
 
-      client.setMutationResponse(createCreateAuctionResponse(
-        auction,
-        'https://s3.example.com/upload?signature=abc'
-      ));
-
-      const input = {
-        title: 'New Auction',
-        fileType: 'image/jpeg',
-        startPrice: 100,
-        startTime: '2024-01-01T00:00:00Z',
-        endTime: '2024-01-08T00:00:00Z',
-      };
-
-      const imageFile = new File(['dummy'], 'image.jpg', { type: 'image/jpeg' });
-
-      // Mock fetch for S3 upload
-      global.fetch = async (url: string | URL | Request) => {
-        if (typeof url === 'string' && url.includes('s3.example.com')) {
-          return new Response(null, { status: 200 });
-        }
-        throw new Error('Unexpected fetch call');
-      };
-
-      // Act
-      const result = await service.createAuction(input, imageFile);
-
-      // Assert
-      expect(isSuccess(result)).toBe(true);
-      if (isSuccess(result)) {
-        expect(result.data.auction.id).toBe('new-auction');
-      }
+            // Assert
+            expect(isError(result)).toBe(true);
+            if (isError(result)) {
+                expect(result.error.message).toContain('upload');
+            }
+        });
     });
 
-    test('should handle S3 upload failure gracefully', async () => {
-      // Arrange
-      const auction = createMockAuction({ id: 'new-auction' });
-      client.setMutationResponse(createCreateAuctionResponse(auction));
+    describe('placeBid behavior', () => {
+        test('should call mutation with correct input', async () => {
+            // Arrange
+            const bid = createMockBid({ amount: 150 });
+            const auction = createMockAuction({
+                id: 'auction-1',
+                currentPrice: 150,
+                bidCount: 1,
+            });
 
-      const input = {
-        title: 'New Auction',
-        fileType: 'image/jpeg',
-        startPrice: 100,
-        startTime: '2024-01-01T00:00:00Z',
-        endTime: '2024-01-08T00:00:00Z',
-      };
+            client.setMutationResponse(createPlaceBidResponse(bid, auction));
 
-      const imageFile = new File(['dummy'], 'image.jpg', { type: 'image/jpeg' });
+            // Act
+            await service.placeBid('auction-1', 150);
 
-      // Mock fetch to fail S3 upload
-      global.fetch = async () => {
-        return new Response(null, { status: 500 });
-      };
+            // Assert
+            expect(client.mutateCalls).toHaveLength(1);
+            expect(client.mutateCalls[0].mutation).toContain('mutation PlaceBid');
+            expect(client.mutateCalls[0].variables).toEqual({
+                input: { auctionId: 'auction-1', amount: 150 },
+            });
+        });
 
-      // Act
-      const result = await service.createAuction(input, imageFile);
+        test('should return bid and updated auction', async () => {
+            // Arrange
+            const bid = createMockBid({ amount: 150 });
+            const auction = createMockAuction({
+                id: 'auction-1',
+                currentPrice: 150,
+                bidCount: 6,
+            });
 
-      // Assert
-      expect(isError(result)).toBe(true);
-      if (isError(result)) {
-        expect(result.error.message).toContain('upload');
-      }
-    });
-  });
+            client.setMutationResponse(createPlaceBidResponse(bid, auction));
 
-  describe('placeBid behavior', () => {
-    test('should call mutation with correct input', async () => {
-      // Arrange
-      const bid = createMockBid({ amount: 150 });
-      const auction = createMockAuction({
-        id: 'auction-1',
-        currentPrice: 150,
-        bidCount: 1,
-      });
+            // Act
+            const result = await service.placeBid('auction-1', 150);
 
-      client.setMutationResponse(createPlaceBidResponse(bid, auction));
-
-      // Act
-      await service.placeBid('auction-1', 150);
-
-      // Assert
-      expect(client.mutateCalls).toHaveLength(1);
-      expect(client.mutateCalls[0].mutation).toContain('mutation PlaceBid');
-      expect(client.mutateCalls[0].variables).toEqual({
-        input: { auctionId: 'auction-1', amount: 150 },
-      });
+            // Assert
+            expect(isSuccess(result)).toBe(true);
+            if (isSuccess(result)) {
+                expect(result.data.bid.amount).toBe(150);
+                expect(result.data.auction.currentPrice).toBe(150);
+                expect(result.data.auction.bidCount).toBe(6);
+            }
+        });
     });
 
-    test('should return bid and updated auction', async () => {
-      // Arrange
-      const bid = createMockBid({ amount: 150 });
-      const auction = createMockAuction({
-        id: 'auction-1',
-        currentPrice: 150,
-        bidCount: 6,
-      });
+    describe('getBidHistory behavior', () => {
+        test('should call GraphQL client with correct query', async () => {
+            // Arrange
+            client.setQueryResponse(createGetBidsResponse([]));
 
-      client.setMutationResponse(createPlaceBidResponse(bid, auction));
+            // Act
+            await service.getBidHistory('auction-1', { limit: 50, offset: 0 });
 
-      // Act
-      const result = await service.placeBid('auction-1', 150);
+            // Assert
+            expect(client.queryCalls).toHaveLength(1);
+            expect(client.queryCalls[0].query).toContain('query GetBids');
+            expect(client.queryCalls[0].variables).toEqual({
+                auctionId: 'auction-1',
+                limit: 50,
+                offset: 0,
+            });
+        });
 
-      // Assert
-      expect(isSuccess(result)).toBe(true);
-      if (isSuccess(result)) {
-        expect(result.data.bid.amount).toBe(150);
-        expect(result.data.auction.currentPrice).toBe(150);
-        expect(result.data.auction.bidCount).toBe(6);
-      }
+        test('should return bid history with total count', async () => {
+            // Arrange
+            const bids = createMockBids(2, 'auction-1');
+            bids[0].amount = 150;
+            bids[1].amount = 175;
+
+            client.setQueryResponse(createGetBidsResponse(bids, 25));
+
+            // Act
+            const result = await service.getBidHistory('auction-1');
+
+            // Assert
+            expect(isSuccess(result)).toBe(true);
+            if (isSuccess(result)) {
+                expect(result.data.bids).toHaveLength(2);
+                expect(result.data.total).toBe(25);
+                expect(result.data.bids[0].amount).toBe(150);
+                expect(result.data.bids[1].amount).toBe(175);
+            }
+        });
     });
-  });
-
-  describe('getBidHistory behavior', () => {
-    test('should call GraphQL client with correct query', async () => {
-      // Arrange
-      client.setQueryResponse(createGetBidsResponse([]));
-
-      // Act
-      await service.getBidHistory('auction-1', { limit: 50, offset: 0 });
-
-      // Assert
-      expect(client.queryCalls).toHaveLength(1);
-      expect(client.queryCalls[0].query).toContain('query GetBids');
-      expect(client.queryCalls[0].variables).toEqual({
-        auctionId: 'auction-1',
-        limit: 50,
-        offset: 0,
-      });
-    });
-
-    test('should return bid history with total count', async () => {
-      // Arrange
-      const bids = createMockBids(2, 'auction-1');
-      bids[0].amount = 150;
-      bids[1].amount = 175;
-
-      client.setQueryResponse(createGetBidsResponse(bids, 25));
-
-      // Act
-      const result = await service.getBidHistory('auction-1');
-
-      // Assert
-      expect(isSuccess(result)).toBe(true);
-      if (isSuccess(result)) {
-        expect(result.data.bids).toHaveLength(2);
-        expect(result.data.total).toBe(25);
-        expect(result.data.bids[0].amount).toBe(150);
-        expect(result.data.bids[1].amount).toBe(175);
-      }
-    });
-  });
 });

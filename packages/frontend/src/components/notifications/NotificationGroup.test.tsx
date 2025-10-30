@@ -5,7 +5,7 @@
  * Tests the notification group component that renders a section with title and items
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { NotificationGroup } from './NotificationGroup';
 import { createMockNotifications } from '../../services/__tests__/fixtures/notificationFixtures';

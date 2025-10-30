@@ -8,7 +8,6 @@
 import type { Notification, NotificationType } from '@social-media-app/shared';
 import type {
   NotificationGroups,
-  NotificationIconColor,
   GroupNotificationsFn,
   FormatNotificationTextFn,
   FormatTimestampFn,

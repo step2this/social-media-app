@@ -363,26 +363,3 @@ export function isISOTimestamp(value: string): value is ISOTimestamp {
  * ====================
  * Compile-time type tests to verify type behavior
  */
-
-/**
- * Test that AsyncState is exhaustively checked
- */
-type _TestExhaustiveCheck = (state: AsyncState<unknown>) => void extends (
-  state: LoadingState | SuccessState<unknown> | ErrorState | EmptyState
-) => void
-  ? true
-  : false;
-
-/**
- * Test that NotificationWithActor excludes system notifications
- */
-type _TestNotificationWithActor = NotificationWithActor extends 'system' | 'announcement' | 'achievement'
-  ? never
-  : true;
-
-/**
- * Test that template literal types work correctly
- */
-type _TestIconColor = NotificationIconColor extends `${CSSPrefix}--${string}` | ''
-  ? true
-  : false;

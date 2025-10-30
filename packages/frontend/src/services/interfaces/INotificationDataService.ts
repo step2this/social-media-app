@@ -11,26 +11,6 @@ import type { AsyncState } from '../../graphql/types';
 import type { Notification } from '@social-media-app/shared';
 
 /**
- * Notification type discriminated union
- * Ensures type-safe notification handling
- */
-export type NotificationType = 'like' | 'comment' | 'follow' | 'mention';
-
-/**
- * Base notification interface
- */
-export interface Notification {
-  readonly id: string;
-  readonly type: NotificationType;
-  readonly actorId: string;
-  readonly actorUsername: string;
-  readonly targetId: string; // Post ID, Comment ID, etc.
-  readonly message: string;
-  readonly read: boolean;
-  readonly createdAt: string;
-}
-
-/**
  * Notification connection for pagination
  * Following GraphQL Relay connection pattern
  */
@@ -38,6 +18,8 @@ export interface NotificationConnection {
   readonly edges: readonly NotificationEdge[];
   readonly pageInfo: {
     readonly hasNextPage: boolean;
+    readonly hasPreviousPage: boolean;
+    readonly startCursor: string | null;
     readonly endCursor: string | null;
   };
 }
