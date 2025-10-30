@@ -1,18 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { screen, waitFor } from '@testing-library/react';
 import { HomePage } from './HomePage';
-import * as feedService from '../services/feedService';
-import type { FeedPostItem } from '@social-media-app/shared';
+import type { IServiceContainer } from '../services/interfaces/IServiceContainer';
+import type { IFeedService } from '../services/interfaces/IFeedService';
+import type { PostWithAuthor } from '@social-media-app/shared';
 import { createMockFeedPostItem } from '../test-utils/mock-factories';
-
-// Mock feedService
-vi.mock('../services/feedService', () => ({
-  feedService: {
-    getFollowingFeed: vi.fn(),
-    markPostsAsRead: vi.fn()
-  }
-}));
+import { renderWithProviders } from '../test-utils/test-providers';
+import { createMockServiceContainer, createMockFeedService } from '../test-utils/mock-service-container';
 
 // Mock useFeedItemAutoRead hook
 vi.mock('../hooks/useFeedItemAutoRead', () => ({
@@ -21,15 +15,15 @@ vi.mock('../hooks/useFeedItemAutoRead', () => ({
 
 // Mock PostCard component to verify it's being used instead of FeedPostCard
 vi.mock('../components/posts/PostCard', () => ({
-  PostCard: ({ post }: any) => (
+  PostCard: ({ post }: { post: PostWithAuthor }) => (
     <div data-testid="post-card-mock">
       <div data-testid="post-card-id">{post.id}</div>
-      <div data-testid="post-card-handle">{post.userHandle}</div>
+      <div data-testid="post-card-handle">{post.authorHandle}</div>
     </div>
   )
 }));
 
-const mockFeedPosts: FeedPostItem[] = [
+const mockFeedPosts: PostWithAuthor[] = [
   createMockFeedPostItem({
     id: 'post-1',
     userId: 'user-1',
@@ -54,27 +48,39 @@ const mockFeedPosts: FeedPostItem[] = [
   })
 ];
 
-const renderHomePage = () => render(
-    <BrowserRouter>
-      <HomePage />
-    </BrowserRouter>
-  );
-
 describe('HomePage', () => {
+  let mockFeedService: IFeedService;
+  let mockServiceContainer: IServiceContainer;
+
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Create fresh mocks for each test using DI pattern
+    mockFeedService = createMockFeedService();
+    mockServiceContainer = createMockServiceContainer({
+      feedService: mockFeedService
+    });
   });
+
+  const renderHomePage = () =>
+    renderWithProviders(<HomePage />, { serviceContainer: mockServiceContainer });
 
   describe('PostCard Integration (TDD Refactor)', () => {
     it('should use PostCard component instead of FeedPostCard', async () => {
-      vi.mocked(feedService.feedService.getFollowingFeed).mockResolvedValue({
-        posts: mockFeedPosts,
-        nextCursor: undefined,
-        hasMore: false
+      // Arrange: Mock successful feed response with AsyncState
+      vi.mocked(mockFeedService.getFollowingFeed).mockResolvedValue({
+        status: 'success',
+        data: {
+          items: mockFeedPosts,
+          hasNextPage: false,
+          endCursor: null
+        }
       });
 
+      // Act: Render with mocked services via DI
       renderHomePage();
 
+      // Assert: Verify PostCard components rendered
       await waitFor(() => {
         expect(screen.getAllByTestId('post-card-mock')).toHaveLength(2);
       });
@@ -83,35 +89,50 @@ describe('HomePage', () => {
       const postIds = screen.getAllByTestId('post-card-id');
       expect(postIds[0]).toHaveTextContent('post-1');
       expect(screen.getByText('user1')).toBeInTheDocument();
+
+      // Verify feedService was called
+      expect(mockFeedService.getFollowingFeed).toHaveBeenCalledOnce();
     });
 
     it('should NOT use FeedPostCard component', async () => {
-      vi.mocked(feedService.feedService.getFollowingFeed).mockResolvedValue({
-        posts: mockFeedPosts,
-        nextCursor: undefined,
-        hasMore: false
+      // Arrange: Mock successful feed response
+      vi.mocked(mockFeedService.getFollowingFeed).mockResolvedValue({
+        status: 'success',
+        data: {
+          items: mockFeedPosts,
+          hasNextPage: false,
+          endCursor: null
+        }
       });
 
+      // Act
       renderHomePage();
 
+      // Assert: Verify posts rendered
       await waitFor(() => {
         expect(screen.getAllByTestId('post-card-mock')).toHaveLength(2);
       });
 
       // FeedPostCard uses .feed-post-card class, PostCard uses .post-card
-      const container = document.querySelector('.home-page__feed');
+      const container = document.querySelector('.home-page__container');
       expect(container?.querySelector('.feed-post-card')).not.toBeInTheDocument();
     });
 
     it('should pass all feed posts to PostCard components', async () => {
-      vi.mocked(feedService.feedService.getFollowingFeed).mockResolvedValue({
-        posts: mockFeedPosts,
-        nextCursor: undefined,
-        hasMore: false
+      // Arrange: Mock successful feed response
+      vi.mocked(mockFeedService.getFollowingFeed).mockResolvedValue({
+        status: 'success',
+        data: {
+          items: mockFeedPosts,
+          hasNextPage: false,
+          endCursor: null
+        }
       });
 
+      // Act
       renderHomePage();
 
+      // Assert: Verify all posts rendered
       await waitFor(() => {
         expect(screen.getAllByTestId('post-card-mock')).toHaveLength(2);
       });
@@ -124,19 +145,24 @@ describe('HomePage', () => {
 
   describe('Auto-Read Integration (Instagram-like behavior)', () => {
     it('should attach auto-read ref to each PostCard', async () => {
+      // Arrange: Mock the hook to track calls
       const mockAutoReadHook = vi.fn(() => ({ current: null }));
-      // @ts-expect-error - Mocking hook implementation
       const { useFeedItemAutoRead } = await import('../hooks/useFeedItemAutoRead');
       vi.mocked(useFeedItemAutoRead).mockImplementation(mockAutoReadHook);
 
-      vi.mocked(feedService.feedService.getFollowingFeed).mockResolvedValue({
-        posts: mockFeedPosts,
-        nextCursor: undefined,
-        hasMore: false
+      vi.mocked(mockFeedService.getFollowingFeed).mockResolvedValue({
+        status: 'success',
+        data: {
+          items: mockFeedPosts,
+          hasNextPage: false,
+          endCursor: null
+        }
       });
 
+      // Act
       renderHomePage();
 
+      // Assert: Verify posts rendered
       await waitFor(() => {
         expect(screen.getAllByTestId('post-card-mock')).toHaveLength(2);
       });
@@ -147,24 +173,38 @@ describe('HomePage', () => {
     });
 
     it('should use useOptimistic for instant post removal on read', async () => {
-      // Mock markPostsAsRead to delay (simulate API call)
-      vi.mocked(feedService.feedService.markPostsAsRead).mockImplementation(
-        () => new Promise(resolve => setTimeout(() => resolve({ success: true, markedCount: 1 }), 1000))
+      // Arrange: Mock markPostsAsRead to delay (simulate API call)
+      vi.mocked(mockFeedService.markPostsAsRead).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  status: 'success',
+                  data: { success: true, markedCount: 1 }
+                }),
+              1000
+            )
+          )
       );
 
-      vi.mocked(feedService.feedService.getFollowingFeed).mockResolvedValue({
-        posts: mockFeedPosts,
-        nextCursor: undefined,
-        hasMore: false
+      vi.mocked(mockFeedService.getFollowingFeed).mockResolvedValue({
+        status: 'success',
+        data: {
+          items: mockFeedPosts,
+          hasNextPage: false,
+          endCursor: null
+        }
       });
 
+      // Act
       renderHomePage();
 
+      // Assert: Verify both posts initially visible
       await waitFor(() => {
         expect(screen.getAllByTestId('post-card-mock')).toHaveLength(2);
       });
 
-      // Verify both posts initially visible
       expect(screen.getByText('post-1')).toBeInTheDocument();
       expect(screen.getByText('post-2')).toBeInTheDocument();
 
@@ -174,19 +214,25 @@ describe('HomePage', () => {
     });
 
     it('should roll back optimistic update on API failure', async () => {
-      // Mock markPostsAsRead to throw error
-      vi.mocked(feedService.feedService.markPostsAsRead).mockRejectedValue(
-        new Error('Network error')
-      );
-
-      vi.mocked(feedService.feedService.getFollowingFeed).mockResolvedValue({
-        posts: mockFeedPosts,
-        nextCursor: undefined,
-        hasMore: false
+      // Arrange: Mock markPostsAsRead to throw error
+      vi.mocked(mockFeedService.markPostsAsRead).mockResolvedValue({
+        status: 'error',
+        error: { message: 'Network error' }
       });
 
+      vi.mocked(mockFeedService.getFollowingFeed).mockResolvedValue({
+        status: 'success',
+        data: {
+          items: mockFeedPosts,
+          hasNextPage: false,
+          endCursor: null
+        }
+      });
+
+      // Act
       renderHomePage();
 
+      // Assert: Verify posts rendered
       await waitFor(() => {
         expect(screen.getAllByTestId('post-card-mock')).toHaveLength(2);
       });
@@ -197,19 +243,25 @@ describe('HomePage', () => {
     });
 
     it('should handle rapid scroll without duplicate API calls', async () => {
-      vi.mocked(feedService.feedService.markPostsAsRead).mockResolvedValue({
-        success: true,
-        markedCount: 1
+      // Arrange
+      vi.mocked(mockFeedService.markPostsAsRead).mockResolvedValue({
+        status: 'success',
+        data: { success: true, markedCount: 1 }
       });
 
-      vi.mocked(feedService.feedService.getFollowingFeed).mockResolvedValue({
-        posts: mockFeedPosts,
-        nextCursor: undefined,
-        hasMore: false
+      vi.mocked(mockFeedService.getFollowingFeed).mockResolvedValue({
+        status: 'success',
+        data: {
+          items: mockFeedPosts,
+          hasNextPage: false,
+          endCursor: null
+        }
       });
 
+      // Act
       renderHomePage();
 
+      // Assert: Verify posts rendered
       await waitFor(() => {
         expect(screen.getAllByTestId('post-card-mock')).toHaveLength(2);
       });
@@ -219,7 +271,8 @@ describe('HomePage', () => {
     });
 
     it('should preserve unread posts during optimistic updates', async () => {
-      const fivePosts: FeedPostItem[] = [
+      // Arrange: Create 5 posts
+      const fivePosts: PostWithAuthor[] = [
         ...mockFeedPosts,
         createMockFeedPostItem({
           id: 'post-3',
@@ -256,19 +309,24 @@ describe('HomePage', () => {
         })
       ];
 
-      vi.mocked(feedService.feedService.markPostsAsRead).mockResolvedValue({
-        success: true,
-        markedCount: 1
+      vi.mocked(mockFeedService.markPostsAsRead).mockResolvedValue({
+        status: 'success',
+        data: { success: true, markedCount: 1 }
       });
 
-      vi.mocked(feedService.feedService.getFollowingFeed).mockResolvedValue({
-        posts: fivePosts,
-        nextCursor: undefined,
-        hasMore: false
+      vi.mocked(mockFeedService.getFollowingFeed).mockResolvedValue({
+        status: 'success',
+        data: {
+          items: fivePosts,
+          hasNextPage: false,
+          endCursor: null
+        }
       });
 
+      // Act
       renderHomePage();
 
+      // Assert: Verify all 5 posts rendered
       await waitFor(() => {
         expect(screen.getAllByTestId('post-card-mock')).toHaveLength(5);
       });
