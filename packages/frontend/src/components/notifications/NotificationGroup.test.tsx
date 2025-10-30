@@ -116,7 +116,7 @@ describe('NotificationGroup', () => {
       // Click first notification
       const firstNotification = screen.getAllByText(/liked your post/i)[0];
       const notificationElement = firstNotification.closest('.notification-item');
-      
+
       if (notificationElement) {
         fireEvent.click(notificationElement);
         expect(mockOnClick).toHaveBeenCalledWith(notifications[0]);

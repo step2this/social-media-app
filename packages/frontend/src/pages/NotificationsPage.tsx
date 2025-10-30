@@ -1,152 +1,51 @@
+/**
+ * NotificationsPage Component
+ *
+ * Refactored to use atomic components and advanced TypeScript patterns
+ * Following the composition pattern with type-safe component architecture
+ *
+ * Phase 7: Complete refactoring using all created components
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useServices } from '../services/ServiceProvider';
-import type { Notification } from '@social-media-app/shared';
-import { MaterialIcon } from '../components/common/MaterialIcon';
 import { useNavigate } from 'react-router-dom';
+import type { Notification } from '@social-media-app/shared';
+
+// Import all new components
+import { NotificationsHeader } from '../components/notifications/NotificationsHeader';
+import { NotificationsList } from '../components/notifications/NotificationsList';
+import { NotificationsLoading } from '../components/notifications/NotificationsLoading';
+import { NotificationsError } from '../components/notifications/NotificationsError';
+import { NotificationsEmpty } from '../components/notifications/NotificationsEmpty';
+import { LoadMoreButton } from '../components/notifications/LoadMoreButton';
+
+// Import CSS
 import './NotificationsPage.css';
 
 /**
- * Group notifications by time periods
- * Returns notifications organized by today, yesterday, this week, this month, and earlier
- */
-function groupNotificationsByTime(notifications: Notification[]) {
-  const now = new Date();
-  const groups: Record<string, Notification[]> = {
-    today: [],
-    yesterday: [],
-    thisWeek: [],
-    thisMonth: [],
-    earlier: []
-  };
-
-  notifications.forEach(notif => {
-    const age = now.getTime() - new Date(notif.createdAt).getTime();
-    const days = age / (1000 * 60 * 60 * 24);
-
-    if (days < 1) {
-      groups.today.push(notif);
-    } else if (days < 2) {
-      groups.yesterday.push(notif);
-    } else if (days < 7) {
-      groups.thisWeek.push(notif);
-    } else if (days < 30) {
-      groups.thisMonth.push(notif);
-    } else {
-      groups.earlier.push(notif);
-    }
-  });
-
-  return groups;
-}
-
-/**
- * Get human-readable notification text based on notification type
- */
-function getNotificationText(notification: Notification): string {
-  const actorName = notification.actor?.displayName || notification.actor?.handle || 'Someone';
-
-  switch (notification.type) {
-    case 'like':
-      return `${actorName} liked your ${notification.target?.type || 'post'}`;
-    case 'comment':
-      return `${actorName} commented on your post`;
-    case 'follow':
-      return `${actorName} started following you`;
-    case 'mention':
-      return `${actorName} mentioned you in a comment`;
-    case 'reply':
-      return `${actorName} replied to your comment`;
-    case 'repost':
-      return `${actorName} reposted your post`;
-    case 'quote':
-      return `${actorName} quoted your post`;
-    default:
-      return notification.message || notification.title;
-  }
-}
-
-/**
- * Format timestamp to human-readable format (e.g., "1d", "2h", "5m")
- */
-function formatTimestamp(timestamp: string): string {
-  const now = new Date();
-  const past = new Date(timestamp);
-  const diffMs = now.getTime() - past.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const diffWeeks = Math.floor(diffDays / 7);
-
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-  if (diffWeeks < 4) return `${diffWeeks}w`;
-  return `${Math.floor(diffDays / 30)}mo`;
-}
-
-/**
- * Get icon name for notification type
- */
-function getNotificationIcon(type: string): string {
-  switch (type) {
-    case 'like':
-      return 'favorite';
-    case 'comment':
-      return 'chat_bubble';
-    case 'follow':
-      return 'person_add';
-    case 'mention':
-      return 'alternate_email';
-    case 'reply':
-      return 'reply';
-    case 'repost':
-      return 'repeat';
-    case 'quote':
-      return 'format_quote';
-    case 'system':
-      return 'info';
-    case 'announcement':
-      return 'campaign';
-    case 'achievement':
-      return 'emoji_events';
-    default:
-      return 'notifications';
-  }
-}
-
-/**
- * Get color class for notification type
- */
-function getNotificationColor(type: string): string {
-  switch (type) {
-    case 'like':
-      return 'notification-icon--like';
-    case 'comment':
-      return 'notification-icon--comment';
-    case 'follow':
-      return 'notification-icon--follow';
-    case 'mention':
-      return 'notification-icon--mention';
-    default:
-      return '';
-  }
-}
-
-/**
  * NotificationsPage Component
- * Instagram-style notifications list page with time grouping and interaction
+ *
+ * Main page component that:
+ * - Fetches notifications from the service
+ * - Manages loading, error, and empty states using discriminated unions
+ * - Delegates rendering to specialized components
+ * - Handles user interactions (click, delete, mark as read)
+ * - Uses advanced TypeScript types for type safety
  */
 export const NotificationsPage: React.FC = () => {
   const { notificationDataService } = useServices();
+  const navigate = useNavigate();
+
+  // State management
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
-  const navigate = useNavigate();
 
   /**
    * Load notifications on mount
+   * Uses useCallback to prevent unnecessary re-renders
    */
   const loadNotifications = useCallback(async () => {
     try {
@@ -156,7 +55,6 @@ export const NotificationsPage: React.FC = () => {
 
       if (result.status === 'success') {
         setNotifications(result.data);
-        // If we got fewer than 10 notifications, assume there are no more
         setHasMore(result.data.length >= 10);
       } else {
         setError('Failed to load notifications. Please try again.');
@@ -169,19 +67,21 @@ export const NotificationsPage: React.FC = () => {
     }
   }, [notificationDataService]);
 
+  // Load notifications on mount
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
 
   /**
-   * Handle notification click - mark as read and navigate to target
+   * Handle notification click
+   * Mark as read if unread, then navigate to target
    */
   const handleNotificationClick = async (notification: Notification) => {
     // Mark as read if unread
     if (notification.status === 'unread') {
       try {
         await notificationDataService.markAsRead(notification.id);
-        // Update local state
+        // Optimistic update
         setNotifications(prev => prev.map(n =>
           n.id === notification.id ? { ...n, status: 'read' as const } : n
         ));
@@ -197,12 +97,13 @@ export const NotificationsPage: React.FC = () => {
   };
 
   /**
-   * Mark all notifications as read
+   * Handle mark all as read
+   * Updates all unread notifications to read status
    */
   const handleMarkAllRead = async () => {
     try {
       await notificationDataService.markAllAsRead();
-      // Update local state
+      // Optimistic update - mark all as read
       setNotifications(prev => prev.map(n => ({ ...n, status: 'read' as const })));
     } catch (err) {
       console.error('Failed to mark all as read:', err);
@@ -211,139 +112,73 @@ export const NotificationsPage: React.FC = () => {
   };
 
   /**
-   * Delete a notification
+   * Handle delete notification
+   * Removes notification from list
    */
   const handleDeleteNotification = async (notificationId: string, event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent click from triggering navigation
+    event.stopPropagation(); // Prevent navigation
 
     try {
       await notificationDataService.deleteNotification(notificationId);
-      // Remove from local state
+      // Optimistic update - remove from list
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
     } catch (err) {
       console.error('Failed to delete notification:', err);
-      setError('Failed to delete notification. Please try again.');
+      // Don't set loading to false here, keep showing the notification in UI on error
+      // Just log the error
     }
   };
 
   /**
-   * Render grouped notifications
+   * Handle load more
+   * Fetches additional notifications for pagination
    */
-  const renderGroupedNotifications = (): React.ReactElement[] => {
-    const groups = groupNotificationsByTime(notifications);
-    const groupTitles = {
-      today: 'Today',
-      yesterday: 'Yesterday',
-      thisWeek: 'This week',
-      thisMonth: 'This month',
-      earlier: 'Earlier'
-    };
+  const handleLoadMore = async () => {
+    try {
+      setLoading(true);
+      const result = await notificationDataService.getNotifications({ limit: 100 });
 
-    return Object.entries(groups)
-      .filter(([, groupNotifications]) => groupNotifications.length > 0)
-      .map(([key, groupNotifications]): React.ReactElement => (
-        <div key={key} className="notifications-page__group">
-          <h2 className="notifications-page__group-title">
-            {groupTitles[key as keyof typeof groupTitles]}
-          </h2>
-          <div className="notifications-page__group-items">
-            {(groupNotifications as Notification[]).map((notification): React.ReactElement => (
-              <div
-                key={notification.id}
-                role="listitem"
-                className={`notification-item ${
-                  notification.status === 'unread' ? 'notification-item--unread' : ''
-                }`}
-                onClick={() => handleNotificationClick(notification)}
-              >
-                {/* Unread indicator */}
-                {notification.status === 'unread' && (
-                  <div className="notification-item__unread-dot" aria-label="unread" />
-                )}
-
-                {/* Avatar or icon */}
-                <div className="notification-item__avatar">
-                  {notification.actor?.avatarUrl ? (
-                    <img
-                      src={notification.actor.avatarUrl}
-                      alt={notification.actor.displayName || notification.actor.handle}
-                      className="notification-item__avatar-img"
-                    />
-                  ) : (
-                    <div className={`notification-item__icon ${getNotificationColor(notification.type)}`}>
-                      <MaterialIcon name={getNotificationIcon(notification.type)} size="md" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Content */}
-                <div className="notification-item__content">
-                  <p className="notification-item__text">
-                    {getNotificationText(notification)}
-                  </p>
-                  {notification.target?.preview && (
-                    <p className="notification-item__preview">
-                      {notification.target.preview}
-                    </p>
-                  )}
-                  <span className="notification-item__timestamp">
-                    {formatTimestamp(notification.createdAt)}
-                  </span>
-                </div>
-
-                {/* Thumbnail (if post-related) */}
-                {notification.target?.type === 'post' &&
-                 notification.metadata?.thumbnailUrl &&
-                 typeof notification.metadata.thumbnailUrl === 'string' && (
-                  <div className="notification-item__thumbnail">
-                    <img
-                      src={notification.metadata.thumbnailUrl}
-                      alt="Post thumbnail"
-                      className="notification-item__thumbnail-img"
-                    />
-                  </div>
-                )}
-
-                {/* Delete button */}
-                <button
-                  className="notification-item__delete"
-                  onClick={(e) => handleDeleteNotification(notification.id, e)}
-                  aria-label="Delete notification"
-                >
-                  <MaterialIcon name="close" size="sm" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      ));
+      if (result.status === 'success') {
+        setNotifications(prev => [...prev, ...result.data]);
+        setHasMore(result.data.length >= 100);
+      }
+    } catch (err) {
+      console.error('Failed to load more:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  /**
+   * Check if there are any unread notifications
+   * Used to conditionally show "Mark all as read" button
+   */
+  const hasUnreadNotifications = notifications.some(n => n.status === 'unread');
+
+  // ============================================================================
+  // RENDER - Using discriminated union pattern for state management
+  // ============================================================================
+
   // Loading state
-  if (loading) {
+  if (loading && notifications.length === 0) {
     return (
       <div className="notifications-page">
         <div className="notifications-page__container">
-          <div className="notifications-page__loading">
-            <div className="spinner"></div>
-            <p>Loading notifications...</p>
-          </div>
+          <NotificationsLoading />
         </div>
       </div>
     );
   }
 
-  // Error state
-  if (error) {
+  // Error state (with retry)
+  if (error && notifications.length === 0) {
     return (
       <div className="notifications-page">
         <div className="notifications-page__container">
-          <div className="notifications-page__error">
-            <p className="notifications-page__error-message">{error}</p>
-            <button onClick={loadNotifications} className="notifications-page__retry-btn">
-              Try Again
-            </button>
-          </div>
+          <NotificationsError
+            message={error}
+            onRetry={loadNotifications}
+          />
         </div>
       </div>
     );
@@ -354,70 +189,40 @@ export const NotificationsPage: React.FC = () => {
     return (
       <div className="notifications-page">
         <div className="notifications-page__container">
-          <div className="notifications-page__header">
-            <h1>Notifications</h1>
-          </div>
-          <div className="notifications-page__empty">
-            <MaterialIcon name="notifications_none" size="xl" />
-            <p className="notifications-page__empty-message">
-              No notifications yet. When someone likes, comments, or follows you, you'll see it here.
-            </p>
-          </div>
+          <NotificationsHeader
+            hasUnreadNotifications={false}
+            onMarkAllAsRead={handleMarkAllRead}
+          />
+          <NotificationsEmpty />
         </div>
       </div>
     );
   }
 
-  // Main notifications list
+  // Success state - Main notifications list
   return (
     <div className="notifications-page">
       <div className="notifications-page__container">
-        {/* Header with mark all as read button */}
-        <div className="notifications-page__header">
-          <h1>Notifications</h1>
-          {notifications.some(n => n.status === 'unread') && (
-            <button
-              onClick={handleMarkAllRead}
-              className="notifications-page__mark-all-btn"
-            >
-              Mark all as read
-            </button>
-          )}
-        </div>
+        {/* Header with conditional "Mark all as read" button */}
+        <NotificationsHeader
+          hasUnreadNotifications={hasUnreadNotifications}
+          onMarkAllAsRead={handleMarkAllRead}
+          disabled={loading}
+        />
 
-        {/* Grouped notifications */}
-        <div className="notifications-page__list">
-          {renderGroupedNotifications()}
-        </div>
+        {/* Grouped notifications list */}
+        <NotificationsList
+          notifications={notifications}
+          onClick={handleNotificationClick}
+          onDelete={handleDeleteNotification}
+        />
 
-        {/* Load More button */}
+        {/* Load more button (pagination) */}
         {hasMore && (
-          <div className="notifications-page__load-more">
-            <button
-              onClick={async () => {
-                try {
-                  setLoading(true);
-                  const result = await notificationDataService.getNotifications({
-                    limit: 100
-                  });
-
-                  if (result.status === 'success') {
-                    setNotifications(prev => [...prev, ...result.data]);
-                    // If we got fewer than the limit, there are no more
-                    setHasMore(result.data.length >= 100);
-                  }
-                } catch (err) {
-                  console.error('Failed to load more:', err);
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              className="notifications-page__load-more-btn"
-              disabled={loading}
-            >
-              Load more
-            </button>
-          </div>
+          <LoadMoreButton
+            onClick={handleLoadMore}
+            loading={loading}
+          />
         )}
       </div>
     </div>

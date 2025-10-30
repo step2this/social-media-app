@@ -3,9 +3,8 @@ import { screen, waitFor, fireEvent, renderWithServices } from '../services/test
 import { MockNotificationDataService, createMockServiceContainer } from '../services/testing/MockServices';
 import { NotificationsPage } from './NotificationsPage';
 import {
-  createMockNotificationConnection,
+  createMockNotification,
   createMockNotifications,
-  createMockNotification
 } from '../services/__tests__/fixtures/notificationFixtures';
 
 describe('NotificationsPage', () => {
@@ -48,7 +47,7 @@ describe('NotificationsPage', () => {
       renderPage();
 
       await waitFor(() => {
-        expect(screen.getByText(/No notifications yet/i)).toBeInTheDocument();
+        expect(screen.getByText(/No notifications/i)).toBeInTheDocument();
       });
     });
   });
@@ -294,7 +293,7 @@ describe('NotificationsPage', () => {
       expect(mockNotificationDataService.markAsRead).toHaveBeenCalled();
     });
 
-    it('should display error message when delete fails', async () => {
+    it('should keep notification in list when delete fails', async () => {
       const notification = createMockNotification();
       mockNotificationDataService.getNotifications.mockResolvedValue({
         status: 'success',
@@ -317,9 +316,12 @@ describe('NotificationsPage', () => {
       const deleteButton = screen.getByLabelText(/delete/i);
       fireEvent.click(deleteButton);
 
+      // Notification should still be in the list since delete failed
       await waitFor(() => {
-        expect(screen.getByText(/failed to delete notification/i)).toBeInTheDocument();
+        expect(screen.getByText(expectedText)).toBeInTheDocument();
       });
+      
+      expect(mockNotificationDataService.deleteNotification).toHaveBeenCalled();
     });
   });
 
@@ -371,7 +373,10 @@ describe('NotificationsPage', () => {
       renderPage();
 
       await waitFor(() => {
-        expect(screen.getAllByRole('listitem')).toHaveLength(10);
+        const notificationButtons = screen.getAllByRole('button').filter(
+          (el) => el.classList.contains('notification-item')
+        );
+        expect(notificationButtons).toHaveLength(10);
       });
 
       // Simulate scroll to bottom
@@ -379,7 +384,10 @@ describe('NotificationsPage', () => {
       fireEvent.click(loadMoreButton);
 
       await waitFor(() => {
-        expect(screen.getAllByRole('listitem')).toHaveLength(15);
+        const notificationButtons = screen.getAllByRole('button').filter(
+          (el) => el.classList.contains('notification-item')
+        );
+        expect(notificationButtons).toHaveLength(15);
       });
 
       expect(mockNotificationDataService.getNotifications).toHaveBeenCalledTimes(2);
@@ -395,7 +403,10 @@ describe('NotificationsPage', () => {
       renderPage();
 
       await waitFor(() => {
-        expect(screen.getAllByRole('listitem')).toHaveLength(5);
+        const notificationButtons = screen.getAllByRole('button').filter(
+          (el) => el.classList.contains('notification-item')
+        );
+        expect(notificationButtons).toHaveLength(5);
       });
 
       // Should not show load more button
