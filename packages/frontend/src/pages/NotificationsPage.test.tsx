@@ -320,7 +320,7 @@ describe('NotificationsPage', () => {
       await waitFor(() => {
         expect(screen.getByText(expectedText)).toBeInTheDocument();
       });
-      
+
       expect(mockNotificationDataService.deleteNotification).toHaveBeenCalled();
     });
   });

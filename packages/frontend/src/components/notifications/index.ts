@@ -1,6 +1,6 @@
 /**
  * Notifications Components Barrel Export
- * 
+ *
  * Central export point for all notification-related components
  * Enables clean imports: import { NotificationItem, NotificationsList } from '@/components/notifications'
  */
