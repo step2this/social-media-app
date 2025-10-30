@@ -1,5 +1,8 @@
 /**
- * Test fixtures for GraphQL responses
+ * GraphQL Test Fixtures
+ *
+ * Shared GraphQL response creation helpers for testing.
+ * Provides type-safe wrappers for all GraphQL operations following Relay patterns.
  *
  * Provides helper functions for wrapping data in GraphQL response structures.
  * Handles AsyncState wrapping, pagination, and common response patterns.
@@ -29,6 +32,7 @@ import type {
   PageInfo,
   BidConnection,
 } from '../../../graphql/operations/auctions.js';
+import type { LikeResponse, LikeStatus } from '../../../graphql/operations/likes.js';
 
 /**
  * Create success AsyncState wrapper
@@ -109,6 +113,12 @@ export function wrapInGraphQLError(
 }
 
 /**
+ * ============================================================================
+ * Auction Operation Responses
+ * ============================================================================
+ */
+
+/**
  * Create paginated auction connection
  *
  * Wraps auctions array in GraphQL connection structure with edges and pageInfo.
@@ -169,23 +179,44 @@ export function createBidConnection(
  * Create ListAuctions GraphQL response
  *
  * Complete response for listAuctions query including AsyncState wrapper.
+ * Supports both pageInfo object and simple hasMore/nextCursor parameters.
  *
  * @param auctions - Array of auctions to return
- * @param pageInfo - Optional pagination overrides
+ * @param hasMoreOrPageInfo - Either boolean hasMore flag or complete PageInfo object
+ * @param nextCursor - Optional cursor for next page (only used if hasMoreOrPageInfo is boolean)
  * @returns AsyncState wrapped ListAuctions response
  *
  * @example
  * ```typescript
+ * // Simple usage with hasMore boolean
+ * const response = createListAuctionsResponse(auctions, true, 'cursor-10');
+ *
+ * // Advanced usage with full pageInfo object
  * const response = createListAuctionsResponse(
- *   createMockAuctions(5),
- *   { hasNextPage: true, endCursor: 'cursor-5' }
+ *   auctions,
+ *   { hasNextPage: true, endCursor: 'cursor-5', hasPreviousPage: false }
  * );
  * ```
  */
 export function createListAuctionsResponse(
   auctions: Auction[],
-  pageInfo: Partial<PageInfo> = {}
+  hasMoreOrPageInfo?: boolean | Partial<PageInfo>,
+  nextCursor?: string
 ): AsyncState<{ auctions: AuctionConnection }> {
+  // Support both signatures for backward compatibility
+  let pageInfo: Partial<PageInfo>;
+  
+  if (typeof hasMoreOrPageInfo === 'boolean') {
+    // Simple signature: (auctions, hasMore, nextCursor)
+    pageInfo = {
+      hasNextPage: hasMoreOrPageInfo,
+      endCursor: nextCursor ?? null,
+    };
+  } else {
+    // Object signature: (auctions, pageInfo)
+    pageInfo = hasMoreOrPageInfo ?? {};
+  }
+  
   return createSuccessState({
     auctions: createAuctionConnection(auctions, pageInfo),
   });
@@ -277,4 +308,78 @@ export function createPlaceBidResponse(
   return createSuccessState({
     placeBid: { bid, auction },
   });
+}
+
+/**
+ * ============================================================================
+ * Like Operation Responses
+ * Following TypeScript generics pattern (SKILL.md lines 38-53)
+ * ============================================================================
+ */
+
+/**
+ * Create LikePost GraphQL response
+ *
+ * @param response - Like response data
+ * @returns AsyncState wrapped LikePost response
+ *
+ * @example
+ * ```typescript
+ * import { createMockLikeResponse } from './likeFixtures';
+ *
+ * const response = createLikeResponse(
+ *   createMockLikeResponse({ likesCount: 43 })
+ * );
+ * ```
+ */
+export function createLikeResponse(
+  response: LikeResponse
+): AsyncState<{ likePost: LikeResponse }> {
+  return wrapInGraphQLSuccess({ likePost: response });
+}
+
+/**
+ * Create UnlikePost GraphQL response
+ *
+ * @param response - Unlike response data
+ * @returns AsyncState wrapped UnlikePost response
+ *
+ * @example
+ * ```typescript
+ * import { createMockUnlikeResponse } from './likeFixtures';
+ *
+ * const response = createUnlikeResponse(
+ *   createMockUnlikeResponse({ likesCount: 41 })
+ * );
+ * ```
+ */
+export function createUnlikeResponse(
+  response: LikeResponse
+): AsyncState<{ unlikePost: LikeResponse }> {
+  return wrapInGraphQLSuccess({ unlikePost: response });
+}
+
+/**
+ * Create GetLikeStatus GraphQL response
+ *
+ * IMPORTANT: Uses correct field name 'postLikeStatus' to match actual GraphQL query.
+ * Previous tests used incorrect 'likeStatus' field name which caused failures.
+ *
+ * @param status - Like status data
+ * @returns AsyncState wrapped GetLikeStatus response with correct field name
+ *
+ * @example
+ * ```typescript
+ * import { createMockLikeStatus } from './likeFixtures';
+ *
+ * const response = createLikeStatusResponse(
+ *   createMockLikeStatus({ isLiked: true, likesCount: 42 })
+ * );
+ * ```
+ */
+export function createLikeStatusResponse(
+  status: LikeStatus
+): AsyncState<{ postLikeStatus: LikeStatus }> {
+  // ✅ Correct field name: 'postLikeStatus' matches GET_LIKE_STATUS_QUERY
+  return wrapInGraphQLSuccess({ postLikeStatus: status });
 }
