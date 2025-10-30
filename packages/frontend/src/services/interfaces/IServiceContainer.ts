@@ -3,6 +3,7 @@ import type { IAuthService } from './IAuthService';
 import type { IModalService } from './IModalService';
 import type { INotificationService } from './INotificationService';
 import type { INotificationDataService } from './INotificationDataService';
+import type { IFeedService } from './IFeedService';
 
 /**
  * Service container interface - provides access to all application services
@@ -33,6 +34,11 @@ export interface IServiceContainer {
    * Notification data service for backend notification operations
    */
   readonly notificationDataService: INotificationDataService;
+
+  /**
+   * Feed service for post feed operations
+   */
+  readonly feedService: IFeedService;
 }
 
 /**
@@ -43,5 +49,6 @@ export type {
   IAuthService,
   IModalService,
   INotificationService,
-  INotificationDataService
+  INotificationDataService,
+  IFeedService
 };

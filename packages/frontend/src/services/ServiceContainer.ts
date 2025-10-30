@@ -3,8 +3,8 @@ import { NavigationService } from './implementations/NavigationService';
 import { AuthService, type AuthHookResult } from './implementations/AuthService';
 import { ModalService } from './implementations/ModalService';
 import { NotificationService } from './implementations/NotificationService';
-import { NotificationDataServiceGraphQL } from './implementations/NotificationDataService.graphql';
-import { graphqlClient } from '../graphql/client';
+import { notificationDataService } from './notificationDataService';
+import { feedService } from './feedService';
 import type { NavigateFunction } from 'react-router-dom';
 
 /**
@@ -17,6 +17,7 @@ export class ServiceContainer implements IServiceContainer {
   public readonly modalService;
   public readonly notificationService;
   public readonly notificationDataService;
+  public readonly feedService;
 
   constructor(navigate: NavigateFunction, authHook: AuthHookResult) {
     // Create service instances
@@ -24,7 +25,9 @@ export class ServiceContainer implements IServiceContainer {
     this.authService = new AuthService(authHook);
     this.modalService = new ModalService();
     this.notificationService = new NotificationService();
-    this.notificationDataService = new NotificationDataServiceGraphQL(graphqlClient);
+    // Use singleton barrel exports for GraphQL services
+    this.notificationDataService = notificationDataService;
+    this.feedService = feedService;
   }
 
   /**
