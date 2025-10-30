@@ -135,14 +135,16 @@ export const createMentionNotification = (
 /**
  * Create mock unread count result
  */
-export const createMockUnreadCountResult = (count: number = 0) => ({
-  count
+export const createMockUnreadCountResult = (overrides?: { count?: number }) => ({
+  count: 0,
+  ...overrides
 });
 
 /**
  * Create mock mark notifications as read result
  */
-export const createMockMarkNotificationsAsReadResult = (markedCount: number = 0) => ({
+export const createMockMarkNotificationsAsReadResult = (overrides?: { success?: boolean; markedCount?: number }) => ({
   success: true,
-  markedCount
+  markedCount: 0,
+  ...overrides
 });

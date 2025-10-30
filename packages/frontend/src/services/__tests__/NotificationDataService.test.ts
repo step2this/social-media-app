@@ -166,7 +166,7 @@ describe('NotificationDataService.graphql', () => {
     });
 
     it('should filter unread notifications only when specified', async () => {
-      const notifications = createMockNotifications(5, { read: false });
+      const notifications = createMockNotifications(5, { status: 'unread' });
       const connection = createMockNotificationConnection(notifications);
       mockClient.setQueryResponse(wrapInGraphQLSuccess({ notifications: connection }));
 
