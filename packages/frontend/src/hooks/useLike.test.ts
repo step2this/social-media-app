@@ -14,40 +14,21 @@ import { useLike } from './useLike.js';
 import { setLikeService, resetLikeService } from '../services/likeService.js';
 import { LikeServiceGraphQL } from '../services/implementations/LikeService.graphql.js';
 import { MockGraphQLClient } from '../graphql/client.mock.js';
-import { wrapInGraphQLSuccess, wrapInGraphQLError } from '../services/__tests__/fixtures/graphqlFixtures.js';
+import {
+  wrapInGraphQLError,
+  createLikeResponse,
+  createUnlikeResponse,
+  createLikeStatusResponse,
+} from '../services/__tests__/fixtures/graphqlFixtures.js';
+import {
+  createMockLikeResponse,
+  createMockUnlikeResponse,
+  createMockLikeStatus,
+} from '../services/__tests__/fixtures/likeFixtures.js';
 
 /**
  * Test Helpers - DRY utilities for common test patterns
  */
-
-/** Create a successful like response */
-const createLikeResponse = (overrides = {}) => wrapInGraphQLSuccess({
-  likePost: {
-    success: true,
-    isLiked: true,
-    likesCount: 43,
-    ...overrides
-  }
-});
-
-/** Create a successful unlike response */
-const createUnlikeResponse = (overrides = {}) => wrapInGraphQLSuccess({
-  unlikePost: {
-    success: true,
-    isLiked: false,
-    likesCount: 41,
-    ...overrides
-  }
-});
-
-/** Create a successful like status query response */
-const createLikeStatusResponse = (overrides = {}) => wrapInGraphQLSuccess({
-  likeStatus: {
-    isLiked: true,
-    likesCount: 42,
-    ...overrides
-  }
-});
 
 /** Helper to test error rollback */
 async function testErrorRollback(
@@ -115,7 +96,9 @@ describe('useLike', () => {
 
   describe('likePost', () => {
     it('should like post with optimistic update then sync with server', async () => {
-      mockClient.setMutationResponse(createLikeResponse());
+      mockClient.setMutationResponse(
+        createLikeResponse(createMockLikeResponse({ likesCount: 43 }))
+      );
 
       const { result } = renderHook(() =>
         useLike('post-123', { initialLikesCount: 42 })
@@ -180,7 +163,9 @@ describe('useLike', () => {
 
   describe('unlikePost', () => {
     it('should unlike post with optimistic update then sync with server', async () => {
-      mockClient.setMutationResponse(createUnlikeResponse());
+      mockClient.setMutationResponse(
+        createUnlikeResponse(createMockUnlikeResponse({ likesCount: 41 }))
+      );
 
       const { result } = renderHook(() =>
         useLike('post-123', { initialIsLiked: true, initialLikesCount: 42 })
@@ -245,7 +230,9 @@ describe('useLike', () => {
 
   describe('toggleLike', () => {
     it('should toggle from not liked to liked', async () => {
-      mockClient.setMutationResponse(createLikeResponse({ likesCount: 1 }));
+      mockClient.setMutationResponse(
+        createLikeResponse(createMockLikeResponse({ likesCount: 1 }))
+      );
 
       const { result } = renderHook(() =>
         useLike('post-123', { initialIsLiked: false })
@@ -263,7 +250,9 @@ describe('useLike', () => {
     });
 
     it('should toggle from liked to not liked', async () => {
-      mockClient.setMutationResponse(createUnlikeResponse({ likesCount: 0 }));
+      mockClient.setMutationResponse(
+        createUnlikeResponse(createMockUnlikeResponse({ likesCount: 0 }))
+      );
 
       const { result } = renderHook(() =>
         useLike('post-123', { initialIsLiked: true, initialLikesCount: 1 })
@@ -283,7 +272,9 @@ describe('useLike', () => {
 
   describe('fetchLikeStatus', () => {
     it('should fetch and update like status from server', async () => {
-      mockClient.setQueryResponse(createLikeStatusResponse());
+      mockClient.setQueryResponse(
+        createLikeStatusResponse(createMockLikeStatus({ isLiked: true, likesCount: 42 }))
+      );
 
       const { result } = renderHook(() => useLike('post-123'));
 
