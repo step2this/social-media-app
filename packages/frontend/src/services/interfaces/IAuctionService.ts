@@ -43,12 +43,13 @@ export interface ListAuctionsOptions {
 }
 
 /**
- * Paginated list of auctions
+ * Result of listing auctions
+ * Using readonly array to prevent accidental mutations
  */
 export interface AuctionsList {
-  auctions: Auction[];
-  nextCursor: string | null;
+  auctions: readonly Auction[];
   hasMore: boolean;
+  nextCursor?: string | null;
 }
 
 /**
