@@ -1,0 +1,19 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`FeedLoading > matches snapshot 1`] = `
+<div
+  aria-live="polite"
+  class="feed-loading"
+  data-testid="feed-loading"
+>
+  <div
+    aria-label="Loading"
+    class="feed-loading__spinner spinner"
+  />
+  <p
+    class="feed-loading__message"
+  >
+    Loading your feed...
+  </p>
+</div>
+`;

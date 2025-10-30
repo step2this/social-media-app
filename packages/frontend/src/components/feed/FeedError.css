@@ -1,0 +1,31 @@
+.feed-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  min-height: 300px;
+}
+
+.feed-error__message {
+  font-size: 16px;
+  color: var(--color-error, #d32f2f);
+  margin: 0 0 24px 0;
+  text-align: center;
+}
+
+.feed-error__retry-btn {
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  background-color: var(--color-primary, #0095f6);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.feed-error__retry-btn:hover {
+  background-color: var(--color-primary-hover, #0081d9);
+}

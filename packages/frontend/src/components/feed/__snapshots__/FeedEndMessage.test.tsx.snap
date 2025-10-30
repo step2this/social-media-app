@@ -1,0 +1,19 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`FeedEndMessage > matches snapshot 1`] = `
+<div
+  class="feed-end"
+  data-testid="feed-end"
+  role="status"
+>
+  <span
+    aria-hidden="true"
+    class="feed-end__icon"
+  >
+    🎉
+  </span>
+  <p>
+    You're all caught up!
+  </p>
+</div>
+`;

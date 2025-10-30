@@ -1,0 +1,28 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`FeedList > matches snapshot (empty) 1`] = `
+<div
+  class="feed-list"
+  data-testid="feed-list"
+/>
+`;
+
+exports[`FeedList > matches snapshot (with posts) 1`] = `
+<div
+  class="feed-list"
+  data-testid="feed-list"
+>
+  <div
+    data-testid="feed-item-post-1"
+  >
+    Feed Item 
+    post-1
+  </div>
+  <div
+    data-testid="feed-item-post-2"
+  >
+    Feed Item 
+    post-2
+  </div>
+</div>
+`;

@@ -1,0 +1,18 @@
+.feed-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  min-height: 300px;
+}
+
+.feed-loading__spinner {
+  margin-bottom: 16px;
+}
+
+.feed-loading__message {
+  font-size: 16px;
+  color: var(--color-text-secondary, #666);
+  margin: 0;
+}

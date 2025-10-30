@@ -1,0 +1,14 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`FeedItemWrapper > matches snapshot 1`] = `
+<div
+  class="feed-item-wrapper"
+  data-testid="feed-item-wrapper"
+>
+  <div
+    data-testid="post-card"
+  >
+    Post Card
+  </div>
+</div>
+`;

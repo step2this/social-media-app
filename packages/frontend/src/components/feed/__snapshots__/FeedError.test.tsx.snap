@@ -1,0 +1,25 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`FeedError > matches snapshot 1`] = `
+<div
+  class="feed-error"
+  role="alert"
+>
+  <span
+    aria-hidden="true"
+    class="feed-error__icon"
+  >
+    ⚠️
+  </span>
+  <p
+    class="feed-error__message"
+  >
+    Something went wrong
+  </p>
+  <button
+    class="feed-error__retry-btn"
+  >
+    Try Again
+  </button>
+</div>
+`;

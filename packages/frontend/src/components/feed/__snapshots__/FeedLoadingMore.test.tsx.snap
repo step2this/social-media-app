@@ -1,0 +1,17 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`FeedLoadingMore > matches snapshot (loading state) 1`] = `
+<div
+  aria-live="polite"
+  class="feed-loading-more"
+>
+  <div
+    class="spinner"
+  />
+  <p>
+    Loading more...
+  </p>
+</div>
+`;
+
+exports[`FeedLoadingMore > matches snapshot (not loading state) 1`] = `null`;

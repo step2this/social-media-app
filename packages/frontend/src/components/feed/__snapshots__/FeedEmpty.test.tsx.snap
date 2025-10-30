@@ -1,0 +1,19 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`FeedEmpty > matches snapshot 1`] = `
+<div
+  class="feed-empty"
+  data-testid="feed-empty"
+  role="status"
+>
+  <span
+    aria-hidden="true"
+    class="feed-empty__icon"
+  >
+    📭
+  </span>
+  <p>
+    No posts yet! Follow some users to see their posts here.
+  </p>
+</div>
+`;
