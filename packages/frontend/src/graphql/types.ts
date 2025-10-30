@@ -245,3 +245,43 @@ export function unwrap<T>(state: AsyncState<T>): T {
 export function unwrapOr<T, D>(state: AsyncState<T>, defaultValue: D): T | D {
   return isSuccess(state) ? state.data : defaultValue;
 }
+
+/**
+ * Test helper: Create success AsyncState
+ * Useful for testing without needing to mock API calls
+ *
+ * @example
+ * ```typescript
+ * const mockState = createSuccessState({ id: '1', name: 'Test' });
+ * ```
+ */
+export function createSuccessState<T>(data: T): AsyncState<T> {
+  return { status: 'success', data };
+}
+
+/**
+ * Test helper: Create error AsyncState
+ * Useful for testing error scenarios
+ *
+ * @example
+ * ```typescript
+ * const mockState = createErrorState({ message: 'Network error' });
+ * ```
+ */
+export function createErrorState(error: GraphQLError): AsyncState<never> {
+  return { status: 'error', error };
+}
+
+/**
+ * Test helper: Create loading AsyncState
+ */
+export function createLoadingState(): AsyncState<never> {
+  return { status: 'loading' };
+}
+
+/**
+ * Test helper: Create idle AsyncState
+ */
+export function createIdleState(): AsyncState<never> {
+  return { status: 'idle' };
+}
