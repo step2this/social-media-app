@@ -1,12 +1,12 @@
 /**
  * useNotificationActions Custom Hook
- * 
+ *
  * Custom hook for notification actions (mark as read, delete, click handling)
  * Encapsulates notification interaction logic with optimistic updates
- * 
+ *
  * @example
  * ```tsx
- * const { markAsRead, markAllAsRead, deleteNotification, handleClick } = 
+ * const { markAsRead, markAllAsRead, deleteNotification, handleClick } =
  *   useNotificationActions(notificationDataService, notifications, setNotifications, navigate);
  * ```
  */
@@ -17,7 +17,7 @@ import type { INotificationDataService } from '../services/interfaces/INotificat
 
 /**
  * useNotificationActions Hook Return Type
- * 
+ *
  * Provides action handlers for notification interactions
  */
 export interface UseNotificationActionsReturn {
@@ -29,16 +29,16 @@ export interface UseNotificationActionsReturn {
 
 /**
  * useNotificationActions Hook
- * 
+ *
  * Manages notification actions and interactions
- * 
+ *
  * Features:
  * - Mark single notification as read with optimistic update
  * - Mark all notifications as read with optimistic update
  * - Delete notification with optimistic update
  * - Handle click with mark as read + navigation
  * - Type-safe with advanced TypeScript patterns
- * 
+ *
  * @param notificationDataService - Service for notification operations
  * @param notifications - Current notifications array
  * @param setNotifications - State setter for notifications
@@ -85,11 +85,14 @@ export const useNotificationActions = (
 
   /**
    * Delete a notification
-   * Uses optimistic update for better UX
+   * Uses optimistic update with rollback on error
    */
   const deleteNotification = useCallback(async (notificationId: string, event: React.MouseEvent) => {
     // Stop propagation to prevent triggering notification click
     event.stopPropagation();
+
+    // Save the notification for rollback
+    const notificationToDelete = notifications.find(n => n.id === notificationId);
 
     try {
       // Optimistic update - remove from list
@@ -98,8 +101,13 @@ export const useNotificationActions = (
       await notificationDataService.deleteNotification(notificationId);
     } catch (err) {
       console.error('Failed to delete notification:', err);
+      
+      // Rollback on error - add the notification back if we have it
+      if (notificationToDelete) {
+        setNotifications(prev => [...prev, notificationToDelete]);
+      }
     }
-  }, [notificationDataService, setNotifications]);
+  }, [notificationDataService, setNotifications, notifications]);
 
   /**
    * Handle notification click
