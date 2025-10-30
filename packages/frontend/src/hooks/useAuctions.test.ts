@@ -14,23 +14,16 @@ import { useAuctions } from './useAuctions.js';
 import { setAuctionService, resetAuctionService } from '../services/auctionService.js';
 import { AuctionServiceGraphQL } from '../services/implementations/AuctionService.graphql.js';
 import { MockGraphQLClient } from '../graphql/client.mock.js';
-import { wrapInGraphQLSuccess, wrapInGraphQLError } from '../services/__tests__/fixtures/graphqlFixtures.js';
+import {
+  wrapInGraphQLError,
+  createListAuctionsResponse,
+} from '../services/__tests__/fixtures/graphqlFixtures.js';
 import { createMockAuction } from '../services/__tests__/fixtures/auctionFixtures.js';
 import type { Auction } from '@social-media-app/shared';
 
 /**
  * Test Helpers - DRY utilities for common test patterns
  */
-
-/** Create a successful list auctions response */
-const createListAuctionsResponse = (auctions: Auction[], hasMore = false, nextCursor?: string) =>
-  wrapInGraphQLSuccess({
-    listAuctions: {
-      auctions,
-      hasMore,
-      nextCursor
-    }
-  });
 
 /** Create an array of mock auctions */
 const createMockAuctions = (count: number, overrides = {}) =>
@@ -133,13 +126,13 @@ describe('useAuctions', () => {
     });
 
     it('should combine multiple filters', async () => {
-      const filteredAuctions = createMockAuctions(1, { 
-        status: 'active', 
-        sellerId: 'user-123' 
+      const filteredAuctions = createMockAuctions(1, {
+        status: 'active',
+        sellerId: 'user-123'
       });
       mockClient.setQueryResponse(createListAuctionsResponse(filteredAuctions));
 
-      const { result } = renderHook(() => 
+      const { result } = renderHook(() =>
         useAuctions({ status: 'active', userId: 'user-123' })
       );
 
@@ -214,9 +207,9 @@ describe('useAuctions', () => {
 
       // Try to load more while still loading initial data
       const queriesBefore = mockClient.queryCalls.length;
-      
+
       await result.current.loadMore();
-      
+
       // Should not make additional query
       expect(mockClient.queryCalls.length).toBe(queriesBefore);
     });
@@ -234,9 +227,9 @@ describe('useAuctions', () => {
       });
 
       const queriesBefore = mockClient.queryCalls.length;
-      
+
       await result.current.loadMore();
-      
+
       // Should not make additional query
       expect(mockClient.queryCalls.length).toBe(queriesBefore);
     });
