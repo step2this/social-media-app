@@ -67,9 +67,9 @@ describe('useNotificationsPage', () => {
         status: 'success',
         data: [notification]
       });
-      vi.mocked(mockService.markAsRead).mockResolvedValue({ 
+      vi.mocked(mockService.markAsRead).mockResolvedValue({
         status: 'success',
-        data: { success: true, markedCount: 1 } 
+        data: { success: true, markedCount: 1 }
       });
 
       const { result } = renderHook(() =>
@@ -142,7 +142,7 @@ describe('useNotificationsPage', () => {
         status: 'success',
         data: notifications
       });
-      vi.mocked(mockService.markAsRead).mockResolvedValue({ 
+      vi.mocked(mockService.markAsRead).mockResolvedValue({
         status: 'success',
         data: { success: true, markedCount: 1 }
       });
@@ -272,7 +272,7 @@ describe('useNotificationsPage', () => {
         status: 'success',
         data: [notification]
       });
-      vi.mocked(mockService.markAsRead).mockResolvedValue({ 
+      vi.mocked(mockService.markAsRead).mockResolvedValue({
         status: 'success',
         data: { success: true, markedCount: 1 }
       });
@@ -337,7 +337,7 @@ describe('useNotificationsPage', () => {
         status: 'success',
         data: [notification]
       });
-      vi.mocked(mockService.markAsRead).mockResolvedValue({ 
+      vi.mocked(mockService.markAsRead).mockResolvedValue({
         status: 'success',
         data: { success: true, markedCount: 1 }
       });

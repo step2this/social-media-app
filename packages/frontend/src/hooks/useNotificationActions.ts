@@ -101,7 +101,7 @@ export const useNotificationActions = (
       await notificationDataService.deleteNotification(notificationId);
     } catch (err) {
       console.error('Failed to delete notification:', err);
-      
+
       // Rollback on error - add the notification back if we have it
       if (notificationToDelete) {
         setNotifications(prev => [...prev, notificationToDelete]);

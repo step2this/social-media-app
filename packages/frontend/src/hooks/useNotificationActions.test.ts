@@ -1,6 +1,6 @@
 /**
  * useNotificationActions Hook Tests
- * 
+ *
  * TDD approach: Write tests first
  * Tests the custom hook for notification actions (mark as read, delete, etc.)
  */
@@ -38,7 +38,7 @@ describe('useNotificationActions', () => {
     it('should mark a notification as read', async () => {
       vi.mocked(mockService.markAsRead).mockResolvedValue({ success: true });
 
-      const { result } = renderHook(() => 
+      const { result } = renderHook(() =>
         useNotificationActions(mockService, initialNotifications, vi.fn())
       );
 
@@ -51,9 +51,9 @@ describe('useNotificationActions', () => {
 
     it('should update notification status to read optimistically', async () => {
       vi.mocked(mockService.markAsRead).mockResolvedValue({ success: true });
-      
+
       const setNotifications = vi.fn();
-      const { result } = renderHook(() => 
+      const { result } = renderHook(() =>
         useNotificationActions(mockService, initialNotifications, setNotifications)
       );
 
@@ -64,7 +64,7 @@ describe('useNotificationActions', () => {
       expect(setNotifications).toHaveBeenCalled();
       const updater = setNotifications.mock.calls[0][0];
       const updated = updater(initialNotifications);
-      
+
       expect(updated[0].status).toBe('read');
       expect(updated[1].status).toBe('unread'); // Others unchanged
     });
@@ -75,7 +75,7 @@ describe('useNotificationActions', () => {
       );
 
       const setNotifications = vi.fn();
-      const { result } = renderHook(() => 
+      const { result } = renderHook(() =>
         useNotificationActions(mockService, initialNotifications, setNotifications)
       );
 
@@ -92,7 +92,7 @@ describe('useNotificationActions', () => {
     it('should mark all notifications as read', async () => {
       vi.mocked(mockService.markAllAsRead).mockResolvedValue({ success: true });
 
-      const { result } = renderHook(() => 
+      const { result } = renderHook(() =>
         useNotificationActions(mockService, initialNotifications, vi.fn())
       );
 
@@ -105,9 +105,9 @@ describe('useNotificationActions', () => {
 
     it('should update all notifications to read status optimistically', async () => {
       vi.mocked(mockService.markAllAsRead).mockResolvedValue({ success: true });
-      
+
       const setNotifications = vi.fn();
-      const { result } = renderHook(() => 
+      const { result } = renderHook(() =>
         useNotificationActions(mockService, initialNotifications, setNotifications)
       );
 
@@ -118,7 +118,7 @@ describe('useNotificationActions', () => {
       expect(setNotifications).toHaveBeenCalled();
       const updater = setNotifications.mock.calls[0][0];
       const updated = updater(initialNotifications);
-      
+
       expect(updated.every(n => n.status === 'read')).toBe(true);
     });
 
@@ -128,7 +128,7 @@ describe('useNotificationActions', () => {
       );
 
       const setNotifications = vi.fn();
-      const { result } = renderHook(() => 
+      const { result } = renderHook(() =>
         useNotificationActions(mockService, initialNotifications, setNotifications)
       );
 
@@ -146,8 +146,8 @@ describe('useNotificationActions', () => {
       vi.mocked(mockService.deleteNotification).mockResolvedValue({ success: true });
 
       const mockEvent = { stopPropagation: vi.fn() } as unknown as React.MouseEvent;
-      
-      const { result } = renderHook(() => 
+
+      const { result } = renderHook(() =>
         useNotificationActions(mockService, initialNotifications, vi.fn())
       );
 
@@ -161,11 +161,11 @@ describe('useNotificationActions', () => {
 
     it('should remove notification from list optimistically', async () => {
       vi.mocked(mockService.deleteNotification).mockResolvedValue({ success: true });
-      
+
       const mockEvent = { stopPropagation: vi.fn() } as unknown as React.MouseEvent;
       const setNotifications = vi.fn();
-      
-      const { result } = renderHook(() => 
+
+      const { result } = renderHook(() =>
         useNotificationActions(mockService, initialNotifications, setNotifications)
       );
 
@@ -176,17 +176,17 @@ describe('useNotificationActions', () => {
       expect(setNotifications).toHaveBeenCalled();
       const updater = setNotifications.mock.calls[0][0];
       const updated = updater(initialNotifications);
-      
+
       expect(updated).toHaveLength(2);
       expect(updated.find(n => n.id === '1')).toBeUndefined();
     });
 
     it('should stop event propagation', async () => {
       vi.mocked(mockService.deleteNotification).mockResolvedValue({ success: true });
-      
+
       const mockEvent = { stopPropagation: vi.fn() } as unknown as React.MouseEvent;
-      
-      const { result } = renderHook(() => 
+
+      const { result } = renderHook(() =>
         useNotificationActions(mockService, initialNotifications, vi.fn())
       );
 
@@ -204,8 +204,8 @@ describe('useNotificationActions', () => {
 
       const mockEvent = { stopPropagation: vi.fn() } as unknown as React.MouseEvent;
       const setNotifications = vi.fn();
-      
-      const { result } = renderHook(() => 
+
+      const { result } = renderHook(() =>
         useNotificationActions(mockService, initialNotifications, setNotifications)
       );
 
@@ -221,15 +221,15 @@ describe('useNotificationActions', () => {
   describe('Handle Click', () => {
     it('should mark unread notification as read when clicked', async () => {
       vi.mocked(mockService.markAsRead).mockResolvedValue({ success: true });
-      
-      const notification = createMockNotification({ 
-        id: '1', 
+
+      const notification = createMockNotification({
+        id: '1',
         status: 'unread',
         target: { type: 'post', id: 'post-1', url: '/posts/post-1' }
       });
-      
+
       const onNavigate = vi.fn();
-      const { result } = renderHook(() => 
+      const { result } = renderHook(() =>
         useNotificationActions(mockService, [notification], vi.fn(), onNavigate)
       );
 
@@ -242,14 +242,14 @@ describe('useNotificationActions', () => {
     });
 
     it('should not mark read notification as read again', async () => {
-      const notification = createMockNotification({ 
-        id: '1', 
+      const notification = createMockNotification({
+        id: '1',
         status: 'read',
         target: { type: 'post', id: 'post-1', url: '/posts/post-1' }
       });
-      
+
       const onNavigate = vi.fn();
-      const { result } = renderHook(() => 
+      const { result } = renderHook(() =>
         useNotificationActions(mockService, [notification], vi.fn(), onNavigate)
       );
 
@@ -262,13 +262,13 @@ describe('useNotificationActions', () => {
     });
 
     it('should navigate to target URL when notification is clicked', async () => {
-      const notification = createMockNotification({ 
-        id: '1', 
+      const notification = createMockNotification({
+        id: '1',
         target: { type: 'post', id: 'post-1', url: '/posts/post-1' }
       });
-      
+
       const onNavigate = vi.fn();
-      const { result } = renderHook(() => 
+      const { result } = renderHook(() =>
         useNotificationActions(mockService, [notification], vi.fn(), onNavigate)
       );
 
@@ -280,13 +280,13 @@ describe('useNotificationActions', () => {
     });
 
     it('should not navigate when notification has no target', async () => {
-      const notification = createMockNotification({ 
-        id: '1', 
+      const notification = createMockNotification({
+        id: '1',
         target: undefined
       });
-      
+
       const onNavigate = vi.fn();
-      const { result } = renderHook(() => 
+      const { result } = renderHook(() =>
         useNotificationActions(mockService, [notification], vi.fn(), onNavigate)
       );
 
