@@ -1,9 +1,9 @@
 /**
  * NotificationUnreadDot Component
- * 
+ *
  * Atomic component that displays a small dot indicator for unread notifications
  * Uses advanced TypeScript types for props validation
- * 
+ *
  * @example
  * ```tsx
  * <NotificationUnreadDot
@@ -18,10 +18,10 @@ import type { NotificationUnreadDotProps } from '../../pages/NotificationsPage.t
 
 /**
  * NotificationUnreadDot Component
- * 
+ *
  * Displays a visual indicator (dot) for unread notifications
  * Includes proper ARIA attributes for accessibility
- * 
+ *
  * Props are type-safe using NotificationUnreadDotProps from advanced types
  */
 export const NotificationUnreadDot: React.FC<NotificationUnreadDotProps> = ({

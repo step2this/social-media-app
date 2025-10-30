@@ -1,6 +1,6 @@
 /**
  * NotificationUnreadDot Component Tests
- * 
+ *
  * TDD approach: Write tests first
  * Tests the unread indicator dot display logic
  */
@@ -81,7 +81,7 @@ describe('NotificationUnreadDot', () => {
 
       // Change to read
       rerender(<NotificationUnreadDot isUnread={false} />);
-      
+
       dot = container.querySelector('.notification-item__unread-dot');
       expect(dot).not.toBeInTheDocument();
     });

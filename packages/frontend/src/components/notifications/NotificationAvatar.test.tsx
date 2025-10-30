@@ -1,6 +1,6 @@
 /**
  * NotificationAvatar Component Tests
- * 
+ *
  * TDD approach: Write tests first
  * Tests the avatar display logic for notifications
  */
@@ -51,7 +51,7 @@ describe('NotificationAvatar', () => {
       // Should render MaterialIcon instead of img
       const img = screen.queryByRole('img');
       expect(img).not.toBeInTheDocument();
-      
+
       // Should render the favorite icon for like type
       expect(screen.getByText('favorite')).toBeInTheDocument();
     });

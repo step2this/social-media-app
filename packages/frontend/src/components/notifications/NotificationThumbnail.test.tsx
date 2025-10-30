@@ -1,6 +1,6 @@
 /**
  * NotificationThumbnail Component Tests
- * 
+ *
  * TDD approach: Write tests first
  * Tests the thumbnail display logic for post-related notifications
  */
@@ -72,7 +72,7 @@ describe('NotificationThumbnail', () => {
   describe('Edge Cases', () => {
     it('should handle very long URLs', () => {
       const longUrl = `https://example.com/${'very-long-path/'.repeat(50)}thumbnail.jpg`;
-      
+
       render(
         <NotificationThumbnail
           thumbnailUrl={longUrl}

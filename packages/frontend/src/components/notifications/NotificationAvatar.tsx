@@ -1,9 +1,9 @@
 /**
  * NotificationAvatar Component
- * 
+ *
  * Atomic component that displays either an avatar image or icon for notifications
  * Uses advanced TypeScript types for props validation
- * 
+ *
  * @example
  * ```tsx
  * // With avatar image
@@ -13,7 +13,7 @@
  *   handle="johndoe"
  *   notificationType="like"
  * />
- * 
+ *
  * // With icon (no avatar)
  * <NotificationAvatar
  *   notificationType="follow"
@@ -29,10 +29,10 @@ import type { NotificationAvatarProps } from '../../pages/NotificationsPage.type
 
 /**
  * NotificationAvatar Component
- * 
+ *
  * Displays avatar image if available, otherwise shows a type-appropriate icon
  * Uses Material Design icons with BEM-style CSS class names
- * 
+ *
  * Props are type-safe using NotificationAvatarProps from advanced types
  */
 export const NotificationAvatar: React.FC<NotificationAvatarProps> = ({

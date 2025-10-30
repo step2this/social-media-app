@@ -1,6 +1,6 @@
 /**
  * NotificationContent Component Tests
- * 
+ *
  * TDD approach: Write tests first
  * Tests the notification content display logic (text, preview, timestamp)
  */

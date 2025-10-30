@@ -1,9 +1,9 @@
 /**
  * NotificationContent Component
- * 
+ *
  * Atomic component that displays notification text, preview, and timestamp
  * Uses advanced TypeScript types for props validation
- * 
+ *
  * @example
  * ```tsx
  * <NotificationContent
@@ -22,12 +22,12 @@ import type { NotificationContentProps } from '../../pages/NotificationsPage.typ
 
 /**
  * NotificationContent Component
- * 
+ *
  * Displays the main content of a notification including:
  * - Formatted notification text
  * - Optional preview text
  * - Relative timestamp
- * 
+ *
  * Props are type-safe using NotificationContentProps from advanced types
  */
 export const NotificationContent: React.FC<NotificationContentProps> = ({
