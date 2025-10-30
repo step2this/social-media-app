@@ -1,6 +1,6 @@
 /**
  * NotificationsError Component Tests
- * 
+ *
  * TDD approach: Write tests first
  * Tests the error state display component with retry functionality
  */
@@ -95,7 +95,7 @@ describe('NotificationsError', () => {
 
     it('should handle very long error messages', () => {
       const longMessage = 'This is a very long error message that explains in detail what went wrong. '.repeat(5).trim();
-      
+
       render(<NotificationsError message={longMessage} onRetry={mockOnRetry} />);
 
       expect(screen.getByText(longMessage)).toBeInTheDocument();

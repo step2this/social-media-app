@@ -1,9 +1,9 @@
 /**
  * NotificationItem Component
- * 
+ *
  * Composite component that combines all atomic notification components
  * Uses advanced TypeScript types for props validation
- * 
+ *
  * @example
  * ```tsx
  * <NotificationItem
@@ -23,13 +23,13 @@ import type { BaseNotificationItemProps } from '../../pages/NotificationsPage.ty
 
 /**
  * NotificationItem Component
- * 
+ *
  * Composite component that:
  * - Combines NotificationAvatar, NotificationContent, NotificationThumbnail, and NotificationUnreadDot
  * - Handles click interactions with proper event bubbling control
  * - Applies conditional CSS classes based on read status
  * - Provides accessibility features (ARIA labels, keyboard support)
- * 
+ *
  * Props are type-safe using BaseNotificationItemProps from advanced types
  */
 export const NotificationItem: React.FC<BaseNotificationItemProps> = ({

@@ -1,6 +1,6 @@
 /**
  * NotificationsHeader Component Tests
- * 
+ *
  * TDD approach: Write tests first
  * Tests the header component with "Mark all as read" functionality
  */

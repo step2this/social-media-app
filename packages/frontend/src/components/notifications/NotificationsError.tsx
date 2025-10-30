@@ -1,9 +1,9 @@
 /**
  * NotificationsError Component
- * 
+ *
  * State component that displays an error message with retry functionality
  * Shows when notifications fail to load
- * 
+ *
  * @example
  * ```tsx
  * {error && (
@@ -29,12 +29,12 @@ export interface NotificationsErrorProps {
 
 /**
  * NotificationsError Component
- * 
+ *
  * Displays an error state with:
  * - Error message (with sensible default)
  * - Retry button for user recovery
  * - Proper ARIA attributes for accessibility
- * 
+ *
  * Props are type-safe using NotificationsErrorProps interface
  */
 export const NotificationsError: React.FC<NotificationsErrorProps> = ({

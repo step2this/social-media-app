@@ -1,6 +1,6 @@
 /**
  * NotificationGroup Component Tests
- * 
+ *
  * TDD approach: Write tests first
  * Tests the notification group component that renders a section with title and items
  */
@@ -116,7 +116,7 @@ describe('NotificationGroup', () => {
       // Click first notification
       const firstNotification = screen.getAllByText(/liked your post/i)[0];
       const notificationElement = firstNotification.closest('.notification-item');
-      
+
       if (notificationElement) {
         notificationElement.click();
         expect(mockOnClick).toHaveBeenCalledWith(notifications[0]);

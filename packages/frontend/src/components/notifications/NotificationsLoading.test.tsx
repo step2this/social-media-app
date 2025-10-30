@@ -1,6 +1,6 @@
 /**
  * NotificationsLoading Component Tests
- * 
+ *
  * TDD approach: Write tests first
  * Tests the loading state display component
  */

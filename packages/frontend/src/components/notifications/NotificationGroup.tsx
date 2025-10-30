@@ -1,9 +1,9 @@
 /**
  * NotificationGroup Component
- * 
+ *
  * Composite component that renders a section of notifications with a title
  * Groups notifications by time period (Today, Yesterday, etc.)
- * 
+ *
  * @example
  * ```tsx
  * <NotificationGroup
@@ -33,12 +33,12 @@ export interface NotificationGroupProps {
 
 /**
  * NotificationGroup Component
- * 
+ *
  * Renders a group of notifications with:
  * - Section title (e.g., "Today", "Yesterday")
  * - List of NotificationItem components
  * - Conditional rendering (hidden if no notifications)
- * 
+ *
  * Props are type-safe using NotificationGroupProps interface
  */
 export const NotificationGroup: React.FC<NotificationGroupProps> = ({

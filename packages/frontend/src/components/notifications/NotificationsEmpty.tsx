@@ -1,9 +1,9 @@
 /**
  * NotificationsEmpty Component
- * 
+ *
  * State component that displays an empty state message
  * Shows when user has no notifications
- * 
+ *
  * @example
  * ```tsx
  * {notifications.length === 0 && <NotificationsEmpty />}
@@ -21,12 +21,12 @@ export interface NotificationsEmptyProps {
 
 /**
  * NotificationsEmpty Component
- * 
+ *
  * Displays an empty state with:
  * - Icon representation
  * - Empty message (with sensible default)
  * - Friendly subtext
- * 
+ *
  * Props are type-safe using NotificationsEmptyProps interface
  */
 export const NotificationsEmpty: React.FC<NotificationsEmptyProps> = ({

@@ -1,6 +1,6 @@
 /**
  * NotificationsEmpty Component Tests
- * 
+ *
  * TDD approach: Write tests first
  * Tests the empty state display component
  */
@@ -53,7 +53,7 @@ describe('NotificationsEmpty', () => {
 
     it('should handle very long custom messages', () => {
       const longMessage = 'This is a very long custom message that might wrap to multiple lines in the UI '.repeat(3).trim();
-      
+
       render(<NotificationsEmpty message={longMessage} />);
 
       expect(screen.getByText(longMessage)).toBeInTheDocument();

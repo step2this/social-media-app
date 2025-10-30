@@ -1,6 +1,6 @@
 /**
  * NotificationItem Component Tests
- * 
+ *
  * TDD approach: Write tests first
  * Tests the composite notification item that combines all atomic components
  */
@@ -41,13 +41,13 @@ describe('NotificationItem', () => {
 
       // Should have avatar
       expect(screen.getByRole('img', { name: 'John Doe' })).toBeInTheDocument();
-      
+
       // Should have content text
       expect(screen.getByText('John Doe liked your post')).toBeInTheDocument();
-      
+
       // Should have unread dot
       expect(container.querySelector('.notification-item__unread-dot')).toBeInTheDocument();
-      
+
       // Should have delete button
       expect(screen.getByLabelText(/delete/i)).toBeInTheDocument();
     });
@@ -73,7 +73,7 @@ describe('NotificationItem', () => {
       );
 
       const thumbnails = screen.getAllByRole('img');
-      const thumbnailImg = thumbnails.find(img => 
+      const thumbnailImg = thumbnails.find(img =>
         img.getAttribute('src') === 'https://example.com/thumbnail.jpg'
       );
       expect(thumbnailImg).toBeInTheDocument();

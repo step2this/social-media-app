@@ -1,9 +1,9 @@
 /**
  * NotificationsHeader Component
- * 
+ *
  * Composite component that renders the page header with "Mark all as read" functionality
  * Uses advanced TypeScript types for props validation
- * 
+ *
  * @example
  * ```tsx
  * <NotificationsHeader
@@ -29,12 +29,12 @@ export interface NotificationsHeaderProps {
 
 /**
  * NotificationsHeader Component
- * 
+ *
  * Renders the notifications page header with:
  * - Page title ("Notifications")
  * - Conditional "Mark all as read" button (only shown when unread notifications exist)
  * - Disabled state support for loading scenarios
- * 
+ *
  * Props are type-safe using NotificationsHeaderProps interface
  */
 export const NotificationsHeader: React.FC<NotificationsHeaderProps> = ({
