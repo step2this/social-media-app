@@ -16,7 +16,7 @@ export const FeedError: React.FC<FeedErrorProps> = ({ message, onRetry }) => {
       <span className="feed-error__icon" aria-hidden="true">⚠️</span>
       <p className="feed-error__message">{message}</p>
       <button onClick={onRetry} className="feed-error__retry-btn">
-        Try Again
+        Retry
       </button>
     </div>
   );

@@ -149,11 +149,11 @@ function HomePageFeed({ queryRef }: { queryRef: HomePage_followingFeed$key }) {
 
   return (
     <div className="home-page">
-      <div className="home-page__container">
+      <div className="home-page__container" role="feed">
         <FeedList posts={posts} compact={true} />
 
         {hasNext && (
-          <div ref={sentinelRef} className="home-page__sentinel">
+          <div ref={sentinelRef} className="home-page__sentinel" data-testid="scroll-sentinel">
             <FeedLoadingMore loading={isLoadingNext} />
           </div>
         )}
