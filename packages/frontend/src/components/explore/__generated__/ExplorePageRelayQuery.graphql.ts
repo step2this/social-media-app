@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<f8d739fd8473c2bd285c13115d8e6642>>
+ * @generated SignedSource<<f752629e04405a3130503e92887eeeba>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -151,7 +151,21 @@ return {
                     "alias": null,
                     "args": null,
                     "kind": "ScalarField",
+                    "name": "isLiked",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
                     "name": "createdAt",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "updatedAt",
                     "storageKey": null
                   },
                   {
@@ -162,6 +176,7 @@ return {
                     "name": "author",
                     "plural": false,
                     "selections": [
+                      (v3/*: any*/),
                       {
                         "alias": null,
                         "args": null,
@@ -169,7 +184,27 @@ return {
                         "name": "handle",
                         "storageKey": null
                       },
-                      (v3/*: any*/)
+                      {
+                        "alias": null,
+                        "args": null,
+                        "kind": "ScalarField",
+                        "name": "username",
+                        "storageKey": null
+                      },
+                      {
+                        "alias": null,
+                        "args": null,
+                        "kind": "ScalarField",
+                        "name": "fullName",
+                        "storageKey": null
+                      },
+                      {
+                        "alias": null,
+                        "args": null,
+                        "kind": "ScalarField",
+                        "name": "profilePictureUrl",
+                        "storageKey": null
+                      }
                     ],
                     "storageKey": null
                   },
@@ -233,12 +268,12 @@ return {
     ]
   },
   "params": {
-    "cacheID": "1cf8ed791fbe1e6b515db700384f069b",
+    "cacheID": "60ab92188e1318086f3b190d0286500d",
     "id": null,
     "metadata": {},
     "name": "ExplorePageRelayQuery",
     "operationKind": "query",
-    "text": "query ExplorePageRelayQuery(\n  $first: Int!\n  $after: String\n) {\n  ...ExplorePage_exploreFeed_2HEEH6\n}\n\nfragment ExplorePage_exploreFeed_2HEEH6 on Query {\n  exploreFeed(after: $after, first: $first) {\n    edges {\n      node {\n        id\n        userId\n        caption\n        imageUrl\n        thumbnailUrl\n        likesCount\n        commentsCount\n        createdAt\n        author {\n          handle\n          id\n        }\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n  }\n}\n"
+    "text": "query ExplorePageRelayQuery(\n  $first: Int!\n  $after: String\n) {\n  ...ExplorePage_exploreFeed_2HEEH6\n}\n\nfragment ExplorePage_exploreFeed_2HEEH6 on Query {\n  exploreFeed(after: $after, first: $first) {\n    edges {\n      node {\n        id\n        userId\n        caption\n        imageUrl\n        thumbnailUrl\n        likesCount\n        commentsCount\n        isLiked\n        createdAt\n        updatedAt\n        author {\n          id\n          handle\n          username\n          fullName\n          profilePictureUrl\n        }\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n  }\n}\n"
   }
 };
 })();

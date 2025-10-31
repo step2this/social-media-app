@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<23e92372ec59075695ddcfb0910b87ba>>
+ * @generated SignedSource<<47cffcd28fa4e12114309cc163fe548e>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -15,15 +15,21 @@ export type ExplorePage_exploreFeed$data = {
     readonly edges: ReadonlyArray<{
       readonly node: {
         readonly author: {
+          readonly fullName: string | null | undefined;
           readonly handle: string;
+          readonly id: string;
+          readonly profilePictureUrl: string | null | undefined;
+          readonly username: string;
         };
         readonly caption: string | null | undefined;
         readonly commentsCount: number;
         readonly createdAt: string;
         readonly id: string;
         readonly imageUrl: string;
+        readonly isLiked: boolean | null | undefined;
         readonly likesCount: number;
         readonly thumbnailUrl: string;
+        readonly updatedAt: string;
         readonly userId: string;
       };
     }>;
@@ -44,7 +50,14 @@ import ExplorePageExploreFeedPaginationQuery_graphql from './ExplorePageExploreF
 const node: ReaderFragment = (function(){
 var v0 = [
   "exploreFeed"
-];
+],
+v1 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "id",
+  "storageKey": null
+};
 return {
   "argumentDefinitions": [
     {
@@ -107,13 +120,7 @@ return {
               "name": "node",
               "plural": false,
               "selections": [
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "id",
-                  "storageKey": null
-                },
+                (v1/*: any*/),
                 {
                   "alias": null,
                   "args": null,
@@ -160,7 +167,21 @@ return {
                   "alias": null,
                   "args": null,
                   "kind": "ScalarField",
+                  "name": "isLiked",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
                   "name": "createdAt",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "updatedAt",
                   "storageKey": null
                 },
                 {
@@ -171,11 +192,33 @@ return {
                   "name": "author",
                   "plural": false,
                   "selections": [
+                    (v1/*: any*/),
                     {
                       "alias": null,
                       "args": null,
                       "kind": "ScalarField",
                       "name": "handle",
+                      "storageKey": null
+                    },
+                    {
+                      "alias": null,
+                      "args": null,
+                      "kind": "ScalarField",
+                      "name": "username",
+                      "storageKey": null
+                    },
+                    {
+                      "alias": null,
+                      "args": null,
+                      "kind": "ScalarField",
+                      "name": "fullName",
+                      "storageKey": null
+                    },
+                    {
+                      "alias": null,
+                      "args": null,
+                      "kind": "ScalarField",
+                      "name": "profilePictureUrl",
                       "storageKey": null
                     }
                   ],
@@ -235,6 +278,6 @@ return {
 };
 })();
 
-(node as any).hash = "73f102956cdbff11225d3401440da90c";
+(node as any).hash = "c7c1ea203b654f99bbfd1550727340cb";
 
 export default node;
