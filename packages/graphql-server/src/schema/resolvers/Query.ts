@@ -647,10 +647,12 @@ export const Query: QueryResolvers = {
   // @ts-expect-error - bidder field resolved by Bid.bidder field resolver (not in DAL Bid type)
   bids: async (_parent, args, context) => {
     // Get bid history from service
-    const result = await context.services.auctionService.getBidHistory(
-      args.auctionId,
-      { limit: args.limit || 50, offset: args.offset || 0 }
-    );
+    // Service expects single request object with auctionId, limit, offset
+    const result = await context.services.auctionService.getBidHistory({
+      auctionId: args.auctionId,
+      limit: args.limit || 50,
+      offset: args.offset || 0,
+    });
 
     // Note: bidder field will be resolved by Bid.bidder field resolver
     return {
