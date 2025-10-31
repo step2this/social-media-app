@@ -14,7 +14,7 @@
  * Pattern from Phase 2 of Relay Migration Plan
  */
 
-import React, { Suspense, useMemo } from 'react';
+import React, { Suspense, useMemo, useRef } from 'react';
 import { useLazyLoadQuery, usePaginationFragment, graphql } from 'react-relay';
 import type { ExplorePageRelayQuery as ExplorePageRelayQueryType } from './__generated__/ExplorePageRelayQuery.graphql';
 import type { ExplorePage_exploreFeed$key } from './__generated__/ExplorePage_exploreFeed.graphql';
@@ -29,6 +29,10 @@ import {
   FeedEndMessage,
 } from '../feed';
 import { useIntersectionObserver } from '../../hooks/useIntersectionObserver';
+import {
+  transformRelayEdges,
+  relayPostToPostGridItem,
+} from '../../relay/relay-transformers';
 import './ExplorePage.css';
 
 /**
@@ -81,35 +85,6 @@ const ExploreFeedPaginationFragment = graphql`
   }
 `;
 
-/**
- * Transform Post to PostGridItem for grid display
- */
-function transformToGridItem(edge: {
-  node: {
-    id: string;
-    userId: string;
-    caption: string | null;
-    imageUrl: string;
-    thumbnailUrl: string;
-    likesCount: number;
-    commentsCount: number;
-    createdAt: string;
-    author: {
-      handle: string;
-    };
-  };
-}): PostGridItem {
-  return {
-    id: edge.node.id,
-    userId: edge.node.userId,
-    userHandle: edge.node.author.handle,
-    thumbnailUrl: edge.node.thumbnailUrl,
-    likesCount: edge.node.likesCount,
-    commentsCount: edge.node.commentsCount,
-    createdAt: edge.node.createdAt,
-    caption: edge.node.caption,
-  };
-}
 
 /**
  * ExplorePage Feed Component (Inner)
@@ -129,9 +104,9 @@ function ExplorePageFeed({ queryRef }: { queryRef: ExplorePage_exploreFeed$key }
     queryRef
   );
 
-  // Transform Relay data structure to PostGridItem
+  // Transform Relay data to PostGridItem using generalized transformer
   const gridItems = useMemo(
-    () => data.exploreFeed.edges.map(transformToGridItem),
+    () => transformRelayEdges(data.exploreFeed.edges, relayPostToPostGridItem),
     [data.exploreFeed.edges]
   );
 
@@ -142,14 +117,21 @@ function ExplorePageFeed({ queryRef }: { queryRef: ExplorePage_exploreFeed$key }
   );
 
   // Set up intersection observer for infinite scroll
-  const sentinelRef = useIntersectionObserver({
-    onIntersect: () => {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  
+  useIntersectionObserver(
+    sentinelRef,
+    {
+      threshold: 0.1,
+      delay: 0,
+      rootMargin: '100px',
+    },
+    () => {
       if (hasNext && !isLoadingNext) {
         loadNext(24); // Load 24 more posts
       }
-    },
-    enabled: hasNext,
-  });
+    }
+  );
 
   if (scrambledPosts.length === 0) {
     return (

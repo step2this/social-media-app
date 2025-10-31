@@ -32,6 +32,10 @@ import {
 } from '../components/dev';
 import { useAuthStore } from '../stores/authStore';
 import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
+import {
+  transformRelayEdges,
+  relayPostToPostWithAuthor,
+} from '../relay/relay-transformers';
 import './HomePage.css';
 
 /**
@@ -110,33 +114,15 @@ function HomePageFeed({ queryRef }: { queryRef: HomePage_followingFeed$key }) {
     queryRef
   );
 
-  // Convert Relay data structure to match existing PostWithAuthor type
-  const posts = data.followingFeed.edges.map((edge) => ({
-    id: edge.node.id,
-    userId: edge.node.userId,
-    userHandle: edge.node.author.handle,
-    authorHandle: edge.node.author.handle,
-    authorId: edge.node.userId,
-    caption: edge.node.caption,
-    imageUrl: edge.node.imageUrl,
-    thumbnailUrl: edge.node.thumbnailUrl,
-    likesCount: edge.node.likesCount,
-    commentsCount: edge.node.commentsCount,
-    isLiked: edge.node.isLiked ?? false,
-    createdAt: edge.node.createdAt,
-    updatedAt: edge.node.updatedAt,
-    author: {
-      id: edge.node.author.id,
-      handle: edge.node.author.handle,
-      username: edge.node.author.username,
-      fullName: edge.node.author.fullName,
-      profilePictureUrl: edge.node.author.profilePictureUrl,
-    },
-  }));
+  // Transform Relay data to domain type using generalized transformer
+  const posts = transformRelayEdges(
+    data.followingFeed.edges,
+    relayPostToPostWithAuthor
+  );
 
   // Set up intersection observer for infinite scroll
   const sentinelRef = useRef<HTMLDivElement>(null);
-  
+
   useIntersectionObserver(
     sentinelRef,
     {
