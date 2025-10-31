@@ -4,7 +4,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute.js';
 import { AuthModal } from './components/auth/AuthModal.js';
 import { ProfilePage } from './components/profile/ProfilePage';
 import { MyProfilePage } from './components/profile/MyProfilePage';
-import { NotificationsPage } from './pages/NotificationsPage';
+import { NotificationsPageRelay as NotificationsPage } from './pages/NotificationsPage.relay';
 import { PlaceholderPage } from './components/common/PlaceholderPage';
 import { CreatePostPage } from './components/posts/index.js';
 import { PostDetailPageRelay as PostDetailPage } from './components/posts/PostDetailPage.relay';
