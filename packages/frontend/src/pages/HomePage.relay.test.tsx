@@ -13,6 +13,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { RelayEnvironmentProvider } from 'react-relay';
+import { BrowserRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { HomePage } from './HomePage.relay';
 import {
@@ -37,6 +38,7 @@ import { useAuthStore } from '../stores/authStore';
  * Test Helper: Render HomePage with Relay environment
  *
  * Dependency Injection pattern: Environment is injectable for testing
+ * Includes Router context for useNavigate hook
  *
  * @returns Render utilities plus environment for assertions
  */
@@ -45,9 +47,11 @@ function renderHomePage() {
   const user = userEvent.setup();
 
   const utils = render(
-    <RelayEnvironmentProvider environment={environment}>
-      <HomePage />
-    </RelayEnvironmentProvider>
+    <BrowserRouter>
+      <RelayEnvironmentProvider environment={environment}>
+        <HomePage />
+      </RelayEnvironmentProvider>
+    </BrowserRouter>
   );
 
   return { environment, user, ...utils };
@@ -58,7 +62,14 @@ function renderHomePage() {
  */
 function setupAuthenticatedUser() {
   useAuthStore.setState({
-    user: { id: 'test-user-1', email: 'test@example.com' },
+    user: { 
+      id: 'test-user-1', 
+      email: 'test@example.com',
+      username: 'testuser',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      emailVerified: true,
+    },
     tokens: { 
       accessToken: 'token', 
       refreshToken: 'refresh',
@@ -243,9 +254,11 @@ describe('HomePage (Relay)', () => {
       // Unmount and remount
       unmount();
       render(
-        <RelayEnvironmentProvider environment={environment}>
-          <HomePage />
-        </RelayEnvironmentProvider>
+        <BrowserRouter>
+          <RelayEnvironmentProvider environment={environment}>
+            <HomePage />
+          </RelayEnvironmentProvider>
+        </BrowserRouter>
       );
 
       // Behavior: No new network request (Relay cache works!)
