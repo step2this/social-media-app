@@ -1,6 +1,17 @@
 /**
  * Profile Service Barrel Export
  * Re-exports the profile service implementation with lazy initialization
+ *
+ * ⚠️ MIGRATION IN PROGRESS
+ *
+ * Status:
+ * - ✅ ProfilePage: Migrated to Relay (ProfilePage.relay.tsx)
+ * - ❌ MyProfilePage: Still uses this service (MyProfilePage.tsx)
+ * - ❌ ProfileHoverCard: Still uses this service (ProfileHoverCard.tsx)
+ *
+ * TODO: Migrate MyProfilePage and ProfileHoverCard to Relay, then delete this file
+ *
+ * See: GRAPHQL_SERVICES_DEPENDENCY_MAP.md
  */
 
 import { ProfileServiceGraphQL } from './implementations/ProfileService.graphql.js';

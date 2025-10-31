@@ -1,6 +1,17 @@
 /**
  * Comment Service Barrel Export
  * Re-exports the comment service implementation with lazy initialization
+ *
+ * ⚠️ MIGRATION PENDING
+ *
+ * Status:
+ * - ❌ CommentItem: Still uses this service (CommentItem.tsx)
+ * - ❌ CommentForm: Still uses this service (CommentForm.tsx)
+ * - ❌ CommentList: Still uses this service (CommentList.tsx)
+ *
+ * TODO: Migrate comment components to Relay, then delete this file
+ *
+ * See: GRAPHQL_SERVICES_DEPENDENCY_MAP.md
  */
 
 import { CommentServiceGraphQL } from './implementations/CommentService.graphql.js';

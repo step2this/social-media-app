@@ -1,6 +1,18 @@
 /**
  * Feed Service Barrel Export
  * Re-exports the feed service implementation with lazy initialization
+ *
+ * ⚠️ MIGRATION IN PROGRESS
+ *
+ * Status:
+ * - ✅ HomePage: Migrated to Relay (HomePage.relay.tsx)
+ * - ✅ ExplorePage: Migrated to Relay (ExplorePage.relay.tsx)
+ * - ❌ DevManualMarkButton: Still uses this service (DevManualMarkButton.tsx) - dev tool
+ * - ❌ useFeedItemAutoRead: Still uses this service (useFeedItemAutoRead.ts) - auto-read feature
+ *
+ * TODO: Migrate remaining components to Relay mutations, then delete this file
+ *
+ * See: GRAPHQL_SERVICES_DEPENDENCY_MAP.md
  */
 
 import { FeedServiceGraphQL } from './implementations/FeedService.graphql.js';

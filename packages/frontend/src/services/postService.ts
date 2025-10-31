@@ -1,6 +1,16 @@
 /**
  * Post Service Barrel Export
  * Re-exports the post service implementation with lazy initialization
+ *
+ * ⚠️ MIGRATION IN PROGRESS
+ *
+ * Status:
+ * - ✅ PostDetailPage: Migrated to Relay (PostDetailPage.relay.tsx)
+ * - ❌ CreatePost: Still uses this service (createPostAction.ts)
+ *
+ * TODO: Migrate createPostAction to Relay mutation, then delete this file
+ *
+ * See: GRAPHQL_SERVICES_DEPENDENCY_MAP.md
  */
 
 import { PostServiceGraphQL } from './implementations/PostService.graphql.js';

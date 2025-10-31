@@ -1,6 +1,15 @@
 /**
  * Follow Service Barrel Export
  * Re-exports the follow service implementation with lazy initialization
+ *
+ * ⚠️ MIGRATION PENDING
+ *
+ * Status:
+ * - ❌ useFollow: Still uses this service (useFollow.ts hook)
+ *
+ * TODO: Migrate useFollow to Relay mutations, then delete this file
+ *
+ * See: GRAPHQL_SERVICES_DEPENDENCY_MAP.md
  */
 
 import { FollowServiceGraphQL } from './implementations/FollowService.graphql.js';

@@ -1,6 +1,15 @@
 /**
  * Like Service Barrel Export
  * Re-exports the like service implementation with lazy initialization
+ *
+ * ⚠️ MIGRATION PENDING
+ *
+ * Status:
+ * - ❌ useLike: Still uses this service (useLike.ts hook)
+ *
+ * TODO: Migrate useLike to Relay mutations, then delete this file
+ *
+ * See: GRAPHQL_SERVICES_DEPENDENCY_MAP.md
  */
 
 import { LikeServiceGraphQL } from './implementations/LikeService.graphql.js';
