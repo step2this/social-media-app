@@ -86,7 +86,7 @@ const DesktopNavItems: React.FC<{ pathname: string }> = ({ pathname }) => {
       {navItems.map(item => (
         <NavigationItem key={item.to} {...item} />
       ))}
-      
+
       {/* Notifications - Using Relay version */}
       <div className="navigation__item">
         <NotificationBellRelayWithSuspense />

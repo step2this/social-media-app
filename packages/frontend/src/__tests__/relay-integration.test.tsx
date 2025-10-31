@@ -11,12 +11,12 @@ describe('Relay Integration', () => {
     // This test verifies that Relay context is available
     // We'll use a test component that tries to use Relay
     render(<App />);
-    
+
     // Wait for app to render (may show login or home based on auth state)
     await waitFor(() => {
       expect(document.querySelector('.app-layout, .guest-layout')).toBeInTheDocument();
     });
-    
+
     // The fact that the app rendered without Relay context errors
     // proves RelayProvider is in the tree
     expect(true).toBe(true);
@@ -26,7 +26,7 @@ describe('Relay Integration', () => {
     // This verifies that deeply nested components can access Relay
     // We'll check that existing Relay components work
     const { container } = render(<App />);
-    
+
     // If RelayProvider is missing, any Relay hook will throw
     // "Could not find Relay environment"
     expect(container).toBeTruthy();

@@ -41,7 +41,7 @@ describe('Legacy Component Imports', () => {
 
   it('should have no imports from legacy hooks useFeed, useFeedInfiniteScroll, useHomePage', () => {
     const hooks = ['useFeed', 'useFeedInfiniteScroll', 'useHomePage'];
-    
+
     hooks.forEach(hook => {
       try {
         const result = execSync(

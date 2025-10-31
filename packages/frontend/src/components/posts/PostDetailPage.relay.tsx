@@ -1,9 +1,9 @@
 /**
  * PostDetailPage - Relay Implementation
- * 
+ *
  * This is the Relay-powered version of PostDetailPage that displays
  * a single post with its comments.
- * 
+ *
  * Benefits of Relay version:
  * - Automatic caching and normalization
  * - Type-safe generated types from schema
@@ -25,7 +25,7 @@ import './PostDetailPage.css';
 
 /**
  * Main query for PostDetailPage
- * 
+ *
  * Fetches a single post by ID with all its details including author and comments
  */
 const PostDetailQuery = graphql`
@@ -54,7 +54,7 @@ const PostDetailQuery = graphql`
 
 /**
  * PostDetailPage Inner Component
- * 
+ *
  * This component handles the query execution and renders the post details.
  * Separated from the outer component to allow Suspense boundaries.
  */
@@ -151,7 +151,7 @@ function PostDetailPageInner() {
 
 /**
  * PostDetailPage with Error Boundary
- * 
+ *
  * Wraps the query component with error handling.
  * Relay will throw errors that can be caught here.
  */
@@ -171,7 +171,7 @@ class PostDetailPageErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       const navigate = () => window.history.back();
-      
+
       return (
         <ContentLayout>
           <div className="post-detail-error" data-testid="post-detail-error">
@@ -198,7 +198,7 @@ class PostDetailPageErrorBoundary extends React.Component<
 
 /**
  * PostDetailPage with Suspense Boundary (Export)
- * 
+ *
  * This is what should be imported and used in App.tsx
  */
 export function PostDetailPageRelay(): JSX.Element {

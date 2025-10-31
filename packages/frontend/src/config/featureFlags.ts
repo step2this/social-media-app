@@ -1,17 +1,17 @@
 /**
  * Feature Flags Configuration
- * 
+ *
  * Centralized feature flags for enabling/disabling features during development
  * and progressive rollouts.
- * 
+ *
  * Usage:
  * - Set environment variables in .env.local (create from .env.example)
  * - Use flags in components to conditionally render features
- * 
+ *
  * @example
  * ```typescript
  * import { ENABLE_NEW_FEATURE } from '@/config/featureFlags';
- * 
+ *
  * if (ENABLE_NEW_FEATURE) {
  *   return <NewFeature />;
  * }

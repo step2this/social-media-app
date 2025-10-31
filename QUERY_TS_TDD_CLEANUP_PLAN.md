@@ -4,7 +4,7 @@
 
 ### Type Safety Errors
 1. **Line 300**: `post` parameter has implicit `any` type
-2. **Line 364**: `postWithAuthor` parameter has implicit `any` type  
+2. **Line 364**: `postWithAuthor` parameter has implicit `any` type
 3. **Lines 614-616**: Nullable types passed to service that doesn't accept null
 4. **Line 640**: bids resolver return type missing `bidder` field
 
@@ -47,7 +47,7 @@ const edges = result.posts.map((post: PostGridItem) => ({
 // BEFORE (line 365)
 const edges = result.posts.map((postWithAuthor) => ({
 
-// AFTER  
+// AFTER
 const edges = result.posts.map((postWithAuthor: PostWithAuthor) => ({
 ```
 

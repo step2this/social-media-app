@@ -79,7 +79,7 @@ function setupAuthenticatedUser() {
 describe('HomePage (Relay)', () => {
   beforeEach(() => {
     setupAuthenticatedUser();
-    
+
     // Mock IntersectionObserver globally for all tests
     const mockIntersectionObserver = vi.fn((callback) => {
       const instance = {
@@ -254,7 +254,7 @@ describe('HomePage (Relay)', () => {
   describe('Relay Cache Behavior', () => {
     it('uses cached data on remount (no refetch)', async () => {
       const environment = createMockRelayEnvironment();
-      
+
       // First render
       const { unmount } = render(
         <BrowserRouter>
@@ -273,10 +273,10 @@ describe('HomePage (Relay)', () => {
 
       // Unmount
       unmount();
-      
+
       // Small delay to ensure unmount is complete
       await new Promise(resolve => setTimeout(resolve, 10));
-      
+
       // Remount with the SAME environment to test cache
       render(
         <BrowserRouter>
@@ -292,7 +292,7 @@ describe('HomePage (Relay)', () => {
       await waitFor(() => {
         expect(screen.getAllByTestId(ARIA_TEXT.POST_CARD)).toHaveLength(12);
       });
-      
+
       // Verify that the component is displaying cached data
       // (the posts are visible even though we haven't resolved the new operation)
       const operations = environment.mock.getAllOperations();

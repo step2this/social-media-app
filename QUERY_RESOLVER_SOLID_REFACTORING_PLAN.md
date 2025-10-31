@@ -222,7 +222,7 @@ export class GetCurrentUserProfile {
     }
 
     const result = await this.profileRepository.findById(input.userId);
-    
+
     if (!result.success) return result;
     if (!result.data) {
       return {
@@ -430,7 +430,7 @@ export class ResolverBuilder<TSource, TContext, TArgs> {
     resolver: GraphQLFieldResolver<TSource, TContext, TArgs>
   ): GraphQLFieldResolver<TSource, TContext, TArgs> {
     this.resolver = resolver;
-    
+
     return async (source, args, context, info) => {
       let index = 0;
 
@@ -468,7 +468,7 @@ export class ConnectionResolver<T> {
 
   async resolve(args: PaginationArgs): Promise<Connection<T>> {
     const result = await this.repository.find(args);
-    
+
     if (!result.success) {
       throw ErrorFactory.create(result.error.message, 'INTERNAL_SERVER_ERROR');
     }
@@ -750,7 +750,7 @@ describe('GetCurrentUserProfile', () => {
   it('should return error when not authenticated', async () => {
     const mockRepository = { findById: vi.fn() };
     const useCase = new GetCurrentUserProfile(mockRepository);
-    
+
     const result = await useCase.execute({ userId: undefined });
 
     expect(result.success).toBe(false);
@@ -989,7 +989,7 @@ export class GetCurrentUserProfile {
 
     // Fetch profile
     const result = await this.profileRepository.findById(input.userId);
-    
+
     if (!result.success) {
       return result;
     }
@@ -1029,7 +1029,7 @@ describe('GetCurrentUserProfile', () => {
 
     expect(result.success).toBe(true);
     expect(mockRepository.findById).toHaveBeenCalledWith(UserId('user1'));
-    
+
     if (result.success) {
       expect(result.data.handle).toBe('@john');
     }
@@ -1038,12 +1038,12 @@ describe('GetCurrentUserProfile', () => {
   it('should return AuthenticationError when not authenticated', async () => {
     const mockRepository = { findById: vi.fn() };
     const useCase = new GetCurrentUserProfile(mockRepository);
-    
+
     const result = await useCase.execute({ userId: undefined });
 
     expect(result.success).toBe(false);
     expect(mockRepository.findById).not.toHaveBeenCalled();
-    
+
     if (!result.success) {
       expect(result.error).toBeInstanceOf(AuthenticationError);
       expect(result.error.message).toContain('authenticated');
@@ -1059,7 +1059,7 @@ describe('GetCurrentUserProfile', () => {
     const result = await useCase.execute({ userId: UserId('user1') });
 
     expect(result.success).toBe(false);
-    
+
     if (!result.success) {
       expect(result.error).toBeInstanceOf(NotFoundError);
     }
@@ -1075,7 +1075,7 @@ describe('GetCurrentUserProfile', () => {
     const result = await useCase.execute({ userId: UserId('user1') });
 
     expect(result.success).toBe(false);
-    
+
     if (!result.success) {
       expect(result.error).toBe(dbError);
     }
