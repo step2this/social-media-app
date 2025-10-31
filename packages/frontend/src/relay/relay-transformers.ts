@@ -78,7 +78,7 @@ export function relayPostToPostWithAuthor(node: RelayPostNode): PostWithAuthor {
     // Author fields (denormalized for performance)
     authorId: node.userId,
     authorHandle: node.author.handle,
-    authorFullName: node.author.fullName,
+    authorFullName: node.author.fullName ?? '',
     authorProfilePictureUrl: node.author.profilePictureUrl ?? undefined,
 
     // Feed-specific fields
