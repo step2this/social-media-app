@@ -23,7 +23,9 @@
     "test:watch": "vitest",
     "test:debug": "vitest --inspect-brk --no-coverage --reporter=verbose",
     "lint": "eslint src/**/*.{ts,tsx}",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "relay": "cd ../.. && relay-compiler",
+    "relay:watch": "cd ../.. && relay-compiler --watch"
   },
   "dependencies": {
     "@social-media-app/shared": "workspace:*",
@@ -32,11 +34,16 @@
     "lodash-es": "^4.17.21",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-relay": "^20.1.1",
     "react-router-dom": "^7.1.1",
+    "relay-runtime": "^20.1.1",
     "zod": "^3.24.1",
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.28.5",
+    "@babel/preset-react": "^7.28.5",
+    "@babel/preset-typescript": "^7.28.5",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.0.1",
@@ -44,12 +51,16 @@
     "@types/lodash-es": "^4.17.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@types/react-relay": "^18.2.1",
     "@types/react-router-dom": "^5.3.3",
+    "@types/relay-runtime": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-v8": "^2.1.8",
     "@vitest/ui": "^2.1.8",
+    "babel-plugin-relay": "^20.1.1",
     "jsdom": "^27.0.0",
     "msw": "^2.11.5",
+    "relay-compiler": "^20.1.1",
     "typescript": "^5.9.3",
     "vite": "^5.4.11",
     "vitest": "^2.1.8"

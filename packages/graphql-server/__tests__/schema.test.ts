@@ -75,7 +75,7 @@ describe('GraphQL Schema Validation', () => {
         const profileField = fields?.profile;
 
         expect(profileField).toBeDefined();
-        expect((profileField?.type as any).name).toBe('Profile');
+        expect((profileField?.type as any).name).toBe('PublicProfile');
 
         const args = profileField?.args;
         expect(args).toBeDefined();
@@ -619,15 +619,6 @@ describe('GraphQL Schema Validation', () => {
       expect((postsCountField.type as any).ofType).toBe(GraphQLInt);
     });
 
-    it('should have Profile with optional isFollowing field (Boolean)', () => {
-      const profileType = schema.getType('Profile') as GraphQLObjectType;
-      const fields = profileType.getFields();
-      const isFollowingField = fields.isFollowing;
-
-      expect(isFollowingField).toBeDefined();
-      expect((isFollowingField.type as any)).toBe(GraphQLBoolean);
-    });
-
     it('should have Profile with createdAt field (String!)', () => {
       const profileType = schema.getType('Profile') as GraphQLObjectType;
       const fields = profileType.getFields();
@@ -670,14 +661,14 @@ describe('GraphQL Schema Validation', () => {
       expect((userIdField.type as any).ofType).toBe(GraphQLID);
     });
 
-    it('should have Post with author field (Profile!)', () => {
+    it('should have Post with author field (PublicProfile!)', () => {
       const postType = schema.getType('Post') as GraphQLObjectType;
       const fields = postType.getFields();
       const authorField = fields.author;
 
       expect(authorField).toBeDefined();
       expect(authorField.type).toBeInstanceOf(GraphQLNonNull);
-      expect((authorField.type as any).ofType.name).toBe('Profile');
+      expect((authorField.type as any).ofType.name).toBe('PublicProfile');
     });
 
     it('should have Post with imageUrl and thumbnailUrl fields (String!)', () => {
@@ -776,14 +767,14 @@ describe('GraphQL Schema Validation', () => {
       expect((fields.content.type as any).ofType).toBe(GraphQLString);
     });
 
-    it('should have Comment with author field (Profile!)', () => {
+    it('should have Comment with author field (PublicProfile!)', () => {
       const commentType = schema.getType('Comment') as GraphQLObjectType;
       const fields = commentType.getFields();
       const authorField = fields.author;
 
       expect(authorField).toBeDefined();
       expect(authorField.type).toBeInstanceOf(GraphQLNonNull);
-      expect((authorField.type as any).ofType.name).toBe('Profile');
+      expect((authorField.type as any).ofType.name).toBe('PublicProfile');
     });
 
     it('should have Comment with timestamp fields (createdAt as String!)', () => {

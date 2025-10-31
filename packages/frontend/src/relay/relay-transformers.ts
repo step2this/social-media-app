@@ -27,20 +27,20 @@ import type { PostWithAuthor, PostGridItem } from '@social-media-app/shared';
 export interface RelayPostNode {
   readonly id: string;
   readonly userId: string;
-  readonly caption: string | null;
+  readonly caption: string | null | undefined;
   readonly imageUrl: string;
   readonly thumbnailUrl: string;
   readonly likesCount: number;
   readonly commentsCount: number;
-  readonly isLiked: boolean | null;
+  readonly isLiked?: boolean | null | undefined;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly author: {
     readonly id: string;
     readonly handle: string;
     readonly username: string;
-    readonly fullName: string;
-    readonly profilePictureUrl: string | null;
+    readonly fullName: string | null | undefined;
+    readonly profilePictureUrl: string | null | undefined;
   };
 }
 

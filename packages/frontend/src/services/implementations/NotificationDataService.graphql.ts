@@ -28,7 +28,7 @@ import { unwrapConnection } from '../../graphql/helpers.js';
  * GraphQL response types
  */
 interface GetUnreadCountResponse {
-  unreadCount: UnreadCountResult;
+  unreadNotificationsCount: number;
 }
 
 interface GetNotificationsResponse {
@@ -57,7 +57,7 @@ export class NotificationDataServiceGraphQL implements INotificationDataService 
         if (result.status === 'success') {
           return {
             status: 'success' as const,
-            data: result.data.unreadCount,
+            data: { count: result.data.unreadNotificationsCount },
           };
         }
         return result;
@@ -70,7 +70,6 @@ export class NotificationDataServiceGraphQL implements INotificationDataService 
     const variables = {
       limit: options?.limit ?? this.DEFAULT_LIMIT,
       cursor: options?.cursor,
-      unreadOnly: options?.unreadOnly,
     };
 
     return this.client
@@ -81,7 +80,7 @@ export class NotificationDataServiceGraphQL implements INotificationDataService 
           const notifications = unwrapConnection(result.data.notifications);
           return {
             status: 'success' as const,
-            data: notifications,
+            data: [...notifications],
           };
         }
         return result;

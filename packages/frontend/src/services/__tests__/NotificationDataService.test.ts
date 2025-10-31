@@ -16,7 +16,6 @@ import {
   createMockNotification,
   createMockNotifications,
   createMockNotificationConnection,
-  createMockUnreadCountResult,
   createMockMarkNotificationsAsReadResult,
 } from './fixtures/notificationFixtures';
 import { wrapInGraphQLSuccess } from './fixtures/graphqlFixtures';
@@ -51,12 +50,10 @@ describe('NotificationDataService.graphql', () => {
 
   describe('getUnreadCount', () => {
     it('should fetch unread notification count successfully', async () => {
-      const unreadCount = createMockUnreadCountResult({ count: 5 });
-
       await expectServiceSuccess(
         mockClient,
         () => service.getUnreadCount(),
-        { unreadCount },
+        { unreadNotificationsCount: 5 },
         (data) => {
           expect(data.count).toBe(5);
         },
@@ -65,12 +62,10 @@ describe('NotificationDataService.graphql', () => {
     });
 
     it('should return zero when no unread notifications', async () => {
-      const unreadCount = createMockUnreadCountResult({ count: 0 });
-
       await expectServiceSuccess(
         mockClient,
         () => service.getUnreadCount(),
-        { unreadCount },
+        { unreadNotificationsCount: 0 },
         (data) => {
           expect(data.count).toBe(0);
         },
@@ -165,23 +160,6 @@ describe('NotificationDataService.graphql', () => {
       });
     });
 
-    it('should filter unread notifications only when specified', async () => {
-      const notifications = createMockNotifications(5, { status: 'unread' });
-      const connection = createMockNotificationConnection(notifications);
-      mockClient.setQueryResponse(wrapInGraphQLSuccess({ notifications: connection }));
-
-      const result = await service.getNotifications({ unreadOnly: true });
-
-      expect(result.status).toBe('success');
-      if (result.status === 'success') {
-        // All notifications should be unread
-        expect(result.data.length).toBe(5);
-      }
-
-      expectQueryCalledWith<GetNotificationsVariables>(mockClient, {
-        unreadOnly: true,
-      });
-    });
 
     it('should handle empty results', async () => {
       const connection = createMockNotificationConnection([]);
@@ -313,7 +291,7 @@ describe('NotificationDataService.graphql', () => {
       const connection = createMockNotificationConnection(notifications);
       mockClient.setQueryResponse(wrapInGraphQLSuccess({ notifications: connection }));
 
-      const fetchResult = await service.getNotifications({ unreadOnly: true });
+      const fetchResult = await service.getNotifications();
       expect(fetchResult.status).toBe('success');
 
       // Mark first one as read
@@ -336,8 +314,7 @@ describe('NotificationDataService.graphql', () => {
 
     it('should handle checking unread count after marking as read', async () => {
       // Initial unread count
-      const initialCount = createMockUnreadCountResult({ count: 5 });
-      mockClient.setQueryResponse(wrapInGraphQLSuccess({ unreadCount: initialCount }));
+      mockClient.setQueryResponse(wrapInGraphQLSuccess({ unreadNotificationsCount: 5 }));
 
       const initialResult = await service.getUnreadCount();
       expect(initialResult.status).toBe('success');
@@ -352,8 +329,7 @@ describe('NotificationDataService.graphql', () => {
       await service.markAsRead('notif-1');
 
       // Updated unread count
-      const updatedCount = createMockUnreadCountResult({ count: 4 });
-      mockClient.setQueryResponse(wrapInGraphQLSuccess({ unreadCount: updatedCount }));
+      mockClient.setQueryResponse(wrapInGraphQLSuccess({ unreadNotificationsCount: 4 }));
 
       const updatedResult = await service.getUnreadCount();
       expect(updatedResult.status).toBe('success');

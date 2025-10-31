@@ -20,6 +20,7 @@ import {
   resolveMostRecentOperation,
   rejectMostRecentOperation,
   getMostRecentOperationVariables,
+  type MockEnvironment,
 } from '../../test-utils/relay-test-utils';
 import { FeedScenarios } from '../../test-utils/relay-feed-adapters';
 import {

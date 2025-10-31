@@ -251,7 +251,7 @@ export const Query: QueryResolvers = {
    * Get explore feed (all public posts)
    * Public - no authentication required
    * Returns posts from all users in chronological order
-   * 
+   *
    * Supports both old (limit/cursor) and Relay spec (first/after) pagination args
    */
   // @ts-ignore - PostGridItem differs from Post (author field resolver handles missing field)
@@ -307,7 +307,7 @@ export const Query: QueryResolvers = {
    * Get following feed (posts from followed users)
    * Requires authentication
    * Returns posts from users that the authenticated user follows
-   * 
+   *
    * Supports both old (limit/cursor) and Relay spec (first/after) pagination args
    */
   // @ts-ignore - PostWithAuthor differs from Post (mapping handles denormalized fields)

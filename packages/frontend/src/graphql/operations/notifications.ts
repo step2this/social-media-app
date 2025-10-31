@@ -7,25 +7,35 @@
 
 export const GET_UNREAD_COUNT_QUERY = `
   query GetUnreadNotificationCount {
-    unreadCount {
-      count
-    }
+    unreadNotificationsCount
   }
 `;
 
 export const GET_NOTIFICATIONS_QUERY = `
-  query GetNotifications($limit: Int, $cursor: String, $unreadOnly: Boolean) {
-    notifications(limit: $limit, cursor: $cursor, unreadOnly: $unreadOnly) {
+  query GetNotifications($limit: Int, $cursor: String) {
+    notifications(limit: $limit, cursor: $cursor) {
       edges {
         node {
           id
+          userId
           type
-          actorId
-          actorUsername
-          targetId
+          title
           message
-          read
+          status
           createdAt
+          readAt
+          actor {
+            userId
+            handle
+            displayName
+            avatarUrl
+          }
+          target {
+            type
+            id
+            url
+            preview
+          }
         }
         cursor
       }

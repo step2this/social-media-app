@@ -71,9 +71,15 @@ const ExploreFeedPaginationFragment = graphql`
           thumbnailUrl
           likesCount
           commentsCount
+          isLiked
           createdAt
+          updatedAt
           author {
+            id
             handle
+            username
+            fullName
+            profilePictureUrl
           }
         }
       }

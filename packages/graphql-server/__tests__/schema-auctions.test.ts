@@ -60,14 +60,14 @@ describe('GraphQL Auction Schema Validation', () => {
       expect((userIdField.type as any).ofType).toBe(GraphQLID);
     });
 
-    it('should have Auction with seller field (Profile!)', () => {
+    it('should have Auction with seller field (PublicProfile!)', () => {
       const auctionType = schema.getType('Auction') as GraphQLObjectType;
       const fields = auctionType.getFields();
       const sellerField = fields.seller;
 
       expect(sellerField).toBeDefined();
       expect(sellerField.type).toBeInstanceOf(GraphQLNonNull);
-      expect((sellerField.type as any).ofType.name).toBe('Profile');
+      expect((sellerField.type as any).ofType.name).toBe('PublicProfile');
     });
 
     it('should have Auction with title field (String!)', () => {
@@ -155,13 +155,13 @@ describe('GraphQL Auction Schema Validation', () => {
       expect((winnerIdField.type as any)).toBe(GraphQLID);
     });
 
-    it('should have Auction with optional winner field (Profile)', () => {
+    it('should have Auction with optional winner field (PublicProfile)', () => {
       const auctionType = schema.getType('Auction') as GraphQLObjectType;
       const fields = auctionType.getFields();
       const winnerField = fields.winner;
 
       expect(winnerField).toBeDefined();
-      expect((winnerField.type as any).name).toBe('Profile');
+      expect((winnerField.type as any).name).toBe('PublicProfile');
     });
 
     it('should have Auction with bidCount field (Int!)', () => {
@@ -228,14 +228,14 @@ describe('GraphQL Auction Schema Validation', () => {
       expect((userIdField.type as any).ofType).toBe(GraphQLID);
     });
 
-    it('should have Bid with bidder field (Profile!)', () => {
+    it('should have Bid with bidder field (PublicProfile!)', () => {
       const bidType = schema.getType('Bid') as GraphQLObjectType;
       const fields = bidType.getFields();
       const bidderField = fields.bidder;
 
       expect(bidderField).toBeDefined();
       expect(bidderField.type).toBeInstanceOf(GraphQLNonNull);
-      expect((bidderField.type as any).ofType.name).toBe('Profile');
+      expect((bidderField.type as any).ofType.name).toBe('PublicProfile');
     });
 
     it('should have Bid with amount field (Float!)', () => {

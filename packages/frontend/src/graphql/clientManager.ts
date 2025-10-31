@@ -1,6 +1,6 @@
 /**
  * GraphQL Client Manager
- * 
+ *
  * Manages the singleton GraphQL client and keeps it synchronized with authentication state.
  * This ensures all GraphQL requests include the current auth token.
  */
@@ -26,12 +26,12 @@ export function getGraphQLClient(): IGraphQLClient {
 /**
  * Update the GraphQL client's auth token
  * Call this when the user logs in, registers, or the token is refreshed
- * 
+ *
  * @param token - The new access token, or null to clear
  */
 export function setGraphQLAuthToken(token: string | null): void {
   const client = getGraphQLClient();
-  
+
   if (token) {
     (client as GraphQLClient).setAuthToken(token);
   } else {

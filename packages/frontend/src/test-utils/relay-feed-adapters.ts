@@ -12,13 +12,12 @@
  */
 
 import type { MockResolvers } from 'relay-test-utils';
+import type { PostGridItem, PostWithAuthor } from '@social-media-app/shared';
 import {
   createMockExploreFeed,
   createMockFollowingFeed,
   createMockEmptyExploreFeed,
   createMockEmptyFollowingFeed,
-  type PostGridItem,
-  type PostWithAuthor,
 } from '@social-media-app/shared/test-utils';
 
 /**
@@ -30,12 +29,18 @@ import {
  * Pattern: Type union with type narrowing
  */
 function toRelayPostNode(post: PostGridItem | PostWithAuthor): Record<string, unknown> {
+  // Determine thumbnailUrl based on post type
+  // PostGridItem has thumbnailUrl, PostWithAuthor uses imageUrl as fallback
+  const thumbnailUrl = 'thumbnailUrl' in post 
+    ? post.thumbnailUrl 
+    : `https://example.com/thumbnails/${post.id}.jpg`;
+
   // Base fields present in both types
   const baseNode = {
     id: post.id,
     userId: post.userId,
     caption: post.caption ?? null,
-    thumbnailUrl: post.thumbnailUrl,
+    thumbnailUrl,
     likesCount: post.likesCount,
     commentsCount: post.commentsCount,
     createdAt: post.createdAt,

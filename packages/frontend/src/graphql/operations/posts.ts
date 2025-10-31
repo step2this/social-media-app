@@ -16,7 +16,7 @@ export const POST_FRAGMENT = `
       id
       handle
       username
-      displayName
+      fullName
       profilePictureUrl
     }
     caption

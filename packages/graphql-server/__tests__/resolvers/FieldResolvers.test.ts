@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { Profile as ProfileResolver } from '../../src/schema/resolvers/Profile.js';
+import { PublicProfile as PublicProfileResolver } from '../../src/schema/resolvers/Profile.js';
 import { Post as PostResolver } from '../../src/schema/resolvers/Post.js';
 import { Comment as CommentResolver } from '../../src/schema/resolvers/Comment.js';
 import { ProfileService, FollowService, LikeService, PostService, CommentService } from '@social-media-app/dal';

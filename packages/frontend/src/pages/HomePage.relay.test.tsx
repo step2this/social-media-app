@@ -20,6 +20,7 @@ import {
   resolveMostRecentOperation,
   rejectMostRecentOperation,
   getMostRecentOperationVariables,
+  type MockEnvironment,
 } from '../test-utils/relay-test-utils';
 import { FeedScenarios } from '../test-utils/relay-feed-adapters';
 import {
@@ -57,8 +58,12 @@ function renderHomePage() {
  */
 function setupAuthenticatedUser() {
   useAuthStore.setState({
-    user: { id: 'test-user-1', handle: 'testuser', email: 'test@example.com' },
-    tokens: { access: 'token', refresh: 'refresh' },
+    user: { id: 'test-user-1', email: 'test@example.com' },
+    tokens: { 
+      accessToken: 'token', 
+      refreshToken: 'refresh',
+      expiresIn: 3600,
+    },
   });
 }
 

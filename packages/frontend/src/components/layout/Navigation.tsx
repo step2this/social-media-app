@@ -3,7 +3,7 @@
  * @module Navigation
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, Suspense } from 'react';
 import type { MouseEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -20,6 +20,9 @@ import {
   MenuIcon,
   CloseIcon
 } from './NavigationIcons';
+import { RELAY_FEATURES } from '../../config/featureFlags';
+import { RelayProvider } from '../../relay/RelayProvider';
+import { NotificationBellRelayWithSuspense } from '../notifications/NotificationBellRelay';
 import './Navigation.css';
 
 /**
@@ -76,7 +79,6 @@ const DesktopNavItems: React.FC<{ pathname: string }> = ({ pathname }) => {
     { to: '/', icon: <HomeIcon />, label: 'Home', isActive: pathname === '/' },
     { to: '/explore', icon: <ExploreIcon />, label: 'Explore', isActive: pathname === '/explore' },
     { to: '/create', icon: <CreateIcon />, label: 'Create', isActive: pathname === '/create' },
-    { to: '/notifications', icon: <NotificationIcon />, label: 'Notifications', isActive: pathname === '/notifications' },
     { to: '/messages', icon: <InboxIcon />, label: 'Messages', isActive: pathname === '/messages' },
     { to: '/profile', icon: <ProfileIcon />, label: 'Profile', isActive: pathname === '/profile' }
   ];
@@ -86,6 +88,22 @@ const DesktopNavItems: React.FC<{ pathname: string }> = ({ pathname }) => {
       {navItems.map(item => (
         <NavigationItem key={item.to} {...item} />
       ))}
+      
+      {/* Notifications - Feature flagged for Relay migration */}
+      {RELAY_FEATURES.notificationBell ? (
+        <div className="navigation__item">
+          <RelayProvider>
+            <NotificationBellRelayWithSuspense />
+          </RelayProvider>
+        </div>
+      ) : (
+        <NavigationItem
+          to="/notifications"
+          icon={<NotificationIcon />}
+          label="Notifications"
+          isActive={pathname === '/notifications'}
+        />
+      )}
     </nav>
   );
 };
