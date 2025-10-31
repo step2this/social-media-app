@@ -1,11 +1,4 @@
-/**
- * GraphQL Schema Type Definitions
- *
- * This file contains the complete GraphQL schema definition for the social media app.
- * It defines types for Profile, Post, Comment, Notification, and all queries/mutations.
- */
 
-export const typeDefs = `
   # ============================================================================
   # Root Types
   # ============================================================================
@@ -428,4 +421,3 @@ export const typeDefs = `
     bid: Bid!
     auction: Auction!
   }
-`;

@@ -9,6 +9,39 @@ import { GraphQLError } from 'graphql';
 import type { QueryResolvers } from '../generated/types.js';
 
 /**
+ * Helper: Parse and validate cursor
+ * Reusable cursor validation logic (DRY principle)
+ */
+function parseCursor(cursor?: string | null): string | undefined {
+  if (!cursor) {
+    return undefined;
+  }
+
+  try {
+    // Validate cursor is valid base64-encoded JSON
+    Buffer.from(cursor, 'base64').toString('utf-8');
+    return cursor;
+  } catch (error) {
+    throw new GraphQLError('Invalid cursor', {
+      extensions: { code: 'BAD_REQUEST' },
+    });
+  }
+}
+
+/**
+ * Helper: Build edge cursor for post
+ * Reusable cursor generation for posts (DRY principle)
+ */
+function buildPostCursor(post: { id: string; createdAt: string }): string {
+  return Buffer.from(
+    JSON.stringify({
+      id: post.id,
+      createdAt: post.createdAt,
+    })
+  ).toString('base64');
+}
+
+/**
  * Query resolvers
  *
  * Implements:
@@ -206,6 +239,127 @@ export const Query: QueryResolvers = {
       hasPreviousPage: false, // Not supported yet
       startCursor: edges.length > 0 ? edges[0].cursor : null,
       endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null,
+    };
+
+    return {
+      edges,
+      pageInfo,
+    };
+  },
+
+  /**
+   * Get explore feed (all public posts)
+   * Public - no authentication required
+   * Returns posts from all users in chronological order
+   * 
+   * Supports both old (limit/cursor) and Relay spec (first/after) pagination args
+   */
+  // @ts-ignore - PostGridItem differs from Post (author field resolver handles missing field)
+  exploreFeed: async (_parent, args, context) => {
+    // Support both pagination styles for backward compatibility
+    // Relay spec uses 'first' and 'after', old style uses 'limit' and 'cursor'
+    const limit = args.first || args.limit || 24;
+    const cursorArg = args.after || args.cursor;
+
+    // Parse and validate cursor
+    const cursor = parseCursor(cursorArg);
+
+    // Get explore feed from PostService (returns PostGridResponse with PostGridItem[])
+    const result = await context.services.postService.getFeedPosts(
+      limit,
+      cursor
+    );
+
+    // Transform PostGridItem to Post edges
+    // PostGridItem has: id, userId, userHandle, thumbnailUrl, caption, likesCount, commentsCount, createdAt
+    // Post needs: id, userId, imageUrl, caption, likesCount, commentsCount, createdAt, updatedAt
+    // author field will be resolved by Post.author field resolver
+    const edges = result.posts.map((post) => ({
+      node: {
+        id: post.id,
+        userId: post.userId,
+        caption: post.caption ?? '',
+        imageUrl: post.thumbnailUrl, // Explore feed uses thumbnails
+        thumbnailUrl: post.thumbnailUrl,
+        likesCount: post.likesCount,
+        commentsCount: post.commentsCount,
+        createdAt: post.createdAt,
+        updatedAt: post.createdAt, // PostGridItem doesn't have updatedAt
+        // author field resolved by Post.author field resolver via DataLoader
+      },
+      cursor: buildPostCursor(post),
+    }));
+
+    const pageInfo = {
+      hasNextPage: result.hasMore,
+      hasPreviousPage: false,
+      startCursor: edges[0]?.cursor || null,
+      endCursor: edges[edges.length - 1]?.cursor || null,
+    };
+
+    return {
+      edges,
+      pageInfo,
+    };
+  },
+
+  /**
+   * Get following feed (posts from followed users)
+   * Requires authentication
+   * Returns posts from users that the authenticated user follows
+   * 
+   * Supports both old (limit/cursor) and Relay spec (first/after) pagination args
+   */
+  // @ts-ignore - PostWithAuthor differs from Post (mapping handles denormalized fields)
+  followingFeed: async (_parent, args, context) => {
+    if (!context.userId) {
+      throw new GraphQLError('You must be authenticated to access your feed', {
+        extensions: { code: 'UNAUTHENTICATED' },
+      });
+    }
+
+    // Support both pagination styles for backward compatibility
+    // Relay spec uses 'first' and 'after', old style uses 'limit' and 'cursor'
+    const limit = args.first || args.limit || 24;
+    const cursorArg = args.after || args.cursor;
+
+    // Parse and validate cursor
+    const cursor = parseCursor(cursorArg);
+
+    // Get following feed from PostService
+    // This returns FeedResponse with PostWithAuthor[] (denormalized author fields)
+    const result = await context.services.postService.getFollowingFeedPosts(
+      context.userId,
+      context.services.followService,
+      limit,
+      cursor
+    );
+
+    // Transform PostWithAuthor to Post edges
+    // PostWithAuthor has denormalized fields: authorId, authorHandle, authorFullName, authorProfilePictureUrl
+    // We map these to nested Post structure for GraphQL (author field resolved by field resolver)
+    const edges = result.posts.map((postWithAuthor) => ({
+      node: {
+        id: postWithAuthor.id,
+        userId: postWithAuthor.userId,
+        caption: postWithAuthor.caption ?? '',
+        imageUrl: postWithAuthor.imageUrl,
+        thumbnailUrl: postWithAuthor.imageUrl, // Use full image as thumbnail
+        likesCount: postWithAuthor.likesCount,
+        commentsCount: postWithAuthor.commentsCount,
+        isLiked: postWithAuthor.isLiked ?? false,
+        createdAt: postWithAuthor.createdAt,
+        updatedAt: postWithAuthor.createdAt, // PostWithAuthor doesn't have updatedAt
+        // author field resolved by Post.author field resolver via DataLoader
+      },
+      cursor: buildPostCursor(postWithAuthor),
+    }));
+
+    const pageInfo = {
+      hasNextPage: result.hasMore,
+      hasPreviousPage: false,
+      startCursor: edges[0]?.cursor || null,
+      endCursor: edges[edges.length - 1]?.cursor || null,
     };
 
     return {
