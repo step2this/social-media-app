@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/auth/ProtectedRoute.js';
 import { AuthModal } from './components/auth/AuthModal.js';
-import { ProfilePage } from './components/profile/ProfilePage';
+import { ProfilePageRelay as ProfilePage } from './components/profile/ProfilePage.relay';
 import { MyProfilePage } from './components/profile/MyProfilePage';
 import { NotificationsPageRelay as NotificationsPage } from './pages/NotificationsPage.relay';
 import { PlaceholderPage } from './components/common/PlaceholderPage';
