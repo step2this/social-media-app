@@ -1,5 +1,29 @@
 /**
- * Query Resolvers
+ * GraphQL Query Resolvers
+ *
+ * ⚠️ CRITICAL: DO NOT DELETE THIS FILE
+ *
+ * These resolvers are the backend GraphQL API that serves data to the frontend.
+ * Even though the frontend now uses Relay instead of handrolled GraphQL services,
+ * Relay STILL makes GraphQL queries that hit these resolvers.
+ *
+ * Migration Status:
+ * - ✅ Frontend: Migrated to Relay (packages/frontend/src/pages/*.relay.tsx)
+ * - ✅ Backend: These resolvers serve Relay queries (MUST KEEP)
+ *
+ * What was deleted:
+ * - Frontend handrolled GraphQL services (FeedService.graphql.ts, etc.)
+ *
+ * What must stay:
+ * - This file (Query.ts) - Backend resolvers for GraphQL API
+ * - All other resolver files (Post.ts, User.ts, etc.)
+ * - GraphQL schema (schema.graphql)
+ *
+ * How it works now:
+ * 1. Relay (frontend) makes GraphQL query: `query HomePageRelayQuery { followingFeed(...) }`
+ * 2. Query hits this resolver: `Query.followingFeed()`
+ * 3. Resolver fetches data from backend/dal
+ * 4. Relay receives data and updates cache
  *
  * Implements all root-level Query resolvers for the GraphQL schema.
  * Handles read operations for profiles, posts, comments, and feeds.
