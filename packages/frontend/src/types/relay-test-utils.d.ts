@@ -1,6 +1,6 @@
 /**
  * Type definitions for relay-test-utils
- * 
+ *
  * relay-test-utils doesn't ship with TypeScript definitions,
  * so we provide minimal types here for our usage.
  */
@@ -24,7 +24,7 @@ declare module 'relay-test-utils' {
   }
 
   export function createMockEnvironment(config?: any): MockEnvironment;
-  
+
   export const MockPayloadGenerator: {
     generate(operation: any, mockResolvers?: MockResolvers): any;
   };
