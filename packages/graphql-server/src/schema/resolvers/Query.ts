@@ -56,7 +56,12 @@ function parseCursor(cursor?: string | null): string | undefined {
  * Helper: Build edge cursor for post
  * Reusable cursor generation for posts (DRY principle)
  */
-function buildPostCursor(post: { id: string; createdAt: string }): string {
+interface PostCursorData {
+  id: string;
+  createdAt: string;
+}
+
+function buildPostCursor(post: PostCursorData): string {
   return Buffer.from(
     JSON.stringify({
       id: post.id,
@@ -298,7 +303,7 @@ export const Query: QueryResolvers = {
     // PostGridItem has: id, userId, userHandle, thumbnailUrl, caption, likesCount, commentsCount, createdAt
     // Post needs: id, userId, imageUrl, caption, likesCount, commentsCount, createdAt, updatedAt
     // author field will be resolved by Post.author field resolver
-    const edges = result.posts.map((post) => ({
+    const edges = result.posts.map((post: { id: string; userId: string; userHandle: string; thumbnailUrl: string; caption: string | null; likesCount: number; commentsCount: number; createdAt: string }) => ({
       node: {
         id: post.id,
         userId: post.userId,
@@ -362,7 +367,7 @@ export const Query: QueryResolvers = {
     // Transform PostWithAuthor to Post edges
     // PostWithAuthor has denormalized fields: authorId, authorHandle, authorFullName, authorProfilePictureUrl
     // We map these to nested Post structure for GraphQL (author field resolved by field resolver)
-    const edges = result.posts.map((postWithAuthor) => ({
+    const edges = result.posts.map((postWithAuthor: { id: string; userId: string; caption: string | null; imageUrl: string; likesCount: number; commentsCount: number; isLiked?: boolean; createdAt: string }) => ({
       node: {
         id: postWithAuthor.id,
         userId: postWithAuthor.userId,
@@ -610,11 +615,12 @@ export const Query: QueryResolvers = {
   // @ts-ignore - DAL Auction type differs from GraphQL Auction type (seller/winner field resolvers handle missing fields)
   auctions: async (_parent, args, context) => {
     // Get auctions from service
+    // Convert nullable GraphQL args to undefined for service (InputMaybe -> undefined)
     const result = await context.services.auctionService.listAuctions({
       limit: args.limit || 20,
-      cursor: args.cursor,
-      status: args.status,
-      userId: args.userId,
+      cursor: args.cursor ?? undefined,
+      status: args.status ?? undefined,
+      userId: args.userId ?? undefined,
     });
 
     // Transform to Relay connection
@@ -638,6 +644,7 @@ export const Query: QueryResolvers = {
    * Get bid history for an auction
    * Public - no authentication required
    */
+  // @ts-expect-error - bidder field resolved by Bid.bidder field resolver (not in DAL Bid type)
   bids: async (_parent, args, context) => {
     // Get bid history from service
     const result = await context.services.auctionService.getBidHistory(
@@ -645,6 +652,7 @@ export const Query: QueryResolvers = {
       { limit: args.limit || 50, offset: args.offset || 0 }
     );
 
+    // Note: bidder field will be resolved by Bid.bidder field resolver
     return {
       bids: result.bids,
       total: result.total,
