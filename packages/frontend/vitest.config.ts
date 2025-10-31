@@ -3,7 +3,13 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      babel: {
+        plugins: ['relay']
+      }
+    })
+  ],
   test: {
     globals: true,
     environment: 'jsdom',
