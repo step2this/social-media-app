@@ -7,23 +7,16 @@ import { MyProfilePage } from './components/profile/MyProfilePage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { PlaceholderPage } from './components/common/PlaceholderPage';
 import { CreatePostPage } from './components/posts/index.js';
-import { PostDetailPage } from './components/posts/PostDetailPage';
+import { PostDetailPageRelay as PostDetailPage } from './components/posts/PostDetailPage.relay';
 import { AppLayout } from './components/layout/AppLayout';
 import { DesignSystemTest } from './components/design-system/DesignSystemTest.js';
 import { ServiceProvider, useServices } from './services/ServiceProvider';
 import { useAuthStore } from './stores/authStore.js';
-import { RELAY_FEATURES } from './config/featureFlags';
 import './App.css';
 
-// Conditionally import HomePage based on feature flag
-import { HomePage as HomePageRelay } from './pages/HomePage.relay';
-import { HomePage as HomePageLegacy } from './pages/HomePage';
-const HomePage = RELAY_FEATURES.homeFeed ? HomePageRelay : HomePageLegacy;
-
-// Conditionally import ExplorePage based on feature flag
-import { ExplorePage as ExplorePageRelay } from './components/explore/ExplorePage.relay';
-import { ExplorePage as ExplorePageLegacy } from './components/explore/ExplorePage';
-const ExplorePage = RELAY_FEATURES.exploreFeed ? ExplorePageRelay : ExplorePageLegacy;
+// Import Relay versions directly
+import { HomePage } from './pages/HomePage.relay';
+import { ExplorePage } from './components/explore/ExplorePage.relay';
 
 /**
  * Internal app content component that uses dependency injection

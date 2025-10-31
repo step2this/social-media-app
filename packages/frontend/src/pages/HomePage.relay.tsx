@@ -241,17 +241,12 @@ class HomePageErrorBoundary extends React.Component<
 /**
  * HomePage with Suspense Boundary (Default Export)
  *
- * This is what should be imported and used in App.tsx when the
- * RELAY_FEATURES.homeFeed flag is enabled.
+ * This is what should be imported and used in App.tsx.
  *
  * @example
  * ```tsx
  * // In App.tsx
  * import { HomePage } from './pages/HomePage.relay';
- * // or conditionally:
- * const HomePage = RELAY_FEATURES.homeFeed
- *   ? require('./pages/HomePage.relay').HomePage
- *   : require('./pages/HomePage').HomePage;
  * ```
  */
 export function HomePage(): JSX.Element {

@@ -235,17 +235,12 @@ class ExplorePageErrorBoundary extends React.Component<
 /**
  * ExplorePage with Suspense Boundary (Default Export)
  *
- * This is what should be imported and used in App.tsx when the
- * RELAY_FEATURES.exploreFeed flag is enabled.
+ * This is what should be imported and used in App.tsx.
  *
  * @example
  * ```tsx
  * // In App.tsx
  * import { ExplorePage } from './components/explore/ExplorePage.relay';
- * // or conditionally:
- * const ExplorePage = RELAY_FEATURES.exploreFeed
- *   ? require('./components/explore/ExplorePage.relay').ExplorePage
- *   : require('./components/explore/ExplorePage').ExplorePage;
  * ```
  */
 export function ExplorePage(): JSX.Element {

@@ -20,8 +20,6 @@ import {
   MenuIcon,
   CloseIcon
 } from './NavigationIcons';
-import { RELAY_FEATURES } from '../../config/featureFlags';
-import { RelayProvider } from '../../relay/RelayProvider';
 import { NotificationBellRelayWithSuspense } from '../notifications/NotificationBellRelay';
 import './Navigation.css';
 
@@ -89,21 +87,10 @@ const DesktopNavItems: React.FC<{ pathname: string }> = ({ pathname }) => {
         <NavigationItem key={item.to} {...item} />
       ))}
       
-      {/* Notifications - Feature flagged for Relay migration */}
-      {RELAY_FEATURES.notificationBell ? (
-        <div className="navigation__item">
-          <RelayProvider>
-            <NotificationBellRelayWithSuspense />
-          </RelayProvider>
-        </div>
-      ) : (
-        <NavigationItem
-          to="/notifications"
-          icon={<NotificationIcon />}
-          label="Notifications"
-          isActive={pathname === '/notifications'}
-        />
-      )}
+      {/* Notifications - Using Relay version */}
+      <div className="navigation__item">
+        <NotificationBellRelayWithSuspense />
+      </div>
     </nav>
   );
 };
