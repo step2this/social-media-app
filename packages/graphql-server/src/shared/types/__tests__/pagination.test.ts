@@ -1,9 +1,9 @@
 /**
  * Pagination Types Tests
- * 
+ *
  * Test-Driven Development (TDD) for Relay-style cursor pagination types.
  * These types follow the Relay Cursor Connections Specification.
- * 
+ *
  * @see https://relay.dev/graphql/connections.htm
  */
 

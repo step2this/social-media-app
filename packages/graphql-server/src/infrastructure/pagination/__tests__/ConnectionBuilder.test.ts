@@ -1,9 +1,9 @@
 /**
  * ConnectionBuilder Tests
- * 
+ *
  * Test-Driven Development (TDD) for Relay Connection builder.
  * The ConnectionBuilder transforms raw data into Relay Connection format.
- * 
+ *
  * Relay Connection structure:
  * - edges: Array of { node, cursor }
  * - pageInfo: { hasNextPage, hasPreviousPage, startCursor, endCursor }

@@ -1,9 +1,9 @@
 /**
  * CursorCodec Tests
- * 
+ *
  * Test-Driven Development (TDD) for cursor encoding/decoding.
  * The CursorCodec handles opaque cursor generation for Relay pagination.
- * 
+ *
  * Cursors are base64-encoded JSON containing { id, sortKey }.
  * This keeps cursor implementation details hidden from clients.
  */

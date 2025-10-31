@@ -1,9 +1,9 @@
 /**
  * Shared Types Barrel Export
- * 
+ *
  * Central export point for all shared types in the GraphQL server.
  * Import all types from this file instead of individual modules.
- * 
+ *
  * @example
  * ```typescript
  * import { UserId, Result, Connection } from '../shared/types/index.js';

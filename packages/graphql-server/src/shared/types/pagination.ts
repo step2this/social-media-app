@@ -1,18 +1,18 @@
 /**
  * Pagination Types
- * 
+ *
  * Type definitions for Relay-style cursor-based pagination.
  * Implements the Relay Cursor Connections Specification.
- * 
+ *
  * These types provide a standardized way to paginate through collections
  * using opaque cursors instead of offset/limit pagination.
- * 
+ *
  * Benefits:
  * - Stable pagination (items can be added/removed without affecting page consistency)
  * - Efficient for large datasets (no need to count total items)
  * - Supports bidirectional pagination (forward and backward)
  * - Compatible with GraphQL and Relay
- * 
+ *
  * @see https://relay.dev/graphql/connections.htm
  * @see https://graphql.org/learn/pagination/
  */
@@ -21,10 +21,10 @@ import { Cursor } from './branded.js';
 
 /**
  * PageInfo - Metadata about the current page
- * 
+ *
  * Provides information about pagination state and cursor positions.
  * Essential for implementing "Load More" and infinite scroll UIs.
- * 
+ *
  * @example
  * ```typescript
  * const pageInfo: PageInfo = {
@@ -65,12 +65,12 @@ export interface PageInfo {
 
 /**
  * Edge<T> - A single item in a connection with its cursor
- * 
+ *
  * Wraps a node (the actual data item) with its cursor position.
  * The cursor is an opaque identifier that marks the item's position in the list.
- * 
+ *
  * @template T - The type of the node
- * 
+ *
  * @example
  * ```typescript
  * const edge: Edge<Post> = {
@@ -95,12 +95,12 @@ export interface Edge<T> {
 
 /**
  * Connection<T> - A paginated collection of items
- * 
+ *
  * Represents a page of items with metadata about pagination state.
  * This is the top-level type returned by paginated GraphQL queries.
- * 
+ *
  * @template T - The type of items in the connection
- * 
+ *
  * @example
  * ```typescript
  * const connection: Connection<Post> = {
@@ -133,36 +133,36 @@ export interface Connection<T> {
 
 /**
  * PaginationArgs - Arguments for paginated queries
- * 
+ *
  * Defines the parameters used to request a specific page of results.
  * Supports both forward pagination (first/after) and backward pagination (last/before).
- * 
+ *
  * Forward pagination (typical):
  * - `first: N` - Fetch the first N items
  * - `after: cursor` - Fetch items after this cursor
- * 
+ *
  * Backward pagination (less common):
  * - `last: N` - Fetch the last N items
  * - `before: cursor` - Fetch items before this cursor
- * 
+ *
  * @example
  * ```typescript
  * // Initial page: First 20 items
  * const args1: PaginationArgs = { first: 20 };
- * 
+ *
  * // Next page: 20 items after last cursor from previous page
- * const args2: PaginationArgs = { 
+ * const args2: PaginationArgs = {
  *   first: 20,
  *   after: lastPageEndCursor,
  * };
- * 
+ *
  * // Backward pagination: 10 items before a cursor
  * const args3: PaginationArgs = {
  *   last: 10,
  *   before: someCursor,
  * };
  * ```
- * 
+ *
  * @note Per Relay spec, you should not mix forward and backward pagination
  *       in the same request (don't use first+after with last+before).
  */
@@ -170,7 +170,7 @@ export interface PaginationArgs {
   /**
    * Number of items to fetch (forward pagination).
    * Used with `after` to implement "Load More" or infinite scroll.
-   * 
+   *
    * @example `first: 20` - Fetch 20 items
    */
   first?: number;
@@ -178,7 +178,7 @@ export interface PaginationArgs {
   /**
    * Cursor to fetch items after (forward pagination).
    * Use the `endCursor` from the previous page's `pageInfo`.
-   * 
+   *
    * @example `after: Cursor('prev-page-end-cursor')`
    */
   after?: Cursor;
@@ -186,7 +186,7 @@ export interface PaginationArgs {
   /**
    * Number of items to fetch (backward pagination).
    * Used with `before` to implement backward navigation (less common).
-   * 
+   *
    * @example `last: 10` - Fetch last 10 items before cursor
    */
   last?: number;
@@ -194,7 +194,7 @@ export interface PaginationArgs {
   /**
    * Cursor to fetch items before (backward pagination).
    * Use the `startCursor` from the next page's `pageInfo`.
-   * 
+   *
    * @example `before: Cursor('next-page-start-cursor')`
    */
   before?: Cursor;
@@ -202,17 +202,17 @@ export interface PaginationArgs {
 
 /**
  * CursorData<T> - Data structure encoded in a cursor
- * 
+ *
  * Defines what information is stored inside an opaque cursor.
  * Typically base64-encoded JSON containing an ID and sort key.
- * 
+ *
  * The sort key determines the order of items and can be:
  * - A timestamp (for time-ordered feeds)
  * - A score (for ranked content)
  * - Any sortable value
- * 
+ *
  * @template T - The type of the sort key (defaults to unknown)
- * 
+ *
  * @example
  * ```typescript
  * // Time-based cursor (feed items sorted by creation time)
@@ -220,18 +220,18 @@ export interface PaginationArgs {
  *   id: 'post-123',
  *   sortKey: '2024-01-01T12:00:00Z',
  * };
- * 
+ *
  * // Encode to opaque cursor
  * const cursor = Cursor(
  *   Buffer.from(JSON.stringify(cursorData)).toString('base64')
  * );
- * 
+ *
  * // Decode from cursor
  * const decoded = JSON.parse(
  *   Buffer.from(cursor, 'base64').toString('utf-8')
  * ) as CursorData<string>;
  * ```
- * 
+ *
  * @example
  * ```typescript
  * // Score-based cursor (items sorted by relevance score)
@@ -240,7 +240,7 @@ export interface PaginationArgs {
  *   sortKey: 0.95,  // Relevance score
  * };
  * ```
- * 
+ *
  * @example
  * ```typescript
  * // Composite sort key (multiple sort criteria)

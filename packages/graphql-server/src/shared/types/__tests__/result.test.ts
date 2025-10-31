@@ -1,9 +1,9 @@
 /**
  * Result Type Tests
- * 
+ *
  * Test-Driven Development (TDD) for type-safe error handling.
  * Result<T, E> is a discriminated union inspired by Rust's Result type.
- * 
+ *
  * Benefits:
  * - Forces explicit error handling (no silent failures)
  * - Type-safe success and error branches
@@ -443,7 +443,7 @@ describe('Result Type', () => {
 
       // Compose operations
       const userResult = await getUser('user-123');
-      
+
       if (userResult.success) {
         const emailResult = await sendEmail(userResult.data.email);
         expect(emailResult.success).toBe(true);
