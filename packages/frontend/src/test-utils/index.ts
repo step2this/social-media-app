@@ -14,3 +14,12 @@ export * from './file-mocks.js';
 
 // Render helpers for component testing
 export * from './render-helpers.js';
+
+// Test constants (centralized UI text for maintainability)
+export * from '../pages/__tests__/test-constants.js';
+
+// Relay transformers (type-safe data transformations)
+export * from '../relay/relay-transformers.js';
+
+// Relay feed fixture adapters (mock data for Relay tests)
+export * from './relay-feed-adapters.js';
