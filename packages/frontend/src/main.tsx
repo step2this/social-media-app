@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { RelayProvider } from './relay/RelayProvider';
 import './index.css';
 
 // Start MSW in development mode only when explicitly enabled
@@ -14,7 +15,9 @@ async function enableMocking() {
 enableMocking().then(() => {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-      <App />
+      <RelayProvider>
+        <App />
+      </RelayProvider>
     </React.StrictMode>
   );
 });
