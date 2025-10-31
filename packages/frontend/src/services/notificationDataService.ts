@@ -21,12 +21,12 @@
  */
 
 import { NotificationDataServiceGraphQL } from './implementations/NotificationDataService.graphql.js';
-import { createGraphQLClient } from '../graphql/client.js';
+import { getGraphQLClient } from '../graphql/clientManager.js';
 
 /**
  * Singleton instance of NotificationDataService
  * Follows same pattern as postService, profileService, etc.
  */
 export const notificationDataService = new NotificationDataServiceGraphQL(
-  createGraphQLClient()
+  getGraphQLClient()
 );

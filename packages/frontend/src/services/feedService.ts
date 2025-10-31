@@ -4,7 +4,7 @@
  */
 
 import { FeedServiceGraphQL } from './implementations/FeedService.graphql.js';
-import { createGraphQLClient } from '../graphql/client.js';
+import { getGraphQLClient } from '../graphql/clientManager.js';
 
 // Private singleton instance
 let _feedService: FeedServiceGraphQL | null = null;
@@ -14,10 +14,10 @@ let _feedService: FeedServiceGraphQL | null = null;
  * Creates instance on first access with GraphQL client
  */
 export function getFeedService(): FeedServiceGraphQL {
-  if (!_feedService) {
-    _feedService = new FeedServiceGraphQL(createGraphQLClient());
-  }
-  return _feedService;
+    if (!_feedService) {
+        _feedService = new FeedServiceGraphQL(getGraphQLClient());
+    }
+    return _feedService;
 }
 
 /**
@@ -25,7 +25,7 @@ export function getFeedService(): FeedServiceGraphQL {
  * Allows injection of mock service
  */
 export function setFeedService(service: FeedServiceGraphQL): void {
-  _feedService = service;
+    _feedService = service;
 }
 
 /**
@@ -33,7 +33,7 @@ export function setFeedService(service: FeedServiceGraphQL): void {
  * Clears singleton for cleanup between tests
  */
 export function resetFeedService(): void {
-  _feedService = null;
+    _feedService = null;
 }
 
 /**
@@ -41,13 +41,13 @@ export function resetFeedService(): void {
  * Uses Proxy to delegate to lazy singleton
  */
 export const feedService = new Proxy({} as FeedServiceGraphQL, {
-  get(_target, prop) {
-    const instance = getFeedService();
-    const value = instance[prop as keyof FeedServiceGraphQL];
-    // Bind methods to preserve 'this' context
-    if (typeof value === 'function') {
-      return value.bind(instance);
+    get(_target, prop) {
+        const instance = getFeedService();
+        const value = instance[prop as keyof FeedServiceGraphQL];
+        // Bind methods to preserve 'this' context
+        if (typeof value === 'function') {
+            return value.bind(instance);
+        }
+        return value;
     }
-    return value;
-  }
 });

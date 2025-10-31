@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, AuthTokens } from '@social-media-app/shared';
+import { setGraphQLAuthToken } from '../graphql/clientManager.js';
 
 export interface AuthState {
   user: User | null;
@@ -44,10 +45,14 @@ export const useAuthStore = create<AuthStore>()(
         isAuthenticated: !!user
       }),
 
-      setTokens: (tokens) => set({
-        tokens,
-        isAuthenticated: !!(tokens && get().user)
-      }),
+      setTokens: (tokens) => {
+        set({
+          tokens,
+          isAuthenticated: !!(tokens && get().user)
+        });
+        // Sync GraphQL client with new tokens
+        setGraphQLAuthToken(tokens?.accessToken || null);
+      },
 
       setLoading: (isLoading) => set({ isLoading }),
 
@@ -55,21 +60,29 @@ export const useAuthStore = create<AuthStore>()(
 
       setHydrated: (isHydrated) => set({ isHydrated }),
 
-      login: (user, tokens) => set({
-        user,
-        tokens,
-        isAuthenticated: true,
-        error: null,
-        isLoading: false,
-      }),
+      login: (user, tokens) => {
+        set({
+          user,
+          tokens,
+          isAuthenticated: true,
+          error: null,
+          isLoading: false,
+        });
+        // Sync GraphQL client with new tokens
+        setGraphQLAuthToken(tokens.accessToken);
+      },
 
-      logout: () => set({
-        user: null,
-        tokens: null,
-        isAuthenticated: false,
-        error: null,
-        isLoading: false,
-      }),
+      logout: () => {
+        set({
+          user: null,
+          tokens: null,
+          isAuthenticated: false,
+          error: null,
+          isLoading: false,
+        });
+        // Clear GraphQL client auth token
+        setGraphQLAuthToken(null);
+      },
 
       clearError: () => set({ error: null }),
 
@@ -85,6 +98,10 @@ export const useAuthStore = create<AuthStore>()(
       onRehydrateStorage: () => (state) => {
         // Mark as hydrated when persistence restoration is complete
         state?.setHydrated(true);
+        // Sync GraphQL client with rehydrated tokens
+        if (state?.tokens?.accessToken) {
+          setGraphQLAuthToken(state.tokens.accessToken);
+        }
       },
     }
   )
