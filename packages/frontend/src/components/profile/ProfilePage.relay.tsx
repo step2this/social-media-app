@@ -81,31 +81,42 @@ function transformRelayUser(user: any) {
     followingCount: user.followingCount,
     postsCount: user.postsCount,
     isFollowing: user.isFollowing,
+    createdAt: new Date().toISOString(), // Fallback since not in query
   };
 }
 
 /**
  * Transform Relay posts to PostGridItem array
  */
-function transformRelayPosts(edges: any[]) {
+function transformRelayPosts(edges: any[], userHandle: string, userId: string) {
   return edges.map((edge: any) => ({
     id: edge.node.id,
-    imageUrl: edge.node.imageUrl,
+    userId: userId,
+    userHandle: userHandle,
     thumbnailUrl: edge.node.thumbnailUrl,
     likesCount: edge.node.likesCount,
     commentsCount: edge.node.commentsCount,
+    createdAt: new Date().toISOString(), // Fallback since not in query
   }));
 }
 
 /**
  * ProfilePage Posts Component (With Pagination)
  */
-function ProfilePagePosts({ handle, initialPosts }: { handle: string; initialPosts: any }) {
-  const [postsLoading, setPostsLoading] = React.useState(false);
-  const [allPosts, setAllPosts] = React.useState(initialPosts);
+function ProfilePagePosts({ 
+  handle, 
+  userId, 
+  initialPosts 
+}: { 
+  handle: string; 
+  userId: string; 
+  initialPosts: any;
+}) {
+  const [postsLoading] = React.useState(false);
+  const allPosts = initialPosts;
 
   // Transform posts
-  const posts = transformRelayPosts(allPosts.edges);
+  const posts = transformRelayPosts(allPosts.edges, handle, userId);
   const hasMore = allPosts.pageInfo.hasNextPage;
   const nextCursor = allPosts.pageInfo.endCursor;
 
@@ -221,7 +232,7 @@ function ProfilePageInner() {
         )}
       </div>
 
-      <ProfilePagePosts handle={handle} initialPosts={data.userPosts} />
+      <ProfilePagePosts handle={handle} userId={profile.id} initialPosts={data.userPosts} />
     </ProfileLayout>
   );
 }

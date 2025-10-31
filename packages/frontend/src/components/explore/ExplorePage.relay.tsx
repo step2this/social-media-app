@@ -18,7 +18,6 @@ import React, { Suspense, useMemo, useRef } from 'react';
 import { useLazyLoadQuery, usePaginationFragment, graphql } from 'react-relay';
 import type { ExplorePageRelayQuery as ExplorePageRelayQueryType } from './__generated__/ExplorePageRelayQuery.graphql';
 import type { ExplorePage_exploreFeed$key } from './__generated__/ExplorePage_exploreFeed.graphql';
-import type { PostGridItem } from '@social-media-app/shared';
 import { PostThumbnail } from '../profile/PostThumbnail';
 import { scramblePosts } from '../../utils/scramblePosts';
 import {
@@ -29,10 +28,7 @@ import {
   FeedEndMessage,
 } from '../feed';
 import { useIntersectionObserver } from '../../hooks/useIntersectionObserver';
-import {
-  transformRelayEdges,
-  relayPostToPostGridItem,
-} from '../../relay/relay-transformers';
+import { transformRelayEdges, relayPostToPostGridItem } from '../../relay/relay-transformers';
 import './ExplorePage.css';
 
 /**
@@ -124,7 +120,7 @@ function ExplorePageFeed({ queryRef }: { queryRef: ExplorePage_exploreFeed$key }
 
   // Set up intersection observer for infinite scroll
   const sentinelRef = useRef<HTMLDivElement>(null);
-  
+
   useIntersectionObserver(
     sentinelRef,
     {

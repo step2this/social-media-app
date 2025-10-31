@@ -1,9 +1,9 @@
 /**
  * NotificationsPage - Relay Implementation
- * 
+ *
  * This is the Relay-powered version of NotificationsPage that displays
  * notifications with pagination.
- * 
+ *
  * Benefits of Relay version:
  * - Automatic caching and normalization
  * - Built-in pagination with usePaginationFragment
@@ -29,7 +29,7 @@ import './NotificationsPage.css';
 
 /**
  * Main query for NotificationsPage
- * 
+ *
  * Fetches the initial set of notifications with pagination support
  */
 const NotificationsQuery = graphql`
@@ -40,7 +40,7 @@ const NotificationsQuery = graphql`
 
 /**
  * Pagination fragment for infinite scroll
- * 
+ *
  * The @refetchable directive makes this fragment paginated
  * The @connection directive tells Relay to append new edges to the existing list
  */
@@ -77,27 +77,37 @@ const NotificationsPaginationFragment = graphql`
 `;
 
 /**
- * Transform Relay notification to domain type
+ * Transform Relay notification to domain type (Notification from @social-media-app/shared)
  */
 function transformRelayNotification(node: any) {
-  // Combine title and message into content for compatibility
-  const content = node.message || node.title || '';
-  
   return {
     id: node.id,
+    userId: '', // Not available from relay, would need viewer query
     type: node.type,
-    content,
+    status: (node.readAt ? 'read' : 'unread') as 'read' | 'unread' | 'archived' | 'deleted',
+    title: node.title || '',
+    message: node.message || '',
+    priority: 'normal' as const,
+    actor: node.actor ? {
+      userId: node.actor.userId,
+      handle: node.actor.handle,
+      displayName: node.actor.handle, // Use handle as display name
+      avatarUrl: node.actor.avatarUrl,
+    } : undefined,
+    target: undefined, // Not available from relay
+    metadata: {}, // Not available from relay
+    deliveryChannels: ['in-app'] as ('in-app' | 'email' | 'sms' | 'push')[],
+    soundEnabled: true,
+    vibrationEnabled: true,
+    readAt: node.readAt || null,
     createdAt: node.createdAt,
-    isRead: !!node.readAt, // readAt is truthy if notification is read
-    senderId: node.actor?.userId || '',
-    senderHandle: node.actor?.handle || '',
-    senderProfilePictureUrl: node.actor?.avatarUrl || '',
+    updatedAt: node.createdAt, // Use createdAt as updatedAt fallback
   };
 }
 
 /**
  * NotificationsPage Feed Component (Inner)
- * 
+ *
  * This component handles the pagination logic and renders the notifications.
  */
 function NotificationsPageFeed({ queryRef }: { queryRef: NotificationsPage_notifications$key }) {
@@ -105,29 +115,29 @@ function NotificationsPageFeed({ queryRef }: { queryRef: NotificationsPage_notif
     NotificationsPaginationFragment,
     queryRef
   );
-  
+
   const [isLoadingNext, setIsLoadingNext] = useState(false);
-  
+
   // Check if there are more notifications
   const hasNext = data.notifications.pageInfo.hasNextPage;
   const nextCursor = data.notifications.pageInfo.endCursor;
 
   // Transform Relay data to domain type
-  const notifications = data.notifications.edges.map(edge => 
+  const notifications = data.notifications.edges.map(edge =>
     transformRelayNotification(edge.node)
   );
 
   // Check if there are unread notifications
-  const hasUnreadNotifications = notifications.some(n => !n.isRead);
+  const hasUnreadNotifications = notifications.some(n => n.status === 'unread');
 
   // Handle mark all as read (TODO: Implement mutation)
   const handleMarkAllAsRead = () => {
     console.log('TODO: Implement mark all as read mutation');
   };
 
-  // Handle notification click
-  const handleClick = (notificationId: string) => {
-    console.log('TODO: Navigate based on notification type', notificationId);
+  // Handle notification click (receives full Notification object)
+  const handleClick = (notification: any) => {
+    console.log('TODO: Navigate based on notification type', notification.id);
   };
 
   // Handle delete notification (TODO: Implement mutation)
@@ -195,7 +205,7 @@ function NotificationsPageFeed({ queryRef }: { queryRef: NotificationsPage_notif
 
 /**
  * NotificationsPage Component (Outer)
- * 
+ *
  * This component executes the query and provides error handling.
  */
 function NotificationsPageInner() {
@@ -212,7 +222,7 @@ function NotificationsPageInner() {
 
 /**
  * NotificationsPage with Error Boundary
- * 
+ *
  * Wraps the query component with error handling.
  * Relay will throw errors that can be caught here.
  */
@@ -256,7 +266,7 @@ class NotificationsPageErrorBoundary extends React.Component<
 
 /**
  * NotificationsPage with Suspense Boundary (Export)
- * 
+ *
  * This is what should be imported and used in App.tsx
  */
 export function NotificationsPageRelay(): JSX.Element {
