@@ -1,0 +1,16 @@
+{
+  "src": "./packages/frontend/src",
+  "language": "typescript",
+  "schema": "./schema.graphql",
+  "excludes": [
+    "**/node_modules/**",
+    "**/__generated__/**",
+    "**/__mocks__/**",
+    "**/ test-utils/**",
+    "**/__tests__/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ]
+}
