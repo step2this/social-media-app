@@ -15,9 +15,9 @@ describe('validateCursor', () => {
   describe('with valid base64 cursor', () => {
     it('should return success with cursor', () => {
       const cursor = Buffer.from('test-cursor').toString('base64');
-      
+
       const result = validateCursor(cursor);
-      
+
       expect(isSuccess(result)).toBe(true);
       if (isSuccess(result)) {
         expect(result.data).toBe(cursor);
@@ -27,9 +27,9 @@ describe('validateCursor', () => {
     it('should return success with complex JSON cursor', () => {
       const cursorData = { PK: 'USER#123', SK: 'POST#2024-01-01' };
       const cursor = Buffer.from(JSON.stringify(cursorData)).toString('base64');
-      
+
       const result = validateCursor(cursor);
-      
+
       expect(isSuccess(result)).toBe(true);
       if (isSuccess(result)) {
         expect(result.data).toBe(cursor);
@@ -40,7 +40,7 @@ describe('validateCursor', () => {
   describe('with null/undefined cursor', () => {
     it('should return success with undefined for null', () => {
       const result = validateCursor(null);
-      
+
       expect(isSuccess(result)).toBe(true);
       if (isSuccess(result)) {
         expect(result.data).toBeUndefined();
@@ -49,7 +49,7 @@ describe('validateCursor', () => {
 
     it('should return success with undefined for undefined', () => {
       const result = validateCursor(undefined);
-      
+
       expect(isSuccess(result)).toBe(true);
       if (isSuccess(result)) {
         expect(result.data).toBeUndefined();
@@ -60,7 +60,7 @@ describe('validateCursor', () => {
   describe('with invalid cursor', () => {
     it('should return failure with BAD_REQUEST code', () => {
       const result = validateCursor('not-valid-base64!!!');
-      
+
       expect(isFailure(result)).toBe(true);
       if (isFailure(result)) {
         expect(result.error.code).toBe(ERROR_CODES.BAD_REQUEST);
@@ -70,7 +70,7 @@ describe('validateCursor', () => {
 
     it('should return failure for malformed base64', () => {
       const result = validateCursor('%%%invalid%%%');
-      
+
       expect(isFailure(result)).toBe(true);
     });
   });
@@ -80,15 +80,15 @@ describe('requireValidCursor', () => {
   describe('with valid cursor', () => {
     it('should return cursor when valid', () => {
       const cursor = Buffer.from('test').toString('base64');
-      
+
       const result = requireValidCursor(cursor);
-      
+
       expect(result).toBe(cursor);
     });
 
     it('should return undefined for null', () => {
       const result = requireValidCursor(null);
-      
+
       expect(result).toBeUndefined();
     });
   });
@@ -96,7 +96,7 @@ describe('requireValidCursor', () => {
   describe('with invalid cursor', () => {
     it('should throw GraphQLError with BAD_REQUEST code', () => {
       expect(() => requireValidCursor('invalid!!!')).toThrow(GraphQLError);
-      
+
       try {
         requireValidCursor('invalid!!!');
       } catch (error) {

@@ -20,26 +20,26 @@ describe('ErrorCodes', () => {
   describe('ERROR_MESSAGES', () => {
     it('should provide default message for UNAUTHENTICATED', () => {
       const message = ERROR_MESSAGES.UNAUTHENTICATED();
-      
+
       expect(message).toContain('authenticated');
       expect(message).toContain('perform this action');
     });
 
     it('should accept custom action for UNAUTHENTICATED', () => {
       const message = ERROR_MESSAGES.UNAUTHENTICATED('view feed');
-      
+
       expect(message).toBe('You must be authenticated to view feed');
     });
 
     it('should provide default message for BAD_REQUEST', () => {
       const message = ERROR_MESSAGES.BAD_REQUEST();
-      
+
       expect(message).toBe('Invalid request');
     });
 
     it('should accept custom context for BAD_REQUEST', () => {
       const message = ERROR_MESSAGES.BAD_REQUEST('Invalid cursor format');
-      
+
       expect(message).toBe('Invalid cursor format');
     });
   });

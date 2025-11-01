@@ -41,13 +41,13 @@ export type ErrorCode = typeof ERROR_CODES[keyof typeof ERROR_CODES];
 export const ERROR_MESSAGES: Record<ErrorCode, (context?: string) => string> = {
   UNAUTHENTICATED: (context = 'perform this action') =>
     `You must be authenticated to ${context}`,
-  
+
   BAD_REQUEST: (context = 'Invalid request') => context,
-  
+
   NOT_FOUND: (context = 'Resource not found') => context,
-  
+
   FORBIDDEN: (context = 'access this resource') =>
     `You don't have permission to ${context}`,
-  
+
   INTERNAL_SERVER_ERROR: (context = 'An error occurred') => context,
 };
