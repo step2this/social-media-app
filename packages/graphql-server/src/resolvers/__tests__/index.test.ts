@@ -59,7 +59,7 @@ describe('createResolvers', () => {
       const resolvers = createResolvers(container);
 
       const queryResolvers = Object.keys(resolvers.Query || {});
-      
+
       expect(queryResolvers).toHaveLength(6);
       expect(queryResolvers).toEqual(
         expect.arrayContaining([

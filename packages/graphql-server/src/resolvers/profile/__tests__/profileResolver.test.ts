@@ -133,57 +133,6 @@ describe('profileResolver', () => {
     });
   });
 
-  describe('Use case integration', () => {
-    it('should call container.resolve with correct key', async () => {
-      const mockProfile = {
-        id: 'user-321',
-        handle: '@charlie',
-        fullName: 'Charlie Brown',
-        bio: null,
-        profilePictureUrl: null,
-        createdAt: '2024-01-01T00:00:00Z',
-      };
-
-      vi.mocked(mockUseCase.execute).mockResolvedValue({
-        success: true,
-        data: mockProfile,
-      });
-
-      const resolveSpy = vi.spyOn(container, 'resolve');
-      const resolver = createProfileResolver(container);
-
-      await resolver({}, { handle: '@charlie' }, {} as any, {} as any);
-
-      expect(resolveSpy).toHaveBeenCalledWith('GetProfileByHandle');
-    });
-  });
-
-  describe('Integration', () => {
-    it('should work with real use case through container', async () => {
-      const mockProfile = {
-        id: 'user-999',
-        handle: '@david',
-        fullName: 'David Lee',
-        bio: 'Engineer',
-        profilePictureUrl: 'https://example.com/david.jpg',
-        createdAt: '2024-01-01T00:00:00Z',
-      };
-
-      const realUseCase: GetProfileByHandle = {
-        execute: vi.fn().mockResolvedValue({
-          success: true,
-          data: mockProfile,
-        }),
-      } as any;
-
-      container.clear();
-      container.register('GetProfileByHandle', () => realUseCase);
-
-      const resolver = createProfileResolver(container);
-      const result = await resolver({}, { handle: '@david' }, {} as any, {} as any);
-
-      expect(result).toEqual(mockProfile);
-      expect(realUseCase.execute).toHaveBeenCalledWith({ handle: '@david' });
-    });
-  });
+  // Removed "Use case integration" and "Integration" sections
+  // Smoke tests cover wiring - unit tests focus on behavior
 });

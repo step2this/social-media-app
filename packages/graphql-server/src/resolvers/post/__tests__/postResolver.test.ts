@@ -114,61 +114,6 @@ describe('postResolver', () => {
     });
   });
 
-  describe('Use case integration', () => {
-    it('should call container.resolve with correct key', async () => {
-      const mockPost = {
-        id: 'post-789',
-        userId: 'user-123',
-        imageUrl: 'https://example.com/test.jpg',
-        caption: 'Test post',
-        likesCount: 5,
-        commentsCount: 2,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
-
-      vi.mocked(mockUseCase.execute).mockResolvedValue({
-        success: true,
-        data: mockPost,
-      });
-
-      const resolveSpy = vi.spyOn(container, 'resolve');
-      const resolver = createPostResolver(container);
-
-      await resolver({}, { id: 'post-789' }, {} as any, {} as any);
-
-      expect(resolveSpy).toHaveBeenCalledWith('GetPostById');
-    });
-  });
-
-  describe('Integration', () => {
-    it('should work with real use case through container', async () => {
-      const mockPost = {
-        id: 'post-321',
-        userId: 'user-654',
-        imageUrl: 'https://example.com/integration.jpg',
-        caption: 'Integration test',
-        likesCount: 15,
-        commentsCount: 8,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2024-01-01T00:00:00Z',
-      };
-
-      const realUseCase: GetPostById = {
-        execute: vi.fn().mockResolvedValue({
-          success: true,
-          data: mockPost,
-        }),
-      } as any;
-
-      container.clear();
-      container.register('GetPostById', () => realUseCase);
-
-      const resolver = createPostResolver(container);
-      const result = await resolver({}, { id: 'post-321' }, {} as any, {} as any);
-
-      expect(result).toEqual(mockPost);
-      expect(realUseCase.execute).toHaveBeenCalledWith({ postId: 'post-321' });
-    });
-  });
+  // Removed "Use case integration" and "Integration" sections
+  // Spy anti-patterns removed - smoke tests cover wiring
 });
