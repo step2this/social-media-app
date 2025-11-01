@@ -4,6 +4,8 @@ import { createDynamoDBClient, getTableName } from '@social-media-app/aws-utils'
 import { verifyAccessToken, extractTokenFromHeader, getJWTConfigFromEnv } from '@social-media-app/auth-utils';
 import { createLoaders, type DataLoaders } from './dataloaders/index.js';
 import { createServices, type Services } from './services/factory.js';
+import { Container } from './infrastructure/di/Container.js';
+import { registerServices } from './infrastructure/di/registerServices.js';
 
 /**
  * GraphQL Context
@@ -22,6 +24,9 @@ export interface GraphQLContext {
 
   // DataLoaders for batching and caching queries (solves N+1 problem)
   loaders: DataLoaders;
+
+  // DI Container (created once per request for clean architecture resolvers)
+  container: Container;
 }
 
 /**
@@ -64,11 +69,19 @@ export async function createContext(
     userId
   );
 
-  return {
+  // Create context object (needed for registerServices)
+  const context: GraphQLContext = {
     userId,
     dynamoClient,
     tableName,
     services,
     loaders,
-  };
+  } as GraphQLContext;
+
+  // Create DI container once per request
+  const container = new Container();
+  registerServices(container, context);
+  context.container = container;
+
+  return context;
 }
