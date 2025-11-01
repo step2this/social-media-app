@@ -32,6 +32,7 @@ import { PostServiceAdapter } from '../adapters/PostServiceAdapter.js';
 import { FeedServiceAdapter } from '../adapters/FeedServiceAdapter.js';
 import { CommentServiceAdapter } from '../adapters/CommentServiceAdapter.js';
 import { FollowServiceAdapter } from '../adapters/FollowServiceAdapter.js';
+import { LikeServiceAdapter } from '../adapters/LikeServiceAdapter.js';
 
 // Repositories (interfaces)
 import type { IProfileRepository } from '../../domain/repositories/IProfileRepository.js';
@@ -39,6 +40,7 @@ import type { IPostRepository } from '../../domain/repositories/IPostRepository.
 import type { IFeedRepository } from '../../domain/repositories/IFeedRepository.js';
 import type { ICommentRepository } from '../../domain/repositories/ICommentRepository.js';
 import type { IFollowRepository } from '../../domain/repositories/IFollowRepository.js';
+import type { ILikeRepository } from '../../domain/repositories/ILikeRepository.js';
 
 // Use Cases
 import { GetCurrentUserProfile } from '../../application/use-cases/profile/GetCurrentUserProfile.js';
@@ -49,6 +51,7 @@ import { GetFollowingFeed } from '../../application/use-cases/feed/GetFollowingF
 import { GetExploreFeed } from '../../application/use-cases/feed/GetExploreFeed.js';
 import { GetCommentsByPost } from '../../application/use-cases/comment/GetCommentsByPost.js';
 import { GetFollowStatus } from '../../application/use-cases/follow/GetFollowStatus.js';
+import { GetPostLikeStatus } from '../../application/use-cases/like/GetPostLikeStatus.js';
 
 /**
  * Register all services in the container.
@@ -102,6 +105,10 @@ export function registerServices(container: Container, context: GraphQLContext):
     new FollowServiceAdapter(context.services.followService)
   );
 
+  container.register<ILikeRepository>('LikeRepository', () =>
+    new LikeServiceAdapter(context.services.likeService)
+  );
+
   /**
    * Layer 2: Use Cases
    *
@@ -144,5 +151,10 @@ export function registerServices(container: Container, context: GraphQLContext):
   // Follow use cases
   container.register<GetFollowStatus>('GetFollowStatus', () =>
     new GetFollowStatus(container.resolve('FollowRepository'))
+  );
+
+  // Like use cases
+  container.register<GetPostLikeStatus>('GetPostLikeStatus', () =>
+    new GetPostLikeStatus(container.resolve('LikeRepository'))
   );
 }

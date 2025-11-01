@@ -29,6 +29,7 @@ import { createPostResolver, createUserPostsResolver } from './post/index.js';
 import { createFollowingFeedResolver, createExploreFeedResolver } from './feed/index.js';
 import { createCommentsResolver } from './comment/commentsResolver.js';
 import { createFollowStatusResolver } from './follow/followStatusResolver.js';
+import { createPostLikeStatusResolver } from './like/postLikeStatusResolver.js';
 import { requireAuth } from '../infrastructure/resolvers/helpers/requireAuth.js';
 import { requireValidCursor } from '../infrastructure/resolvers/helpers/validateCursor.js';
 import { buildConnection } from '../infrastructure/resolvers/helpers/ConnectionBuilder.js';
@@ -138,22 +139,9 @@ export function createQueryResolvers(): QueryResolvers {
       return resolver(parent, args, context, info);
     },
 
-    postLikeStatus: async (_parent, args, context) => {
-      requireAuth(context, 'check like status');
-
-      const statusMap = await context.services.likeService.getLikeStatusesByPostIds(
-        context.userId,
-        [args.postId]
-      );
-
-      const status = statusMap.get(args.postId) || { isLiked: false, likesCount: 0 };
-
-      const post = await context.services.postService.getPostById(args.postId);
-
-      return {
-        isLiked: status.isLiked,
-        likesCount: post?.likesCount || 0,
-      };
+    postLikeStatus: async (parent, args, context, info) => {
+      const resolver = createPostLikeStatusResolver(context.container);
+      return resolver(parent, args, context, info);
     },
 
     // @ts-ignore - DAL Notification type differs from GraphQL Notification type (status enum values differ)
