@@ -10,8 +10,9 @@ import type { ICommentRepository, Comment } from '../../src/domain/repositories/
 import type { IFollowRepository, FollowStatus } from '../../src/domain/repositories/IFollowRepository';
 import type { ILikeRepository, LikeStatus } from '../../src/domain/repositories/ILikeRepository';
 import type { INotificationRepository, Notification } from '../../src/domain/repositories/INotificationRepository';
+import type { IAuctionRepository, Auction, Bid } from '../../src/domain/repositories/IAuctionRepository';
 import type { PaginatedResult } from '../../src/shared/types/pagination';
-import { success, type Result } from '../../src/shared/types/result';
+import { success, failure, type Result } from '../../src/shared/types/result';
 
 /**
  * Fake Comment Repository
@@ -99,5 +100,54 @@ export class FakeNotificationRepository implements INotificationRepository {
   async getUnreadCount(userId: string): Promise<Result<number, Error>> {
     const count = this.notifications.filter((n) => n.userId === userId && !n.read).length;
     return success(count);
+  }
+}
+
+/**
+ * Fake Auction Repository
+ * In-memory implementation for testing auction use cases.
+ */
+export class FakeAuctionRepository implements IAuctionRepository {
+  constructor(
+    private auctions: Auction[] = [],
+    private bids: Bid[] = []
+  ) {}
+
+  async getAuction(id: string): Promise<Result<Auction, Error>> {
+    const auction = this.auctions.find((a) => a.id === id);
+    return auction ? success(auction) : failure(new Error('Auction not found'));
+  }
+
+  async getAuctions(
+    status?: string,
+    limit: number = 20,
+    cursor?: string
+  ): Promise<Result<PaginatedResult<Auction>, Error>> {
+    let filtered = this.auctions;
+    if (status) {
+      filtered = filtered.filter((a) => a.status === status);
+    }
+    const items = filtered.slice(0, limit);
+
+    return success({
+      items,
+      hasMore: filtered.length > limit,
+      nextCursor: filtered.length > limit ? 'next-cursor' : null,
+    });
+  }
+
+  async getBidHistory(
+    auctionId: string,
+    limit: number,
+    cursor?: string
+  ): Promise<Result<PaginatedResult<Bid>, Error>> {
+    const filtered = this.bids.filter((b) => b.auctionId === auctionId);
+    const items = filtered.slice(0, limit);
+
+    return success({
+      items,
+      hasMore: filtered.length > limit,
+      nextCursor: filtered.length > limit ? 'next-cursor' : null,
+    });
   }
 }

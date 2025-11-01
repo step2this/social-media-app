@@ -97,6 +97,14 @@ export {
 } from './fixtures/notification-fixtures.js';
 
 export {
+  createMockAuction,
+  createMockAuctions,
+  createMockActiveAuction,
+  createMockEndedAuction,
+  type MockAuction
+} from './fixtures/auction-fixtures.js';
+
+export {
   type GraphQLResult,
   type SingleResult,
   type GraphQLErrorResponse,
