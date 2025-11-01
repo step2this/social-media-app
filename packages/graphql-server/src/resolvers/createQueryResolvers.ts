@@ -32,6 +32,7 @@ import { createFollowStatusResolver } from './follow/followStatusResolver.js';
 import { createPostLikeStatusResolver } from './like/postLikeStatusResolver.js';
 import { createNotificationsResolver } from './notification/notificationsResolver.js';
 import { createUnreadNotificationsCountResolver } from './notification/unreadNotificationsCountResolver.js';
+import { createAuctionResolver } from './auction/auctionResolver.js';
 import { requireAuth } from '../infrastructure/resolvers/helpers/requireAuth.js';
 import { requireValidCursor } from '../infrastructure/resolvers/helpers/validateCursor.js';
 import { buildConnection } from '../infrastructure/resolvers/helpers/ConnectionBuilder.js';
@@ -158,10 +159,9 @@ export function createQueryResolvers(): QueryResolvers {
     },
 
     // @ts-ignore - DAL Auction type differs from GraphQL Auction type (seller/winner field resolvers handle missing fields)
-    auction: async (_parent, args, context) => {
-      const auction = await context.services.auctionService.getAuction(args.id);
-
-      return auction || null;
+    auction: async (parent, args, context, info) => {
+      const resolver = createAuctionResolver(context.container);
+      return resolver(parent, args, context, info);
     },
 
     // @ts-ignore - DAL Auction type differs from GraphQL Auction type (seller/winner field resolvers handle missing fields)

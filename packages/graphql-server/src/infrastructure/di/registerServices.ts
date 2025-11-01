@@ -34,6 +34,7 @@ import { CommentServiceAdapter } from '../adapters/CommentServiceAdapter.js';
 import { FollowServiceAdapter } from '../adapters/FollowServiceAdapter.js';
 import { LikeServiceAdapter } from '../adapters/LikeServiceAdapter.js';
 import { NotificationServiceAdapter } from '../adapters/NotificationServiceAdapter.js';
+import { AuctionServiceAdapter } from '../adapters/AuctionServiceAdapter.js';
 
 // Repositories (interfaces)
 import type { IProfileRepository } from '../../domain/repositories/IProfileRepository.js';
@@ -43,6 +44,7 @@ import type { ICommentRepository } from '../../domain/repositories/ICommentRepos
 import type { IFollowRepository } from '../../domain/repositories/IFollowRepository.js';
 import type { ILikeRepository } from '../../domain/repositories/ILikeRepository.js';
 import type { INotificationRepository } from '../../domain/repositories/INotificationRepository.js';
+import type { IAuctionRepository } from '../../domain/repositories/IAuctionRepository.js';
 
 // Use Cases
 import { GetCurrentUserProfile } from '../../application/use-cases/profile/GetCurrentUserProfile.js';
@@ -56,6 +58,7 @@ import { GetFollowStatus } from '../../application/use-cases/follow/GetFollowSta
 import { GetPostLikeStatus } from '../../application/use-cases/like/GetPostLikeStatus.js';
 import { GetNotifications } from '../../application/use-cases/notification/GetNotifications.js';
 import { GetUnreadNotificationsCount } from '../../application/use-cases/notification/GetUnreadNotificationsCount.js';
+import { GetAuction } from '../../application/use-cases/auction/GetAuction.js';
 
 /**
  * Register all services in the container.
@@ -117,6 +120,10 @@ export function registerServices(container: Container, context: GraphQLContext):
     new NotificationServiceAdapter(context.services.notificationService)
   );
 
+  container.register<IAuctionRepository>('AuctionRepository', () =>
+    new AuctionServiceAdapter(context.services.auctionService)
+  );
+
   /**
    * Layer 2: Use Cases
    *
@@ -173,5 +180,10 @@ export function registerServices(container: Container, context: GraphQLContext):
 
   container.register<GetUnreadNotificationsCount>('GetUnreadNotificationsCount', () =>
     new GetUnreadNotificationsCount(container.resolve('NotificationRepository'))
+  );
+
+  // Auction use cases
+  container.register<GetAuction>('GetAuction', () =>
+    new GetAuction(container.resolve('AuctionRepository'))
   );
 }
