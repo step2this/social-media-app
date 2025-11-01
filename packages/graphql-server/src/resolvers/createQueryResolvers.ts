@@ -33,6 +33,8 @@ import { createPostLikeStatusResolver } from './like/postLikeStatusResolver.js';
 import { createNotificationsResolver } from './notification/notificationsResolver.js';
 import { createUnreadNotificationsCountResolver } from './notification/unreadNotificationsCountResolver.js';
 import { createAuctionResolver } from './auction/auctionResolver.js';
+import { createAuctionsResolver } from './auction/auctionsResolver.js';
+import { createBidsResolver } from './auction/bidsResolver.js';
 import { requireAuth } from '../infrastructure/resolvers/helpers/requireAuth.js';
 import { requireValidCursor } from '../infrastructure/resolvers/helpers/validateCursor.js';
 import { buildConnection } from '../infrastructure/resolvers/helpers/ConnectionBuilder.js';
@@ -165,36 +167,15 @@ export function createQueryResolvers(): QueryResolvers {
     },
 
     // @ts-ignore - DAL Auction type differs from GraphQL Auction type (seller/winner field resolvers handle missing fields)
-    auctions: async (_parent, args, context) => {
-      const result = await context.services.auctionService.listAuctions({
-        limit: args.limit || 20,
-        cursor: args.cursor ?? undefined,
-        status: args.status ?? undefined,
-        userId: args.userId ?? undefined,
-      });
-
-      return buildConnection({
-        items: result.auctions,
-        hasMore: result.hasMore,
-        getCursorKeys: (auction) => ({
-          PK: `AUCTION#${auction.id}`,
-          SK: `CREATED#${auction.createdAt}`,
-        }),
-      });
+    auctions: async (parent, args, context, info) => {
+      const resolver = createAuctionsResolver(context.container);
+      return resolver(parent, args, context, info);
     },
 
     // @ts-expect-error - bidder field resolved by Bid.bidder field resolver (not in DAL Bid type)
-    bids: async (_parent, args, context) => {
-      const result = await context.services.auctionService.getBidHistory({
-        auctionId: args.auctionId,
-        limit: args.limit || 50,
-        offset: args.offset || 0,
-      });
-
-      return {
-        bids: result.bids,
-        total: result.total,
-      };
+    bids: async (parent, args, context, info) => {
+      const resolver = createBidsResolver(context.container);
+      return resolver(parent, args, context, info);
     },
   };
 }
