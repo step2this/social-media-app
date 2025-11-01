@@ -1,0 +1,283 @@
+/**
+ * exploreFeedResolver Tests
+ *
+ * TDD for public exploreFeed resolver with pagination.
+ * Tests pagination, use case integration, and optional authentication.
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { GraphQLError } from 'graphql';
+import { Container } from '../../../infrastructure/di/Container.js';
+import { createExploreFeedResolver } from '../exploreFeedResolver.js';
+import { UserId, Cursor } from '../../../shared/types/index.js';
+import type { GetExploreFeed } from '../../../application/use-cases/feed/GetExploreFeed.js';
+
+describe('exploreFeedResolver', () => {
+  let container: Container;
+  let mockUseCase: { execute: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    container = new Container();
+    mockUseCase = { execute: vi.fn() };
+    container.register('GetExploreFeed', () => mockUseCase as any);
+  });
+
+  describe('Anonymous access', () => {
+    it('should return feed for anonymous user', async () => {
+      const mockConnection = {
+        edges: [
+          {
+            cursor: Cursor('cursor-1'),
+            node: {
+              id: 'post-1',
+              userId: 'user-123',
+              imageUrl: 'https://example.com/1.jpg',
+              caption: 'Trending post',
+              likesCount: 100,
+              commentsCount: 20,
+              createdAt: '2024-01-01T00:00:00Z',
+              updatedAt: '2024-01-01T00:00:00Z',
+            },
+          },
+        ],
+        pageInfo: {
+          hasNextPage: true,
+          hasPreviousPage: false,
+          startCursor: Cursor('cursor-1'),
+          endCursor: Cursor('cursor-1'),
+        },
+      };
+
+      vi.mocked(mockUseCase.execute).mockResolvedValue({
+        success: true,
+        data: mockConnection,
+      });
+
+      const resolver = createExploreFeedResolver(container);
+      const result = await resolver({}, { first: 10 }, { userId: undefined }, {} as any);
+
+      expect(result.edges).toHaveLength(1);
+      expect(mockUseCase.execute).toHaveBeenCalledWith({
+        pagination: { first: 10 },
+        viewerId: undefined,
+      });
+    });
+  });
+
+  describe('Authenticated access', () => {
+    it('should return feed for authenticated user (with viewerId)', async () => {
+      const mockConnection = {
+        edges: [
+          {
+            cursor: Cursor('cursor-1'),
+            node: {
+              id: 'post-1',
+              userId: 'user-456',
+              imageUrl: 'https://example.com/1.jpg',
+              caption: 'Personalized post',
+              likesCount: 50,
+              commentsCount: 10,
+              createdAt: '2024-01-01T00:00:00Z',
+              updatedAt: '2024-01-01T00:00:00Z',
+            },
+          },
+        ],
+        pageInfo: {
+          hasNextPage: true,
+          hasPreviousPage: false,
+          startCursor: Cursor('cursor-1'),
+          endCursor: Cursor('cursor-1'),
+        },
+      };
+
+      vi.mocked(mockUseCase.execute).mockResolvedValue({
+        success: true,
+        data: mockConnection,
+      });
+
+      const resolver = createExploreFeedResolver(container);
+      const result = await resolver(
+        {},
+        { first: 10 },
+        { userId: UserId('user-123') },
+        {} as any
+      );
+
+      expect(result.edges).toHaveLength(1);
+      expect(mockUseCase.execute).toHaveBeenCalledWith({
+        pagination: { first: 10 },
+        viewerId: 'user-123',
+      });
+    });
+  });
+
+  describe('Pagination', () => {
+    it('should handle pagination correctly', async () => {
+      const mockConnection = {
+        edges: [
+          {
+            cursor: Cursor('cursor-11'),
+            node: {
+              id: 'post-11',
+              userId: 'user-789',
+              imageUrl: 'https://example.com/11.jpg',
+              caption: null,
+              likesCount: 0,
+              commentsCount: 0,
+              createdAt: '2024-01-11T00:00:00Z',
+              updatedAt: '2024-01-11T00:00:00Z',
+            },
+          },
+        ],
+        pageInfo: {
+          hasNextPage: false,
+          hasPreviousPage: true,
+          startCursor: Cursor('cursor-11'),
+          endCursor: Cursor('cursor-11'),
+        },
+      };
+
+      vi.mocked(mockUseCase.execute).mockResolvedValue({
+        success: true,
+        data: mockConnection,
+      });
+
+      const resolver = createExploreFeedResolver(container);
+      const result = await resolver(
+        {},
+        { first: 10, after: 'cursor-10' },
+        { userId: undefined },
+        {} as any
+      );
+
+      expect(result.pageInfo.hasPreviousPage).toBe(true);
+      expect(mockUseCase.execute).toHaveBeenCalledWith({
+        pagination: { first: 10, after: 'cursor-10' },
+        viewerId: undefined,
+      });
+    });
+
+    it('should handle empty feed', async () => {
+      const emptyConnection = {
+        edges: [],
+        pageInfo: {
+          hasNextPage: false,
+          hasPreviousPage: false,
+          startCursor: null,
+          endCursor: null,
+        },
+      };
+
+      vi.mocked(mockUseCase.execute).mockResolvedValue({
+        success: true,
+        data: emptyConnection,
+      });
+
+      const resolver = createExploreFeedResolver(container);
+      const result = await resolver({}, { first: 10 }, { userId: undefined }, {} as any);
+
+      expect(result.edges).toHaveLength(0);
+      expect(result.pageInfo.hasNextPage).toBe(false);
+    });
+  });
+
+  describe('Use case integration', () => {
+    it('should call container.resolve with correct key', async () => {
+      const mockConnection = {
+        edges: [],
+        pageInfo: {
+          hasNextPage: false,
+          hasPreviousPage: false,
+          startCursor: null,
+          endCursor: null,
+        },
+      };
+
+      vi.mocked(mockUseCase.execute).mockResolvedValue({
+        success: true,
+        data: mockConnection,
+      });
+
+      const resolveSpy = vi.spyOn(container, 'resolve');
+      const resolver = createExploreFeedResolver(container);
+
+      await resolver({}, { first: 10 }, { userId: undefined }, {} as any);
+
+      expect(resolveSpy).toHaveBeenCalledWith('GetExploreFeed');
+    });
+
+    it('should pass optional viewerId to use case', async () => {
+      const mockConnection = {
+        edges: [],
+        pageInfo: {
+          hasNextPage: false,
+          hasPreviousPage: false,
+          startCursor: null,
+          endCursor: null,
+        },
+      };
+
+      vi.mocked(mockUseCase.execute).mockResolvedValue({
+        success: true,
+        data: mockConnection,
+      });
+
+      const resolver = createExploreFeedResolver(container);
+
+      await resolver({}, { first: 20 }, { userId: UserId('user-789') }, {} as any);
+
+      expect(mockUseCase.execute).toHaveBeenCalledWith({
+        pagination: { first: 20 },
+        viewerId: 'user-789',
+      });
+    });
+  });
+
+  describe('Integration', () => {
+    it('should work with real use case through container', async () => {
+      const mockConnection = {
+        edges: [
+          {
+            cursor: Cursor('cursor-1'),
+            node: {
+              id: 'post-integration',
+              userId: 'user-integration',
+              imageUrl: 'https://example.com/integration.jpg',
+              caption: 'Integration test',
+              likesCount: 100,
+              commentsCount: 50,
+              createdAt: '2024-01-01T00:00:00Z',
+              updatedAt: '2024-01-01T00:00:00Z',
+            },
+          },
+        ],
+        pageInfo: {
+          hasNextPage: false,
+          hasPreviousPage: false,
+          startCursor: Cursor('cursor-1'),
+          endCursor: Cursor('cursor-1'),
+        },
+      };
+
+      const realUseCase: GetExploreFeed = {
+        execute: vi.fn().mockResolvedValue({
+          success: true,
+          data: mockConnection,
+        }),
+      } as any;
+
+      container.clear();
+      container.register('GetExploreFeed', () => realUseCase);
+
+      const resolver = createExploreFeedResolver(container);
+      const result = await resolver({}, { first: 10 }, { userId: undefined }, {} as any);
+
+      expect(result.edges).toHaveLength(1);
+      expect(result.edges[0].node.id).toBe('post-integration');
+      expect(realUseCase.execute).toHaveBeenCalledWith({
+        pagination: { first: 10 },
+        viewerId: undefined,
+      });
+    });
+  });
+});
