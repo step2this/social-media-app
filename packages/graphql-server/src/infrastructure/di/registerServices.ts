@@ -30,11 +30,15 @@ import type { GraphQLContext } from '../../context.js';
 import { ProfileServiceAdapter } from '../adapters/ProfileServiceAdapter.js';
 import { PostServiceAdapter } from '../adapters/PostServiceAdapter.js';
 import { FeedServiceAdapter } from '../adapters/FeedServiceAdapter.js';
+import { CommentServiceAdapter } from '../adapters/CommentServiceAdapter.js';
+import { FollowServiceAdapter } from '../adapters/FollowServiceAdapter.js';
 
 // Repositories (interfaces)
 import type { IProfileRepository } from '../../domain/repositories/IProfileRepository.js';
 import type { IPostRepository } from '../../domain/repositories/IPostRepository.js';
 import type { IFeedRepository } from '../../domain/repositories/IFeedRepository.js';
+import type { ICommentRepository } from '../../domain/repositories/ICommentRepository.js';
+import type { IFollowRepository } from '../../domain/repositories/IFollowRepository.js';
 
 // Use Cases
 import { GetCurrentUserProfile } from '../../application/use-cases/profile/GetCurrentUserProfile.js';
@@ -43,6 +47,8 @@ import { GetPostById } from '../../application/use-cases/post/GetPostById.js';
 import { GetUserPosts } from '../../application/use-cases/post/GetUserPosts.js';
 import { GetFollowingFeed } from '../../application/use-cases/feed/GetFollowingFeed.js';
 import { GetExploreFeed } from '../../application/use-cases/feed/GetExploreFeed.js';
+import { GetCommentsByPost } from '../../application/use-cases/comment/GetCommentsByPost.js';
+import { GetFollowStatus } from '../../application/use-cases/follow/GetFollowStatus.js';
 
 /**
  * Register all services in the container.
@@ -88,6 +94,14 @@ export function registerServices(container: Container, context: GraphQLContext):
     new FeedServiceAdapter(context.services.feedService)
   );
 
+  container.register<ICommentRepository>('CommentRepository', () =>
+    new CommentServiceAdapter(context.services.commentService)
+  );
+
+  container.register<IFollowRepository>('FollowRepository', () =>
+    new FollowServiceAdapter(context.services.followService)
+  );
+
   /**
    * Layer 2: Use Cases
    *
@@ -120,5 +134,15 @@ export function registerServices(container: Container, context: GraphQLContext):
 
   container.register<GetExploreFeed>('GetExploreFeed', () =>
     new GetExploreFeed(container.resolve('FeedRepository'))
+  );
+
+  // Comment use cases
+  container.register<GetCommentsByPost>('GetCommentsByPost', () =>
+    new GetCommentsByPost(container.resolve('CommentRepository'))
+  );
+
+  // Follow use cases
+  container.register<GetFollowStatus>('GetFollowStatus', () =>
+    new GetFollowStatus(container.resolve('FollowRepository'))
   );
 }

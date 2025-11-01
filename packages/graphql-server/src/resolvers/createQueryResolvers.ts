@@ -27,6 +27,8 @@ import type { QueryResolvers } from '../../generated/types.js';
 import { createMeResolver, createProfileResolver } from './profile/index.js';
 import { createPostResolver, createUserPostsResolver } from './post/index.js';
 import { createFollowingFeedResolver, createExploreFeedResolver } from './feed/index.js';
+import { createCommentsResolver } from './comment/commentsResolver.js';
+import { createFollowStatusResolver } from './follow/followStatusResolver.js';
 import { requireAuth } from '../infrastructure/resolvers/helpers/requireAuth.js';
 import { requireValidCursor } from '../infrastructure/resolvers/helpers/validateCursor.js';
 import { buildConnection } from '../infrastructure/resolvers/helpers/ConnectionBuilder.js';
@@ -126,38 +128,14 @@ export function createQueryResolvers(): QueryResolvers {
     },
 
     // @ts-ignore - DAL Comment type differs from GraphQL Comment type (author field resolver handles missing field)
-    comments: async (_parent, args, context) => {
-      const cursor = requireValidCursor(args.cursor);
-
-      const result = await context.services.commentService.getCommentsByPost(
-        args.postId,
-        args.limit || 20,
-        cursor
-      );
-
-      return buildConnection({
-        items: result.comments,
-        hasMore: result.hasMore,
-        getCursorKeys: (comment) => ({
-          PK: `POST#${args.postId}`,
-          SK: `COMMENT#${comment.createdAt}#${comment.id}`,
-        }),
-      });
+    comments: async (parent, args, context, info) => {
+      const resolver = createCommentsResolver(context.container);
+      return resolver(parent, args, context, info);
     },
 
-    followStatus: async (_parent, args, context) => {
-      requireAuth(context, 'check follow status');
-
-      const status = await context.services.followService.getFollowStatus(
-        context.userId,
-        args.userId
-      );
-
-      return {
-        isFollowing: status.isFollowing,
-        followersCount: status.followersCount,
-        followingCount: status.followingCount,
-      };
+    followStatus: async (parent, args, context, info) => {
+      const resolver = createFollowStatusResolver(context.container);
+      return resolver(parent, args, context, info);
     },
 
     postLikeStatus: async (_parent, args, context) => {
