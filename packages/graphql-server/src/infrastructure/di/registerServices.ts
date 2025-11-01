@@ -29,7 +29,6 @@ import type { GraphQLContext } from '../../context.js';
 // Adapters
 import { ProfileServiceAdapter } from '../adapters/ProfileServiceAdapter.js';
 import { PostServiceAdapter } from '../adapters/PostServiceAdapter.js';
-import { FeedServiceAdapter } from '../adapters/FeedServiceAdapter.js';
 import { CommentServiceAdapter } from '../adapters/CommentServiceAdapter.js';
 import { FollowServiceAdapter } from '../adapters/FollowServiceAdapter.js';
 import { LikeServiceAdapter } from '../adapters/LikeServiceAdapter.js';
@@ -59,6 +58,8 @@ import { GetPostLikeStatus } from '../../application/use-cases/like/GetPostLikeS
 import { GetNotifications } from '../../application/use-cases/notification/GetNotifications.js';
 import { GetUnreadNotificationsCount } from '../../application/use-cases/notification/GetUnreadNotificationsCount.js';
 import { GetAuction } from '../../application/use-cases/auction/GetAuction.js';
+import { GetAuctions } from '../../application/use-cases/auction/GetAuctions.js';
+import { GetBidHistory } from '../../application/use-cases/auction/GetBidHistory.js';
 
 /**
  * Register all services in the container.
@@ -98,10 +99,6 @@ export function registerServices(container: Container, context: GraphQLContext):
 
   container.register<IPostRepository>('PostRepository', () =>
     new PostServiceAdapter(context.services.postService)
-  );
-
-  container.register<IFeedRepository>('FeedRepository', () =>
-    new FeedServiceAdapter(context.services.feedService)
   );
 
   container.register<ICommentRepository>('CommentRepository', () =>
@@ -185,5 +182,13 @@ export function registerServices(container: Container, context: GraphQLContext):
   // Auction use cases
   container.register<GetAuction>('GetAuction', () =>
     new GetAuction(container.resolve('AuctionRepository'))
+  );
+
+  container.register<GetAuctions>('GetAuctions', () =>
+    new GetAuctions(container.resolve('AuctionRepository'))
+  );
+
+  container.register<GetBidHistory>('GetBidHistory', () =>
+    new GetBidHistory(container.resolve('AuctionRepository'))
   );
 }

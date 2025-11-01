@@ -5,14 +5,18 @@
  * Uses shared adapter helpers for DRY error handling.
  */
 
-import type { IFollowRepository } from '../../domain/repositories/IFollowRepository';
+import type { IFollowRepository, FollowStatus } from '../../domain/repositories/IFollowRepository';
 import type { IFollowService } from '@social-media-app/dal';
+import type { Result } from '../../shared/types/result';
 import { adaptServiceCall } from './shared/AdapterHelpers';
 
 export class FollowServiceAdapter implements IFollowRepository {
   constructor(private readonly followService: IFollowService) {}
 
-  async getFollowStatus(followerId: string, followeeId: string) {
+  async getFollowStatus(
+    followerId: string,
+    followeeId: string
+  ): Promise<Result<FollowStatus, Error>> {
     return adaptServiceCall(() => this.followService.getFollowStatus(followerId, followeeId));
   }
 }

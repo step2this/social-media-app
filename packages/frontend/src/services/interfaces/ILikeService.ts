@@ -1,25 +1,27 @@
 import type { AsyncState } from '../../graphql/types';
-import type { LikeResponse, LikeStatus } from '../../graphql/operations/likes';
+import type {
+  LikePostResponse,
+  UnlikePostResponse,
+  GetPostLikeStatusResponse,
+} from '@social-media-app/shared';
 
 /**
- * Like Service Interface
- *
- * Defines the contract for like operations using GraphQL.
+ * Defines the contract for like operations using REST API.
  * All methods return AsyncState for consistent state management.
  */
 export interface ILikeService {
   /**
    * Like a post
    */
-  likePost(postId: string): Promise<AsyncState<LikeResponse>>;
+  likePost(postId: string): Promise<AsyncState<LikePostResponse>>;
 
   /**
    * Unlike a post
    */
-  unlikePost(postId: string): Promise<AsyncState<LikeResponse>>;
+  unlikePost(postId: string): Promise<AsyncState<UnlikePostResponse>>;
 
   /**
    * Get like status for a post
    */
-  getLikeStatus(postId: string): Promise<AsyncState<LikeStatus>>;
+  getLikeStatus(postId: string): Promise<AsyncState<GetPostLikeStatusResponse>>;
 }
