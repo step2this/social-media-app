@@ -1,16 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import type { Profile } from '@social-media-app/shared';
-import { useAuth } from '../../hooks/useAuth';
-import { ProfileServiceGraphQL } from '../../services/implementations/ProfileService.graphql';
-import { createGraphQLClient } from '../../graphql/client';
-import { unwrap } from '../../graphql/types';
+import React, { useState, Suspense } from 'react';
+import { useLazyLoadQuery, useMutation, graphql } from 'react-relay';
+import type { MyProfilePageRelayQuery } from './__generated__/MyProfilePageRelayQuery.graphql';
+import type { MyProfilePageRelayMutation } from './__generated__/MyProfilePageRelayMutation.graphql';
 import { ProfileDisplay } from './ProfileDisplay';
 import { LoadingSpinner, ErrorState } from '../common/LoadingStates';
 import { ProfileLayout } from '../layout/AppLayout';
 import {
   validateProfileForm,
   initializeProfileFormData,
-  buildProfileUpdateRequest,
   clearValidationError,
   formatProfileValidationError,
   isProfileFormValid,
@@ -19,17 +16,32 @@ import {
 } from '../../utils/index.js';
 import './MyProfilePage.css';
 
-// Initialize profile service
-const profileService = new ProfileServiceGraphQL(createGraphQLClient());
-
 /**
- * My profile page component for authenticated users
+ * Internal component that uses Relay query
+ * Wrapped in Suspense by the parent component
  */
-export const MyProfilePage: React.FC = () => {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function MyProfilePageContent() {
+  const data = useLazyLoadQuery<MyProfilePageRelayQuery>(
+    graphql`
+      query MyProfilePageRelayQuery {
+        me {
+          id
+          username
+          handle
+          fullName
+          bio
+          profilePictureUrl
+          followersCount
+          followingCount
+          postsCount
+          createdAt
+        }
+      }
+    `,
+    {},
+    { fetchPolicy: 'store-or-network' }
+  );
+
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<ProfileFormData>({
     fullName: '',
@@ -38,7 +50,27 @@ export const MyProfilePage: React.FC = () => {
   const [editError, setEditError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<ProfileValidationErrors>({});
 
-  // Handle avatar upload
+  const [commitUpdateProfile, isUpdating] = useMutation<MyProfilePageRelayMutation>(
+    graphql`
+      mutation MyProfilePageRelayMutation($input: UpdateProfileInput!) {
+        updateProfile(input: $input) {
+          id
+          username
+          handle
+          fullName
+          bio
+          profilePictureUrl
+          followersCount
+          followingCount
+          postsCount
+          createdAt
+        }
+      }
+    `
+  );
+
+  const profile = data.me;
+
   const handleAvatarClick = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -47,39 +79,12 @@ export const MyProfilePage: React.FC = () => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         console.log('🐾 Avatar upload selected:', file.name);
-        // TODO: Implement avatar upload API call
-        // For now, just show a placeholder message
         alert(`🎉 Avatar upload coming soon! Selected: ${file.name}`);
       }
     };
     input.click();
   };
 
-  // Load profile data
-  const loadProfile = async () => {
-    if (!user?.username) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      // Use username as handle for now (they're the same initially)
-      const result = unwrap(await profileService.getProfileByHandle(user.username));
-      setProfile(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load profile');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load profile on mount
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      loadProfile();
-    }
-  }, [isAuthenticated, user]);
-
-  // Handle edit modal open
   const handleEditClick = () => {
     if (profile) {
       setEditFormData(initializeProfileFormData(profile));
@@ -89,69 +94,46 @@ export const MyProfilePage: React.FC = () => {
     }
   };
 
-  // Validate form data
   const validateForm = () => {
     const errors = validateProfileForm(editFormData);
     setValidationErrors(errors);
     return isProfileFormValid(errors);
   };
 
-  // Handle form submission
-  const handleSaveProfile = async () => {
+  const handleSaveProfile = () => {
     if (!validateForm()) {
       return;
     }
 
-    try {
-      setEditError(null);
-      const updateRequest = buildProfileUpdateRequest(editFormData);
-      const result = await profileService.updateProfile(updateRequest);
-      const updatedProfile = unwrap(result);
+    setEditError(null);
 
-      setProfile(updatedProfile);
-      setEditModalOpen(false);
-    } catch (err) {
-      setEditError('Failed to update profile. Please try again.');
-    }
+    commitUpdateProfile({
+      variables: {
+        input: {
+          fullName: editFormData.fullName || null,
+          bio: editFormData.bio || null,
+        },
+      },
+      onCompleted: () => {
+        setEditModalOpen(false);
+      },
+      onError: (error) => {
+        console.error('Failed to update profile:', error);
+        setEditError('Failed to update profile. Please try again.');
+      },
+    });
   };
 
-  // Handle input changes
   const handleInputChange = (field: keyof ProfileFormData, value: string) => {
     setEditFormData(prev => ({
       ...prev,
       [field]: value
     }));
 
-    // Clear validation error when user starts typing
     if (validationErrors[field]) {
       setValidationErrors(prev => clearValidationError(prev, field));
     }
   };
-
-  // Show auth loading
-  if (authLoading) {
-    return <LoadingSpinner />;
-  }
-
-  // Show not authenticated
-  if (!isAuthenticated || !user) {
-    return <ErrorState message="Please sign in to view your profile" />;
-  }
-
-  // Show loading state
-  if (loading) {
-    return <LoadingSpinner message="Loading profile..." />;
-  }
-
-  // Show error state
-  if (error || !profile) {
-    return (
-      <ErrorState
-        message={error || 'Failed to load profile'}
-        onRetry={loadProfile}
-      />
-    );
-  }
 
   return (
     <ProfileLayout
@@ -171,7 +153,6 @@ export const MyProfilePage: React.FC = () => {
         />
       </div>
 
-      {/* Edit Profile Modal */}
       {editModalOpen && (
         <div className="modal-overlay modal-overlay--automotive">
           <div className="modal-content modal-content--automotive" role="dialog">
@@ -195,6 +176,7 @@ export const MyProfilePage: React.FC = () => {
                   onChange={(e) => handleInputChange('fullName', e.target.value)}
                   className="tama-input tama-input--automotive"
                   placeholder="Enter your full name"
+                  disabled={isUpdating}
                 />
                 {formatProfileValidationError(validationErrors, 'fullName') && (
                   <p className="tama-form-error">{formatProfileValidationError(validationErrors, 'fullName')}</p>
@@ -212,6 +194,7 @@ export const MyProfilePage: React.FC = () => {
                   onChange={(e) => handleInputChange('bio', e.target.value)}
                   className="tama-input tama-input--automotive tama-textarea"
                   placeholder="Tell others about your pet adventures..."
+                  disabled={isUpdating}
                 />
                 {formatProfileValidationError(validationErrors, 'bio') && (
                   <p className="tama-form-error">{formatProfileValidationError(validationErrors, 'bio')}</p>
@@ -223,12 +206,14 @@ export const MyProfilePage: React.FC = () => {
               <button
                 onClick={handleSaveProfile}
                 className="tama-btn tama-btn--automotive tama-btn--racing-red"
+                disabled={isUpdating}
               >
-                Save Changes
+                {isUpdating ? 'Saving...' : 'Save Changes'}
               </button>
               <button
                 onClick={() => setEditModalOpen(false)}
                 className="tama-btn tama-btn--automotive tama-btn--secondary"
+                disabled={isUpdating}
               >
                 Cancel
               </button>
@@ -237,5 +222,17 @@ export const MyProfilePage: React.FC = () => {
         </div>
       )}
     </ProfileLayout>
+  );
+}
+
+/**
+ * Relay-powered My Profile page component for authenticated users
+ * Uses Relay query with Suspense boundary
+ */
+export const MyProfilePageRelay: React.FC = () => {
+  return (
+    <Suspense fallback={<LoadingSpinner message="Loading profile..." />}>
+      <MyProfilePageContent />
+    </Suspense>
   );
 };

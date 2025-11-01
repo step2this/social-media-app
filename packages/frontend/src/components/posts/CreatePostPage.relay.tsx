@@ -1,15 +1,15 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useMutation, graphql } from 'react-relay';
+import type { CreatePostPageRelayMutation } from './__generated__/CreatePostPageRelayMutation.graphql';
 import { MaterialIcon } from '../common/MaterialIcon';
 import { useImagePreview } from '../../hooks/useImagePreview';
 import { useCreatePostForm } from '../../hooks/useCreatePostForm';
-import { createPost, type CreatePostInput, type CreatePostResult } from './createPostAction';
 import './CreatePostPage.css';
 
-export const CreatePostPage: React.FC = () => {
+export const CreatePostPageRelay: React.FC = () => {
   const navigate = useNavigate();
 
-  // Image preview hook
   const {
     selectedFile,
     previewUrl,
@@ -19,7 +19,6 @@ export const CreatePostPage: React.FC = () => {
     clearImage,
   } = useImagePreview();
 
-  // Form state and validation hook
   const {
     caption,
     tags,
@@ -29,20 +28,49 @@ export const CreatePostPage: React.FC = () => {
     setTags,
     validateForm,
     resetForm,
-    getFormData,
   } = useCreatePostForm();
 
-  // State for form submission
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  /**
-   * Handle form submission
-   */
+  const [commitCreatePost, isSubmitting] = useMutation<CreatePostPageRelayMutation>(
+    graphql`
+      mutation CreatePostPageRelayMutation($input: CreatePostInput!) {
+        createPost(input: $input) {
+          post {
+            id
+            imageUrl
+            caption
+            createdAt
+            author {
+              id
+              handle
+              username
+            }
+          }
+          uploadUrl
+          thumbnailUploadUrl
+        }
+      }
+    `
+  );
+
+  const uploadImageToS3 = async (uploadUrl: string, file: File): Promise<void> => {
+    const response = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: {
+        'Content-Type': file.type,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload image');
+    }
+  };
+
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Client-side validation
     if (!validateForm()) {
       setActionError('Please fix validation errors');
       return;
@@ -53,30 +81,38 @@ export const CreatePostPage: React.FC = () => {
       return;
     }
 
-    setIsSubmitting(true);
     setActionError(null);
 
-    try {
-      // Get form data and submit
-      const formData = getFormData();
-      const result = await createPost({
-        ...formData,
-        imageFile: selectedFile,
-      });
+    commitCreatePost({
+      variables: {
+        input: {
+          fileType: selectedFile.type,
+          caption: caption.trim() || null,
+        },
+      },
+      onCompleted: async (response) => {
+        try {
+          if (!response.createPost) {
+            throw new Error('Failed to create post');
+          }
 
-      // Reset form
-      resetForm();
-      clearImage();
+          await uploadImageToS3(response.createPost.uploadUrl, selectedFile);
 
-      // Navigate to new post
-      if (result.postId) {
-        navigate(`/post/${result.postId}`);
-      }
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Failed to create post');
-      setIsSubmitting(false);
-    }
-  }, [validateForm, selectedFile, getFormData, resetForm, clearImage, navigate]);
+          resetForm();
+          clearImage();
+
+          navigate(`/post/${response.createPost.post.id}`);
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          setActionError('Failed to upload image. Please try again.');
+        }
+      },
+      onError: (error) => {
+        console.error('Failed to create post:', error);
+        setActionError(error.message || 'Failed to create post');
+      },
+    });
+  }, [validateForm, selectedFile, caption, commitCreatePost, resetForm, clearImage, navigate]);
 
   return (
     <div className="create-post-page">
@@ -92,7 +128,6 @@ export const CreatePostPage: React.FC = () => {
           <h1>Create New Post</h1>
         </header>
 
-        {/* Display action errors */}
         {actionError && (
           <div className="error-banner" role="alert">
             <MaterialIcon name="error" />
@@ -107,7 +142,6 @@ export const CreatePostPage: React.FC = () => {
           role="form"
           aria-label="Create post"
         >
-          {/* Image Upload Section */}
           <div className="form-section">
             <label htmlFor="image-upload" className="form-label required">
               Image
@@ -159,7 +193,6 @@ export const CreatePostPage: React.FC = () => {
             )}
           </div>
 
-          {/* Caption Section */}
           <div className="form-section">
             <label htmlFor="caption" className="form-label">
               Caption
@@ -177,6 +210,7 @@ export const CreatePostPage: React.FC = () => {
               maxLength={2200}
               aria-label="Post caption"
               aria-describedby={captionError ? 'caption-error' : undefined}
+              disabled={isSubmitting}
             />
             {captionError && (
               <div
@@ -189,7 +223,6 @@ export const CreatePostPage: React.FC = () => {
             )}
           </div>
 
-          {/* Tags Section */}
           <div className="form-section">
             <label htmlFor="tags" className="form-label">
               Tags
@@ -204,6 +237,7 @@ export const CreatePostPage: React.FC = () => {
               className="tags-input"
               aria-label="Post tags"
               aria-describedby={tagsError ? 'tags-error' : undefined}
+              disabled={isSubmitting}
             />
             {tagsError && (
               <div
@@ -219,7 +253,6 @@ export const CreatePostPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Submit Button */}
           <div className="form-actions">
             <button
               type="button"

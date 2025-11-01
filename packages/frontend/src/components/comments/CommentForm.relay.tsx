@@ -1,10 +1,10 @@
 import { useState, useCallback, FormEvent, ChangeEvent } from 'react';
-import { commentService } from '../../services/commentService';
-import { isSuccess, isError } from '../../graphql/types';
+import { useMutation, graphql } from 'react-relay';
+import type { CommentFormRelayMutation } from './__generated__/CommentFormRelayMutation.graphql';
 import type { Comment } from '@social-media-app/shared';
 import './CommentForm.css';
 
-interface CommentFormProps {
+interface CommentFormRelayProps {
   postId: string;
   onCommentCreated?: (comment: Comment) => void;
 }
@@ -13,15 +13,32 @@ const MAX_COMMENT_LENGTH = 500;
 const WARNING_THRESHOLD = 450;
 
 /**
- * CommentForm component for creating comments on posts
- * Features character counter, validation, and error handling
+ * Relay-powered CommentForm component for creating comments on posts
+ * Uses Relay mutations with optimistic updates
  */
-export const CommentForm = ({ postId, onCommentCreated }: CommentFormProps) => {
+export const CommentFormRelay = ({ postId, onCommentCreated }: CommentFormRelayProps) => {
   const [content, setContent] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [displayError, setDisplayError] = useState<string | null>(null);
 
-  // Don't render if missing postId
+  const [commitCreateComment, isInFlight] = useMutation<CommentFormRelayMutation>(
+    graphql`
+      mutation CommentFormRelayMutation($input: CreateCommentInput!) {
+        createComment(input: $input) {
+          id
+          postId
+          userId
+          content
+          createdAt
+          author {
+            id
+            handle
+            username
+          }
+        }
+      }
+    `
+  );
+
   if (!postId) {
     return null;
   }
@@ -32,24 +49,17 @@ export const CommentForm = ({ postId, onCommentCreated }: CommentFormProps) => {
   const trimmedContent = content.trim();
   const isValid = trimmedContent.length > 0 && !isOverLimit;
 
-  /**
-   * Handle textarea content change
-   */
   const handleChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
-    // Clear error when user starts typing again
     if (displayError) {
       setDisplayError(null);
     }
   }, [displayError]);
 
-  /**
-   * Handle form submission
-   */
-  const handleSubmit = useCallback(async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = useCallback((e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!isValid || isSubmitting) {
+    if (!isValid || isInFlight) {
       return;
     }
 
@@ -61,35 +71,37 @@ export const CommentForm = ({ postId, onCommentCreated }: CommentFormProps) => {
       return;
     }
 
-    setIsSubmitting(true);
     setDisplayError(null);
 
-    try {
-      const result = await commentService.createComment(postId, trimmedContent);
+    commitCreateComment({
+      variables: {
+        input: {
+          postId,
+          content: trimmedContent,
+        },
+      },
+      onCompleted: (response) => {
+        setContent('');
+        if (onCommentCreated && response.createComment) {
+          onCommentCreated(response.createComment as Comment);
+        }
+      },
+      onError: (error) => {
+        console.error('Failed to create comment:', error);
+        const errorMsg = 'Failed to post comment. Please try again.';
+        setDisplayError(errorMsg);
+      },
+      updater: (store, data) => {
+        if (!data.createComment) return;
 
-      // Check if the operation was successful
-      if (!isSuccess(result)) {
-        const errorMessage = isError(result)
-          ? result.error.message
-          : 'Failed to create comment';
-        throw new Error(errorMessage);
-      }
-
-      // Clear input on success
-      setContent('');
-      setIsSubmitting(false);
-
-      // Call callback if provided
-      if (onCommentCreated) {
-        onCommentCreated(result.data.comment);
-      }
-    } catch (err) {
-      setIsSubmitting(false);
-      console.error('Failed to create comment:', err);
-      const errorMsg = 'Failed to post comment. Please try again.';
-      setDisplayError(errorMsg);
-    }
-  }, [isValid, isSubmitting, content, postId, onCommentCreated]);
+        const postRecord = store.get(postId);
+        if (postRecord) {
+          const currentCommentsCount = postRecord.getValue('commentsCount') as number || 0;
+          postRecord.setValue(currentCommentsCount + 1, 'commentsCount');
+        }
+      },
+    });
+  }, [isValid, isInFlight, content, postId, onCommentCreated, commitCreateComment]);
 
   const counterClasses = [
     'comment-form__counter',
@@ -113,7 +125,7 @@ export const CommentForm = ({ postId, onCommentCreated }: CommentFormProps) => {
           placeholder="Add a comment..."
           aria-label="Add a comment"
           aria-describedby={counterId}
-          disabled={isSubmitting}
+          disabled={isInFlight}
           rows={1}
           data-testid="comment-textarea"
         />
@@ -141,10 +153,10 @@ export const CommentForm = ({ postId, onCommentCreated }: CommentFormProps) => {
       <button
         type="submit"
         className="comment-form__submit"
-        disabled={!isValid || isSubmitting}
+        disabled={!isValid || isInFlight}
         data-testid="comment-submit-button"
       >
-        {isSubmitting ? 'Posting...' : 'Post Comment'}
+        {isInFlight ? 'Posting...' : 'Post Comment'}
       </button>
     </form>
   );

@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
+import { useFragment, useMutation, graphql } from 'react-relay';
 import { useNavigate } from 'react-router-dom';
-import type { Post, PostWithAuthor } from '@social-media-app/shared';
+import type { PostCardRelay_post$key } from './__generated__/PostCardRelay_post.graphql';
+import type { PostCardRelayLikeMutation } from './__generated__/PostCardRelayLikeMutation.graphql';
+import type { PostCardRelayUnlikeMutation } from './__generated__/PostCardRelayUnlikeMutation.graphql';
 import { MaterialIcon } from '../common/MaterialIcon';
-import { useLike } from '../../hooks/useLike';
 import { UserLink } from '../common/UserLink';
 import { FollowButton } from '../common/FollowButton';
 import { DevFeedSourceBadge, type FeedSource } from '../dev';
 import './PostCard.css';
 
-export interface PostCardProps {
-  post: Post | PostWithAuthor;
+export interface PostCardRelayProps {
+  post: PostCardRelay_post$key;
   currentUserId?: string;
   showComments?: boolean;
   compact?: boolean;
@@ -19,13 +21,11 @@ export interface PostCardProps {
 }
 
 /**
- * Reusable post card component
- * Displays post with image, caption, tags, and interaction buttons
- * Consistent UI across feed and post detail pages
- * @param variant - Layout variant: 'feed' (square images, compact) or 'detail' (full images, expanded)
+ * Relay-powered post card component
+ * Uses Relay mutations for optimistic updates
  */
-export const PostCard: React.FC<PostCardProps> = ({
-  post,
+export const PostCardRelay: React.FC<PostCardRelayProps> = ({
+  post: postRef,
   currentUserId,
   showComments = false,
   compact = false,
@@ -36,28 +36,95 @@ export const PostCard: React.FC<PostCardProps> = ({
   const navigate = useNavigate();
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  // Initialize like hook with post data
-  const {
-    isLiked,
-    likesCount,
-    isLoading: likeLoading,
-    toggleLike
-  } = useLike(post.id, {
-    initialIsLiked: ('isLiked' in post ? post.isLiked : false) || false,
-    initialLikesCount: post.likesCount || 0
-  });
+  const post = useFragment(
+    graphql`
+      fragment PostCardRelay_post on Post {
+        id
+        userId
+        userHandle: author {
+          handle
+          username
+        }
+        caption
+        imageUrl
+        likesCount
+        isLiked
+        commentsCount
+        createdAt
+      }
+    `,
+    postRef
+  );
 
-  // Determine if this is the current user's post
+  const [commitLike, isLikeInFlight] = useMutation<PostCardRelayLikeMutation>(
+    graphql`
+      mutation PostCardRelayLikeMutation($postId: ID!) {
+        likePost(postId: $postId) {
+          success
+          likesCount
+          isLiked
+        }
+      }
+    `
+  );
+
+  const [commitUnlike, isUnlikeInFlight] = useMutation<PostCardRelayUnlikeMutation>(
+    graphql`
+      mutation PostCardRelayUnlikeMutation($postId: ID!) {
+        unlikePost(postId: $postId) {
+          success
+          likesCount
+          isLiked
+        }
+      }
+    `
+  );
+
   const isOwnPost = currentUserId && currentUserId === post.userId;
+  const isLoading = isLikeInFlight || isUnlikeInFlight;
 
-  // Navigate to post detail page
+  const toggleLike = () => {
+    if (isLoading) return;
+
+    const mutation = post.isLiked ? commitUnlike : commitLike;
+    const optimisticLikesCount = post.isLiked
+      ? post.likesCount - 1
+      : post.likesCount + 1;
+
+    mutation({
+      variables: { postId: post.id },
+      optimisticResponse: {
+        [post.isLiked ? 'unlikePost' : 'likePost']: {
+          success: true,
+          likesCount: optimisticLikesCount,
+          isLiked: !post.isLiked,
+        },
+      },
+      optimisticUpdater: (store) => {
+        const postRecord = store.get(post.id);
+        if (postRecord) {
+          postRecord.setValue(!post.isLiked, 'isLiked');
+          postRecord.setValue(optimisticLikesCount, 'likesCount');
+        }
+      },
+      onCompleted: (response) => {
+        const result = post.isLiked ? response.unlikePost : response.likePost;
+        if (!result?.success) {
+          console.error('Failed to toggle like');
+        }
+      },
+      onError: (error) => {
+        console.error('Error toggling like:', error);
+      },
+    });
+  };
+
   const handleCommentClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     navigate(`/post/${post.id}`);
   };
 
-  // Build class names based on props
   const cardClasses = [
     'post-card',
     compact && 'post-card--compact',
@@ -66,10 +133,8 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   return (
     <article className={cardClasses} data-testid="post-card">
-      {/* Dev Badge (if enabled) */}
       {showDevBadge && <DevFeedSourceBadge feedSource={feedSource} />}
 
-      {/* Post Image */}
       <div className="post-card__image-container">
         {!imageLoaded && (
           <div className="image-loading-skeleton">
@@ -85,70 +150,54 @@ export const PostCard: React.FC<PostCardProps> = ({
         />
       </div>
 
-      {/* Post Info */}
       <div className="post-card__info">
-        {/* User Info & Follow Button */}
         <div className="post-card__header">
           <div className="post-card__user">
             <div className="post-card__avatar"></div>
             <UserLink
               userId={post.userId}
-              username={post.userHandle}
+              username={post.userHandle.handle}
               className="post-card__username"
             />
           </div>
           {!isOwnPost && <FollowButton userId={post.userId} />}
         </div>
 
-        {/* Caption */}
         {post.caption && (
           <p className="post-card__caption">{post.caption}</p>
         )}
 
-        {/* Tags */}
-        {'tags' in post && post.tags && post.tags.length > 0 && (
-          <div className="post-card__tags">
-            {post.tags.map((tag: string, index: number) => (
-              <span key={index} className="post-card__tag">
-                #{tag}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Timestamp */}
         <p className="post-card__timestamp">
           {new Date(post.createdAt).toLocaleString()}
         </p>
       </div>
 
-      {/* Actions */}
       <div className="post-card__actions">
         <div className="action-buttons">
-          {/* Like Button */}
           <div className="action-button-wrapper">
             <button
-              className={`tama-btn tama-btn--icon ${isLiked ? 'tama-btn--liked' : ''}`}
+              className={`tama-btn tama-btn--icon ${post.isLiked ? 'tama-btn--liked' : ''}`}
               onClick={toggleLike}
-              disabled={likeLoading}
-              aria-label={isLiked ? 'Unlike' : 'Like'}
+              disabled={isLoading}
+              aria-label={post.isLiked ? 'Unlike' : 'Like'}
               data-testid="like-button"
             >
               <MaterialIcon
                 name="favorite"
-                variant={isLiked ? 'filled' : 'outlined'}
+                variant={post.isLiked ? 'filled' : 'outlined'}
                 size="md"
               />
             </button>
-            <span className="action-count" data-testid="like-count">{likesCount}</span>
+            <span className="action-count" data-testid="like-count">
+              {post.likesCount}
+            </span>
           </div>
 
-          {/* Comment Button */}
           <div className="action-button-wrapper">
             <button
               className="tama-btn tama-btn--icon"
               onClick={handleCommentClick}
-              disabled={likeLoading}
+              disabled={isLoading}
               aria-label={`View ${post.commentsCount || 0} comments`}
               data-testid="comment-button"
             >
@@ -157,7 +206,6 @@ export const PostCard: React.FC<PostCardProps> = ({
             <span className="action-count">{post.commentsCount}</span>
           </div>
 
-          {/* Share Button */}
           <div className="action-button-wrapper">
             <button
               className="tama-btn tama-btn--icon"
