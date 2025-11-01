@@ -22,4 +22,5 @@ export {
 } from './context-builder.js';
 export { QueryExecutor } from './query-executor.js';
 export { FEED_QUERIES, TEST_PAGINATION, TEST_USERS } from './feed-query-constants.js';
+export { REFACTORED_QUERIES } from './refactored-query-constants.js';
 export { FeedMatchers } from './feed-matchers.js';
