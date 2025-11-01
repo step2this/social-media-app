@@ -82,6 +82,13 @@ export {
 } from './fixtures/follow-fixtures.js';
 
 export {
+  createMockLikeStatus,
+  createMockLiked,
+  createMockNotLiked,
+  type MockLikeStatus
+} from './fixtures/like-fixtures.js';
+
+export {
   type GraphQLResult,
   type SingleResult,
   type GraphQLErrorResponse,

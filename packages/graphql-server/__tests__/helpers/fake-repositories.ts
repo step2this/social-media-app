@@ -8,6 +8,7 @@
 
 import type { ICommentRepository, Comment } from '../../src/domain/repositories/ICommentRepository';
 import type { IFollowRepository, FollowStatus } from '../../src/domain/repositories/IFollowRepository';
+import type { ILikeRepository, LikeStatus } from '../../src/domain/repositories/ILikeRepository';
 import type { PaginatedResult } from '../../src/shared/types/pagination';
 import { success, type Result } from '../../src/shared/types/result';
 
@@ -50,6 +51,23 @@ export class FakeFollowRepository implements IFollowRepository {
       isFollowing: false,
       followersCount: 0,
       followingCount: 0,
+    };
+    return success(status);
+  }
+}
+
+/**
+ * Fake Like Repository
+ * In-memory implementation for testing like use cases.
+ */
+export class FakeLikeRepository implements ILikeRepository {
+  constructor(private likeStatus: Map<string, LikeStatus> = new Map()) {}
+
+  async getPostLikeStatus(userId: string, postId: string): Promise<Result<LikeStatus, Error>> {
+    const key = `${userId}-${postId}`;
+    const status = this.likeStatus.get(key) || {
+      isLiked: false,
+      likeCount: 0,
     };
     return success(status);
   }
