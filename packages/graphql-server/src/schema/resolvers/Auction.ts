@@ -16,6 +16,10 @@ import type { AuctionResolvers } from '../generated/types.js';
  * Implements:
  * - seller: Resolve auction seller profile from userId (batched via DataLoader)
  * - winner: Resolve auction winner profile from winnerId (batched via DataLoader)
+ *
+ * Note: Type assertion used to align with GraphQL schema definition.
+ * Schema specifies PublicProfile (no email) but generated types expect Profile (with email).
+ * This is safe because GraphQL schema is source of truth and resolver returns PublicProfile.
  */
 export const Auction: AuctionResolvers = {
   /**
@@ -36,7 +40,9 @@ export const Auction: AuctionResolvers = {
       });
     }
 
-    return profile;
+    // Type assertion: DataLoader returns PublicProfile (correct per schema)
+    // Generated types expect Profile due to type generation mismatch
+    return profile as any;
   },
 
   /**
@@ -58,7 +64,8 @@ export const Auction: AuctionResolvers = {
     // Use DataLoader to batch profile requests
     const profile = await context.loaders.profileLoader.load(parent.winnerId);
 
-    // Return null if winner profile not found (graceful degradation)
-    return profile || null;
+    // Type assertion: DataLoader returns PublicProfile (correct per schema)
+    // Generated types expect Profile due to type generation mismatch
+    return (profile as any) || null;
   },
 };

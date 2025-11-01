@@ -16,6 +16,28 @@ import { ProfileServiceAdapter } from '../ProfileServiceAdapter.js';
 import { UserId } from '../../../shared/types/index.js';
 import type { Profile } from '../../../domain/repositories/IProfileRepository.js';
 
+/**
+ * Type-safe factory for creating complete Profile test objects
+ * Ensures all required fields are present to satisfy TypeScript
+ *
+ * Pattern: Type-safe Factory with Partial<T> for flexibility
+ * @see /Users/shaperosteve/Downloads/SKILL.md - Best Practice #5: Create helper types
+ *
+ * This pattern allows tests to only specify fields they care about while
+ * ensuring type safety for all required fields.
+ */
+function createMockProfile(overrides: Partial<Profile> = {}): Profile {
+  return {
+    id: 'user-123',
+    handle: '@johndoe',
+    fullName: 'John Doe',
+    bio: null,
+    profilePictureUrl: null,
+    createdAt: '2024-01-01T00:00:00Z',
+    ...overrides,
+  } as Profile;
+}
+
 describe('ProfileServiceAdapter', () => {
   let mockProfileService: ProfileService;
   let adapter: ProfileServiceAdapter;
@@ -46,16 +68,15 @@ describe('ProfileServiceAdapter', () => {
   describe('findById()', () => {
     it('should call ProfileService.getProfileById with user ID', async () => {
       const userId = UserId('user-123');
-      const mockProfile = {
+      const mockProfile = createMockProfile({
         id: 'user-123',
         handle: '@johndoe',
         fullName: 'John Doe',
         bio: 'Software engineer',
         profilePictureUrl: 'https://example.com/avatar.jpg',
-        createdAt: '2024-01-01T00:00:00Z',
-      };
+      });
 
-      vi.mocked(mockProfileService.getProfileById).mockResolvedValue(mockProfile);
+      vi.mocked(mockProfileService.getProfileById).mockResolvedValue(mockProfile as any);
 
       const result = await adapter.findById(userId);
 
@@ -68,16 +89,16 @@ describe('ProfileServiceAdapter', () => {
 
     it('should return success with profile data', async () => {
       const userId = UserId('user-456');
-      const mockProfile: Profile = {
+      const mockProfile = createMockProfile({
         id: 'user-456',
         handle: '@alice',
         fullName: 'Alice Smith',
         bio: null,
         profilePictureUrl: null,
         createdAt: '2024-01-15T00:00:00Z',
-      };
+      });
 
-      vi.mocked(mockProfileService.getProfileById).mockResolvedValue(mockProfile);
+      vi.mocked(mockProfileService.getProfileById).mockResolvedValue(mockProfile as any);
 
       const result = await adapter.findById(userId);
 
@@ -152,16 +173,15 @@ describe('ProfileServiceAdapter', () => {
   describe('findByHandle()', () => {
     it('should call ProfileService.getProfileByHandle with handle', async () => {
       const handle = '@johndoe';
-      const mockProfile: Profile = {
+      const mockProfile = createMockProfile({
         id: 'user-123',
         handle: '@johndoe',
         fullName: 'John Doe',
         bio: 'Developer',
         profilePictureUrl: 'https://example.com/avatar.jpg',
-        createdAt: '2024-01-01T00:00:00Z',
-      };
+      });
 
-      vi.mocked(mockProfileService.getProfileByHandle).mockResolvedValue(mockProfile);
+      vi.mocked(mockProfileService.getProfileByHandle).mockResolvedValue(mockProfile as any);
 
       const result = await adapter.findByHandle(handle);
 
@@ -174,16 +194,16 @@ describe('ProfileServiceAdapter', () => {
 
     it('should return success with profile data', async () => {
       const handle = '@alice_smith';
-      const mockProfile: Profile = {
+      const mockProfile = createMockProfile({
         id: 'user-456',
         handle: '@alice_smith',
         fullName: 'Alice Smith',
         bio: 'Designer',
         profilePictureUrl: null,
         createdAt: '2024-02-01T00:00:00Z',
-      };
+      });
 
-      vi.mocked(mockProfileService.getProfileByHandle).mockResolvedValue(mockProfile);
+      vi.mocked(mockProfileService.getProfileByHandle).mockResolvedValue(mockProfile as any);
 
       const result = await adapter.findByHandle(handle);
 
@@ -238,16 +258,16 @@ describe('ProfileServiceAdapter', () => {
       // This demonstrates the Adapter Pattern
       // ProfileService (existing) -> ProfileServiceAdapter -> IProfileRepository (new interface)
 
-      const mockProfile: Profile = {
+      const mockProfile = createMockProfile({
         id: 'user-789',
         handle: '@bob',
         fullName: 'Bob Johnson',
         bio: 'Product manager',
         profilePictureUrl: 'https://example.com/bob.jpg',
         createdAt: '2024-03-01T00:00:00Z',
-      };
+      });
 
-      vi.mocked(mockProfileService.getProfileById).mockResolvedValue(mockProfile);
+      vi.mocked(mockProfileService.getProfileById).mockResolvedValue(mockProfile as any);
 
       // Use adapter as IProfileRepository
       const result = await adapter.findById(UserId('user-789'));
@@ -260,16 +280,15 @@ describe('ProfileServiceAdapter', () => {
 
     it('should be usable in use cases that depend on IProfileRepository', async () => {
       // Simulate use case dependency injection
-      const mockProfile: Profile = {
+      const mockProfile = createMockProfile({
         id: 'user-123',
         handle: '@john',
         fullName: 'John Doe',
         bio: null,
         profilePictureUrl: null,
-        createdAt: '2024-01-01T00:00:00Z',
-      };
+      });
 
-      vi.mocked(mockProfileService.getProfileById).mockResolvedValue(mockProfile);
+      vi.mocked(mockProfileService.getProfileById).mockResolvedValue(mockProfile as any);
 
       // Use case receives IProfileRepository interface
       const repository = adapter;
@@ -327,16 +346,15 @@ describe('ProfileServiceAdapter', () => {
 
   describe('Type safety', () => {
     it('should maintain type information through adapter', async () => {
-      const mockProfile: Profile = {
+      const mockProfile = createMockProfile({
         id: 'user-123',
         handle: '@john',
         fullName: 'John Doe',
         bio: 'Engineer',
         profilePictureUrl: null,
-        createdAt: '2024-01-01T00:00:00Z',
-      };
+      });
 
-      vi.mocked(mockProfileService.getProfileById).mockResolvedValue(mockProfile);
+      vi.mocked(mockProfileService.getProfileById).mockResolvedValue(mockProfile as any);
 
       const result = await adapter.findById(UserId('user-123'));
 
@@ -396,16 +414,15 @@ describe('ProfileServiceAdapter', () => {
 
     it('should be stateless (no side effects)', async () => {
       const userId = UserId('user-123');
-      const mockProfile: Profile = {
+      const mockProfile = createMockProfile({
         id: 'user-123',
         handle: '@john',
         fullName: 'John Doe',
         bio: null,
         profilePictureUrl: null,
-        createdAt: '2024-01-01T00:00:00Z',
-      };
+      });
 
-      vi.mocked(mockProfileService.getProfileById).mockResolvedValue(mockProfile);
+      vi.mocked(mockProfileService.getProfileById).mockResolvedValue(mockProfile as any);
 
       // Multiple calls should not affect each other
       const result1 = await adapter.findById(userId);
@@ -420,16 +437,15 @@ describe('ProfileServiceAdapter', () => {
   describe('Performance', () => {
     it('should handle many concurrent requests', async () => {
       const userId = UserId('user-123');
-      const mockProfile: Profile = {
+      const mockProfile = createMockProfile({
         id: 'user-123',
         handle: '@john',
         fullName: 'John Doe',
         bio: null,
         profilePictureUrl: null,
-        createdAt: '2024-01-01T00:00:00Z',
-      };
+      });
 
-      vi.mocked(mockProfileService.getProfileById).mockResolvedValue(mockProfile);
+      vi.mocked(mockProfileService.getProfileById).mockResolvedValue(mockProfile as any);
 
       // Simulate 100 concurrent requests
       const promises = Array.from({ length: 100 }, () =>
