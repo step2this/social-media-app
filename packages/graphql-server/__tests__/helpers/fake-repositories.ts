@@ -9,6 +9,7 @@
 import type { ICommentRepository, Comment } from '../../src/domain/repositories/ICommentRepository';
 import type { IFollowRepository, FollowStatus } from '../../src/domain/repositories/IFollowRepository';
 import type { ILikeRepository, LikeStatus } from '../../src/domain/repositories/ILikeRepository';
+import type { INotificationRepository, Notification } from '../../src/domain/repositories/INotificationRepository';
 import type { PaginatedResult } from '../../src/shared/types/pagination';
 import { success, type Result } from '../../src/shared/types/result';
 
@@ -70,5 +71,33 @@ export class FakeLikeRepository implements ILikeRepository {
       likeCount: 0,
     };
     return success(status);
+  }
+}
+
+/**
+ * Fake Notification Repository
+ * In-memory implementation for testing notification use cases.
+ */
+export class FakeNotificationRepository implements INotificationRepository {
+  constructor(private notifications: Notification[] = []) {}
+
+  async getNotifications(
+    userId: string,
+    limit: number,
+    cursor?: string
+  ): Promise<Result<PaginatedResult<Notification>, Error>> {
+    const filtered = this.notifications.filter((n) => n.userId === userId);
+    const items = filtered.slice(0, limit);
+
+    return success({
+      items,
+      hasMore: filtered.length > limit,
+      nextCursor: filtered.length > limit ? 'next-cursor' : null,
+    });
+  }
+
+  async getUnreadCount(userId: string): Promise<Result<number, Error>> {
+    const count = this.notifications.filter((n) => n.userId === userId && !n.read).length;
+    return success(count);
   }
 }

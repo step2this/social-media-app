@@ -89,6 +89,14 @@ export {
 } from './fixtures/like-fixtures.js';
 
 export {
+  createMockNotification,
+  createMockNotifications,
+  createMockUnreadNotification,
+  createMockReadNotification,
+  type MockNotification
+} from './fixtures/notification-fixtures.js';
+
+export {
   type GraphQLResult,
   type SingleResult,
   type GraphQLErrorResponse,
