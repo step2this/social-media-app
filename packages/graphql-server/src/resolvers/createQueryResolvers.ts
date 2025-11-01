@@ -30,6 +30,8 @@ import { createFollowingFeedResolver, createExploreFeedResolver } from './feed/i
 import { createCommentsResolver } from './comment/commentsResolver.js';
 import { createFollowStatusResolver } from './follow/followStatusResolver.js';
 import { createPostLikeStatusResolver } from './like/postLikeStatusResolver.js';
+import { createNotificationsResolver } from './notification/notificationsResolver.js';
+import { createUnreadNotificationsCountResolver } from './notification/unreadNotificationsCountResolver.js';
 import { requireAuth } from '../infrastructure/resolvers/helpers/requireAuth.js';
 import { requireValidCursor } from '../infrastructure/resolvers/helpers/validateCursor.js';
 import { buildConnection } from '../infrastructure/resolvers/helpers/ConnectionBuilder.js';
@@ -145,29 +147,14 @@ export function createQueryResolvers(): QueryResolvers {
     },
 
     // @ts-ignore - DAL Notification type differs from GraphQL Notification type (status enum values differ)
-    notifications: async (_parent, args, context) => {
-      requireAuth(context, 'access notifications');
-      const cursor = requireValidCursor(args.cursor);
-
-      const result = await context.services.notificationService.getNotifications({
-        userId: context.userId,
-        limit: args.limit || 20,
-        cursor,
-      });
-
-      return buildConnection({
-        items: result.notifications,
-        hasMore: result.hasMore,
-        getCursorKeys: (notification) => ({
-          PK: `USER#${context.userId}`,
-          SK: `NOTIFICATION#${notification.createdAt}#${notification.id}`,
-        }),
-      });
+    notifications: async (parent, args, context, info) => {
+      const resolver = createNotificationsResolver(context.container);
+      return resolver(parent, args, context, info);
     },
 
-    unreadNotificationsCount: async (_parent, _args, context) => {
-      requireAuth(context, 'access notifications');
-      return context.services.notificationService.getUnreadCount(context.userId);
+    unreadNotificationsCount: async (parent, args, context, info) => {
+      const resolver = createUnreadNotificationsCountResolver(context.container);
+      return resolver(parent, args, context, info);
     },
 
     // @ts-ignore - DAL Auction type differs from GraphQL Auction type (seller/winner field resolvers handle missing fields)

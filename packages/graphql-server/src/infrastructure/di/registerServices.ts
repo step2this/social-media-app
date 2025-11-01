@@ -33,6 +33,7 @@ import { FeedServiceAdapter } from '../adapters/FeedServiceAdapter.js';
 import { CommentServiceAdapter } from '../adapters/CommentServiceAdapter.js';
 import { FollowServiceAdapter } from '../adapters/FollowServiceAdapter.js';
 import { LikeServiceAdapter } from '../adapters/LikeServiceAdapter.js';
+import { NotificationServiceAdapter } from '../adapters/NotificationServiceAdapter.js';
 
 // Repositories (interfaces)
 import type { IProfileRepository } from '../../domain/repositories/IProfileRepository.js';
@@ -41,6 +42,7 @@ import type { IFeedRepository } from '../../domain/repositories/IFeedRepository.
 import type { ICommentRepository } from '../../domain/repositories/ICommentRepository.js';
 import type { IFollowRepository } from '../../domain/repositories/IFollowRepository.js';
 import type { ILikeRepository } from '../../domain/repositories/ILikeRepository.js';
+import type { INotificationRepository } from '../../domain/repositories/INotificationRepository.js';
 
 // Use Cases
 import { GetCurrentUserProfile } from '../../application/use-cases/profile/GetCurrentUserProfile.js';
@@ -52,6 +54,8 @@ import { GetExploreFeed } from '../../application/use-cases/feed/GetExploreFeed.
 import { GetCommentsByPost } from '../../application/use-cases/comment/GetCommentsByPost.js';
 import { GetFollowStatus } from '../../application/use-cases/follow/GetFollowStatus.js';
 import { GetPostLikeStatus } from '../../application/use-cases/like/GetPostLikeStatus.js';
+import { GetNotifications } from '../../application/use-cases/notification/GetNotifications.js';
+import { GetUnreadNotificationsCount } from '../../application/use-cases/notification/GetUnreadNotificationsCount.js';
 
 /**
  * Register all services in the container.
@@ -109,6 +113,10 @@ export function registerServices(container: Container, context: GraphQLContext):
     new LikeServiceAdapter(context.services.likeService)
   );
 
+  container.register<INotificationRepository>('NotificationRepository', () =>
+    new NotificationServiceAdapter(context.services.notificationService)
+  );
+
   /**
    * Layer 2: Use Cases
    *
@@ -156,5 +164,14 @@ export function registerServices(container: Container, context: GraphQLContext):
   // Like use cases
   container.register<GetPostLikeStatus>('GetPostLikeStatus', () =>
     new GetPostLikeStatus(container.resolve('LikeRepository'))
+  );
+
+  // Notification use cases
+  container.register<GetNotifications>('GetNotifications', () =>
+    new GetNotifications(container.resolve('NotificationRepository'))
+  );
+
+  container.register<GetUnreadNotificationsCount>('GetUnreadNotificationsCount', () =>
+    new GetUnreadNotificationsCount(container.resolve('NotificationRepository'))
   );
 }
