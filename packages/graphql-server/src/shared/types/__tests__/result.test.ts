@@ -484,7 +484,7 @@ describe('Result Type', () => {
       const validResult = parseJSON<{ name: string }>('{"name": "John"}');
       expect(validResult.success).toBe(true);
 
-      const invalidResult = parseJSON('invalid json');
+      const invalidResult = parseJSON<unknown>('invalid json');
       expect(invalidResult.success).toBe(false);
     });
   });

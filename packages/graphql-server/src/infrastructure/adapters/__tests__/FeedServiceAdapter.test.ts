@@ -1,6 +1,6 @@
 /**
  * FeedServiceAdapter Tests
- * 
+ *
  * TDD for FeedService adapter following established patterns.
  */
 

@@ -1,9 +1,9 @@
 /**
  * PostServiceAdapter
- * 
+ *
  * Adapter that bridges PostService to IPostRepository interface.
  * Applies the Adapter Pattern to decouple from concrete PostService.
- * 
+ *
  * Features:
  * - Adapts PostService methods to IPostRepository interface
  * - Wraps errors in Result type for type-safe error handling
@@ -19,7 +19,7 @@ import { CursorCodec } from '../pagination/CursorCodec.js';
 
 /**
  * PostServiceAdapter - Adapts PostService to IPostRepository
- * 
+ *
  * This adapter wraps the existing PostService and implements the
  * IPostRepository interface.
  */
@@ -28,7 +28,7 @@ export class PostServiceAdapter implements IPostRepository {
 
   /**
    * Creates a PostServiceAdapter.
-   * 
+   *
    * @param postService - The PostService instance to adapt
    */
   constructor(private readonly postService: PostService) {
@@ -38,7 +38,7 @@ export class PostServiceAdapter implements IPostRepository {
 
   /**
    * Find post by ID.
-   * 
+   *
    * @param id - The post ID (branded type)
    * @returns AsyncResult with Post if found, null if not found, or error on failure
    */
@@ -60,7 +60,7 @@ export class PostServiceAdapter implements IPostRepository {
 
   /**
    * Find posts by user (paginated).
-   * 
+   *
    * @param userId - The user whose posts to fetch
    * @param pagination - Pagination arguments
    * @returns AsyncResult with Connection of posts or error on failure

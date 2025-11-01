@@ -1,6 +1,6 @@
 /**
  * FeedServiceAdapter
- * 
+ *
  * Adapter that bridges FeedService to IFeedRepository interface.
  * Handles different feed types (following, explore) with pagination.
  */

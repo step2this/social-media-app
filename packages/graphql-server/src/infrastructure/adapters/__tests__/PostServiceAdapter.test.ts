@@ -1,6 +1,6 @@
 /**
  * PostServiceAdapter Tests
- * 
+ *
  * TDD for PostService adapter following established patterns.
  */
 
@@ -144,9 +144,9 @@ describe('PostServiceAdapter', () => {
         hasMore: false,
       });
 
-      await adapter.findByUser(UserId('user-123'), { 
-        first: 20, 
-        after: 'cursor-123' as any 
+      await adapter.findByUser(UserId('user-123'), {
+        first: 20,
+        after: 'cursor-123' as any
       });
 
       expect(mockPostService.getPostsByUser).toHaveBeenCalledWith(

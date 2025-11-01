@@ -1,9 +1,9 @@
 /**
  * ProfileServiceAdapter Tests
- * 
+ *
  * Test-Driven Development (TDD) for ProfileService adapter.
  * The adapter bridges the existing ProfileService to IProfileRepository interface.
- * 
+ *
  * This is the Adapter Pattern in action - we're adapting an existing service
  * to a new interface without modifying the existing service.
  */
