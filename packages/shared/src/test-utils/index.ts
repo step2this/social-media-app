@@ -69,6 +69,19 @@ export {
 } from './fixtures/feed-fixtures.js';
 
 export {
+  createMockComment,
+  createMockComments,
+  type MockComment
+} from './fixtures/comment-fixtures.js';
+
+export {
+  createMockFollowStatus,
+  createMockFollowing,
+  createMockNotFollowing,
+  type MockFollowStatus
+} from './fixtures/follow-fixtures.js';
+
+export {
   type GraphQLResult,
   type SingleResult,
   type GraphQLErrorResponse,
