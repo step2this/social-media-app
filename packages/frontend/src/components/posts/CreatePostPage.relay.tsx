@@ -1,10 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, graphql } from 'react-relay';
-import type { CreatePostPageRelayMutation } from './__generated__/CreatePostPageRelayMutation.graphql';
 import { MaterialIcon } from '../common/MaterialIcon';
 import { useImagePreview } from '../../hooks/useImagePreview';
 import { useCreatePostForm } from '../../hooks/useCreatePostForm';
+import { useCreatePost } from '../../hooks/useCreatePost';
 import './CreatePostPage.css';
 
 export const CreatePostPageRelay: React.FC = () => {
@@ -32,27 +31,7 @@ export const CreatePostPageRelay: React.FC = () => {
 
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const [commitCreatePost, isSubmitting] = useMutation<CreatePostPageRelayMutation>(
-    graphql`
-      mutation CreatePostPageRelayMutation($input: CreatePostInput!) {
-        createPost(input: $input) {
-          post {
-            id
-            imageUrl
-            caption
-            createdAt
-            author {
-              id
-              handle
-              username
-            }
-          }
-          uploadUrl
-          thumbnailUploadUrl
-        }
-      }
-    `
-  );
+  const { createPost, isInFlight: isSubmitting, error: mutationError } = useCreatePost();
 
   const uploadImageToS3 = async (uploadUrl: string, file: File): Promise<void> => {
     const response = await fetch(uploadUrl, {
@@ -83,36 +62,28 @@ export const CreatePostPageRelay: React.FC = () => {
 
     setActionError(null);
 
-    commitCreatePost({
-      variables: {
-        input: {
-          fileType: selectedFile.type,
-          caption: caption.trim() || null,
-        },
-      },
-      onCompleted: async (response) => {
-        try {
-          if (!response.createPost) {
-            throw new Error('Failed to create post');
-          }
-
-          await uploadImageToS3(response.createPost.uploadUrl, selectedFile);
-
-          resetForm();
-          clearImage();
-
-          navigate(`/post/${response.createPost.post.id}`);
-        } catch (error) {
-          console.error('Error uploading image:', error);
-          setActionError('Failed to upload image. Please try again.');
-        }
-      },
-      onError: (error) => {
-        console.error('Failed to create post:', error);
-        setActionError(error.message || 'Failed to create post');
-      },
+    const result = await createPost({
+      fileType: selectedFile.type,
+      caption: caption.trim() || null,
     });
-  }, [validateForm, selectedFile, caption, commitCreatePost, resetForm, clearImage, navigate]);
+
+    if (!result) {
+      setActionError(mutationError?.message || 'Failed to create post');
+      return;
+    }
+
+    try {
+      await uploadImageToS3(result.uploadUrl, selectedFile);
+
+      resetForm();
+      clearImage();
+
+      navigate(`/post/${result.post.id}`);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setActionError('Failed to upload image. Please try again.');
+    }
+  }, [validateForm, selectedFile, caption, createPost, mutationError, resetForm, clearImage, navigate]);
 
   return (
     <div className="create-post-page">
