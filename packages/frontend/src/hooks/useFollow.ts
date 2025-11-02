@@ -42,8 +42,7 @@ export function useFollow(
   const {
     initialIsFollowing = false,
     initialFollowersCount = 0,
-    initialFollowingCount = 0,
-    onFollowStatusChange
+    initialFollowingCount = 0
   } = options;
 
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
@@ -95,7 +94,7 @@ export function useFollow(
         setFollowersCount(response.followUser.followersCount);
         setFollowingCount(response.followUser.followingCount);
       },
-      onError: (err) => {
+      onError: (_err) => {
         // Rollback on error
         setIsFollowing(originalIsFollowing);
         setFollowersCount(originalFollowersCount);
@@ -122,7 +121,7 @@ export function useFollow(
         setFollowersCount(response.unfollowUser.followersCount);
         setFollowingCount(response.unfollowUser.followingCount);
       },
-      onError: (err) => {
+      onError: (_err) => {
         // Rollback on error
         setIsFollowing(originalIsFollowing);
         setFollowersCount(originalFollowersCount);
