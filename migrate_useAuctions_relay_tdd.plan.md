@@ -24,7 +24,7 @@ Migrate `useAuctions` hook from REST service to Relay `useLazyLoadQuery` with **
 it('should fetch auctions on mount', async () => {
   const environment = createMockEnvironment();
   const auctions = createMockAuctions(3);
-  
+
   const { result } = renderHook(() => useAuctions(), {
     wrapper: ({ children }) => (
       <RelayEnvironmentProvider environment={environment}>
@@ -63,7 +63,7 @@ it('should fetch auctions on mount', async () => {
 ```typescript
 it('should handle empty auction list', async () => {
   const environment = createMockEnvironment();
-  
+
   const { result } = renderHook(() => useAuctions(), {
     wrapper: ({ children }) => (
       <RelayEnvironmentProvider environment={environment}>
@@ -97,7 +97,7 @@ it('should handle empty auction list', async () => {
 ```typescript
 it('should handle API errors gracefully', async () => {
   const environment = createMockEnvironment();
-  
+
   const { result } = renderHook(() => useAuctions(), {
     wrapper: ({ children }) => (
       <RelayEnvironmentProvider environment={environment}>
@@ -126,7 +126,7 @@ it('should handle API errors gracefully', async () => {
 it('should filter auctions by status', async () => {
   const environment = createMockEnvironment();
   const activeAuctions = createMockAuctions(2, { status: 'ACTIVE' });
-  
+
   const { result } = renderHook(
     () => useAuctions({ status: 'ACTIVE' }),
     {
@@ -167,7 +167,7 @@ it('should filter auctions by status', async () => {
 it('should indicate when more results are available', async () => {
   const environment = createMockEnvironment();
   const auctions = createMockAuctions(10);
-  
+
   const { result } = renderHook(() => useAuctions(), {
     wrapper: ({ children }) => (
       <RelayEnvironmentProvider environment={environment}>
@@ -199,7 +199,7 @@ it('should indicate when more results are available', async () => {
 it('should refetch auctions from the beginning', async () => {
   const environment = createMockEnvironment();
   const initialAuctions = createMockAuctions(3);
-  
+
   const { result } = renderHook(() => useAuctions(), {
     wrapper: ({ children }) => (
       <RelayEnvironmentProvider environment={environment}>

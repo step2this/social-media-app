@@ -256,7 +256,7 @@ Remove old service implementation files (already deleted, just confirm):
 ```bash
 # These should already be deleted:
 # - FeedService.graphql.ts
-# - ProfileService.graphql.ts  
+# - ProfileService.graphql.ts
 # - PostService.graphql.ts
 # - CommentService.graphql.ts
 # - LikeService.graphql.ts
@@ -409,7 +409,7 @@ npm run typecheck
 ## Estimated Time
 
 - Phase 2.1 (Pages): 10 minutes
-- Phase 2.2 (Main Components): 20 minutes  
+- Phase 2.2 (Main Components): 20 minutes
 - Phase 2.3 (Sub-components): 10 minutes
 - Phase 2.4-2.5 (Update imports/names): 15 minutes
 - Phase 2.6 (Test files): 10 minutes

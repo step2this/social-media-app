@@ -122,7 +122,7 @@ markAsRead(['post-1', 'post-2', 'post-3']);
 ### Component: `FeedItemWrapper`
 
 ```typescript
-<FeedItemWrapper 
+<FeedItemWrapper
   post={post}           // PostWithAuthor data
   compact={true}        // Optional: compact display mode
 />

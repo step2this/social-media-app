@@ -8,7 +8,7 @@ Extract the `createPost` Relay mutation from `CreatePostPageRelay.tsx` into a re
   - Uses `useMutation` inline (lines 35-55)
   - Handles S3 upload and navigation
   - 288 lines with mixed concerns
-  
+
 - **Pattern:** Mutation logic is embedded in component
 - **Issue:** Not reusable, harder to test, violates single responsibility
 
