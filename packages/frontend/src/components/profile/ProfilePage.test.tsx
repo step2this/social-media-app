@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { RelayEnvironmentProvider } from 'react-relay';
 import { BrowserRouter, Routes, Route, MemoryRouter } from 'react-router-dom';
-import { ProfilePageRelay } from './ProfilePage.relay';
+import { ProfilePage } from './ProfilePage';
 import { createMockRelayEnvironment, resolveMostRecentOperation } from '../../test-utils/relay-test-utils';
 import type { MockEnvironment } from '../../test-utils/relay-test-utils';
 
@@ -21,7 +21,7 @@ describe('ProfilePage (Relay)', () => {
       <MemoryRouter initialEntries={['/profile/testuser']}>
         <RelayEnvironmentProvider environment={environment}>
           <Routes>
-            <Route path="/profile/:handle" element={<ProfilePageRelay />} />
+            <Route path="/profile/:handle" element={<ProfilePage />} />
           </Routes>
         </RelayEnvironmentProvider>
       </MemoryRouter>
@@ -67,7 +67,7 @@ describe('ProfilePage (Relay)', () => {
       <MemoryRouter initialEntries={['/profile/testuser']}>
         <RelayEnvironmentProvider environment={environment}>
           <Routes>
-            <Route path="/profile/:handle" element={<ProfilePageRelay />} />
+            <Route path="/profile/:handle" element={<ProfilePage />} />
           </Routes>
         </RelayEnvironmentProvider>
       </MemoryRouter>
@@ -86,7 +86,7 @@ describe('ProfilePage (Relay)', () => {
       <MemoryRouter initialEntries={['/profile/testuser']}>
         <RelayEnvironmentProvider environment={environment}>
           <Routes>
-            <Route path="/profile/:handle" element={<ProfilePageRelay />} />
+            <Route path="/profile/:handle" element={<ProfilePage />} />
           </Routes>
         </RelayEnvironmentProvider>
       </MemoryRouter>
@@ -103,7 +103,7 @@ describe('ProfilePage (Relay)', () => {
     render(
       <BrowserRouter>
         <RelayEnvironmentProvider environment={environment}>
-          <ProfilePageRelay />
+          <ProfilePage />
         </RelayEnvironmentProvider>
       </BrowserRouter>
     );
@@ -138,7 +138,7 @@ describe('ProfilePage (Relay)', () => {
       <MemoryRouter initialEntries={['/profile/testuser']}>
         <RelayEnvironmentProvider environment={environment}>
           <Routes>
-            <Route path="/profile/:handle" element={<ProfilePageRelay />} />
+            <Route path="/profile/:handle" element={<ProfilePage />} />
           </Routes>
         </RelayEnvironmentProvider>
       </MemoryRouter>
@@ -188,7 +188,7 @@ describe('ProfilePage (Relay)', () => {
       <MemoryRouter initialEntries={['/profile/testuser']}>
         <RelayEnvironmentProvider environment={environment}>
           <Routes>
-            <Route path="/profile/:handle" element={<ProfilePageRelay />} />
+            <Route path="/profile/:handle" element={<ProfilePage />} />
           </Routes>
         </RelayEnvironmentProvider>
       </MemoryRouter>

@@ -1,5 +1,5 @@
 /**
- * NotificationBellRelay Tests
+ * NotificationBell Tests
  *
  * Clean, DRY tests using:
  * - Existing notification fixtures (notificationFixtures.ts)
@@ -13,7 +13,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { RelayEnvironmentProvider } from 'react-relay';
 import userEvent from '@testing-library/user-event';
-import { NotificationBellRelay } from './NotificationBellRelay';
+import { NotificationBell } from './NotificationBell';
 import {
   createMockRelayEnvironment,
   resolveMostRecentOperation,
@@ -21,7 +21,7 @@ import {
 import { NotificationBellScenarios } from '../../test-utils/relay-fixture-adapters';
 
 /**
- * Helper to render NotificationBellRelay with Relay environment
+ * Helper to render NotificationBell with Relay environment
  * Follows pattern from existing test-providers.tsx
  */
 function renderNotificationBell() {
@@ -30,14 +30,14 @@ function renderNotificationBell() {
 
   const utils = render(
     <RelayEnvironmentProvider environment={environment}>
-      <NotificationBellRelay />
+      <NotificationBell />
     </RelayEnvironmentProvider>
   );
 
   return { environment, user, ...utils };
 }
 
-describe('NotificationBellRelay', () => {
+describe('NotificationBell', () => {
   describe('Initial Render', () => {
     it('renders bell icon', () => {
       const { environment } = renderNotificationBell();
@@ -216,7 +216,7 @@ describe('NotificationBellRelay', () => {
       expect(operations).toHaveLength(1);
 
       // Verify it's the NotificationBellQuery
-      expect(operations[0].request.node.operation.name).toBe('NotificationBellRelayQuery');
+      expect(operations[0].request.node.operation.name).toBe('NotificationBellQuery');
 
       resolveMostRecentOperation(environment, NotificationBellScenarios.withUnread(3));
     });
@@ -231,7 +231,7 @@ describe('NotificationBellRelay', () => {
       // Remount
       render(
         <RelayEnvironmentProvider environment={environment}>
-          <NotificationBellRelay />
+          <NotificationBell />
         </RelayEnvironmentProvider>
       );
 

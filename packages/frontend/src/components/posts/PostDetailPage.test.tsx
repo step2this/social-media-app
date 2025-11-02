@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { RelayEnvironmentProvider } from 'react-relay';
 import { BrowserRouter, Routes, Route, MemoryRouter } from 'react-router-dom';
-import { PostDetailPageRelay } from './PostDetailPage.relay';
+import { PostDetailPage } from './PostDetailPage';
 import { createMockRelayEnvironment, resolveMostRecentOperation } from '../../test-utils/relay-test-utils';
 import type { MockEnvironment } from '../../test-utils/relay-test-utils';
 
@@ -21,7 +21,7 @@ describe('PostDetailPage (Relay)', () => {
       <MemoryRouter initialEntries={['/post/123']}>
         <RelayEnvironmentProvider environment={environment}>
           <Routes>
-            <Route path="/post/:postId" element={<PostDetailPageRelay />} />
+            <Route path="/post/:postId" element={<PostDetailPage />} />
           </Routes>
         </RelayEnvironmentProvider>
       </MemoryRouter>
@@ -65,7 +65,7 @@ describe('PostDetailPage (Relay)', () => {
       <MemoryRouter initialEntries={['/post/post-1']}>
         <RelayEnvironmentProvider environment={environment}>
           <Routes>
-            <Route path="/post/:postId" element={<PostDetailPageRelay />} />
+            <Route path="/post/:postId" element={<PostDetailPage />} />
           </Routes>
         </RelayEnvironmentProvider>
       </MemoryRouter>
@@ -85,7 +85,7 @@ describe('PostDetailPage (Relay)', () => {
       <MemoryRouter initialEntries={['/post/123']}>
         <RelayEnvironmentProvider environment={environment}>
           <Routes>
-            <Route path="/post/:postId" element={<PostDetailPageRelay />} />
+            <Route path="/post/:postId" element={<PostDetailPage />} />
           </Routes>
         </RelayEnvironmentProvider>
       </MemoryRouter>
@@ -103,7 +103,7 @@ describe('PostDetailPage (Relay)', () => {
     render(
       <BrowserRouter>
         <RelayEnvironmentProvider environment={environment}>
-          <PostDetailPageRelay />
+          <PostDetailPage />
         </RelayEnvironmentProvider>
       </BrowserRouter>
     );

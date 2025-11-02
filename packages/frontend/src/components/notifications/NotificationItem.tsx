@@ -1,117 +1,179 @@
 /**
- * NotificationItem Component
+ * NotificationItemRelay - Relay Fragment Component
  *
- * Composite component that combines all atomic notification components
- * Uses advanced TypeScript types for props validation
+ * This component demonstrates Relay's fragment pattern.
+ * It declares its data requirements using a GraphQL fragment,
+ * ensuring it only receives exactly the data it needs.
+ *
+ * Benefits:
+ * - Colocation: data requirements live with the component
+ * - Type safety: generated types from fragment
+ * - Composability: parent queries include this fragment
+ * - No overfetching: only requests needed fields
+ */
+
+import { useFragment, graphql } from 'react-relay';
+import type { NotificationItemRelay_notification$key } from './__generated__/NotificationItemRelay_notification.graphql';
+import './NotificationItem.css';
+
+/**
+ * Fragment defining data requirements for NotificationItem
+ *
+ * This fragment will be included in parent queries using:
+ * ...NotificationItemRelay_notification
+ */
+const NotificationItemFragment = graphql`
+  fragment NotificationItemRelay_notification on Notification {
+    id
+    type
+    title
+    message
+    status
+    createdAt
+    actor {
+      userId
+      handle
+      displayName
+      avatarUrl
+    }
+    target {
+      type
+      id
+      url
+      preview
+    }
+  }
+`;
+
+/**
+ * Props for NotificationItemRelay
+ *
+ * The notification prop is a fragment reference (opaque type)
+ * that Relay uses to ensure type safety.
+ */
+export interface NotificationItemRelayProps {
+  readonly notification: NotificationItemRelay_notification$key;
+  readonly onClick?: () => void;
+}
+
+/**
+ * NotificationItemRelay Component
+ *
+ * Displays a single notification in the dropdown.
+ * Uses useFragment to read data from the fragment reference.
  *
  * @example
  * ```tsx
- * <NotificationItem
- *   notification={notification}
- *   onClick={(notif) => handleClick(notif)}
- *   onDelete={(id, e) => handleDelete(id, e)}
+ * // In parent component:
+ * <NotificationItemRelay
+ *   notification={edge.node}
+ *   onClick={() => markAsRead(edge.node.id)}
  * />
  * ```
  */
-
-import React from 'react';
-import { NotificationAvatar } from './NotificationAvatar';
-import { NotificationContent } from './NotificationContent';
-import { NotificationThumbnail } from './NotificationThumbnail';
-import { NotificationUnreadDot } from './NotificationUnreadDot';
-import type { BaseNotificationItemProps } from '../../pages/NotificationsPage.types';
-
-/**
- * NotificationItem Component
- *
- * Composite component that:
- * - Combines NotificationAvatar, NotificationContent, NotificationThumbnail, and NotificationUnreadDot
- * - Handles click interactions with proper event bubbling control
- * - Applies conditional CSS classes based on read status
- * - Provides accessibility features (ARIA labels, keyboard support)
- *
- * Props are type-safe using BaseNotificationItemProps from advanced types
- */
-export const NotificationItem: React.FC<BaseNotificationItemProps> = ({
-  notification,
+export function NotificationItemRelay({
+  notification: notificationRef,
   onClick,
-  onDelete
-}) => {
+}: NotificationItemRelayProps): JSX.Element {
+  // useFragment reads data from the fragment reference
+  // and provides it with full type safety
+  const notification = useFragment(NotificationItemFragment, notificationRef);
+
   // Determine if notification is unread
-  const isUnread = notification.status === 'unread';
+  const isUnread = notification.status === 'UNREAD';
 
-  // Determine if thumbnail should be shown
-  const shouldShowThumbnail =
-    notification.target?.type === 'post' &&
-    notification.metadata?.thumbnailUrl &&
-    typeof notification.metadata.thumbnailUrl === 'string';
+  // Format timestamp
+  const timeAgo = formatTimeAgo(notification.createdAt);
 
-  // Handle notification click
-  const handleClick = () => {
-    onClick(notification);
-  };
-
-  // Handle delete button click
-  const handleDelete = (e: React.MouseEvent) => {
-    // Stop propagation to prevent triggering the notification click
-    e.stopPropagation();
-    onDelete(notification.id, e);
-  };
-
-  // Handle keyboard interaction
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onClick(notification);
-    }
-  };
+  // Get notification icon based on type
+  const icon = getNotificationIcon(notification.type);
 
   return (
     <div
-      className={`notification-item ${isUnread ? 'notification-item--unread' : ''}`}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
+      className={`notification-item ${isUnread ? 'unread' : ''}`}
+      onClick={onClick}
       role="button"
       tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
     >
-      {/* Unread indicator dot */}
-      <NotificationUnreadDot isUnread={isUnread} />
+      {/* Unread indicator */}
+      {isUnread && <div className="notification-unread-dot" />}
 
-      {/* Avatar or icon */}
-      <div className="notification-item__avatar">
-        <NotificationAvatar
-          avatarUrl={notification.actor?.avatarUrl}
-          displayName={notification.actor?.displayName}
-          handle={notification.actor?.handle}
-          notificationType={notification.type}
-        />
-      </div>
-
-      {/* Content (text, preview, timestamp) */}
-      <NotificationContent
-        type={notification.type}
-        message={notification.message}
-        createdAt={notification.createdAt}
-        actor={notification.actor}
-        preview={notification.target?.preview}
-      />
-
-      {/* Thumbnail (if post-related) */}
-      {shouldShowThumbnail && (
-        <NotificationThumbnail
-          thumbnailUrl={notification.metadata!.thumbnailUrl as string}
-          altText="Post thumbnail"
-        />
+      {/* Actor avatar */}
+      {notification.actor && (
+        <div className="notification-avatar">
+          {notification.actor.avatarUrl ? (
+            <img
+              src={notification.actor.avatarUrl}
+              alt={notification.actor.displayName || notification.actor.handle}
+              className="avatar-image"
+            />
+          ) : (
+            <div className="avatar-placeholder">
+              {(notification.actor.displayName || notification.actor.handle)[0].toUpperCase()}
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Delete button */}
-      <button
-        onClick={handleDelete}
-        className="notification-item__delete"
-        aria-label="Delete notification"
-      >
-        ×
-      </button>
+      {/* Notification content */}
+      <div className="notification-content">
+        <div className="notification-header">
+          <span className="notification-icon">{icon}</span>
+          <span className="notification-title">{notification.title}</span>
+        </div>
+
+        <p className="notification-message">{notification.message}</p>
+
+        {notification.target?.preview && (
+          <p className="notification-preview">{notification.target.preview}</p>
+        )}
+
+        <span className="notification-time">{timeAgo}</span>
+      </div>
     </div>
   );
-};
+}
+
+/**
+ * Get notification icon emoji based on type
+ */
+function getNotificationIcon(type: string): string {
+  switch (type) {
+    case 'LIKE':
+      return '❤️';
+    case 'COMMENT':
+      return '💬';
+    case 'FOLLOW':
+      return '👤';
+    case 'MENTION':
+      return '@';
+    case 'SYSTEM':
+      return '📢';
+    default:
+      return '🔔';
+  }
+}
+
+/**
+ * Format timestamp to relative time
+ */
+function formatTimeAgo(timestamp: string): string {
+  const now = new Date();
+  const time = new Date(timestamp);
+  const diffMs = now.getTime() - time.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return time.toLocaleDateString();
+}
