@@ -1,6 +1,6 @@
 import React, { useRef, useCallback } from 'react';
 import type { PostWithAuthor } from '@social-media-app/shared';
-import { PostCard } from '../posts/PostCard';
+import { PostCardRelay } from '../posts/PostCard';
 import { useIntersectionObserver } from '../../hooks/useIntersectionObserver';
 import { useFeedItemAutoRead } from '../../hooks/useFeedItemAutoRead';
 
@@ -71,7 +71,7 @@ export const FeedItemWrapper: React.FC<FeedItemWrapperProps> = ({
 
   return (
     <div ref={elementRef} className="feed-item-wrapper" data-testid="feed-item-wrapper">
-      <PostCard post={post} compact={compact} />
+      <PostCardRelay post={post} compact={compact} />
     </div>
   );
 };
