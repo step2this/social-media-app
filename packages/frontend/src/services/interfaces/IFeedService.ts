@@ -34,21 +34,6 @@ export interface FeedResult {
 }
 
 /**
- * Mark posts as read input
- */
-export interface MarkPostsAsReadInput {
-  readonly postIds: readonly string[];
-}
-
-/**
- * Mark posts as read result
- */
-export interface MarkPostsAsReadResult {
-  readonly success: boolean;
-  readonly markedCount: number;
-}
-
-/**
  * Feed Service Interface
  *
  * All implementations must provide these methods.
@@ -72,14 +57,4 @@ export interface IFeedService {
    * @returns AsyncState with FeedResult
    */
   getFollowingFeed(options?: FeedQueryOptions): Promise<AsyncState<FeedResult>>;
-
-  /**
-   * Mark posts as read (Instagram-like behavior)
-   * Posts marked as read will not appear in future feed requests
-   * Requires authentication
-   *
-   * @param input - Post IDs to mark as read
-   * @returns AsyncState with result indicating success and count
-   */
-  markPostsAsRead(input: MarkPostsAsReadInput): Promise<AsyncState<MarkPostsAsReadResult>>;
 }

@@ -136,7 +136,6 @@ export function createMockFeedService(): IFeedService {
   return {
     getExploreFeed: vi.fn(),
     getFollowingFeed: vi.fn(),
-    markPostsAsRead: vi.fn(),
   };
 }
 

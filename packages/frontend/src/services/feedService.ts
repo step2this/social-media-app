@@ -7,10 +7,10 @@
  * Status:
  * - ✅ HomePage: Migrated to Relay (HomePage.relay.tsx)
  * - ✅ ExplorePage: Migrated to Relay (ExplorePage.relay.tsx)
- * - ❌ DevManualMarkButton: Still uses this service (DevManualMarkButton.tsx) - dev tool
- * - ❌ useFeedItemAutoRead: Still uses this service (useFeedItemAutoRead.ts) - auto-read feature
+ * - ✅ useFeedItemAutoRead: Migrated to Relay (useFeedItemAutoRead.ts)
+ * - ❌ DevManualMarkButton: Needs migration to Relay hook (DevManualMarkButton.tsx) - dev tool
  *
- * TODO: Migrate remaining components to Relay mutations, then delete this file
+ * TODO: Migrate DevManualMarkButton to use Relay hook, then delete this file
  *
  * See: GRAPHQL_SERVICES_DEPENDENCY_MAP.md
  */
