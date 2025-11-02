@@ -1,14 +1,12 @@
 import { vi } from 'vitest';
 import type { User, Notification } from '@social-media-app/shared';
-import type { AsyncState } from '../../graphql/types';
 import type {
+  IServiceContainer,
   INavigationService,
   IAuthService,
   IModalService,
   INotificationService,
-  IServiceContainer
-} from '../interfaces/IServiceContainer';
-import type { INotificationDataService } from '../interfaces/INotificationDataService';
+} from '../interfaces/IServiceContainer.js';
 
 /**
  * Mock implementation of NavigationService for testing
@@ -68,24 +66,6 @@ export const createMockNotificationService = (): INotificationService => ({
   clearNotification: vi.fn(),
 });
 
-/**
- * Mock implementation of NotificationDataService for testing (data fetching)
- * Provides full control over notification data operations
- */
-export class MockNotificationDataService implements INotificationDataService {
-  getNotifications = vi.fn<[], Promise<AsyncState<Notification[]>>>();
-  getUnreadCount = vi.fn();
-  markAsRead = vi.fn();
-  markAllAsRead = vi.fn();
-  deleteNotification = vi.fn();
-}
-
-/**
- * Factory for creating MockNotificationDataService instances
- */
-export const createMockNotificationDataService = (): MockNotificationDataService => {
-  return new MockNotificationDataService();
-};
 
 /**
  * Create a complete mock service container with all services
@@ -96,7 +76,6 @@ export const createMockServiceContainer = (overrides: Partial<IServiceContainer>
   authService: createMockAuthService(),
   modalService: createMockModalService(),
   notificationService: createMockNotificationService(),
-  notificationDataService: createMockNotificationDataService(),
   ...overrides,
 });
 

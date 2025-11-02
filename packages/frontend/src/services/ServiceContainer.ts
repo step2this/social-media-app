@@ -3,21 +3,20 @@ import { NavigationService } from './implementations/NavigationService';
 import { AuthService, type AuthHookResult } from './implementations/AuthService';
 import { ModalService } from './implementations/ModalService';
 import { NotificationService } from './implementations/NotificationService';
-import { notificationDataService } from './notificationDataService';
-import { feedService } from './feedService';
 import type { NavigateFunction } from 'react-router-dom';
 
 /**
  * Concrete implementation of the service container
  * This is the main DI container that creates and manages all services
+ *
+ * Note: GraphQL data services (Feed, Profile, Post, Comment, Like, Auction, Follow, NotificationData)
+ * have been replaced with Relay hooks. Use Relay hooks directly instead.
  */
 export class ServiceContainer implements IServiceContainer {
   public readonly navigationService;
   public readonly authService;
   public readonly modalService;
   public readonly notificationService;
-  public readonly notificationDataService;
-  public readonly feedService;
 
   constructor(navigate: NavigateFunction, authHook: AuthHookResult) {
     // Create service instances
@@ -25,9 +24,6 @@ export class ServiceContainer implements IServiceContainer {
     this.authService = new AuthService(authHook);
     this.modalService = new ModalService();
     this.notificationService = new NotificationService();
-    // Use singleton barrel exports for GraphQL services
-    this.notificationDataService = notificationDataService;
-    this.feedService = feedService;
   }
 
   /**

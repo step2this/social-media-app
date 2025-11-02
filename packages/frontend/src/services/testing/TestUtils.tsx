@@ -60,10 +60,6 @@ export const renderWithServices = (
         <MemoryRouter
           initialEntries={[initialRoute, ...routes]}
           initialIndex={0}
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true
-          }}
         >
           {content}
         </MemoryRouter>

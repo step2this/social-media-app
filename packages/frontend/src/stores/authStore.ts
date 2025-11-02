@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, AuthTokens } from '@social-media-app/shared';
-import { setGraphQLAuthToken } from '../graphql/clientManager.js';
 
 export interface AuthState {
   user: User | null;
@@ -50,8 +49,7 @@ export const useAuthStore = create<AuthStore>()(
           tokens,
           isAuthenticated: !!(tokens && get().user)
         });
-        // Sync GraphQL client with new tokens
-        setGraphQLAuthToken(tokens?.accessToken || null);
+        // Note: Relay environment handles auth tokens through network layer
       },
 
       setLoading: (isLoading) => set({ isLoading }),
@@ -68,8 +66,7 @@ export const useAuthStore = create<AuthStore>()(
           error: null,
           isLoading: false,
         });
-        // Sync GraphQL client with new tokens
-        setGraphQLAuthToken(tokens.accessToken);
+        // Note: Relay environment handles auth tokens through network layer
       },
 
       logout: () => {
@@ -80,8 +77,7 @@ export const useAuthStore = create<AuthStore>()(
           error: null,
           isLoading: false,
         });
-        // Clear GraphQL client auth token
-        setGraphQLAuthToken(null);
+        // Note: Relay environment handles auth tokens through network layer
       },
 
       clearError: () => set({ error: null }),
@@ -98,10 +94,7 @@ export const useAuthStore = create<AuthStore>()(
       onRehydrateStorage: () => (state) => {
         // Mark as hydrated when persistence restoration is complete
         state?.setHydrated(true);
-        // Sync GraphQL client with rehydrated tokens
-        if (state?.tokens?.accessToken) {
-          setGraphQLAuthToken(state.tokens.accessToken);
-        }
+        // Note: Relay environment handles auth tokens through network layer
       },
     }
   )

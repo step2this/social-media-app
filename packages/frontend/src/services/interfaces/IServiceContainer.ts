@@ -2,12 +2,13 @@ import type { INavigationService } from './INavigationService';
 import type { IAuthService } from './IAuthService';
 import type { IModalService } from './IModalService';
 import type { INotificationService } from './INotificationService';
-import type { INotificationDataService } from './INotificationDataService';
-import type { IFeedService } from './IFeedService';
 
 /**
  * Service container interface - provides access to all application services
  * This is the main dependency injection container that components can use
+ *
+ * Note: GraphQL data services (Feed, Profile, Post, Comment, Like, Auction, Follow, NotificationData)
+ * have been replaced with Relay hooks. Use Relay hooks directly instead.
  */
 export interface IServiceContainer {
   /**
@@ -29,16 +30,6 @@ export interface IServiceContainer {
    * Notification service for user feedback (UI toasts)
    */
   readonly notificationService: INotificationService;
-
-  /**
-   * Notification data service for backend notification operations
-   */
-  readonly notificationDataService: INotificationDataService;
-
-  /**
-   * Feed service for post feed operations
-   */
-  readonly feedService: IFeedService;
 }
 
 /**
@@ -48,7 +39,5 @@ export type {
   INavigationService,
   IAuthService,
   IModalService,
-  INotificationService,
-  INotificationDataService,
-  IFeedService
+  INotificationService
 };
