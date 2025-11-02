@@ -94,12 +94,10 @@ export function useCreatePostForm(): UseCreatePostFormReturn {
   /**
    * Get form data ready for submission
    */
-  const getFormData = useCallback(() => {
-    return {
+  const getFormData = useCallback(() => ({
       caption: caption.trim(),
       tags: parseTags(tags),
-    };
-  }, [caption, tags]);
+    }), [caption, tags]);
 
   return {
     caption,

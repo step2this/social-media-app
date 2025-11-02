@@ -67,13 +67,11 @@ export function useImagePreview(): UseImagePreviewReturn {
   /**
    * Cleanup preview URL on unmount
    */
-  useEffect(() => {
-    return () => {
+  useEffect(() => () => {
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
       }
-    };
-  }, [previewUrl]);
+    }, [previewUrl]);
 
   return {
     selectedFile,
