@@ -2,21 +2,21 @@ import { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/auth/ProtectedRoute.js';
 import { AuthModal } from './components/auth/AuthModal.js';
-import { ProfilePageRelay as ProfilePage } from './components/profile/ProfilePage.relay';
-import { MyProfilePageRelay as MyProfilePage } from './components/profile/MyProfilePage.relay';
-import { NotificationsPageRelay as NotificationsPage } from './pages/NotificationsPage.relay';
+import { ProfilePage } from './components/profile/ProfilePage';
+import { MyProfilePage } from './components/profile/MyProfilePage';
+import { NotificationsPage } from './pages/NotificationsPage';
 import { PlaceholderPage } from './components/common/PlaceholderPage';
-import { CreatePostPageRelay as CreatePostPage } from './components/posts/CreatePostPage.relay';
-import { PostDetailPageRelay as PostDetailPage } from './components/posts/PostDetailPage.relay';
+import { CreatePostPage } from './components/posts/CreatePostPage';
+import { PostDetailPage } from './components/posts/PostDetailPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { DesignSystemTest } from './components/design-system/DesignSystemTest.js';
 import { ServiceProvider, useServices } from './services/ServiceProvider';
 import { useAuthStore } from './stores/authStore.js';
 import './App.css';
 
-// Import Relay versions directly
-import { HomePage } from './pages/HomePage.relay';
-import { ExplorePage } from './components/explore/ExplorePage.relay';
+// Import Relay versions (now the default)
+import { HomePage } from './pages/HomePage';
+import { ExplorePage } from './components/explore/ExplorePage';
 
 /**
  * Internal app content component that uses dependency injection
