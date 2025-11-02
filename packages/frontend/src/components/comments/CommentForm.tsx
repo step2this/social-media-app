@@ -161,3 +161,6 @@ export const CommentFormRelay = ({ postId, onCommentCreated }: CommentFormRelayP
     </form>
   );
 };
+
+// Export alias for backward compatibility
+export { CommentFormRelay as CommentForm };
