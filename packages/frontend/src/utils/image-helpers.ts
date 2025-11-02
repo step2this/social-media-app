@@ -1,11 +1,6 @@
 import { ImageFileTypeField } from '@social-media-app/shared';
 
 /**
- * Allowed image MIME types
- */
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
-
-/**
  * Image dimensions structure
  */
 export interface ImageDimensions {
@@ -129,7 +124,7 @@ export const getImageDimensions = (file: File): Promise<ImageDimensions> => new 
       });
     });
 
-    img.addEventListener('error', (error) => {
+    img.addEventListener('error', () => {
       reject(new Error('Failed to load image'));
     });
 

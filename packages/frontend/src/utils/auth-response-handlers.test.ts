@@ -4,7 +4,7 @@ import {
   shouldAutoLogin,
   processRegisterResponse,
 } from './auth-response-handlers.js';
-import type { RegisterResponse, AuthTokens, User } from '@social-media-app/shared';
+import type { RegisterResponse, User } from '@social-media-app/shared';
 
 describe('auth-response-handlers', () => {
   describe('hasTokensInResponse', () => {
@@ -35,7 +35,7 @@ describe('auth-response-handlers', () => {
       const response = {
         user: {} as User,
         message: 'Success',
-        tokens: null,
+        tokens: undefined,
       };
 
       expect(hasTokensInResponse(response)).toBe(false);
@@ -67,7 +67,6 @@ describe('auth-response-handlers', () => {
           username: 'testuser',
           emailVerified: false,
           createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
         },
         message: 'Success',
         tokens: {
@@ -88,7 +87,6 @@ describe('auth-response-handlers', () => {
           username: 'testuser',
           emailVerified: false,
           createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
         },
         message: 'Please verify your email',
       };
@@ -104,10 +102,9 @@ describe('auth-response-handlers', () => {
           username: 'testuser',
           emailVerified: false,
           createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
         },
         message: 'Success',
-        tokens: null,
+        tokens: undefined,
       };
 
       expect(shouldAutoLogin(response)).toBe(false);
@@ -121,7 +118,6 @@ describe('auth-response-handlers', () => {
           username: 'testuser',
           emailVerified: false,
           createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
         },
         message: 'Success',
         tokens: undefined,
@@ -178,7 +174,6 @@ describe('auth-response-handlers', () => {
           username: 'testuser',
           emailVerified: false,
           createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
         },
         message: 'Please verify your email',
       };
@@ -224,7 +219,6 @@ describe('auth-response-handlers', () => {
           username: 'testuser',
           emailVerified: true,
           createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-05T00:00:00.000Z',
         },
         message: 'Success',
         tokens: {
@@ -237,7 +231,6 @@ describe('auth-response-handlers', () => {
       const result = processRegisterResponse(response);
 
       expect(result.shouldLogin).toBe(true);
-      expect(result.user?.updatedAt).toBe('2024-01-05T00:00:00.000Z');
       expect(result.user?.createdAt).toBe('2024-01-01T00:00:00.000Z');
     });
 
@@ -249,10 +242,9 @@ describe('auth-response-handlers', () => {
           username: 'testuser',
           emailVerified: false,
           createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
         },
         message: 'Success',
-        tokens: null,
+        tokens: undefined,
       };
 
       const result = processRegisterResponse(response);
@@ -272,7 +264,6 @@ describe('auth-response-handlers', () => {
           username: 'testuser',
           emailVerified: false,
           createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
         },
         message: 'Success',
         tokens: undefined,
@@ -297,7 +288,6 @@ describe('auth-response-handlers', () => {
           username: 'testuser',
           emailVerified: false,
           createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
         },
         message: 'Success',
         tokens: {

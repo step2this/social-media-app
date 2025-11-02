@@ -3,7 +3,12 @@
  * Pure functions for managing follow state calculations and transformations
  */
 
-import type { UseFollowOptions } from '../hooks/useFollow.js';
+/**
+ * Options for follow hook configuration
+ */
+export interface UseFollowOptions {
+  initialIsFollowing?: boolean;
+}
 
 /**
  * Follow state representation

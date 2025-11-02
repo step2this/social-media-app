@@ -9,7 +9,6 @@ import {
   shouldAllowUnfollow,
   hasInitialFollowValues,
   type FollowState,
-  type FollowStateSnapshot,
 } from './follow-state-helpers.js';
 
 describe('follow-state-helpers', () => {
@@ -185,7 +184,6 @@ describe('follow-state-helpers', () => {
 
     it('should return false when initialIsFollowing is undefined', () => {
       expect(hasInitialFollowValues({})).toBe(false);
-      expect(hasInitialFollowValues({ initialFollowersCount: 10 })).toBe(false);
     });
 
     it('should distinguish between undefined and false', () => {
