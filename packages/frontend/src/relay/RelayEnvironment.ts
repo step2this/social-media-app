@@ -2,7 +2,7 @@
  * Relay Environment Configuration
  *
  * Creates the Relay Environment that manages GraphQL queries, mutations, and cache.
- * Integrates with our existing GraphQL client for network requests.
+ * Handles authentication via JWT tokens from authStore.
  *
  * TDD Note: This is infrastructure setup - tested via integration tests in Phase 1.3
  */
@@ -11,44 +11,58 @@ import {
   Environment,
   Network,
   RecordSource,
-  Store,
-  FetchFunction,
-  GraphQLResponse,
+  Store
 } from 'relay-runtime';
-import type { RequestParameters, Variables } from 'relay-runtime';
-import { createGraphQLClient } from '../graphql/client.js';
-import type { IGraphQLClient } from '../graphql/interfaces/IGraphQLClient.js';
+import type { RequestParameters, Variables ,
+  FetchFunction,
+  GraphQLResponse} from 'relay-runtime';
+import { useAuthStore } from '../stores/authStore';
 
 /**
  * Fetch function for Relay Network layer
  *
  * This function is called by Relay for all GraphQL operations.
- * It uses our existing GraphQL client to maintain consistency
- * with current authentication and error handling.
+ * Handles authentication by reading JWT tokens from authStore.
  */
 const fetchQuery: FetchFunction = async (
   operation: RequestParameters,
   variables: Variables
 ): Promise<GraphQLResponse> => {
-  // Use the existing GraphQL client (singleton pattern)
-  const graphqlClient: IGraphQLClient = createGraphQLClient();
+  // Get auth token from store
+  const tokens = useAuthStore.getState().tokens;
+  const accessToken = tokens?.accessToken;
+
+  // Build request headers
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  // Add authorization header if token exists
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  }
 
   try {
-    // Execute the GraphQL query using our existing client
-    const result = await graphqlClient.query(operation.text || '', variables);
+    // Make GraphQL request
+    const response = await fetch(import.meta.env.VITE_GRAPHQL_URL || '/graphql', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        query: operation.text,
+        variables,
+      }),
+    });
 
-    // Transform AsyncState response to Relay's expected format
-    if (result.status === 'success') {
-      return result.data as GraphQLResponse;
+    // Handle HTTP errors
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    // Handle error state
-    if (result.status === 'error') {
-      throw new Error(result.error.message);
-    }
+    // Parse JSON response
+    const json = await response.json();
 
-    // Handle other states (idle, loading - should not happen in practice)
-    throw new Error('Unexpected query state');
+    // Return GraphQL response
+    return json;
   } catch (error) {
     // Relay expects errors to be thrown
     throw error instanceof Error ? error : new Error('Unknown GraphQL error');
