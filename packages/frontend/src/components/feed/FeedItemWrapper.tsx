@@ -1,16 +1,17 @@
 import React, { useRef, useCallback } from 'react';
-import type { PostWithAuthor } from '@social-media-app/shared';
+import { useFragment, graphql } from 'react-relay';
+import type { FeedItemWrapper_post$key } from './__generated__/FeedItemWrapper_post.graphql';
 import { PostCardRelay } from '../posts/PostCard';
 import { useIntersectionObserver } from '../../hooks/useIntersectionObserver';
 import { useFeedItemAutoRead } from '../../hooks/useFeedItemAutoRead';
 
 /**
  * Props for FeedItemWrapper component
- * Uses TypeScript best practices with explicit property types
+ * Uses Relay fragment reference for type-safe data fetching
  */
 export interface FeedItemWrapperProps {
-  /** Post data including author information */
-  readonly post: PostWithAuthor;
+  /** Relay fragment reference for post data */
+  readonly post: FeedItemWrapper_post$key;
   /** Whether to display the post in compact mode (default: true) */
   readonly compact?: boolean;
 }
@@ -19,24 +20,46 @@ export interface FeedItemWrapperProps {
  * Wrapper component for PostCard with auto-read functionality using Relay
  *
  * Handles Instagram-like behavior where posts are marked as read after viewing.
- * Uses Relay mutation for marking posts as read, combined with intersection observer
- * to track visibility (70% visible for 1 second).
+ * Uses Relay fragment to fetch post data and pass fragment reference to PostCardRelay.
+ * Combined with intersection observer to track visibility (70% visible for 1 second).
  *
  * @example
  * ```tsx
- * <FeedItemWrapper post={post} compact={true} />
+ * const data = useLazyLoadQuery(
+ *   graphql`
+ *     query ExampleQuery {
+ *       post(id: "123") {
+ *         ...FeedItemWrapper_post
+ *       }
+ *     }
+ *   `,
+ *   {}
+ * );
+ *
+ * <FeedItemWrapper post={data.post} compact={true} />
  * ```
  *
- * TypeScript patterns applied from SKILL.md:
+ * TypeScript patterns applied:
+ * - Fragment reference for type-safe Relay data
  * - Readonly modifier for immutable props
  * - Explicit interface for better error messages
  * - Optional properties with default values
- * - JSDoc comments for documentation
  */
 export const FeedItemWrapper: React.FC<FeedItemWrapperProps> = ({
-  post,
+  post: postRef,
   compact = true
 }) => {
+  // Extract post data from Relay fragment reference
+  const post = useFragment(
+    graphql`
+      fragment FeedItemWrapper_post on Post {
+        id
+        ...PostCardRelay_post
+      }
+    `,
+    postRef
+  );
+
   const elementRef = useRef<HTMLDivElement | null>(null);
   const { markAsRead } = useFeedItemAutoRead();
   // Use ref instead of state to prevent race conditions
