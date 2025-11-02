@@ -1,0 +1,92 @@
+/*
+  Profile Page - TamaFriends Virtual Pet Design
+*/
+
+.profile-header {
+  text-align: center;
+  padding: var(--space-8) 0;
+  background: var(--tama-white);
+}
+
+.profile-title {
+  font-family: var(--font-pixel);
+  font-size: var(--text-4xl);
+  font-weight: var(--weight-black);
+  margin-bottom: var(--space-2);
+  letter-spacing: -0.02em;
+  color: var(--tama-black);
+}
+
+.profile-subtitle {
+  font-size: var(--text-lg);
+  color: var(--tama-gray-600);
+  font-weight: var(--weight-medium);
+  font-family: var(--font-body);
+}
+
+.profile-error {
+  text-align: center;
+  padding: var(--space-8);
+}
+
+.profile-error p {
+  font-size: var(--text-lg);
+  color: var(--error);
+  margin-bottom: var(--space-4);
+  font-family: var(--font-body);
+}
+
+.profile-error button {
+  padding: var(--space-4) var(--space-8);
+  background: var(--tama-blue);
+  color: var(--tama-white);
+  border: var(--pixel-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.profile-error button:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--pixel-shadow-colored);
+}
+
+/* TamaFriends Card Component */
+.tama-card {
+  background: var(--tama-white);
+  border: var(--pixel-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--pixel-shadow-md);
+  overflow: hidden;
+  transition: all var(--transition-normal);
+  padding: var(--space-6);
+}
+
+.tama-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--pixel-shadow-lg);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .profile-title {
+    font-size: var(--text-3xl);
+  }
+
+  .profile-subtitle {
+    font-size: var(--text-base);
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-header {
+    padding: var(--space-6) 0;
+  }
+
+  .tama-card {
+    padding: var(--space-4);
+  }
+}
