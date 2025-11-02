@@ -160,13 +160,11 @@ export const mockUseAuthAuthenticated = (userOverrides?: Partial<User>): UseAuth
 /**
  * Helper to create unauthenticated user mock for useAuth
  */
-export const mockUseAuthUnauthenticated = (): UseAuthReturn => {
-  return createMockUseAuthReturn({
+export const mockUseAuthUnauthenticated = (): UseAuthReturn => createMockUseAuthReturn({
     user: null,
     tokens: null,
     isAuthenticated: false
   });
-};
 
 /**
  * Create a mock return value for useFollow hook

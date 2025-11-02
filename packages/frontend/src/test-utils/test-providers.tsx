@@ -27,7 +27,7 @@
  * ```
  */
 
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { render } from '@testing-library/react';
 import { ServiceProvider } from '../services/ServiceProvider';

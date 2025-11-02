@@ -16,9 +16,7 @@ import type { ReactElement } from 'react';
  * const { getByText } = renderWithRouter(<MyComponent />);
  * ```
  */
-export const renderWithRouter = (component: ReactElement) => {
-  return render(<MemoryRouter>{component}</MemoryRouter>);
-};
+export const renderWithRouter = (component: ReactElement) => render(<MemoryRouter>{component}</MemoryRouter>);
 
 /**
  * Render component in MemoryRouter with route configuration
@@ -45,12 +43,10 @@ export const renderWithRoutes = (
   element: ReactElement,
   path: string,
   initialEntry: string
-) => {
-  return render(
+) => render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route path={path} element={element} />
       </Routes>
     </MemoryRouter>
   );
-};

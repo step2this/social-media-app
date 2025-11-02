@@ -18,13 +18,11 @@
 import type { MockResolvers } from 'relay-test-utils';
 import {
   createMockNotification,
-  createMockNotificationConnection,
   createLikeNotification,
   createCommentNotification,
   createFollowNotification,
-  createSystemNotification,
 } from '../services/__tests__/fixtures/notificationFixtures';
-import type { Notification } from '../graphql/types';
+import type { Notification } from '@social-media-app/shared';
 
 /**
  * Convert a single notification fixture to Relay format
@@ -124,8 +122,8 @@ export const NotificationBellScenarios = {
     const notifications = Array.from({ length: Math.min(count, 5) }, (_, i) =>
       createMockNotification({
         id: `notif-${i + 1}`,
-        status: 'UNREAD',
-        type: ['LIKE', 'COMMENT', 'FOLLOW'][i % 3] as 'LIKE' | 'COMMENT' | 'FOLLOW',
+        status: 'unread',
+        type: ['like', 'comment', 'follow'][i % 3] as 'like' | 'comment' | 'follow',
       })
     );
 
@@ -140,9 +138,9 @@ export const NotificationBellScenarios = {
    */
   allRead: (): MockResolvers => {
     const notifications = [
-      createLikeNotification({ status: 'READ' }),
-      createCommentNotification({ status: 'READ' }),
-      createFollowNotification({ status: 'READ' }),
+      createLikeNotification({ status: 'read' }),
+      createCommentNotification({ status: 'read' }),
+      createFollowNotification({ status: 'read' }),
     ];
 
     return buildNotificationBellResolvers({
@@ -156,10 +154,10 @@ export const NotificationBellScenarios = {
    */
   mixed: (): MockResolvers => {
     const notifications = [
-      createLikeNotification({ status: 'UNREAD' }),
-      createCommentNotification({ status: 'READ' }),
-      createFollowNotification({ status: 'UNREAD' }),
-      createSystemNotification({ status: 'READ' }),
+      createLikeNotification({ status: 'unread' }),
+      createCommentNotification({ status: 'read' }),
+      createFollowNotification({ status: 'unread' }),
+      createMockNotification({ type: 'mention', status: 'read' }),
     ];
 
     return buildNotificationBellResolvers({
@@ -175,7 +173,7 @@ export const NotificationBellScenarios = {
     const notifications = Array.from({ length: 5 }, (_, i) =>
       createMockNotification({
         id: `notif-${i + 1}`,
-        status: i < 3 ? 'UNREAD' : 'READ',
+        status: i < 3 ? 'unread' : 'read',
       })
     );
 
@@ -192,7 +190,7 @@ export const NotificationBellScenarios = {
     const notifications = Array.from({ length: 5 }, (_, i) =>
       createMockNotification({
         id: `notif-${i + 1}`,
-        status: 'UNREAD',
+        status: 'unread',
       })
     );
 
@@ -217,7 +215,4 @@ export const RelayNotificationBuilders = {
 
   follow: (overrides?: Partial<Notification>) =>
     toRelayNotification(createFollowNotification(overrides)),
-
-  system: (overrides?: Partial<Notification>) =>
-    toRelayNotification(createSystemNotification(overrides)),
 };

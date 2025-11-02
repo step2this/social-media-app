@@ -12,11 +12,10 @@
  */
 
 import { createMockEnvironment, MockPayloadGenerator, type MockResolvers } from 'relay-test-utils';
-import type { Environment, OperationType } from 'relay-runtime';
 
 /**
  * Mock Environment type with mock property
- * 
+ *
  * The relay-test-utils createMockEnvironment returns an Environment
  * with an additional `mock` property for testing.
  */
@@ -47,11 +46,14 @@ export function createMockRelayEnvironment(): MockEnvironment {
  * ```
  */
 export function resolveMostRecentOperation(
-  environment: Environment,
+  environment: MockEnvironment,
   mockResolvers: MockResolvers
 ): void {
-  const operation = environment.mock.getMostRecentOperation();
-  environment.mock.resolve(operation, MockPayloadGenerator.generate(operation, mockResolvers));
+  const payload = MockPayloadGenerator.generate(
+    environment.mock.getMostRecentOperation(),
+    mockResolvers
+  );
+  environment.mock.resolveMostRecentOperation(payload);
 }
 
 /**
@@ -60,13 +62,17 @@ export function resolveMostRecentOperation(
  * Useful for components that make multiple queries
  */
 export function resolveAllOperations(
-  environment: Environment,
+  environment: MockEnvironment,
   mockResolvers: MockResolvers
 ): void {
-  const operations = environment.mock.getAllOperations();
-  operations.forEach((operation) => {
-    environment.mock.resolve(operation, MockPayloadGenerator.generate(operation, mockResolvers));
-  });
+  // Resolve all operations one by one
+  while (environment.mock.getAllOperations().length > 0) {
+    const payload = MockPayloadGenerator.generate(
+      environment.mock.getMostRecentOperation(),
+      mockResolvers
+    );
+    environment.mock.resolveMostRecentOperation(payload);
+  }
 }
 
 /**
@@ -77,9 +83,8 @@ export function resolveAllOperations(
  * rejectMostRecentOperation(environment, new Error('Network error'));
  * ```
  */
-export function rejectMostRecentOperation(environment: Environment, error: Error): void {
-  const operation = environment.mock.getMostRecentOperation();
-  environment.mock.reject(operation, error);
+export function rejectMostRecentOperation(environment: MockEnvironment, error: Error): void {
+  environment.mock.rejectMostRecentOperation(error);
 }
 
 /**
@@ -88,7 +93,7 @@ export function rejectMostRecentOperation(environment: Environment, error: Error
  * Useful for verifying query parameters
  */
 export function getMostRecentOperationVariables<T = Record<string, unknown>>(
-  environment: Environment
+  environment: MockEnvironment
 ): T {
   const operation = environment.mock.getMostRecentOperation();
   return operation.request.variables as T;
@@ -97,7 +102,7 @@ export function getMostRecentOperationVariables<T = Record<string, unknown>>(
 /**
  * Check if an operation with a specific name was called
  */
-export function wasOperationCalled(environment: Environment, operationName: string): boolean {
+export function wasOperationCalled(environment: MockEnvironment, operationName: string): boolean {
   const operations = environment.mock.getAllOperations();
   return operations.some((op) => op.request.node.operation.name === operationName);
 }
@@ -105,7 +110,7 @@ export function wasOperationCalled(environment: Environment, operationName: stri
 /**
  * Get all operations of a specific type
  */
-export function getOperationsByName(environment: Environment, operationName: string) {
+export function getOperationsByName(environment: MockEnvironment, operationName: string) {
   const operations = environment.mock.getAllOperations();
   return operations.filter((op) => op.request.node.operation.name === operationName);
 }
@@ -115,8 +120,11 @@ export function getOperationsByName(environment: Environment, operationName: str
  *
  * Useful for resetting state between tests
  */
-export function clearAllOperations(environment: Environment): void {
-  environment.mock.clearCache();
+export function clearAllOperations(environment: MockEnvironment): void {
+  // Clear pending operations by rejecting them
+  while (environment.mock.getAllOperations().length > 0) {
+    environment.mock.rejectMostRecentOperation(new Error('Cleared'));
+  }
 }
 
 /**
@@ -124,7 +132,7 @@ export function clearAllOperations(environment: Environment): void {
  *
  * Returns a promise that resolves when all pending operations are done
  */
-export async function waitForOperations(environment: Environment): Promise<void> {
+export async function waitForOperations(): Promise<void> {
   // Flush pending timers
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
