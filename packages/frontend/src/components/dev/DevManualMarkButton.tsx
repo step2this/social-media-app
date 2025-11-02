@@ -1,11 +1,7 @@
 import { useState, useCallback } from 'react';
-import { FeedServiceGraphQL } from '../../services/implementations/FeedService.graphql';
-import { createGraphQLClient } from '../../graphql/client';
+import { useFeedItemAutoRead } from '../../hooks/useFeedItemAutoRead';
 import type { PostWithAuthor } from '@social-media-app/shared';
 import './DevManualMarkButton.css';
-
-// Initialize feed service
-const feedService = new FeedServiceGraphQL(createGraphQLClient());
 
 /**
  * Props for DevManualMarkButton component
@@ -19,7 +15,7 @@ export interface DevManualMarkButtonProps {
  * DevManualMarkButton Component
  *
  * Manual mark-as-read button for testing read state tracking.
- * Provides explicit control over marking posts as read.
+ * Provides explicit control over marking posts as read using Relay mutation.
  *
  * @param props - Component props
  * @returns React component
@@ -28,42 +24,35 @@ export function DevManualMarkButton({
   post,
   onMarkComplete
 }: DevManualMarkButtonProps) {
-  const [isPending, setIsPending] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { markAsRead, isInFlight, error: mutationError } = useFeedItemAutoRead();
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
 
-    setIsPending(true);
-    setError(null);
     setSuccess(false);
 
-    try {
-      await feedService.markPostsAsRead({ postIds: [post.id] });
+    markAsRead(post.id);
+
+    if (!mutationError) {
       setSuccess(true);
-      setIsPending(false);
 
       if (onMarkComplete) {
         onMarkComplete();
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to mark as read');
-      setSuccess(false);
-      setIsPending(false);
     }
-  }, [post.id, onMarkComplete]);
+  }, [post.id, markAsRead, mutationError, onMarkComplete]);
 
   return (
     <form onSubmit={handleSubmit} className="dev-manual-mark-button">
       <button
         type="submit"
-        disabled={isPending}
+        disabled={isInFlight}
         className={`dev-manual-mark-button__btn ${
-          isPending ? 'dev-manual-mark-button__btn--pending' : ''
+          isInFlight ? 'dev-manual-mark-button__btn--pending' : ''
         }`}
       >
-        {isPending ? (
+        {isInFlight ? (
           <>
             <span className="dev-manual-mark-button__spinner"></span>
             Marking...
@@ -79,9 +68,9 @@ export function DevManualMarkButton({
         </span>
       )}
 
-      {error && (
+      {mutationError && (
         <span className="dev-manual-mark-button__message dev-manual-mark-button__message--error">
-          ✗ {error}
+          ✗ {mutationError.message}
         </span>
       )}
     </form>
