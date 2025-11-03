@@ -28,10 +28,11 @@ describe('NotificationAdapter', () => {
   const createMockNotification = (id: string): Notification => ({
     id,
     userId: 'user-1',
-    type: 'LIKE',
+    type: 'like',
+    title: 'New Like',
+    message: 'Someone liked your post',
+    status: 'unread',
     actorId: 'actor-1',
-    actorHandle: 'actor',
-    isRead: false,
     createdAt: new Date().toISOString(),
   });
 
