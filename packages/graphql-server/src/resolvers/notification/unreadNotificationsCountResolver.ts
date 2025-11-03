@@ -1,27 +1,29 @@
 /**
- * UnreadNotificationsCount Resolver
+ * unreadNotificationsCountResolver - Get Unread Notifications Count
  *
- * GraphQL resolver for fetching unread notification count for a user.
- * Uses dependency injection pattern for testability.
+ * Returns the count of unread notifications for the authenticated user.
+ * Requires authentication via withAuth HOC.
  */
 
+import { withAuth } from '../../infrastructure/resolvers/withAuth.js';
+import { Container } from '../../infrastructure/di/Container.js';
 import type { QueryResolvers } from '../../schema/generated/types';
-import type { Container } from '../../infrastructure/di/Container';
-import { requireAuth } from '../../infrastructure/resolvers/helpers/requireAuth';
+import { NotificationAdapter } from '../../infrastructure/adapters/NotificationAdapter';
+import type { NotificationService } from '@social-media-app/dal';
 
-export function createUnreadNotificationsCountResolver(
+/**
+ * Create the unreadNotificationsCount resolver with DI container
+ *
+ * @param container - DI container for resolving services
+ * @returns GraphQL resolver for Query.unreadNotificationsCount
+ */
+export const createUnreadNotificationsCountResolver = (
   container: Container
-): QueryResolvers['unreadNotificationsCount'] {
-  return async (_parent, _args, context, _info) => {
-    const userId = requireAuth(context);
-    const useCase = container.resolve('GetUnreadNotificationsCount');
+): QueryResolvers['unreadNotificationsCount'] => {
+  return withAuth(async (_parent: any, _args: any, context: any) => {
+    const notificationService = container.resolve<NotificationService>('NotificationService');
+    const adapter = new NotificationAdapter(notificationService);
 
-    const result = await useCase.execute(userId);
-
-    if (!result.success) {
-      throw result.error;
-    }
-
-    return result.value;
-  };
-}
+    return adapter.getUnreadCount(context.userId!);
+  });
+};

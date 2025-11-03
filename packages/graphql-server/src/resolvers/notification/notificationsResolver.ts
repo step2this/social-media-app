@@ -1,35 +1,33 @@
 /**
- * Notifications Resolver
+ * notificationsResolver - Get User Notifications
  *
- * GraphQL resolver for fetching paginated notifications for a user.
- * Uses dependency injection pattern for testability.
+ * Returns paginated notifications for the authenticated user.
+ * Requires authentication via withAuth HOC.
  */
 
+import { withAuth } from '../../infrastructure/resolvers/withAuth.js';
+import { Container } from '../../infrastructure/di/Container.js';
 import type { QueryResolvers } from '../../schema/generated/types';
-import type { Container } from '../../infrastructure/di/Container';
-import { requireAuth } from '../../infrastructure/resolvers/helpers/requireAuth';
-import { requireValidCursor } from '../../infrastructure/resolvers/helpers/validateCursor';
-import { buildConnection } from '../../infrastructure/resolvers/helpers/ConnectionBuilder';
+import { NotificationAdapter } from '../../infrastructure/adapters/NotificationAdapter';
+import type { NotificationService } from '@social-media-app/dal';
 
-export function createNotificationsResolver(container: Container): QueryResolvers['notifications'] {
-  return async (_parent, args, context, _info) => {
-    const userId = requireAuth(context);
-    const useCase = container.resolve('GetNotifications');
-    const cursor = requireValidCursor(args.cursor);
+/**
+ * Create the notifications resolver with DI container
+ *
+ * @param container - DI container for resolving services
+ * @returns GraphQL resolver for Query.notifications
+ */
+export const createNotificationsResolver = (
+  container: Container
+): QueryResolvers['notifications'] => {
+  return withAuth(async (_parent: any, args: { first?: number | null; after?: string | null }, context: any) => {
+    const notificationService = container.resolve<NotificationService>('NotificationService');
+    const adapter = new NotificationAdapter(notificationService);
 
-    const result = await useCase.execute(userId, args.limit || 20, cursor);
-
-    if (!result.success) {
-      throw result.error;
-    }
-
-    return buildConnection({
-      items: result.value.items,
-      hasMore: result.value.hasMore,
-      getCursorKeys: (notification) => ({
-        PK: `USER#${userId}`,
-        SK: `NOTIFICATION#${notification.createdAt}#${notification.id}`,
-      }),
+    return adapter.getNotifications({
+      userId: context.userId!,
+      first: args.first ?? undefined,
+      after: args.after ?? undefined,
     });
-  };
-}
+  });
+};

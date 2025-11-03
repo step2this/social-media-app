@@ -31,12 +31,14 @@ import type {
   PostWithAuthor as DomainPostWithAuthor,
   Profile as DomainProfile,
   PublicProfile as DomainPublicProfile,
+  Notification as DomainNotification,
 } from '@social-media-app/shared';
 import type {
   Comment as GraphQLComment,
   PageInfo,
   Post as GraphQLPost,
   Profile as GraphQLProfile,
+  Notification as GraphQLNotification,
 } from '../../../schema/generated/types';
 import { CursorCodec } from '../../pagination/CursorCodec';
 
@@ -299,5 +301,29 @@ export class TypeMapper {
       followersCount: domain.followersCount ?? 0,
       followingCount: domain.followingCount ?? 0,
     } as GraphQLProfile;
+  }
+
+  /**
+   * Transform domain Notification to GraphQL Notification
+   *
+   * Transforms a Notification from the domain layer to GraphQL Notification type.
+   * The domain Notification already has the correct structure matching GraphQL schema.
+   *
+   * @param domain - The domain Notification from @social-media-app/shared
+   * @returns GraphQL Notification type compatible with schema
+   */
+  static toGraphQLNotification(domain: DomainNotification): GraphQLNotification {
+    return {
+      id: domain.id,
+      userId: domain.userId,
+      type: domain.type,
+      title: domain.title,
+      message: domain.message,
+      status: domain.status,
+      actor: domain.actor ?? null,
+      target: domain.target ?? null,
+      createdAt: domain.createdAt,
+      readAt: domain.readAt ?? null,
+    } as GraphQLNotification;
   }
 }
