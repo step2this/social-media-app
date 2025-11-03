@@ -1,9 +1,9 @@
 /**
  * ProfilePage - Relay Implementation
- * 
+ *
  * This is the Relay-powered version of ProfilePage that displays
  * a user's profile with their posts.
- * 
+ *
  * Benefits of Relay version:
  * - Automatic caching and normalization
  * - Built-in pagination for user posts
@@ -29,7 +29,7 @@ import './ProfilePage.css';
 
 /**
  * Main query for ProfilePage
- * 
+ *
  * Fetches user profile by handle with their posts
  */
 const ProfilePageQuery = graphql`
@@ -103,13 +103,13 @@ function transformRelayPosts(edges: any[], userHandle: string, userId: string) {
 /**
  * ProfilePage Posts Component (With Pagination)
  */
-function ProfilePagePosts({ 
-  handle, 
-  userId, 
-  initialPosts 
-}: { 
-  handle: string; 
-  userId: string; 
+function ProfilePagePosts({
+  handle,
+  userId,
+  initialPosts
+}: {
+  handle: string;
+  userId: string;
   initialPosts: any;
 }) {
   const [postsLoading] = React.useState(false);
@@ -138,7 +138,7 @@ function ProfilePagePosts({
 
 /**
  * ProfilePage Inner Component
- * 
+ *
  * Handles the query execution and renders the profile.
  */
 function ProfilePageInner() {
@@ -239,7 +239,7 @@ function ProfilePageInner() {
 
 /**
  * ProfilePage with Error Boundary
- * 
+ *
  * Wraps the query component with error handling.
  * Relay will throw errors that can be caught here.
  */
@@ -286,17 +286,30 @@ class ProfilePageErrorBoundary extends React.Component<
   }
 }
 
-/**
- * ProfilePage with Suspense Boundary (Export)
- * 
- * This is what should be imported and used in App.tsx
- */
 export function ProfilePageRelay(): JSX.Element {
   return (
     <ProfilePageErrorBoundary>
-      <Suspense fallback={<LoadingSpinner message="Loading profile..." />}>
+      <Suspense
+        fallback={
+          <ProfileLayout
+            header={
+              <div className="profile-header">
+                <h1 className="profile-title tama-heading">🐾 Pet Profile</h1>
+                <p className="profile-subtitle">View pet adventures and activities</p>
+              </div>
+            }
+          >
+            <div className="profile-page-loading" data-testid="profile-page-loading">
+              <LoadingSpinner message="Loading profile..." />
+            </div>
+          </ProfileLayout>
+        }
+      >
         <ProfilePageInner />
       </Suspense>
     </ProfilePageErrorBoundary>
   );
 }
+
+// Export alias for backward compatibility
+export { ProfilePageRelay as ProfilePage };

@@ -18,9 +18,7 @@ import type { PostDetailPageRelayQuery as PostDetailPageRelayQueryType } from '.
 import { ContentLayout } from '../layout/AppLayout';
 import { MaterialIcon } from '../common/MaterialIcon';
 import { PostCard } from './PostCard';
-import { CommentList } from '../comments';
 import { useAuth } from '../../hooks/useAuth';
-import { relayPostToPostWithAuthor } from '../../relay/relay-transformers';
 import './PostDetailPage.css';
 
 /**
@@ -32,22 +30,7 @@ const PostDetailQuery = graphql`
   query PostDetailPageRelayQuery($postId: ID!) {
     post(id: $postId) {
       id
-      userId
-      caption
-      imageUrl
-      thumbnailUrl
-      likesCount
-      commentsCount
-      isLiked
-      createdAt
-      updatedAt
-      author {
-        id
-        handle
-        username
-        fullName
-        profilePictureUrl
-      }
+      ...PostCardRelay_post
     }
   }
 `;
@@ -109,9 +92,6 @@ function PostDetailPageInner() {
     );
   }
 
-  // Transform Relay data to PostWithAuthor
-  const post = relayPostToPostWithAuthor(data.post);
-
   const handleBackClick = () => {
     navigate(-1);
   };
@@ -129,20 +109,12 @@ function PostDetailPageInner() {
             <MaterialIcon name="close" variant="outlined" size="md" />
           </button>
 
-          {/* Post Card with Comments */}
+          {/* Post Card with Comments - PostCard includes CommentList internally when variant="detail" */}
           <PostCard
-            post={post}
-            showComments={true}
+            post={data.post}
+            currentUserId={user?.id}
             variant="detail"
           />
-
-          {/* Comments Section */}
-          <div className="post-detail__comments">
-            <CommentList
-              postId={post.id}
-              currentUserId={user?.id}
-            />
-          </div>
         </div>
       </div>
     </ContentLayout>
@@ -220,3 +192,6 @@ export function PostDetailPageRelay(): JSX.Element {
     </PostDetailPageErrorBoundary>
   );
 }
+
+// Export alias for backward compatibility
+export { PostDetailPageRelay as PostDetailPage };

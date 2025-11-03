@@ -1,21 +1,25 @@
 /**
  * Relay Environment Configuration
  *
- * Creates the Relay Environment that manages GraphQL queries, mutations, and cache.
- * Handles authentication via JWT tokens from authStore.
- *
- * TDD Note: This is infrastructure setup - tested via integration tests in Phase 1.3
+ * This module sets up the Relay environment with:
+ * - Network layer for GraphQL communication
+ * - Store for caching
+ * - JWT token authentication
  */
 
 import {
   Environment,
   Network,
   RecordSource,
-  Store
-} from 'relay-runtime';
-import type { RequestParameters, Variables ,
+  Store,
   FetchFunction,
-  GraphQLResponse} from 'relay-runtime';
+  RequestParameters,
+  Variables,
+  GraphQLResponse,
+} from 'relay-runtime';
+
+// Read GraphQL URL from environment variable, fallback to port 4000
+const HTTP_ENDPOINT = import.meta.env.VITE_GRAPHQL_URL || 'http://localhost:4000/graphql';
 import { useAuthStore } from '../stores/authStore';
 
 /**
@@ -44,7 +48,7 @@ const fetchQuery: FetchFunction = async (
 
   try {
     // Make GraphQL request
-    const response = await fetch(import.meta.env.VITE_GRAPHQL_URL || '/graphql', {
+    const response = await fetch(HTTP_ENDPOINT, {
       method: 'POST',
       headers,
       body: JSON.stringify({

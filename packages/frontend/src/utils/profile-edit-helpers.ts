@@ -54,11 +54,16 @@ export const validateProfileForm = (formData: ProfileFormData): ProfileValidatio
 };
 
 /**
- * Initializes profile form data from a Profile object.
+ * Initializes profile form data from a profile object.
  * Handles null/undefined values by providing empty string defaults.
  * Trims whitespace from all fields.
  *
- * @param profile - The profile object to initialize from
+ * Only requires the specific fields needed for the form (fullName and bio),
+ * following the Interface Segregation Principle.
+ *
+ * Accepts both domain Profile types (with undefined) and GraphQL Profile types (with null).
+ *
+ * @param profile - Object containing fullName and bio fields (can be null or undefined)
  * @returns ProfileFormData with safe defaults
  *
  * @example
@@ -67,7 +72,9 @@ export const validateProfileForm = (formData: ProfileFormData): ProfileValidatio
  * // formData = { fullName: 'John Doe', bio: 'Software developer' }
  * ```
  */
-export const initializeProfileFormData = (profile: Profile): ProfileFormData => ({
+export const initializeProfileFormData = (
+  profile: { fullName?: string | null; bio?: string | null }
+): ProfileFormData => ({
     fullName: (profile.fullName || '').trim(),
     bio: (profile.bio || '').trim(),
   });

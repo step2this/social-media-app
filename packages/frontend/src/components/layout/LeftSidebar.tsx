@@ -1,13 +1,42 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useLazyLoadQuery, graphql } from 'react-relay';
+import type { LeftSidebarQuery } from './__generated__/LeftSidebarQuery.graphql';
 import { useAuth } from '../../hooks/useAuth';
 import { MaterialIcon } from '../common/MaterialIcon';
-import { useServices } from '../../services/ServiceProvider';
 
 interface LeftSidebarProps {
   collapsed?: boolean;
   className?: string;
 }
+
+/**
+ * Notification badge component that fetches unread count using Relay
+ * Isolated in its own component to avoid blocking sidebar render
+ */
+const NotificationBadge: React.FC = () => {
+  const data = useLazyLoadQuery<LeftSidebarQuery>(
+    graphql`
+      query LeftSidebarQuery {
+        unreadNotificationsCount
+      }
+    `,
+    {},
+    { fetchPolicy: 'store-and-network' }
+  );
+
+  const unreadCount = data.unreadNotificationsCount;
+
+  if (unreadCount === 0) {
+    return null;
+  }
+
+  return (
+    <span className="nav-badge">
+      {unreadCount > 99 ? '99+' : unreadCount}
+    </span>
+  );
+};
 
 /**
  * Left sidebar component following wireframe specifications
@@ -21,9 +50,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 }) => {
   const location = useLocation();
   const { user, logout, isAuthenticated, isHydrated } = useAuth();
-  const { notificationDataService } = useServices();
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef<HTMLLIElement>(null);
 
   // Debug logging for account button visibility
@@ -44,7 +71,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const navigationItems = [
     { path: '/', label: 'Home', icon: 'home', activeIcon: 'home' },
     { path: '/explore', label: 'Explore', icon: 'explore', activeIcon: 'explore' },
-    { path: '/notifications', label: 'Notifications', icon: 'notifications_outlined', activeIcon: 'notifications', badge: unreadCount },
+    { path: '/notifications', label: 'Notifications', icon: 'notifications_outlined', activeIcon: 'notifications', showBadge: true },
     { path: '/create', label: 'Create', icon: 'add_circle_outline', activeIcon: 'add_circle' },
     { path: '/messages', label: 'Messages', icon: 'chat_bubble_outline', activeIcon: 'chat_bubble' },
     { path: '/profile', label: 'Profile', icon: 'person_outline', activeIcon: 'person' },
@@ -56,31 +83,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     }
     return location.pathname.startsWith(path);
   };
-
-  // Fetch unread notification count
-  useEffect(() => {
-    const fetchUnreadCount = async () => {
-      try {
-        const result = await notificationDataService.getUnreadCount();
-        if (result.status === 'success') {
-          setUnreadCount(result.data.count);
-        } else {
-          console.error('Failed to fetch unread count:', result.error.message);
-        }
-      } catch (error) {
-        console.error('Failed to fetch unread count:', error);
-      }
-    };
-
-    if (isAuthenticated && isHydrated) {
-      fetchUnreadCount();
-      // Poll every 30 seconds for updates
-      const interval = setInterval(fetchUnreadCount, 30000);
-      return () => clearInterval(interval);
-    }
-
-    return undefined;
-  }, [isAuthenticated, isHydrated, notificationDataService]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -120,8 +122,10 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                 {!collapsed && item.label && (
                   <span className="nav-label">{item.label}</span>
                 )}
-                {!collapsed && item.badge && item.badge > 0 && (
-                  <span className="nav-badge">{item.badge > 99 ? '99+' : item.badge}</span>
+                {!collapsed && item.showBadge && (
+                  <Suspense fallback={null}>
+                    <NotificationBadge />
+                  </Suspense>
                 )}
               </Link>
             </li>

@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
-import { commentService } from '../../services/commentService';
+import { useFragment, useMutation, graphql } from 'react-relay';
 import { UserLink } from '../common/UserLink';
 import { MaterialIcon } from '../common/MaterialIcon';
-import type { Comment } from '@social-media-app/shared';
+import type { CommentItem_comment$key } from './__generated__/CommentItem_comment.graphql';
+import type { CommentItemDeleteMutation } from './__generated__/CommentItemDeleteMutation.graphql';
 import './CommentItem.css';
 
 interface CommentItemProps {
-  comment: Comment;
+  comment: CommentItem_comment$key;
   currentUserId?: string;
   onCommentDeleted?: (commentId: string) => void;
 }
@@ -44,13 +45,39 @@ const formatRelativeTime = (timestamp: string): string => {
  * Features user info, content, timestamp, and delete functionality
  */
 export const CommentItem = ({
-  comment,
+  comment: commentRef,
   currentUserId,
   onCommentDeleted
 }: CommentItemProps) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const comment = useFragment(
+    graphql`
+      fragment CommentItem_comment on Comment {
+        id
+        userId
+        content
+        createdAt
+        author {
+          id
+          handle
+          username
+        }
+      }
+    `,
+    commentRef
+  );
+
+  const [commitDelete, isDeleting] = useMutation<CommentItemDeleteMutation>(
+    graphql`
+      mutation CommentItemDeleteMutation($id: ID!) {
+        deleteComment(id: $id) {
+          success
+        }
+      }
+    `
+  );
 
   const isOwnComment = currentUserId && currentUserId === comment.userId;
   const relativeTime = formatRelativeTime(comment.createdAt);
@@ -73,33 +100,39 @@ export const CommentItem = ({
   /**
    * Handle confirm deletion
    */
-  const handleConfirmDelete = useCallback(async () => {
-    setIsDeleting(true);
+  const handleConfirmDelete = useCallback(() => {
     setError(null);
 
-    try {
-      await commentService.deleteComment(comment.id);
-
-      // Call callback if provided
-      if (onCommentDeleted) {
-        onCommentDeleted(comment.id);
+    commitDelete({
+      variables: { id: comment.id },
+      onCompleted: (response) => {
+        if (response.deleteComment?.success) {
+          // Call callback if provided
+          if (onCommentDeleted) {
+            onCommentDeleted(comment.id);
+          }
+          setShowConfirmation(false);
+        } else {
+          setError('Failed to delete comment. Please try again.');
+        }
+      },
+      onError: (err) => {
+        setError('Failed to delete comment. Please try again.');
+        console.error('Failed to delete comment:', err);
+      },
+      updater: (store) => {
+        // Remove the comment from the store
+        store.delete(comment.id);
       }
-
-      setShowConfirmation(false);
-    } catch (err) {
-      setError('Failed to delete comment. Please try again.');
-      console.error('Failed to delete comment:', err);
-    } finally {
-      setIsDeleting(false);
-    }
-  }, [comment.id, onCommentDeleted]);
+    });
+  }, [comment.id, onCommentDeleted, commitDelete]);
 
   return (
     <div className="comment-item" data-testid="comment-item">
       <div className="comment-item__avatar" data-testid="comment-avatar">
         {/* Placeholder avatar - could be replaced with actual image */}
         <div className="comment-item__avatar-placeholder">
-          {comment.userHandle.charAt(0).toUpperCase()}
+          {comment.author.handle.charAt(0).toUpperCase()}
         </div>
       </div>
 
@@ -107,7 +140,7 @@ export const CommentItem = ({
         <div className="comment-item__header">
           <UserLink
             userId={comment.userId}
-            username={comment.userHandle}
+            username={comment.author.handle}
             className="comment-item__username"
           />
 

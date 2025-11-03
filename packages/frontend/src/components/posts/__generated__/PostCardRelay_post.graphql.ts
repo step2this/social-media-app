@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<68b890202de6662fad282dd715522b20>>
+ * @generated SignedSource<<18ded70fe7672335c4b3127e1188ede8>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -23,6 +23,7 @@ export type PostCardRelay_post$data = {
     readonly username: string;
   };
   readonly userId: string;
+  readonly " $fragmentSpreads": FragmentRefs<"CommentList_post">;
   readonly " $fragmentType": "PostCardRelay_post";
 };
 export type PostCardRelay_post$key = {
@@ -116,12 +117,17 @@ const node: ReaderFragment = {
       "kind": "ScalarField",
       "name": "createdAt",
       "storageKey": null
+    },
+    {
+      "args": null,
+      "kind": "FragmentSpread",
+      "name": "CommentList_post"
     }
   ],
   "type": "Post",
   "abstractKey": null
 };
 
-(node as any).hash = "32ca2b090d9edaaefc5b4078f9f07099";
+(node as any).hash = "e62a9bda20dad76492421fcb26b828aa";
 
 export default node;

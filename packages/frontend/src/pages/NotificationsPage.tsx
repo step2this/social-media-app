@@ -286,3 +286,6 @@ export function NotificationsPageRelay(): JSX.Element {
     </NotificationsPageErrorBoundary>
   );
 }
+
+// Export alias for backward compatibility
+export { NotificationsPageRelay as NotificationsPage };

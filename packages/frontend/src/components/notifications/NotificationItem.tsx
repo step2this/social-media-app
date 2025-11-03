@@ -177,3 +177,6 @@ function formatTimeAgo(timestamp: string): string {
   if (diffDays < 7) return `${diffDays}d ago`;
   return time.toLocaleDateString();
 }
+
+// Export alias for backward compatibility
+export { NotificationItemRelay as NotificationItem };

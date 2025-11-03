@@ -7,6 +7,7 @@ import type { PostCardRelayUnlikeMutation } from './__generated__/PostCardRelayU
 import { MaterialIcon } from '../common/MaterialIcon';
 import { UserLink } from '../common/UserLink';
 import { FollowButton } from '../common/FollowButton';
+import { CommentList } from '../comments/CommentList';
 import { DevFeedSourceBadge, type FeedSource } from '../dev';
 import './PostCard.css';
 
@@ -51,6 +52,7 @@ export const PostCardRelay: React.FC<PostCardRelayProps> = ({
         isLiked
         commentsCount
         createdAt
+        ...CommentList_post
       }
     `,
     postRef
@@ -86,29 +88,32 @@ export const PostCardRelay: React.FC<PostCardRelayProps> = ({
   const toggleLike = () => {
     if (isLoading) return;
 
-    const mutation = post.isLiked ? commitUnlike : commitLike;
-    const optimisticLikesCount = post.isLiked
+    const isCurrentlyLiked = post.isLiked;
+    const mutation = isCurrentlyLiked ? commitUnlike : commitLike;
+    const optimisticLikesCount = isCurrentlyLiked
       ? post.likesCount - 1
       : post.likesCount + 1;
 
     mutation({
       variables: { postId: post.id },
       optimisticResponse: {
-        [post.isLiked ? 'unlikePost' : 'likePost']: {
+        [isCurrentlyLiked ? 'unlikePost' : 'likePost']: {
           success: true,
           likesCount: optimisticLikesCount,
-          isLiked: !post.isLiked,
+          isLiked: !isCurrentlyLiked,
         },
       },
       optimisticUpdater: (store) => {
         const postRecord = store.get(post.id);
         if (postRecord) {
-          postRecord.setValue(!post.isLiked, 'isLiked');
+          postRecord.setValue(!isCurrentlyLiked, 'isLiked');
           postRecord.setValue(optimisticLikesCount, 'likesCount');
         }
       },
       onCompleted: (response) => {
-        const result = post.isLiked ? response.unlikePost : response.likePost;
+        const result = isCurrentlyLiked
+          ? ('unlikePost' in response ? response.unlikePost : null)
+          : ('likePost' in response ? response.likePost : null);
         if (!result?.success) {
           console.error('Failed to toggle like');
         }
@@ -216,6 +221,16 @@ export const PostCardRelay: React.FC<PostCardRelayProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Comments Section - shown on detail pages or when explicitly requested */}
+      {(showComments || variant === 'detail') && (
+        <div className="post-card__comments">
+          <CommentList post={post} currentUserId={currentUserId} />
+        </div>
+      )}
     </article>
   );
 };
+
+// Export alias for backward compatibility
+export { PostCardRelay as PostCard };

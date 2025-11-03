@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<57f75f597426b8d0b61b7f29d4dcf567>>
+ * @generated SignedSource<<5f9459c37b646c5d49cb3d5eee7e1abd>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,13 +14,17 @@ export type MyProfilePageRelayQuery$data = {
   readonly me: {
     readonly bio: string | null | undefined;
     readonly createdAt: string;
+    readonly email: string;
+    readonly emailVerified: boolean;
     readonly followersCount: number;
     readonly followingCount: number;
     readonly fullName: string | null | undefined;
     readonly handle: string;
     readonly id: string;
     readonly postsCount: number;
+    readonly profilePictureThumbnailUrl: string | null | undefined;
     readonly profilePictureUrl: string | null | undefined;
+    readonly updatedAt: string;
     readonly username: string;
   };
 };
@@ -85,6 +89,13 @@ var v0 = [
         "alias": null,
         "args": null,
         "kind": "ScalarField",
+        "name": "profilePictureThumbnailUrl",
+        "storageKey": null
+      },
+      {
+        "alias": null,
+        "args": null,
+        "kind": "ScalarField",
         "name": "followersCount",
         "storageKey": null
       },
@@ -107,6 +118,27 @@ var v0 = [
         "args": null,
         "kind": "ScalarField",
         "name": "createdAt",
+        "storageKey": null
+      },
+      {
+        "alias": null,
+        "args": null,
+        "kind": "ScalarField",
+        "name": "updatedAt",
+        "storageKey": null
+      },
+      {
+        "alias": null,
+        "args": null,
+        "kind": "ScalarField",
+        "name": "email",
+        "storageKey": null
+      },
+      {
+        "alias": null,
+        "args": null,
+        "kind": "ScalarField",
+        "name": "emailVerified",
         "storageKey": null
       }
     ],
@@ -131,16 +163,16 @@ return {
     "selections": (v0/*: any*/)
   },
   "params": {
-    "cacheID": "8aedba8021ba5e63835ca691235cc2b5",
+    "cacheID": "3a94e536f826b29a0401d268c114fd71",
     "id": null,
     "metadata": {},
     "name": "MyProfilePageRelayQuery",
     "operationKind": "query",
-    "text": "query MyProfilePageRelayQuery {\n  me {\n    id\n    username\n    handle\n    fullName\n    bio\n    profilePictureUrl\n    followersCount\n    followingCount\n    postsCount\n    createdAt\n  }\n}\n"
+    "text": "query MyProfilePageRelayQuery {\n  me {\n    id\n    username\n    handle\n    fullName\n    bio\n    profilePictureUrl\n    profilePictureThumbnailUrl\n    followersCount\n    followingCount\n    postsCount\n    createdAt\n    updatedAt\n    email\n    emailVerified\n  }\n}\n"
   }
 };
 })();
 
-(node as any).hash = "9cb4f36c1d233a3a63a2a31a8bc29c38";
+(node as any).hash = "aca284a9ae118a6ca5e50d4e6309d2e9";
 
 export default node;

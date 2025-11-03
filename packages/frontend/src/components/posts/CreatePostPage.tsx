@@ -256,3 +256,6 @@ export const CreatePostPageRelay: React.FC = () => {
     </div>
   );
 };
+
+// Export alias for backward compatibility
+export { CreatePostPageRelay as CreatePostPage };

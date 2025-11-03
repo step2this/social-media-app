@@ -3,7 +3,7 @@ import { useLazyLoadQuery, useMutation, graphql } from 'react-relay';
 import type { MyProfilePageRelayQuery } from './__generated__/MyProfilePageRelayQuery.graphql';
 import type { MyProfilePageRelayMutation } from './__generated__/MyProfilePageRelayMutation.graphql';
 import { ProfileDisplay } from './ProfileDisplay';
-import { LoadingSpinner, ErrorState } from '../common/LoadingStates';
+import { LoadingSpinner } from '../common/LoadingStates';
 import { ProfileLayout } from '../layout/AppLayout';
 import {
   validateProfileForm,
@@ -31,10 +31,14 @@ function MyProfilePageContent() {
           fullName
           bio
           profilePictureUrl
+          profilePictureThumbnailUrl
           followersCount
           followingCount
           postsCount
           createdAt
+          updatedAt
+          email
+          emailVerified
         }
       }
     `,
@@ -146,7 +150,7 @@ function MyProfilePageContent() {
     >
       <div className="tama-card">
         <ProfileDisplay
-          profile={profile}
+          profile={profile as any}
           showEditButton={true}
           onEditClick={handleEditClick}
           onAvatarClick={handleAvatarClick}
@@ -236,3 +240,6 @@ export const MyProfilePageRelay: React.FC = () => {
     </Suspense>
   );
 };
+
+// Export alias for backward compatibility
+export { MyProfilePageRelay as MyProfilePage };
