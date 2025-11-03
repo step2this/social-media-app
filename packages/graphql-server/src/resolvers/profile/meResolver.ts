@@ -5,33 +5,30 @@
  * Requires authentication via withAuth HOC.
  */
 
+import { GraphQLError } from 'graphql';
 import { withAuth } from '../../infrastructure/resolvers/withAuth.js';
 import { Container } from '../../infrastructure/di/Container.js';
-import { ErrorFactory } from '../../infrastructure/errors/ErrorFactory.js';
-import type { GetCurrentUserProfile } from '../../application/use-cases/profile/GetCurrentUserProfile.js';
-import type { QueryResolvers } from '../../../generated/types.js';
+import type { QueryResolvers } from '../../schema/generated/types';
+import { ProfileAdapter } from '../../infrastructure/adapters/ProfileAdapter';
+import type { ProfileService } from '@social-media-app/dal';
 
 /**
  * Create the me resolver with DI container.
  *
- * @param container - DI container for resolving use cases
+ * @param container - DI container for resolving services
  * @returns GraphQL resolver for Query.me
- *
- * @example
- * ```typescript
- * const container = new Container();
- * registerServices(container, context);
- * const meResolver = createMeResolver(container);
- * ```
  */
-export const createMeResolver = (container: Container): QueryResolvers['me'] =>
-  withAuth(async (_parent, _args, context) => {
-    const useCase = container.resolve<GetCurrentUserProfile>('GetCurrentUserProfile');
-    const result = await useCase.execute({ userId: context.userId });
+export const createMeResolver = (container: Container): QueryResolvers['me'] => {
+  return withAuth(async (_parent: any, _args: any, context: any) => {
+    const profileService = container.resolve<ProfileService>('ProfileService');
+    const adapter = new ProfileAdapter(profileService);
 
-    if (!result.success) {
-      throw ErrorFactory.internalServerError(result.error.message);
+    const profile = await adapter.getCurrentUserProfile(context.userId!);
+    
+    if (!profile) {
+      throw new GraphQLError('Profile not found for authenticated user');
     }
-
-    return result.data;
+    
+    return profile;
   });
+};

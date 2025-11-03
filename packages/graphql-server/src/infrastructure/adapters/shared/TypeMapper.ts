@@ -29,12 +29,14 @@ import type {
   Post as DomainPost,
   PostGridItem as DomainPostGridItem,
   PostWithAuthor as DomainPostWithAuthor,
+  Profile as DomainProfile,
+  PublicProfile as DomainPublicProfile,
 } from '@social-media-app/shared';
 import type {
   Comment as GraphQLComment,
   PageInfo,
   Post as GraphQLPost,
-  Profile,
+  Profile as GraphQLProfile,
 } from '../../../schema/generated/types';
 import { CursorCodec } from '../../pagination/CursorCodec';
 
@@ -76,11 +78,11 @@ export class TypeMapper {
    */
   static toGraphQLComment(domain: DomainComment): GraphQLComment {
     // Build the author object from flat domain fields
-    const author: Profile = {
+    const author: GraphQLProfile = {
       id: domain.userId,
       handle: domain.userHandle,
       username: domain.userHandle, // Use handle as fallback for username
-    } as Profile; // Type assertion needed because Profile has more required fields
+    } as GraphQLProfile; // Type assertion needed because Profile has more required fields
 
     return {
       id: domain.id,
@@ -230,13 +232,13 @@ export class TypeMapper {
    * @returns GraphQL Post type compatible with schema
    */
   static toGraphQLFeedPost(domain: DomainPostWithAuthor): GraphQLPost {
-    const author: Profile = {
+    const author: GraphQLProfile = {
       id: domain.authorId,
       handle: domain.authorHandle,
       username: domain.authorHandle,
       fullName: domain.authorFullName ?? null,
       profilePictureUrl: domain.authorProfilePictureUrl ?? null,
-    } as Profile;
+    } as GraphQLProfile;
 
     return {
       id: domain.id,
@@ -251,5 +253,51 @@ export class TypeMapper {
       updatedAt: domain.createdAt,
       author,
     } as GraphQLPost;
+  }
+
+  /**
+   * Transform domain Profile to GraphQL Profile
+   *
+   * Transforms a full Profile from the domain layer to GraphQL Profile type.
+   * Used for authenticated user's own profile.
+   *
+   * @param domain - The domain Profile from @social-media-app/shared
+   * @returns GraphQL Profile type compatible with schema
+   */
+  static toGraphQLProfile(domain: DomainProfile): GraphQLProfile {
+    return {
+      id: domain.id,
+      handle: domain.handle,
+      username: domain.handle,
+      fullName: domain.fullName ?? null,
+      bio: domain.bio ?? null,
+      profilePictureUrl: domain.profilePictureUrl ?? null,
+      postsCount: domain.postsCount ?? 0,
+      followersCount: domain.followersCount ?? 0,
+      followingCount: domain.followingCount ?? 0,
+    } as GraphQLProfile;
+  }
+
+  /**
+   * Transform domain PublicProfile to GraphQL Profile
+   *
+   * Transforms a PublicProfile (viewed by others) to GraphQL Profile type.
+   * May have limited fields compared to full Profile.
+   *
+   * @param domain - The domain PublicProfile from @social-media-app/shared
+   * @returns GraphQL Profile type compatible with schema
+   */
+  static toGraphQLPublicProfile(domain: DomainPublicProfile): GraphQLProfile {
+    return {
+      id: domain.id,
+      handle: domain.handle,
+      username: domain.handle,
+      fullName: domain.fullName ?? null,
+      bio: domain.bio ?? null,
+      profilePictureUrl: domain.profilePictureUrl ?? null,
+      postsCount: domain.postsCount ?? 0,
+      followersCount: domain.followersCount ?? 0,
+      followingCount: domain.followingCount ?? 0,
+    } as GraphQLProfile;
   }
 }
