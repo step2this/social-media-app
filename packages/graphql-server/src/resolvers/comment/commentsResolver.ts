@@ -2,32 +2,47 @@
  * Comments Resolver
  *
  * GraphQL resolver for fetching paginated comments on a post.
- * Uses dependency injection pattern for testability.
+ * Uses CommentAdapter for type transformation from domain to GraphQL types.
  */
 
 import type { QueryResolvers } from '../../schema/generated/types';
-import type { Container } from '../../infrastructure/di/Container';
-import { requireValidCursor } from '../../infrastructure/resolvers/helpers/validateCursor';
-import { buildConnection } from '../../infrastructure/resolvers/helpers/ConnectionBuilder';
+import { CommentAdapter } from '../../infrastructure/adapters/CommentAdapter';
+import { GraphQLError } from 'graphql';
 
-export function createCommentsResolver(container: Container): QueryResolvers['comments'] {
-  return async (_parent, args, _context, _info) => {
-    const useCase = container.resolve('GetCommentsByPost');
-    const cursor = requireValidCursor(args.cursor);
-
-    const result = await useCase.execute(args.postId, args.limit || 20, cursor);
-
-    if (!result.success) {
-      throw result.error;
-    }
-
-    return buildConnection({
-      items: result.value.items,
-      hasMore: result.value.hasMore,
-      getCursorKeys: (comment) => ({
-        PK: `POST#${args.postId}`,
-        SK: `COMMENT#${comment.createdAt}#${comment.id}`,
-      }),
+/**
+ * Comments Query Resolver
+ *
+ * Fetches paginated comments for a post. Requires authentication.
+ * Returns GraphQL CommentConnection with proper type transformation.
+ */
+export const commentsResolver: QueryResolvers['comments'] = async (
+  _parent,
+  args,
+  context
+) => {
+  // Require authentication
+  if (!context.userId) {
+    throw new GraphQLError('Authentication required', {
+      extensions: { code: 'UNAUTHENTICATED' },
     });
-  };
-}
+  }
+
+  // Validate required args
+  if (!args.postId) {
+    throw new GraphQLError('postId is required', {
+      extensions: { code: 'BAD_USER_INPUT' },
+    });
+  }
+
+  // Create adapter with comment service from context
+  const commentAdapter = new CommentAdapter(context.services.commentService);
+
+  const first = args.limit ?? 20;
+
+  // Delegate to adapter - handles all transformation and validation
+  return commentAdapter.getCommentsByPostId({
+    postId: args.postId,
+    first,
+    after: args.cursor ?? undefined,
+  });
+};
