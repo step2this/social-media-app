@@ -14,6 +14,10 @@
     "./test-utils": {
       "types": "./dist/test-utils/index.d.ts",
       "import": "./dist/test-utils/index.js"
+    },
+    "./test-utils/fixtures": {
+      "types": "./dist/test-utils/fixtures/index.d.ts",
+      "import": "./dist/test-utils/fixtures/index.js"
     }
   },
   "scripts": {

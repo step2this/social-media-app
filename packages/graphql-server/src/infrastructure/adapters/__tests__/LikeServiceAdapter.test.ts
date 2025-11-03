@@ -21,8 +21,8 @@ describe('LikeServiceAdapter', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.isLiked).toBe(true);
-      expect(result.value.likeCount).toBe(42);
+      expect(result.data.isLiked).toBe(true);
+      expect(result.data.likeCount).toBe(42);
     }
   });
 

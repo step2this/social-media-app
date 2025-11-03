@@ -21,7 +21,7 @@ describe('FollowServiceAdapter', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.isFollowing).toBe(true);
+      expect(result.data.isFollowing).toBe(true);
     }
   });
 

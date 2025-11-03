@@ -25,8 +25,8 @@ describe('CommentServiceAdapter', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.items).toEqual(mockComments);
-      expect(result.value.hasMore).toBe(false);
+      expect(result.data.items).toEqual(mockComments);
+      expect(result.data.hasMore).toBe(false);
     }
   });
 

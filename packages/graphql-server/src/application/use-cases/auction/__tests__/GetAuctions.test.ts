@@ -20,7 +20,7 @@ describe('GetAuctions', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.items).toHaveLength(5);
+      expect(result.data.items).toHaveLength(5);
     }
   });
 
@@ -36,8 +36,8 @@ describe('GetAuctions', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.items).toHaveLength(3);
-      expect(result.value.items.every(a => a.status === 'ACTIVE')).toBe(true);
+      expect(result.data.items).toHaveLength(3);
+      expect(result.data.items.every(a => a.status === 'ACTIVE')).toBe(true);
     }
   });
 
@@ -50,8 +50,8 @@ describe('GetAuctions', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.items).toHaveLength(20);
-      expect(result.value.hasMore).toBe(true);
+      expect(result.data.items).toHaveLength(20);
+      expect(result.data.hasMore).toBe(true);
     }
   });
 });

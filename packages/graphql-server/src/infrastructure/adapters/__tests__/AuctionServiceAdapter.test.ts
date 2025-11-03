@@ -15,7 +15,7 @@ describe('AuctionServiceAdapter', () => {
       const mockAuction = createMockAuction({ id: 'auction-1' });
       const mockService = {
         getAuction: async () => mockAuction,
-        getAuctions: async () => ({ auctions: [], hasMore: false, nextCursor: null }),
+        listAuctions: async () => ({ auctions: [], hasMore: false, nextCursor: null }),
         getBidHistory: async () => ({ bids: [], hasMore: false, nextCursor: null }),
       };
       const adapter = new AuctionServiceAdapter(mockService as any);
@@ -24,7 +24,7 @@ describe('AuctionServiceAdapter', () => {
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.value.id).toBe('auction-1');
+        expect(result.data.id).toBe('auction-1');
       }
     });
 
@@ -33,7 +33,7 @@ describe('AuctionServiceAdapter', () => {
         getAuction: async () => {
           throw new Error('Auction not found');
         },
-        getAuctions: async () => ({ auctions: [], hasMore: false, nextCursor: null }),
+        listAuctions: async () => ({ auctions: [], hasMore: false, nextCursor: null }),
         getBidHistory: async () => ({ bids: [], hasMore: false, nextCursor: null }),
       };
       const adapter = new AuctionServiceAdapter(mockService as any);
@@ -52,7 +52,7 @@ describe('AuctionServiceAdapter', () => {
       const mockAuctions = createMockAuctions(3);
       const mockService = {
         getAuction: async () => mockAuctions[0],
-        getAuctions: async () => ({
+        listAuctions: async () => ({
           auctions: mockAuctions,
           hasMore: false,
           nextCursor: null,
@@ -65,14 +65,14 @@ describe('AuctionServiceAdapter', () => {
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.value.items).toEqual(mockAuctions);
+        expect(result.data.items).toEqual(mockAuctions);
       }
     });
 
     it('handles service errors gracefully', async () => {
       const mockService = {
         getAuction: async () => createMockAuction(),
-        getAuctions: async () => {
+        listAuctions: async () => {
           throw new Error('Service down');
         },
         getBidHistory: async () => ({ bids: [], hasMore: false, nextCursor: null }),
@@ -95,7 +95,7 @@ describe('AuctionServiceAdapter', () => {
       ];
       const mockService = {
         getAuction: async () => createMockAuction(),
-        getAuctions: async () => ({ auctions: [], hasMore: false, nextCursor: null }),
+        listAuctions: async () => ({ auctions: [], hasMore: false, nextCursor: null }),
         getBidHistory: async () => ({
           bids: mockBids,
           hasMore: false,
@@ -108,14 +108,14 @@ describe('AuctionServiceAdapter', () => {
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.value.items).toEqual(mockBids);
+        expect(result.data.items).toEqual(mockBids);
       }
     });
 
     it('handles service errors gracefully', async () => {
       const mockService = {
         getAuction: async () => createMockAuction(),
-        getAuctions: async () => ({ auctions: [], hasMore: false, nextCursor: null }),
+        listAuctions: async () => ({ auctions: [], hasMore: false, nextCursor: null }),
         getBidHistory: async () => {
           throw new Error('Service down');
         },

@@ -27,8 +27,8 @@ describe('NotificationServiceAdapter', () => {
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.value.items).toEqual(mockNotifications);
-        expect(result.value.hasMore).toBe(false);
+        expect(result.data.items).toEqual(mockNotifications);
+        expect(result.data.hasMore).toBe(false);
       }
     });
 
@@ -62,7 +62,7 @@ describe('NotificationServiceAdapter', () => {
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.value).toBe(5);
+        expect(result.data).toBe(5);
       }
     });
 

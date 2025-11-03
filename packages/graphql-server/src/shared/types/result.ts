@@ -84,6 +84,42 @@ export type Result<T, E = Error> =
 export type AsyncResult<T, E = Error> = Promise<Result<T, E>>;
 
 /**
+ * success - Create a success Result
+ *
+ * Helper function to create a success Result with data.
+ *
+ * @param data - The success data
+ * @returns A success Result
+ *
+ * @example
+ * ```typescript
+ * const result = success(42);
+ * // { success: true, data: 42 }
+ * ```
+ */
+export function success<T>(data: T): Result<T, never> {
+  return { success: true, data };
+}
+
+/**
+ * failure - Create a failure Result
+ *
+ * Helper function to create a failure Result with error.
+ *
+ * @param error - The error
+ * @returns A failure Result
+ *
+ * @example
+ * ```typescript
+ * const result = failure(new Error('Something went wrong'));
+ * // { success: false, error: Error('Something went wrong') }
+ * ```
+ */
+export function failure<E = Error>(error: E): Result<never, E> {
+  return { success: false, error };
+}
+
+/**
  * unwrap - Extract data from Result or throw error
  *
  * Use when you're confident the result is success,
