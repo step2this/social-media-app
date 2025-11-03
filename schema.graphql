@@ -80,10 +80,12 @@
     fullName: String
     bio: String
     profilePictureUrl: String
+    profilePictureThumbnailUrl: String
     followersCount: Int!
     followingCount: Int!
     postsCount: Int!
     createdAt: String!
+    updatedAt: String!
   }
 
   # PublicProfile type - public profile for viewing other users
@@ -113,6 +115,7 @@
     isLiked: Boolean
     createdAt: String!
     updatedAt: String!
+    comments(first: Int, after: String): CommentConnection!
   }
 
   type Comment {
