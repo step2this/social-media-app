@@ -24,12 +24,16 @@
  * ```
  */
 
-import type { Comment as DomainComment } from '@social-media-app/shared';
+import type {
+  Comment as DomainComment,
+  Post as DomainPost,
+  PostGridItem as DomainPostGridItem,
+  PostWithAuthor as DomainPostWithAuthor,
+} from '@social-media-app/shared';
 import type {
   Comment as GraphQLComment,
-  CommentConnection,
-  CommentEdge,
   PageInfo,
+  Post as GraphQLPost,
   Profile,
 } from '../../../schema/generated/types';
 import { CursorCodec } from '../../pagination/CursorCodec';
@@ -91,9 +95,9 @@ export class TypeMapper {
   /**
    * Transform array of domain items to GraphQL Connection
    *
-   * This is a generic method that works with any domain/GraphQL type pair.
-   * It builds the standard GraphQL Connection structure with edges, cursors,
-   * and pageInfo.
+   * This is a truly generic method that works with any domain/GraphQL type pair
+   * and any Connection type. It builds the standard GraphQL Connection structure
+   * with edges, cursors, and pageInfo.
    *
    * Cursors are generated using CursorCodec with { id, timestamp } for stable
    * pagination across requests.
@@ -109,18 +113,22 @@ export class TypeMapper {
    *
    * @example
    * ```typescript
-   * const connection = TypeMapper.toGraphQLConnection(
+   * // For Comments
+   * const commentConnection = TypeMapper.toGraphQLConnection<Comment, GraphQLComment, CommentConnection>(
    *   domainComments,
    *   TypeMapper.toGraphQLComment,
-   *   {
-   *     first: 20,
-   *     hasNextPage: true,
-   *     hasPreviousPage: false
-   *   }
+   *   { hasNextPage: true }
+   * );
+   *
+   * // For Posts
+   * const postConnection = TypeMapper.toGraphQLConnection<Post, GraphQLPost, PostConnection>(
+   *   domainPosts,
+   *   TypeMapper.toGraphQLPost,
+   *   { hasNextPage: false }
    * );
    * ```
    */
-  static toGraphQLConnection<TDomain, TGraphQL>(
+  static toGraphQLConnection<TDomain, TGraphQL, TConnection>(
     items: TDomain[],
     transformer: (item: TDomain) => TGraphQL,
     options: {
@@ -129,9 +137,9 @@ export class TypeMapper {
       hasNextPage?: boolean;
       hasPreviousPage?: boolean;
     }
-  ): CommentConnection {
+  ): TConnection {
     // Transform each item and create edges with cursors
-    const edges: CommentEdge[] = items.map((item) => {
+    const edges = items.map((item) => {
       // Transform domain item to GraphQL type
       const node = transformer(item);
 
@@ -147,7 +155,7 @@ export class TypeMapper {
       const cursor = codec.encode(cursorData);
 
       return {
-        node: node as GraphQLComment,
+        node,
         cursor,
       };
     });
@@ -163,6 +171,85 @@ export class TypeMapper {
     return {
       edges,
       pageInfo,
-    };
+    } as TConnection;
+  }
+
+  /**
+   * Transform domain Post to GraphQL Post
+   *
+   * Transforms a full Post from the domain layer to GraphQL Post type.
+   * Note: Author field will be resolved by Post.author field resolver.
+   *
+   * @param domain - The domain Post from @social-media-app/shared
+   * @returns GraphQL Post type compatible with schema
+   */
+  static toGraphQLPost(domain: DomainPost): GraphQLPost {
+    return {
+      id: domain.id,
+      userId: domain.userId,
+      imageUrl: domain.imageUrl,
+      thumbnailUrl: domain.thumbnailUrl,
+      caption: domain.caption ?? null,
+      likesCount: domain.likesCount,
+      commentsCount: domain.commentsCount,
+      createdAt: domain.createdAt,
+      updatedAt: domain.updatedAt,
+    } as GraphQLPost;
+  }
+
+  /**
+   * Transform domain PostGridItem to GraphQL Post
+   *
+   * Transforms a minimal PostGridItem (for grid views) to GraphQL Post type.
+   * Uses thumbnailUrl for imageUrl to optimize grid loading.
+   *
+   * @param domain - The domain PostGridItem from @social-media-app/shared
+   * @returns GraphQL Post type compatible with schema
+   */
+  static toGraphQLPostGridItem(domain: DomainPostGridItem): GraphQLPost {
+    return {
+      id: domain.id,
+      userId: domain.userId,
+      imageUrl: domain.thumbnailUrl,
+      thumbnailUrl: domain.thumbnailUrl,
+      caption: domain.caption ?? null,
+      likesCount: domain.likesCount,
+      commentsCount: domain.commentsCount,
+      createdAt: domain.createdAt,
+      updatedAt: domain.createdAt,
+    } as GraphQLPost;
+  }
+
+  /**
+   * Transform domain PostWithAuthor to GraphQL Post
+   *
+   * Transforms a PostWithAuthor (feed post with embedded author info) to GraphQL Post.
+   * Includes author profile and isLiked status for feed display.
+   *
+   * @param domain - The domain PostWithAuthor from @social-media-app/shared
+   * @returns GraphQL Post type compatible with schema
+   */
+  static toGraphQLFeedPost(domain: DomainPostWithAuthor): GraphQLPost {
+    const author: Profile = {
+      id: domain.authorId,
+      handle: domain.authorHandle,
+      username: domain.authorHandle,
+      fullName: domain.authorFullName ?? null,
+      profilePictureUrl: domain.authorProfilePictureUrl ?? null,
+    } as Profile;
+
+    return {
+      id: domain.id,
+      userId: domain.userId,
+      imageUrl: domain.imageUrl,
+      thumbnailUrl: domain.imageUrl,
+      caption: domain.caption ?? null,
+      likesCount: domain.likesCount,
+      commentsCount: domain.commentsCount,
+      isLiked: domain.isLiked ?? null,
+      createdAt: domain.createdAt,
+      updatedAt: domain.createdAt,
+      author,
+    } as GraphQLPost;
   }
 }
