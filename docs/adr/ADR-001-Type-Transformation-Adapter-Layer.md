@@ -1,8 +1,8 @@
 # ADR-001: Type Transformation Adapter Layer
 
-**Status**: Accepted  
-**Date**: 2025-11-03  
-**Authors**: Development Team  
+**Status**: Accepted
+**Date**: 2025-11-03
+**Authors**: Development Team
 **Tags**: architecture, graphql, hexagonal-architecture, type-safety
 
 ---
@@ -23,7 +23,7 @@ The GraphQL server was experiencing type mismatches between the Data Access Laye
 // Before: Resolver with manual transformation and tight coupling
 export const commentsResolver = async (_parent, args, context) => {
   const comments = await commentService.getCommentsByPost(args.postId);
-  
+
   // Manual transformation scattered in resolver
   return {
     edges: comments.map(c => ({
@@ -82,7 +82,7 @@ export class TypeMapper {
       node: transformer(item),
       cursor: CursorCodec.encode({ id: item.id, sortKey: item.createdAt })
     }));
-    
+
     return {
       edges,
       pageInfo: {
@@ -169,10 +169,10 @@ export const createCommentsResolver = (container: Container): QueryResolvers['co
 
 1. **❌ More Files**: Additional layer adds files
    - **Mitigation**: Clear organization and naming conventions
-   
+
 2. **❌ Learning Curve**: New pattern for team
    - **Mitigation**: Comprehensive documentation and examples
-   
+
 3. **❌ Initial Development Time**: Setting up adapters takes time
    - **Mitigation**: Template pattern speeds up creation
 
@@ -187,21 +187,21 @@ export const createCommentsResolver = (container: Container): QueryResolvers['co
 
 ### Alternative 1: Keep Current Approach (Rejected)
 
-**Pros**: No changes needed  
+**Pros**: No changes needed
 **Cons**: Type mismatches continue, no test coverage, high maintenance
 
 **Rejection Reason**: Technical debt growing, blocking new features
 
 ### Alternative 2: GraphQL Code Generation (Rejected)
 
-**Pros**: Automatic type generation  
+**Pros**: Automatic type generation
 **Cons**: Still need transformation logic, adds build complexity
 
 **Rejection Reason**: Doesn't solve transformation logic problem
 
 ### Alternative 3: Unified Type System (Rejected)
 
-**Pros**: One set of types everywhere  
+**Pros**: One set of types everywhere
 **Cons**: Couples domain and interface layers, breaks hexagonal architecture
 
 **Rejection Reason**: Violates clean architecture principles
@@ -331,6 +331,6 @@ export class CommentAdapter {
 
 ---
 
-**Decision Status**: ✅ Accepted and Implemented  
-**Implementation Status**: ✅ Complete (Phases 1-5)  
+**Decision Status**: ✅ Accepted and Implemented
+**Implementation Status**: ✅ Complete (Phases 1-5)
 **Next Review**: Q2 2025 (Performance and scalability assessment)

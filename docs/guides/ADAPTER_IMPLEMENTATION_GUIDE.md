@@ -1,7 +1,7 @@
 # Adapter Implementation Guide
 
-**Version**: 1.0  
-**Last Updated**: 2025-11-03  
+**Version**: 1.0
+**Last Updated**: 2025-11-03
 **For**: GraphQL Server Type Transformation Adapters
 
 ---
@@ -45,15 +45,15 @@ Database
 
 Create a new adapter when:
 
-✅ Adding a new GraphQL query that returns domain entities  
-✅ Domain types don't match GraphQL schema types  
-✅ You need pagination (Connection pattern)  
+✅ Adding a new GraphQL query that returns domain entities
+✅ Domain types don't match GraphQL schema types
+✅ You need pagination (Connection pattern)
 ✅ You want to isolate type transformations from resolvers
 
 **Don't create an adapter when:**
 
-❌ Simple scalar queries (e.g., count, status)  
-❌ Mutations (use mutation handlers instead)  
+❌ Simple scalar queries (e.g., count, status)
+❌ Mutations (use mutation handlers instead)
 ❌ Field resolvers (use direct transformations)
 
 ---
@@ -419,10 +419,10 @@ export class [Entity]Adapter {
 
 Every adapter must have:
 
-✅ **Happy Path**: Transforms entities correctly  
-✅ **Pagination**: Handles cursor and hasNextPage  
-✅ **Empty Results**: Returns empty connection  
-✅ **Validation**: Throws on invalid inputs  
+✅ **Happy Path**: Transforms entities correctly
+✅ **Pagination**: Handles cursor and hasNextPage
+✅ **Empty Results**: Returns empty connection
+✅ **Validation**: Throws on invalid inputs
 ✅ **Error Handling**: Wraps errors in GraphQLError
 
 ### Test Pattern
@@ -437,7 +437,7 @@ describe('[Entity]Adapter', () => {
     mock[Entity]Service = {
       methodName: async () => ({ [entity]s: [], hasMore: false }),
     } as any;
-    
+
     // Create adapter with mock
     adapter = new [Entity]Adapter(mock[Entity]Service);
   });
@@ -520,7 +520,7 @@ export class FeedAdapter {
       args.first,
       args.after
     );
-    
+
     return TypeMapper.toGraphQLConnection(...);
   }
 }

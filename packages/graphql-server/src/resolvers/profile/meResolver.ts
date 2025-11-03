@@ -24,11 +24,11 @@ export const createMeResolver = (container: Container): QueryResolvers['me'] => 
     const adapter = new ProfileAdapter(profileService);
 
     const profile = await adapter.getCurrentUserProfile(context.userId!);
-    
+
     if (!profile) {
       throw new GraphQLError('Profile not found for authenticated user');
     }
-    
+
     return profile;
   });
 };
