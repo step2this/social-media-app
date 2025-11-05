@@ -10,7 +10,6 @@ import { GraphQLError } from 'graphql';
 import { Container } from '../../../infrastructure/di/Container.js';
 import { createMeResolver } from '../meResolver.js';
 import { UserId } from '../../../shared/types/index.js';
-import type { GetCurrentUserProfile } from '../../../application/use-cases/profile/GetCurrentUserProfile.js';
 
 describe('meResolver', () => {
   let container: Container;
@@ -39,7 +38,7 @@ describe('meResolver', () => {
       });
 
       const resolver = createMeResolver(container);
-      const result = await resolver({}, {}, { userId: UserId('user-123') }, {} as any);
+      const result = await resolver!({}, {}, { userId: UserId('user-123') }, {} as any);
 
       expect(result).toEqual(mockProfile);
       expect(mockUseCase.execute).toHaveBeenCalledWith({ userId: 'user-123' });
@@ -49,11 +48,11 @@ describe('meResolver', () => {
       const resolver = createMeResolver(container);
 
       await expect(
-        resolver({}, {}, { userId: undefined }, {} as any)
+        resolver!({}, {}, { userId: undefined }, {} as any)
       ).rejects.toThrow(GraphQLError);
 
       await expect(
-        resolver({}, {}, { userId: undefined }, {} as any)
+        resolver!({}, {}, { userId: undefined }, {} as any)
       ).rejects.toThrow('authenticated');
 
       expect(mockUseCase.execute).not.toHaveBeenCalled();
@@ -70,11 +69,11 @@ describe('meResolver', () => {
       const resolver = createMeResolver(container);
 
       await expect(
-        resolver({}, {}, { userId: UserId('user-123') }, {} as any)
+        resolver!({}, {}, { userId: UserId('user-123') }, {} as any)
       ).rejects.toThrow(GraphQLError);
 
       await expect(
-        resolver({}, {}, { userId: UserId('user-123') }, {} as any)
+        resolver!({}, {}, { userId: UserId('user-123') }, {} as any)
       ).rejects.toThrow('Profile service unavailable');
     });
   });

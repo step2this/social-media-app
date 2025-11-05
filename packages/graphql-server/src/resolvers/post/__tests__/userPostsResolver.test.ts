@@ -10,8 +10,6 @@ import { GraphQLError } from 'graphql';
 import { Container } from '../../../infrastructure/di/Container.js';
 import { createUserPostsResolver } from '../userPostsResolver.js';
 import { Cursor } from '../../../shared/types/index.js';
-import type { GetProfileByHandle } from '../../../application/use-cases/profile/GetProfileByHandle.js';
-import type { GetUserPosts } from '../../../application/use-cases/post/GetUserPosts.js';
 
 describe('userPostsResolver', () => {
   let container: Container;
@@ -72,7 +70,7 @@ describe('userPostsResolver', () => {
       });
 
       const resolver = createUserPostsResolver(container);
-      const result = await resolver(
+      const result = await resolver!(
         {},
         { handle: '@john', first: 10 },
         {} as any,
@@ -133,7 +131,7 @@ describe('userPostsResolver', () => {
       });
 
       const resolver = createUserPostsResolver(container);
-      const result = await resolver(
+      const result = await resolver!(
         {},
         { handle: '@alice', first: 10, after: 'cursor-10' },
         {} as any,
@@ -179,7 +177,7 @@ describe('userPostsResolver', () => {
       });
 
       const resolver = createUserPostsResolver(container);
-      const result = await resolver(
+      const result = await resolver!(
         {},
         { handle: '@bob', first: 10 },
         {} as any,
@@ -221,7 +219,7 @@ describe('userPostsResolver', () => {
       });
 
       const resolver = createUserPostsResolver(container);
-      await resolver(
+      await resolver!(
         {},
         { handle: '@charlie', limit: 20, cursor: 'old-cursor' },
         {} as any,
@@ -245,11 +243,11 @@ describe('userPostsResolver', () => {
       const resolver = createUserPostsResolver(container);
 
       await expect(
-        resolver({}, { handle: '@nonexistent', first: 10 }, {} as any, {} as any)
+        resolver!({}, { handle: '@nonexistent', first: 10 }, {} as any, {} as any)
       ).rejects.toThrow(GraphQLError);
 
       await expect(
-        resolver({}, { handle: '@nonexistent', first: 10 }, {} as any, {} as any)
+        resolver!({}, { handle: '@nonexistent', first: 10 }, {} as any, {} as any)
       ).rejects.toThrow('not found');
     });
 
@@ -264,11 +262,11 @@ describe('userPostsResolver', () => {
       const resolver = createUserPostsResolver(container);
 
       await expect(
-        resolver({}, { handle: '@john', first: 10 }, {} as any, {} as any)
+        resolver!({}, { handle: '@john', first: 10 }, {} as any, {} as any)
       ).rejects.toThrow(GraphQLError);
 
       await expect(
-        resolver({}, { handle: '@john', first: 10 }, {} as any, {} as any)
+        resolver!({}, { handle: '@john', first: 10 }, {} as any, {} as any)
       ).rejects.toThrow('Profile service unavailable');
     });
 
@@ -290,11 +288,11 @@ describe('userPostsResolver', () => {
       const resolver = createUserPostsResolver(container);
 
       await expect(
-        resolver({}, { handle: '@john', first: 0 }, {} as any, {} as any)
+        resolver!({}, { handle: '@john', first: 0 }, {} as any, {} as any)
       ).rejects.toThrow(GraphQLError);
 
       await expect(
-        resolver({}, { handle: '@john', first: 0 }, {} as any, {} as any)
+        resolver!({}, { handle: '@john', first: 0 }, {} as any, {} as any)
       ).rejects.toThrow('greater than 0');
     });
   });

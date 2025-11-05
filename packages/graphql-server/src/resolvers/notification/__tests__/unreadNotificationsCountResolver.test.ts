@@ -6,11 +6,13 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import type { GraphQLResolveInfo } from 'graphql';
 import { createUnreadNotificationsCountResolver } from '../unreadNotificationsCountResolver';
 import { Container } from '../../../infrastructure/di/Container';
 import { GetUnreadNotificationsCount } from '../../../application/use-cases/notification/GetUnreadNotificationsCount';
 import { FakeNotificationRepository } from '../../../../__tests__/helpers/fake-repositories';
 import { createMockNotifications } from '@social-media-app/shared/test-utils/fixtures';
+import type { GraphQLContext } from '../../../context';
 
 describe('unreadNotificationsCountResolver', () => {
   let container: Container;
@@ -30,7 +32,12 @@ describe('unreadNotificationsCountResolver', () => {
     container.register('GetUnreadNotificationsCount', () => useCase);
     resolver = createUnreadNotificationsCountResolver(container);
 
-    const result = await resolver({}, {}, { userId: 'user-1' } as any, {} as any);
+    const result = await resolver!(
+      {} as Record<string, never>,
+      {},
+      { userId: 'user-1' } as GraphQLContext,
+      {} as GraphQLResolveInfo
+    );
 
     expect(result).toBe(5);
   });
@@ -42,7 +49,12 @@ describe('unreadNotificationsCountResolver', () => {
     container.register('GetUnreadNotificationsCount', () => useCase);
     resolver = createUnreadNotificationsCountResolver(container);
 
-    const result = await resolver({}, {}, { userId: 'user-1' } as any, {} as any);
+    const result = await resolver(
+      {} as Record<string, never>,
+      {},
+      { userId: 'user-1' } as GraphQLContext,
+      {} as GraphQLResolveInfo
+    );
 
     expect(result).toBe(0);
   });
@@ -53,7 +65,12 @@ describe('unreadNotificationsCountResolver', () => {
     container.register('GetUnreadNotificationsCount', () => useCase);
     resolver = createUnreadNotificationsCountResolver(container);
 
-    const result = await resolver({}, {}, { userId: 'user-1' } as any, {} as any);
+    const result = await resolver(
+      {} as Record<string, never>,
+      {},
+      { userId: 'user-1' } as GraphQLContext,
+      {} as GraphQLResolveInfo
+    );
 
     expect(result).toBe(0);
   });

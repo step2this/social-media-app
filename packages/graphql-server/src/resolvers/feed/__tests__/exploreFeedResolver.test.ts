@@ -6,11 +6,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GraphQLError } from 'graphql';
 import { Container } from '../../../infrastructure/di/Container.js';
 import { createExploreFeedResolver } from '../exploreFeedResolver.js';
 import { UserId, Cursor } from '../../../shared/types/index.js';
-import type { GetExploreFeed } from '../../../application/use-cases/feed/GetExploreFeed.js';
 
 describe('exploreFeedResolver', () => {
   let container: Container;

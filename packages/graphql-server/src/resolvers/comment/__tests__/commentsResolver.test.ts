@@ -6,11 +6,13 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import { GraphQLResolveInfo } from 'graphql';
 import { createCommentsResolver } from '../commentsResolver';
 import { Container } from '../../../infrastructure/di/Container';
 import { GetCommentsByPost } from '../../../application/use-cases/comment/GetCommentsByPost';
 import { FakeCommentRepository } from '../../../../__tests__/helpers/fake-repositories';
 import { createMockComments } from '@social-media-app/shared/test-utils/fixtures';
+import type { GraphQLContext } from '../../../context';
 
 describe('commentsResolver', () => {
   let container: Container;
@@ -27,7 +29,12 @@ describe('commentsResolver', () => {
     container.register('GetCommentsByPost', () => useCase);
     resolver = createCommentsResolver(container);
 
-    const result = await resolver({}, { postId: 'post-1', limit: 20 }, {} as any, {} as any);
+    const result = await resolver!(
+      {} as any,
+      { postId: 'post-1', limit: 20 },
+      {} as GraphQLContext,
+      {} as GraphQLResolveInfo
+    );
 
     expect(result.edges).toHaveLength(5);
     expect(result.edges[0].node.postId).toBe('post-1');
@@ -41,7 +48,12 @@ describe('commentsResolver', () => {
     container.register('GetCommentsByPost', () => useCase);
     resolver = createCommentsResolver(container);
 
-    const result = await resolver({}, { postId: 'post-1', limit: 20 }, {} as any, {} as any);
+    const result = await resolver!(
+      {} as any,
+      { postId: 'post-1', limit: 20 },
+      {} as GraphQLContext,
+      {} as GraphQLResolveInfo
+    );
 
     expect(result.edges).toHaveLength(0);
     expect(result.pageInfo.hasNextPage).toBe(false);
@@ -54,7 +66,12 @@ describe('commentsResolver', () => {
     container.register('GetCommentsByPost', () => useCase);
     resolver = createCommentsResolver(container);
 
-    const result = await resolver({}, { postId: 'post-1', limit: 20 }, {} as any, {} as any);
+    const result = await resolver!(
+      {} as any,
+      { postId: 'post-1', limit: 20 },
+      {} as GraphQLContext,
+      {} as GraphQLResolveInfo
+    );
 
     expect(result.edges).toHaveLength(20);
     expect(result.pageInfo.hasNextPage).toBe(true);

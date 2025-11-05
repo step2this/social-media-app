@@ -6,8 +6,10 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import type { GraphQLResolveInfo } from 'graphql';
 import { createBidsResolver } from '../bidsResolver';
 import { Container } from '../../../infrastructure/di/Container';
+import type { GraphQLContext } from '../../../context';
 import { GetBidHistory } from '../../../application/use-cases/auction/GetBidHistory';
 import { FakeAuctionRepository } from '../../../../__tests__/helpers/fake-repositories';
 
@@ -29,7 +31,12 @@ describe('bidsResolver', () => {
     container.register('GetBidHistory', () => useCase);
     resolver = createBidsResolver(container);
 
-    const result = await resolver({}, { auctionId: 'auction-1', limit: 20 }, {} as any, {} as any);
+    const _parent: any = {};
+    const args: { auctionId: string; limit: number } = { auctionId: 'auction-1', limit: 20 };
+    const context: GraphQLContext = {} as GraphQLContext;
+    const _info: GraphQLResolveInfo = {} as GraphQLResolveInfo;
+
+    const result = await resolver!(_parent, args, context, _info);
 
     expect(result.edges).toHaveLength(2);
     expect(result.edges[0].node.auctionId).toBe('auction-1');
@@ -42,7 +49,12 @@ describe('bidsResolver', () => {
     container.register('GetBidHistory', () => useCase);
     resolver = createBidsResolver(container);
 
-    const result = await resolver({}, { auctionId: 'auction-1', limit: 20 }, {} as any, {} as any);
+    const _parent: any = {};
+    const args: { auctionId: string; limit: number } = { auctionId: 'auction-1', limit: 20 };
+    const context: GraphQLContext = {} as GraphQLContext;
+    const _info: GraphQLResolveInfo = {} as GraphQLResolveInfo;
+
+    const result = await resolver!(_parent, args, context, _info);
 
     expect(result.edges).toHaveLength(0);
     expect(result.pageInfo.hasNextPage).toBe(false);
@@ -61,7 +73,12 @@ describe('bidsResolver', () => {
     container.register('GetBidHistory', () => useCase);
     resolver = createBidsResolver(container);
 
-    const result = await resolver({}, { auctionId: 'auction-1', limit: 20 }, {} as any, {} as any);
+    const _parent: any = {};
+    const args: { auctionId: string; limit: number } = { auctionId: 'auction-1', limit: 20 };
+    const context: GraphQLContext = {} as GraphQLContext;
+    const _info: GraphQLResolveInfo = {} as GraphQLResolveInfo;
+
+    const result = await resolver!(_parent, args, context, _info);
 
     expect(result.edges).toHaveLength(20);
     expect(result.pageInfo.hasNextPage).toBe(true);

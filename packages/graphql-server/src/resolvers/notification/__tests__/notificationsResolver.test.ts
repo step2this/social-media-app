@@ -6,11 +6,13 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import type { GraphQLResolveInfo } from 'graphql';
 import { createNotificationsResolver } from '../notificationsResolver';
 import { Container } from '../../../infrastructure/di/Container';
 import { GetNotifications } from '../../../application/use-cases/notification/GetNotifications';
 import { FakeNotificationRepository } from '../../../../__tests__/helpers/fake-repositories';
 import { createMockNotifications } from '@social-media-app/shared/test-utils/fixtures';
+import type { GraphQLContext } from '../../../context';
 
 describe('notificationsResolver', () => {
   let container: Container;
@@ -27,7 +29,12 @@ describe('notificationsResolver', () => {
     container.register('GetNotifications', () => useCase);
     resolver = createNotificationsResolver(container);
 
-    const result = await resolver({}, { limit: 20 }, { userId: 'user-1' } as any, {} as any);
+    const result = await resolver!(
+      {} as Record<string, never>,
+      { limit: 20 },
+      { userId: 'user-1' } as GraphQLContext,
+      {} as GraphQLResolveInfo
+    );
 
     expect(result.edges).toHaveLength(5);
     expect(result.edges[0].node.userId).toBe('user-1');
@@ -40,7 +47,12 @@ describe('notificationsResolver', () => {
     container.register('GetNotifications', () => useCase);
     resolver = createNotificationsResolver(container);
 
-    const result = await resolver({}, { limit: 20 }, { userId: 'user-1' } as any, {} as any);
+    const result = await resolver(
+      {} as Record<string, never>,
+      { limit: 20 },
+      { userId: 'user-1' } as GraphQLContext,
+      {} as GraphQLResolveInfo
+    );
 
     expect(result.edges).toHaveLength(0);
     expect(result.pageInfo.hasNextPage).toBe(false);
@@ -53,7 +65,12 @@ describe('notificationsResolver', () => {
     container.register('GetNotifications', () => useCase);
     resolver = createNotificationsResolver(container);
 
-    const result = await resolver({}, { limit: 20 }, { userId: 'user-1' } as any, {} as any);
+    const result = await resolver(
+      {} as Record<string, never>,
+      { limit: 20 },
+      { userId: 'user-1' } as GraphQLContext,
+      {} as GraphQLResolveInfo
+    );
 
     expect(result.edges).toHaveLength(20);
     expect(result.pageInfo.hasNextPage).toBe(true);

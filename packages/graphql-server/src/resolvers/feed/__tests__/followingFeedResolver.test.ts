@@ -10,7 +10,6 @@ import { GraphQLError } from 'graphql';
 import { Container } from '../../../infrastructure/di/Container.js';
 import { createFollowingFeedResolver } from '../followingFeedResolver.js';
 import { UserId, Cursor } from '../../../shared/types/index.js';
-import type { GetFollowingFeed } from '../../../application/use-cases/feed/GetFollowingFeed.js';
 
 describe('followingFeedResolver', () => {
   let container: Container;

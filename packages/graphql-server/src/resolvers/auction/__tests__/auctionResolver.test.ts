@@ -6,8 +6,10 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import type { GraphQLResolveInfo } from 'graphql';
 import { createAuctionResolver } from '../auctionResolver';
 import { Container } from '../../../infrastructure/di/Container';
+import type { GraphQLContext } from '../../../context';
 import { GetAuction } from '../../../application/use-cases/auction/GetAuction';
 import { FakeAuctionRepository } from '../../../../__tests__/helpers/fake-repositories';
 import { createMockAuction } from '@social-media-app/shared/test-utils/fixtures';
@@ -27,7 +29,12 @@ describe('auctionResolver', () => {
     container.register('GetAuction', () => useCase);
     resolver = createAuctionResolver(container);
 
-    const result = await resolver({}, { id: 'auction-1' }, {} as any, {} as any);
+    const _parent: any = {};
+    const args: { id: string } = { id: 'auction-1' };
+    const context: GraphQLContext = {} as GraphQLContext;
+    const _info: GraphQLResolveInfo = {} as GraphQLResolveInfo;
+
+    const result = await resolver!(_parent, args, context, _info);
 
     expect(result.id).toBe('auction-1');
     expect(result.sellerId).toBe('seller-1');
@@ -39,7 +46,12 @@ describe('auctionResolver', () => {
     container.register('GetAuction', () => useCase);
     resolver = createAuctionResolver(container);
 
-    await expect(resolver({}, { id: 'nonexistent' }, {} as any, {} as any)).rejects.toThrow('Auction not found');
+    const _parent: any = {};
+    const args: { id: string } = { id: 'nonexistent' };
+    const context: GraphQLContext = {} as GraphQLContext;
+    const _info: GraphQLResolveInfo = {} as GraphQLResolveInfo;
+
+    await expect(resolver!(_parent, args, context, _info)).rejects.toThrow('Auction not found');
   });
 
   it('returns auction with all required fields', async () => {
@@ -54,7 +66,12 @@ describe('auctionResolver', () => {
     container.register('GetAuction', () => useCase);
     resolver = createAuctionResolver(container);
 
-    const result = await resolver({}, { id: 'auction-1' }, {} as any, {} as any);
+    const _parent: any = {};
+    const args: { id: string } = { id: 'auction-1' };
+    const context: GraphQLContext = {} as GraphQLContext;
+    const _info: GraphQLResolveInfo = {} as GraphQLResolveInfo;
+
+    const result = await resolver!(_parent, args, context, _info);
 
     expect(result.status).toBe('ACTIVE');
     expect(result.currentPrice).toBe(200);

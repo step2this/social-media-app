@@ -6,15 +6,16 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import { GraphQLResolveInfo } from 'graphql';
 import { createPostLikeStatusResolver } from '../postLikeStatusResolver';
 import { Container } from '../../../infrastructure/di/Container';
 import { GetPostLikeStatus } from '../../../application/use-cases/like/GetPostLikeStatus';
 import { FakeLikeRepository } from '../../../../__tests__/helpers/fake-repositories';
-import { createMockLiked, createMockNotLiked } from '@social-media-app/shared/test-utils/fixtures';
+import { createMockLiked } from '@social-media-app/shared/test-utils/fixtures';
+import type { GraphQLContext } from '../../../context';
 
 describe('postLikeStatusResolver', () => {
   let container: Container;
-  let resolver: ReturnType<typeof createPostLikeStatusResolver>;
 
   beforeEach(() => {
     container = new Container();
@@ -27,9 +28,14 @@ describe('postLikeStatusResolver', () => {
     const repository = new FakeLikeRepository(likeStatus);
     const useCase = new GetPostLikeStatus(repository);
     container.register('GetPostLikeStatus', () => useCase);
-    resolver = createPostLikeStatusResolver(container);
+    const resolver = createPostLikeStatusResolver(container);
 
-    const result = await resolver({}, { postId: 'post-1' }, { userId: 'user-1' } as any, {} as any);
+    const result = await resolver!(
+      {} as any,
+      { postId: 'post-1' },
+      { userId: 'user-1' } as GraphQLContext,
+      {} as GraphQLResolveInfo
+    );
 
     expect(result.isLiked).toBe(true);
     expect(result.likeCount).toBe(42);
@@ -39,9 +45,14 @@ describe('postLikeStatusResolver', () => {
     const repository = new FakeLikeRepository(new Map());
     const useCase = new GetPostLikeStatus(repository);
     container.register('GetPostLikeStatus', () => useCase);
-    resolver = createPostLikeStatusResolver(container);
+    const resolver = createPostLikeStatusResolver(container);
 
-    const result = await resolver({}, { postId: 'post-1' }, { userId: 'user-1' } as any, {} as any);
+    const result = await resolver!(
+      {} as any,
+      { postId: 'post-1' },
+      { userId: 'user-1' } as GraphQLContext,
+      {} as GraphQLResolveInfo
+    );
 
     expect(result.isLiked).toBe(false);
     expect(result.likeCount).toBe(0);
@@ -54,9 +65,14 @@ describe('postLikeStatusResolver', () => {
     const repository = new FakeLikeRepository(likeStatus);
     const useCase = new GetPostLikeStatus(repository);
     container.register('GetPostLikeStatus', () => useCase);
-    resolver = createPostLikeStatusResolver(container);
+    const resolver = createPostLikeStatusResolver(container);
 
-    const result = await resolver({}, { postId: 'post-1' }, { userId: 'user-1' } as any, {} as any);
+    const result = await resolver!(
+      {} as any,
+      { postId: 'post-1' },
+      { userId: 'user-1' } as GraphQLContext,
+      {} as GraphQLResolveInfo
+    );
 
     expect(result.likeCount).toBe(99);
   });

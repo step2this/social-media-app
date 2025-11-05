@@ -9,7 +9,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GraphQLError } from 'graphql';
 import { Container } from '../../../infrastructure/di/Container.js';
 import { createProfileResolver } from '../profileResolver.js';
-import type { GetProfileByHandle } from '../../../application/use-cases/profile/GetProfileByHandle.js';
 
 describe('profileResolver', () => {
   let container: Container;
@@ -38,7 +37,7 @@ describe('profileResolver', () => {
       });
 
       const resolver = createProfileResolver(container);
-      const result = await resolver({}, { handle: '@john' }, {} as any, {} as any);
+      const result = await resolver!({}, { handle: '@john' }, {} as any, {} as any);
 
       expect(result).toEqual(mockProfile);
       expect(mockUseCase.execute).toHaveBeenCalledWith({ handle: '@john' });
@@ -61,7 +60,7 @@ describe('profileResolver', () => {
 
       const resolver = createProfileResolver(container);
 
-      await resolver({}, { handle: '@alice' }, {} as any, {} as any);
+      await resolver!({}, { handle: '@alice' }, {} as any, {} as any);
 
       expect(mockUseCase.execute).toHaveBeenCalledWith({ handle: '@alice' });
     });
@@ -77,15 +76,15 @@ describe('profileResolver', () => {
       const resolver = createProfileResolver(container);
 
       await expect(
-        resolver({}, { handle: '@nonexistent' }, {} as any, {} as any)
+        resolver!({}, { handle: '@nonexistent' }, {} as any, {} as any)
       ).rejects.toThrow(GraphQLError);
 
       await expect(
-        resolver({}, { handle: '@nonexistent' }, {} as any, {} as any)
+        resolver!({}, { handle: '@nonexistent' }, {} as any, {} as any)
       ).rejects.toThrow('not found');
 
       await expect(
-        resolver({}, { handle: '@nonexistent' }, {} as any, {} as any)
+        resolver!({}, { handle: '@nonexistent' }, {} as any, {} as any)
       ).rejects.toThrow('@nonexistent');
     });
 
@@ -100,11 +99,11 @@ describe('profileResolver', () => {
       const resolver = createProfileResolver(container);
 
       await expect(
-        resolver({}, { handle: '@john' }, {} as any, {} as any)
+        resolver!({}, { handle: '@john' }, {} as any, {} as any)
       ).rejects.toThrow(GraphQLError);
 
       await expect(
-        resolver({}, { handle: '@john' }, {} as any, {} as any)
+        resolver!({}, { handle: '@john' }, {} as any, {} as any)
       ).rejects.toThrow('Profile service unavailable');
     });
   });
@@ -127,7 +126,7 @@ describe('profileResolver', () => {
 
       const resolver = createProfileResolver(container);
 
-      await resolver({}, { handle: '@bob' }, {} as any, {} as any);
+      await resolver!({}, { handle: '@bob' }, {} as any, {} as any);
 
       expect(mockUseCase.execute).toHaveBeenCalledWith({ handle: '@bob' });
     });

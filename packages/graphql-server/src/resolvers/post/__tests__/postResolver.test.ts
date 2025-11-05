@@ -9,8 +9,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GraphQLError } from 'graphql';
 import { Container } from '../../../infrastructure/di/Container.js';
 import { createPostResolver } from '../postResolver.js';
-import { PostId } from '../../../shared/types/index.js';
-import type { GetPostById } from '../../../application/use-cases/post/GetPostById.js';
 
 describe('postResolver', () => {
   let container: Container;
@@ -41,7 +39,7 @@ describe('postResolver', () => {
       });
 
       const resolver = createPostResolver(container);
-      const result = await resolver({}, { id: 'post-123' }, {} as any, {} as any);
+      const result = await resolver!({}, { id: 'post-123' }, {} as any, {} as any);
 
       expect(result).toEqual(mockPost);
       expect(mockUseCase.execute).toHaveBeenCalledWith({ postId: 'post-123' });
@@ -66,7 +64,7 @@ describe('postResolver', () => {
 
       const resolver = createPostResolver(container);
 
-      await resolver({}, { id: 'post-456' }, {} as any, {} as any);
+      await resolver!({}, { id: 'post-456' }, {} as any, {} as any);
 
       expect(mockUseCase.execute).toHaveBeenCalledWith({ postId: 'post-456' });
     });
@@ -82,15 +80,15 @@ describe('postResolver', () => {
       const resolver = createPostResolver(container);
 
       await expect(
-        resolver({}, { id: 'nonexistent' }, {} as any, {} as any)
+        resolver!({}, { id: 'nonexistent' }, {} as any, {} as any)
       ).rejects.toThrow(GraphQLError);
 
       await expect(
-        resolver({}, { id: 'nonexistent' }, {} as any, {} as any)
+        resolver!({}, { id: 'nonexistent' }, {} as any, {} as any)
       ).rejects.toThrow('not found');
 
       await expect(
-        resolver({}, { id: 'nonexistent' }, {} as any, {} as any)
+        resolver!({}, { id: 'nonexistent' }, {} as any, {} as any)
       ).rejects.toThrow('nonexistent');
     });
 
@@ -105,11 +103,11 @@ describe('postResolver', () => {
       const resolver = createPostResolver(container);
 
       await expect(
-        resolver({}, { id: 'post-123' }, {} as any, {} as any)
+        resolver!({}, { id: 'post-123' }, {} as any, {} as any)
       ).rejects.toThrow(GraphQLError);
 
       await expect(
-        resolver({}, { id: 'post-123' }, {} as any, {} as any)
+        resolver!({}, { id: 'post-123' }, {} as any, {} as any)
       ).rejects.toThrow('Post service unavailable');
     });
   });

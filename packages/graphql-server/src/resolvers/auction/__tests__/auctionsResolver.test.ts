@@ -6,8 +6,10 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import type { GraphQLResolveInfo } from 'graphql';
 import { createAuctionsResolver } from '../auctionsResolver';
 import { Container } from '../../../infrastructure/di/Container';
+import type { GraphQLContext } from '../../../context';
 import { GetAuctions } from '../../../application/use-cases/auction/GetAuctions';
 import { FakeAuctionRepository } from '../../../../__tests__/helpers/fake-repositories';
 import { createMockAuctions } from '@social-media-app/shared/test-utils/fixtures';
@@ -27,7 +29,12 @@ describe('auctionsResolver', () => {
     container.register('GetAuctions', () => useCase);
     resolver = createAuctionsResolver(container);
 
-    const result = await resolver({}, { limit: 20 }, {} as any, {} as any);
+    const _parent: any = {};
+    const args: { limit: number } = { limit: 20 };
+    const context: GraphQLContext = {} as GraphQLContext;
+    const _info: GraphQLResolveInfo = {} as GraphQLResolveInfo;
+
+    const result = await resolver!(_parent, args, context, _info);
 
     expect(result.edges).toHaveLength(5);
     expect(result.pageInfo.hasNextPage).toBe(false);
@@ -43,7 +50,12 @@ describe('auctionsResolver', () => {
     container.register('GetAuctions', () => useCase);
     resolver = createAuctionsResolver(container);
 
-    const result = await resolver({}, { status: 'ACTIVE', limit: 20 }, {} as any, {} as any);
+    const _parent: any = {};
+    const args: { status: string; limit: number } = { status: 'ACTIVE', limit: 20 };
+    const context: GraphQLContext = {} as GraphQLContext;
+    const _info: GraphQLResolveInfo = {} as GraphQLResolveInfo;
+
+    const result = await resolver!(_parent, args, context, _info);
 
     expect(result.edges).toHaveLength(3);
     expect(result.edges.every(e => e.node.status === 'ACTIVE')).toBe(true);
@@ -56,7 +68,12 @@ describe('auctionsResolver', () => {
     container.register('GetAuctions', () => useCase);
     resolver = createAuctionsResolver(container);
 
-    const result = await resolver({}, { limit: 20 }, {} as any, {} as any);
+    const _parent: any = {};
+    const args: { limit: number } = { limit: 20 };
+    const context: GraphQLContext = {} as GraphQLContext;
+    const _info: GraphQLResolveInfo = {} as GraphQLResolveInfo;
+
+    const result = await resolver!(_parent, args, context, _info);
 
     expect(result.edges).toHaveLength(20);
     expect(result.pageInfo.hasNextPage).toBe(true);
