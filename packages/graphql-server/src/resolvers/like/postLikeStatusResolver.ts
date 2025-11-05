@@ -20,6 +20,6 @@ export function createPostLikeStatusResolver(container: Container): QueryResolve
       throw result.error;
     }
 
-    return result.value;
+    return result.data;
   };
 }

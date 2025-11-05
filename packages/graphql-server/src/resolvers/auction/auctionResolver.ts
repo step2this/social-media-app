@@ -18,6 +18,6 @@ export function createAuctionResolver(container: Container): QueryResolvers['auc
       throw result.error;
     }
 
-    return result.value;
+    return result.data;
   };
 }

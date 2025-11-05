@@ -20,6 +20,6 @@ export function createFollowStatusResolver(container: Container): QueryResolvers
       throw result.error;
     }
 
-    return result.value;
+    return result.data;
   };
 }

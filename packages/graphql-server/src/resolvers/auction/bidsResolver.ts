@@ -22,8 +22,8 @@ export function createBidsResolver(container: Container): QueryResolvers['bids']
     }
 
     return buildConnection({
-      items: result.value.items,
-      hasMore: result.value.hasMore,
+      items: result.data.items,
+      hasMore: result.data.hasMore,
       getCursorKeys: (bid) => ({
         PK: `AUCTION#${args.auctionId}`,
         SK: `BID#${bid.createdAt}#${bid.id}`,

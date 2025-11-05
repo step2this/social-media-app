@@ -22,12 +22,12 @@
  * @module resolvers/createQueryResolvers
  */
 
-import { GraphQLError } from 'graphql';
-import type { QueryResolvers } from '../../generated/types.js';
+import type { QueryResolvers } from '../schema/generated/types.js';
+import type { GraphQLResolveInfo } from 'graphql';
 import { createMeResolver, createProfileResolver } from './profile/index.js';
 import { createPostResolver, createUserPostsResolver } from './post/index.js';
 import { createFollowingFeedResolver, createExploreFeedResolver } from './feed/index.js';
-import { createCommentsResolver } from './comment/commentsResolver.js';
+import { commentsResolver } from './comment/commentsResolver.js';
 import { createFollowStatusResolver } from './follow/followStatusResolver.js';
 import { createPostLikeStatusResolver } from './like/postLikeStatusResolver.js';
 import { createNotificationsResolver } from './notification/notificationsResolver.js';
@@ -38,6 +38,7 @@ import { createBidsResolver } from './auction/bidsResolver.js';
 import { requireAuth } from '../infrastructure/resolvers/helpers/requireAuth.js';
 import { requireValidCursor } from '../infrastructure/resolvers/helpers/validateCursor.js';
 import { buildConnection } from '../infrastructure/resolvers/helpers/ConnectionBuilder.js';
+import type { GraphQLContext } from '../context.js';
 
 /**
  * Create all Query resolvers using container from context.
@@ -63,39 +64,73 @@ import { buildConnection } from '../infrastructure/resolvers/helpers/ConnectionB
  */
 export function createQueryResolvers(): QueryResolvers {
   return {
-    me: async (parent, args, context, info) => {
+    me: async (
+      _parent: unknown,
+      _args: Record<string, never>,
+      context: GraphQLContext,
+      _info: GraphQLResolveInfo
+    ) => {
       const resolver = createMeResolver(context.container);
-      return resolver(parent, args, context, info);
+      return resolver(_parent, _args, context, _info);
     },
 
-    profile: async (parent, args, context, info) => {
+    profile: async (
+      _parent: unknown,
+      args: { handle: string },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
       const resolver = createProfileResolver(context.container);
-      return resolver(parent, args, context, info);
+      return resolver(_parent, args, context, info);
     },
 
-    post: async (parent, args, context, info) => {
+    post: async (
+      _parent: unknown,
+      args: { id: string },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
       const resolver = createPostResolver(context.container);
-      return resolver(parent, args, context, info);
+      return resolver(_parent, args, context, info);
     },
 
-    userPosts: async (parent, args, context, info) => {
+    userPosts: async (
+      _parent: unknown,
+      args: { handle: string; first?: number | null; after?: string | null },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
       const resolver = createUserPostsResolver(context.container);
-      return resolver(parent, args, context, info);
+      return resolver(_parent, args, context, info);
     },
 
-    followingFeed: async (parent, args, context, info) => {
+    followingFeed: async (
+      _parent: unknown,
+      args: { first?: number | null; after?: string | null },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
       const resolver = createFollowingFeedResolver(context.container);
-      return resolver(parent, args, context, info);
+      return resolver(_parent, args, context, info);
     },
 
-    exploreFeed: async (parent, args, context, info) => {
+    exploreFeed: async (
+      _parent: unknown,
+      args: { first?: number | null; after?: string | null },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
       const resolver = createExploreFeedResolver(context.container);
-      return resolver(parent, args, context, info);
+      return resolver(_parent, args, context, info);
     },
 
     // Legacy resolvers - Refactored with TDD helpers
     // @ts-ignore - DAL Post type differs from GraphQL Post type (author field resolver handles missing field)
-    feed: async (_parent, args, context) => {
+    feed: async (
+      _parent: unknown,
+      args: { limit?: number | null; cursor?: string | null },
+      context: GraphQLContext
+    ) => {
       requireAuth(context, 'access your feed');
       const cursor = requireValidCursor(args.cursor);
 
@@ -134,48 +169,86 @@ export function createQueryResolvers(): QueryResolvers {
     },
 
     // @ts-ignore - DAL Comment type differs from GraphQL Comment type (author field resolver handles missing field)
-    comments: async (parent, args, context, info) => {
-      const resolver = createCommentsResolver(context.container);
-      return resolver(parent, args, context, info);
+    comments: async (
+      _parent: unknown,
+      args: { postId: string; first?: number | null; after?: string | null },
+      context: GraphQLContext,
+      _info: GraphQLResolveInfo
+    ) => {
+      return commentsResolver(args.postId, args.first || 10, args.after);
     },
 
-    followStatus: async (parent, args, context, info) => {
+    followStatus: async (
+      _parent: unknown,
+      args: { userId: string },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
       const resolver = createFollowStatusResolver(context.container);
-      return resolver(parent, args, context, info);
+      return resolver(_parent, args, context, info);
     },
 
-    postLikeStatus: async (parent, args, context, info) => {
+    postLikeStatus: async (
+      _parent: unknown,
+      args: { postId: string },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
       const resolver = createPostLikeStatusResolver(context.container);
-      return resolver(parent, args, context, info);
+      return resolver(_parent, args, context, info);
     },
 
     // @ts-ignore - DAL Notification type differs from GraphQL Notification type (status enum values differ)
-    notifications: async (parent, args, context, info) => {
+    notifications: async (
+      _parent: unknown,
+      args: { first?: number | null; after?: string | null },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
       const resolver = createNotificationsResolver(context.container);
-      return resolver(parent, args, context, info);
+      return resolver(_parent, args, context, info);
     },
 
-    unreadNotificationsCount: async (parent, args, context, info) => {
+    unreadNotificationsCount: async (
+      _parent: unknown,
+      args: Record<string, never>,
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
       const resolver = createUnreadNotificationsCountResolver(context.container);
-      return resolver(parent, args, context, info);
+      return resolver(_parent, args, context, info);
     },
 
     // @ts-ignore - DAL Auction type differs from GraphQL Auction type (seller/winner field resolvers handle missing fields)
-    auction: async (parent, args, context, info) => {
+    auction: async (
+      _parent: unknown,
+      args: { id: string },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
       const resolver = createAuctionResolver(context.container);
-      return resolver(parent, args, context, info);
+      return resolver(_parent, args, context, info);
     },
 
     // @ts-ignore - DAL Auction type differs from GraphQL Auction type (seller/winner field resolvers handle missing fields)
-    auctions: async (parent, args, context, info) => {
+    auctions: async (
+      _parent: unknown,
+      args: { status?: string | null; first?: number | null; after?: string | null },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
       const resolver = createAuctionsResolver(context.container);
-      return resolver(parent, args, context, info);
+      return resolver(_parent, args, context, info);
     },
 
-    // @ts-expect-error - bidder field resolved by Bid.bidder field resolver (not in DAL Bid type)
-    bids: async (parent, args, context, info) => {
+    bids: async (
+      _parent: unknown,
+      args: { auctionId: string; first?: number | null; after?: string | null },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
       const resolver = createBidsResolver(context.container);
-      return resolver(parent, args, context, info);
+      return resolver(_parent, args, context, info);
     },
   };
 }
