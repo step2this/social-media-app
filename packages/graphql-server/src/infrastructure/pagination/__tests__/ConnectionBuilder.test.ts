@@ -14,7 +14,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 // Import types and classes we're about to create (will fail initially - TDD RED phase)
 import { ConnectionBuilder } from '../ConnectionBuilder.js';
 import { CursorCodec } from '../CursorCodec.js';
-import { Connection, Edge } from '../../../shared/types/index.js';
+import { Connection } from '../../../shared/types/index.js';
 
 describe('ConnectionBuilder', () => {
   let builder: ConnectionBuilder;

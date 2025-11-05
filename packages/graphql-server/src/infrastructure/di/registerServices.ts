@@ -38,7 +38,6 @@ import { AuctionServiceAdapter } from '../adapters/AuctionServiceAdapter.js';
 // Repositories (interfaces)
 import type { IProfileRepository } from '../../domain/repositories/IProfileRepository.js';
 import type { IPostRepository } from '../../domain/repositories/IPostRepository.js';
-import type { IFeedRepository } from '../../domain/repositories/IFeedRepository.js';
 import type { ICommentRepository } from '../../domain/repositories/ICommentRepository.js';
 import type { IFollowRepository } from '../../domain/repositories/IFollowRepository.js';
 import type { ILikeRepository } from '../../domain/repositories/ILikeRepository.js';
@@ -50,8 +49,9 @@ import { GetCurrentUserProfile } from '../../application/use-cases/profile/GetCu
 import { GetProfileByHandle } from '../../application/use-cases/profile/GetProfileByHandle.js';
 import { GetPostById } from '../../application/use-cases/post/GetPostById.js';
 import { GetUserPosts } from '../../application/use-cases/post/GetUserPosts.js';
-import { GetFollowingFeed } from '../../application/use-cases/feed/GetFollowingFeed.js';
-import { GetExploreFeed } from '../../application/use-cases/feed/GetExploreFeed.js';
+// Feed use cases temporarily removed - Feed adapters consolidated into Post/Follow
+// import { GetFollowingFeed } from '../../application/use-cases/feed/GetFollowingFeed.js';
+// import { GetExploreFeed } from '../../application/use-cases/feed/GetExploreFeed.js';
 import { GetCommentsByPost } from '../../application/use-cases/comment/GetCommentsByPost.js';
 import { GetFollowStatus } from '../../application/use-cases/follow/GetFollowStatus.js';
 import { GetPostLikeStatus } from '../../application/use-cases/like/GetPostLikeStatus.js';
@@ -147,13 +147,15 @@ export function registerServices(container: Container, context: GraphQLContext):
   );
 
   // Feed use cases
-  container.register<GetFollowingFeed>('GetFollowingFeed', () =>
-    new GetFollowingFeed(container.resolve('FeedRepository'))
-  );
-
-  container.register<GetExploreFeed>('GetExploreFeed', () =>
-    new GetExploreFeed(container.resolve('FeedRepository'))
-  );
+  // Note: Feed use cases temporarily removed - Feed adapters were consolidated into Post/Follow adapters
+  // TODO: Re-implement feed use cases using composition of Post and Follow repositories
+  // container.register<GetFollowingFeed>('GetFollowingFeed', () =>
+  //   new GetFollowingFeed(container.resolve('PostRepository'), container.resolve('FollowRepository'))
+  // );
+  //
+  // container.register<GetExploreFeed>('GetExploreFeed', () =>
+  //   new GetExploreFeed(container.resolve('PostRepository'))
+  // );
 
   // Comment use cases
   container.register<GetCommentsByPost>('GetCommentsByPost', () =>

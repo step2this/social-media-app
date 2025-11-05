@@ -43,6 +43,8 @@ import { createDynamoDBClient, getTableName } from '@social-media-app/aws-utils'
 import { verifyAccessToken, extractTokenFromHeader, getJWTConfigFromEnv } from '@social-media-app/auth-utils';
 import { createLoaders } from './dataloaders/index.js';
 import { createServices } from './services/factory.js';
+import { Container } from './infrastructure/di/Container.js';
+import { registerServices } from './infrastructure/di/registerServices.js';
 
 // Load environment variables from project root
 config({ path: '../../.env' });
@@ -89,13 +91,21 @@ async function createExpressContext({ req }: { req: express.Request }): Promise<
     userId
   );
 
-  return {
+  // Create context object (needed for registerServices)
+  const context: GraphQLContext = {
     userId,
     dynamoClient,
     tableName,
     services,
     loaders,
-  };
+  } as GraphQLContext;
+
+  // Create DI container once per request
+  const container = new Container();
+  registerServices(container, context);
+  context.container = container;
+
+  return context;
 }
 
 /**
