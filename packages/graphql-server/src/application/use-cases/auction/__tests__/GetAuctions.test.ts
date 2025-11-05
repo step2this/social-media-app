@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { GetAuctions } from '../GetAuctions';
 import { FakeAuctionRepository } from '../../../../../__tests__/helpers/fake-repositories';
-import { createMockAuctions, createMockActiveAuction, createMockEndedAuction } from '@social-media-app/shared/test-utils/fixtures';
+import { createMockAuctions } from '@social-media-app/shared/test-utils/fixtures';
 
 describe('GetAuctions', () => {
   it('returns all auctions when no filter is provided', async () => {

@@ -22,8 +22,8 @@ describe('GetBidHistory', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.items).toHaveLength(2);
-      expect(result.value.items[0].auctionId).toBe('auction-1');
+      expect(result.data.items).toHaveLength(2);
+      expect(result.data.items[0].auctionId).toBe('auction-1');
     }
   });
 
@@ -35,8 +35,8 @@ describe('GetBidHistory', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.items).toHaveLength(0);
-      expect(result.value.hasMore).toBe(false);
+      expect(result.data.items).toHaveLength(0);
+      expect(result.data.hasMore).toBe(false);
     }
   });
 
@@ -55,8 +55,8 @@ describe('GetBidHistory', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.items).toHaveLength(20);
-      expect(result.value.hasMore).toBe(true);
+      expect(result.data.items).toHaveLength(20);
+      expect(result.data.hasMore).toBe(true);
     }
   });
 });

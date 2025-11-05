@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { GetPostLikeStatus } from '../GetPostLikeStatus';
 import { FakeLikeRepository } from '../../../../../__tests__/helpers/fake-repositories';
-import { createMockLiked, createMockNotLiked } from '@social-media-app/shared/test-utils/fixtures';
+import { createMockLiked } from '@social-media-app/shared/test-utils/fixtures';
 
 describe('GetPostLikeStatus', () => {
   it('returns liked status when user has liked the post', async () => {
@@ -22,8 +22,8 @@ describe('GetPostLikeStatus', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.isLiked).toBe(true);
-      expect(result.value.likeCount).toBe(42);
+      expect(result.data.isLiked).toBe(true);
+      expect(result.data.likeCount).toBe(42);
     }
   });
 
@@ -35,8 +35,8 @@ describe('GetPostLikeStatus', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.isLiked).toBe(false);
-      expect(result.value.likeCount).toBe(0);
+      expect(result.data.isLiked).toBe(false);
+      expect(result.data.likeCount).toBe(0);
     }
   });
 
@@ -51,7 +51,7 @@ describe('GetPostLikeStatus', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.likeCount).toBe(99);
+      expect(result.data.likeCount).toBe(99);
     }
   });
 });

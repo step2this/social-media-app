@@ -20,8 +20,8 @@ describe('GetAuction', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.id).toBe('auction-1');
-      expect(result.value.sellerId).toBe('seller-1');
+      expect(result.data.id).toBe('auction-1');
+      expect(result.data.sellerId).toBe('seller-1');
     }
   });
 
@@ -51,9 +51,9 @@ describe('GetAuction', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.status).toBe('ACTIVE');
-      expect(result.value.currentPrice).toBe(200);
-      expect(result.value.startingPrice).toBe(100);
+      expect(result.data.status).toBe('ACTIVE');
+      expect(result.data.currentPrice).toBe(200);
+      expect(result.data.startingPrice).toBe(100);
     }
   });
 });

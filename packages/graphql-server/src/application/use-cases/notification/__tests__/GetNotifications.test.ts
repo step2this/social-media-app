@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { GetNotifications } from '../GetNotifications';
 import { FakeNotificationRepository } from '../../../../../__tests__/helpers/fake-repositories';
-import { createMockNotifications, createMockUnreadNotification } from '@social-media-app/shared/test-utils/fixtures';
+import { createMockNotifications } from '@social-media-app/shared/test-utils/fixtures';
 
 describe('GetNotifications', () => {
   it('returns notifications for the specified user', async () => {
@@ -20,8 +20,8 @@ describe('GetNotifications', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.items).toHaveLength(5);
-      expect(result.value.items[0].userId).toBe('user-1');
+      expect(result.data.items).toHaveLength(5);
+      expect(result.data.items[0].userId).toBe('user-1');
     }
   });
 
@@ -33,8 +33,8 @@ describe('GetNotifications', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.items).toHaveLength(0);
-      expect(result.value.hasMore).toBe(false);
+      expect(result.data.items).toHaveLength(0);
+      expect(result.data.hasMore).toBe(false);
     }
   });
 
@@ -47,8 +47,8 @@ describe('GetNotifications', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.items).toHaveLength(20);
-      expect(result.value.hasMore).toBe(true);
+      expect(result.data.items).toHaveLength(20);
+      expect(result.data.hasMore).toBe(true);
     }
   });
 });

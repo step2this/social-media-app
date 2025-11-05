@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { GetFollowStatus } from '../GetFollowStatus';
 import { FakeFollowRepository } from '../../../../../__tests__/helpers/fake-repositories';
-import { createMockFollowing, createMockNotFollowing } from '@social-media-app/shared/test-utils/fixtures';
+import { createMockFollowing } from '@social-media-app/shared/test-utils/fixtures';
 
 describe('GetFollowStatus', () => {
   it('returns following status when user is following', async () => {
@@ -22,7 +22,7 @@ describe('GetFollowStatus', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.isFollowing).toBe(true);
+      expect(result.data.isFollowing).toBe(true);
     }
   });
 
@@ -34,7 +34,7 @@ describe('GetFollowStatus', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.isFollowing).toBe(false);
+      expect(result.data.isFollowing).toBe(false);
     }
   });
 
@@ -49,8 +49,8 @@ describe('GetFollowStatus', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.followersCount).toBe(100);
-      expect(result.value.followingCount).toBe(50);
+      expect(result.data.followersCount).toBe(100);
+      expect(result.data.followingCount).toBe(50);
     }
   });
 });
