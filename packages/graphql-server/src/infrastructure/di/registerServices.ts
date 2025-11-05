@@ -34,6 +34,7 @@ import { FollowServiceAdapter } from '../adapters/FollowServiceAdapter.js';
 import { LikeServiceAdapter } from '../adapters/LikeServiceAdapter.js';
 import { NotificationServiceAdapter } from '../adapters/NotificationServiceAdapter.js';
 import { AuctionServiceAdapter } from '../adapters/AuctionServiceAdapter.js';
+import { FeedServiceAdapter } from '../adapters/FeedServiceAdapter.js';
 
 // Repositories (interfaces)
 import type { IProfileRepository } from '../../domain/repositories/IProfileRepository.js';
@@ -43,15 +44,15 @@ import type { IFollowRepository } from '../../domain/repositories/IFollowReposit
 import type { ILikeRepository } from '../../domain/repositories/ILikeRepository.js';
 import type { INotificationRepository } from '../../domain/repositories/INotificationRepository.js';
 import type { IAuctionRepository } from '../../domain/repositories/IAuctionRepository.js';
+import type { IFeedRepository } from '../../domain/repositories/IFeedRepository.js';
 
 // Use Cases
 import { GetCurrentUserProfile } from '../../application/use-cases/profile/GetCurrentUserProfile.js';
 import { GetProfileByHandle } from '../../application/use-cases/profile/GetProfileByHandle.js';
 import { GetPostById } from '../../application/use-cases/post/GetPostById.js';
 import { GetUserPosts } from '../../application/use-cases/post/GetUserPosts.js';
-// Feed use cases temporarily removed - Feed adapters consolidated into Post/Follow
-// import { GetFollowingFeed } from '../../application/use-cases/feed/GetFollowingFeed.js';
-// import { GetExploreFeed } from '../../application/use-cases/feed/GetExploreFeed.js';
+import { GetFollowingFeed } from '../../application/use-cases/feed/GetFollowingFeed.js';
+import { GetExploreFeed } from '../../application/use-cases/feed/GetExploreFeed.js';
 import { GetCommentsByPost } from '../../application/use-cases/comment/GetCommentsByPost.js';
 import { GetFollowStatus } from '../../application/use-cases/follow/GetFollowStatus.js';
 import { GetPostLikeStatus } from '../../application/use-cases/like/GetPostLikeStatus.js';
@@ -121,6 +122,10 @@ export function registerServices(container: Container, context: GraphQLContext):
     new AuctionServiceAdapter(context.services.auctionService)
   );
 
+  container.register<IFeedRepository>('FeedRepository', () =>
+    new FeedServiceAdapter(context.services.postService, context.services.followService)
+  );
+
   /**
    * Layer 2: Use Cases
    *
@@ -147,15 +152,13 @@ export function registerServices(container: Container, context: GraphQLContext):
   );
 
   // Feed use cases
-  // Note: Feed use cases temporarily removed - Feed adapters were consolidated into Post/Follow adapters
-  // TODO: Re-implement feed use cases using composition of Post and Follow repositories
-  // container.register<GetFollowingFeed>('GetFollowingFeed', () =>
-  //   new GetFollowingFeed(container.resolve('PostRepository'), container.resolve('FollowRepository'))
-  // );
-  //
-  // container.register<GetExploreFeed>('GetExploreFeed', () =>
-  //   new GetExploreFeed(container.resolve('PostRepository'))
-  // );
+  container.register<GetFollowingFeed>('GetFollowingFeed', () =>
+    new GetFollowingFeed(container.resolve('FeedRepository'))
+  );
+
+  container.register<GetExploreFeed>('GetExploreFeed', () =>
+    new GetExploreFeed(container.resolve('FeedRepository'))
+  );
 
   // Comment use cases
   container.register<GetCommentsByPost>('GetCommentsByPost', () =>
