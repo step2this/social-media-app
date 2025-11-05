@@ -32,8 +32,13 @@ describe('NotificationAdapter', () => {
     title: 'New Like',
     message: 'Someone liked your post',
     status: 'unread',
-    actorId: 'actor-1',
+    actor: { userId: 'actor-1', handle: 'testuser', displayName: 'Test User' },
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    priority: 'normal',
+    deliveryChannels: ['in-app'],
+    soundEnabled: true,
+    vibrationEnabled: true,
   });
 
   describe('getNotifications', () => {

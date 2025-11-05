@@ -77,6 +77,6 @@ export function adaptPaginatedResponse<TService, TDomain = TService>(
   return {
     items: mapItem ? items.map(mapItem) : (items as unknown as TDomain[]),
     hasMore: serviceResponse.hasMore,
-    nextCursor: serviceResponse.nextCursor ?? null,
+    cursor: serviceResponse.nextCursor ?? undefined, // Map nextCursor → cursor
   };
 }

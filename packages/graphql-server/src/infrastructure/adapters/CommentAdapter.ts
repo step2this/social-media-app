@@ -100,7 +100,7 @@ export class CommentAdapter {
       );
 
       // Transform domain comments to GraphQL Connection
-      const connection = TypeMapper.toGraphQLConnection(
+      const connection: CommentConnection = TypeMapper.toGraphQLConnection(
         dalResponse.comments,
         TypeMapper.toGraphQLComment,
         {
@@ -109,13 +109,13 @@ export class CommentAdapter {
           hasNextPage: dalResponse.hasMore,
           hasPreviousPage: false, // We don't support backward pagination yet
         }
-      );
+      ) as CommentConnection;
 
       return connection;
     } catch (error) {
       // Convert service errors to GraphQLErrors
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      
+
       throw new GraphQLError(errorMessage, {
         extensions: {
           code: 'INTERNAL_SERVER_ERROR',

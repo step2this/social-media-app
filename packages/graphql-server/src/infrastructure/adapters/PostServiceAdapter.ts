@@ -6,9 +6,13 @@
  *
  * Features:
  * - Adapts PostService methods to IPostRepository interface
+ * - Transforms DAL Post (caption?: string | undefined) to Domain Post (caption: string | null)
  * - Wraps errors in Result type for type-safe error handling
  * - Handles pagination via ConnectionBuilder
  * - Stateless and thread-safe
+ *
+ * Advanced TypeScript Pattern: Undefined to Null Transformation
+ * GraphQL uses null for absent values, not undefined
  */
 
 import type { PostService } from '@social-media-app/dal';
@@ -44,10 +48,18 @@ export class PostServiceAdapter implements IPostRepository {
    */
   async findById(id: PostId): AsyncResult<Post | null> {
     try {
-      const post = await this.postService.getPostById(id);
+      const dalPost = await this.postService.getPostById(id);
+      if (!dalPost) {
+        return { success: true, data: null };
+      }
+      // Transform DAL post (caption?: undefined) to domain post (caption: null)
+      const domainPost: Post = {
+        ...dalPost,
+        caption: dalPost.caption ?? null,
+      };
       return {
         success: true,
-        data: post,
+        data: domainPost,
       };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
@@ -67,15 +79,22 @@ export class PostServiceAdapter implements IPostRepository {
    */
   async findByUser(userId: UserId, pagination: PaginationArgs): AsyncResult<Connection<Post>> {
     try {
-      // Call PostService with pagination
-      const result = await this.postService.getPostsByUser(userId, {
-        limit: pagination.first || 10,
-        cursor: pagination.after,
-      });
+      // Call PostService with correct method name: getUserPosts (not getPostsByUser)
+      const result = await this.postService.getUserPosts(
+        userId,
+        pagination.first || 10,
+        pagination.after
+      );
+
+      // Transform DAL posts to domain posts (caption?: undefined → caption: null)
+      const domainPosts = result.posts.map((dalPost: any) => ({
+        ...dalPost,
+        caption: dalPost.caption ?? null,
+      } as Post));
 
       // Build Relay Connection
       const connection = this.connectionBuilder.build<Post>({
-        nodes: result.posts,
+        nodes: domainPosts,
         hasMore: result.hasMore,
         getCursorData: (post) => ({ id: post.id, sortKey: post.createdAt }),
       });

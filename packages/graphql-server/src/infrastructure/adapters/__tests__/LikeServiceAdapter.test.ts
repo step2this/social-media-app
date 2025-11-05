@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { LikeServiceAdapter } from '../LikeServiceAdapter';
-import { createMockLiked, createMockNotLiked } from '@social-media-app/shared/test-utils/fixtures';
+import { createMockLiked } from '@social-media-app/shared/test-utils/fixtures';
 
 describe('LikeServiceAdapter', () => {
   it('transforms service response to repository format', async () => {

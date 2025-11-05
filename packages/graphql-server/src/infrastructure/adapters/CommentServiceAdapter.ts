@@ -6,11 +6,11 @@
  */
 
 import type { ICommentRepository } from '../../domain/repositories/ICommentRepository';
-import type { ICommentService } from '@social-media-app/dal';
+import type { CommentService } from '@social-media-app/dal';
 import { adaptServiceCall, adaptPaginatedResponse } from './shared/AdapterHelpers';
 
 export class CommentServiceAdapter implements ICommentRepository {
-  constructor(private readonly commentService: ICommentService) {}
+  constructor(private readonly commentService: CommentService) {}
 
   async getCommentsByPost(postId: string, limit: number, cursor?: string) {
     return adaptServiceCall(async () => {

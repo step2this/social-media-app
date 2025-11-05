@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { FollowServiceAdapter } from '../FollowServiceAdapter';
-import { createMockFollowing, createMockNotFollowing } from '@social-media-app/shared/test-utils/fixtures';
+import { createMockFollowing } from '@social-media-app/shared/test-utils/fixtures';
 
 describe('FollowServiceAdapter', () => {
   it('transforms service response to repository format', async () => {

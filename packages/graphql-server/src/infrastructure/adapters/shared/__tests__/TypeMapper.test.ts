@@ -8,7 +8,6 @@
 import { describe, it, expect } from 'vitest';
 import { TypeMapper } from '../TypeMapper';
 import type { Comment as DomainComment } from '@social-media-app/shared';
-import type { Comment as GraphQLComment } from '../../../../schema/generated/types';
 
 describe('TypeMapper', () => {
   describe('toGraphQLComment', () => {
@@ -88,13 +87,23 @@ describe('TypeMapper', () => {
       );
 
       expect(result.edges).toHaveLength(2);
-      expect(result.edges[0].node.id).toBe('comment-1');
-      expect(result.edges[0].cursor).toBeDefined();
-      expect(result.edges[0].cursor).toMatch(/^[A-Za-z0-9+/=]+$/); // Base64 pattern
-      expect(result.pageInfo.hasNextPage).toBe(true);
-      expect(result.pageInfo.hasPreviousPage).toBe(false);
-      expect(result.pageInfo.startCursor).toBe(result.edges[0].cursor);
-      expect(result.pageInfo.endCursor).toBe(result.edges[1].cursor);
+
+      // Type-safe access with proper assertions
+      const firstEdge = result.edges[0];
+      const secondEdge = result.edges[1];
+
+      expect(firstEdge).toBeDefined();
+      expect(secondEdge).toBeDefined();
+
+      if (firstEdge && secondEdge) {
+        expect(firstEdge.node.id).toBe('comment-1');
+        expect(firstEdge.cursor).toBeDefined();
+        expect(firstEdge.cursor).toMatch(/^[A-Za-z0-9+/=]+$/); // Base64 pattern
+        expect(result.pageInfo.hasNextPage).toBe(true);
+        expect(result.pageInfo.hasPreviousPage).toBe(false);
+        expect(result.pageInfo.startCursor).toBe(firstEdge.cursor);
+        expect(result.pageInfo.endCursor).toBe(secondEdge.cursor);
+      }
     });
 
     it('generates stable cursors for pagination', () => {
@@ -121,7 +130,16 @@ describe('TypeMapper', () => {
         { first: 1 }
       );
 
-      expect(result1.edges[0].cursor).toBe(result2.edges[0].cursor);
+      // Type-safe access
+      const edge1 = result1.edges[0];
+      const edge2 = result2.edges[0];
+
+      expect(edge1).toBeDefined();
+      expect(edge2).toBeDefined();
+
+      if (edge1 && edge2) {
+        expect(edge1.cursor).toBe(edge2.cursor);
+      }
     });
 
     it('handles empty array', () => {

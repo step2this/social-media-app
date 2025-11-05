@@ -8,6 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { AuctionServiceAdapter } from '../AuctionServiceAdapter';
 import { createMockAuction, createMockAuctions } from '@social-media-app/shared/test-utils/fixtures';
+import type { AuctionService } from '@social-media-app/auction-dal';
 
 describe('AuctionServiceAdapter', () => {
   describe('getAuction', () => {
@@ -18,7 +19,7 @@ describe('AuctionServiceAdapter', () => {
         listAuctions: async () => ({ auctions: [], hasMore: false, nextCursor: null }),
         getBidHistory: async () => ({ bids: [], hasMore: false, nextCursor: null }),
       };
-      const adapter = new AuctionServiceAdapter(mockService as any);
+      const adapter = new AuctionServiceAdapter(mockService as unknown as AuctionService);
 
       const result = await adapter.getAuction('auction-1');
 
@@ -36,7 +37,7 @@ describe('AuctionServiceAdapter', () => {
         listAuctions: async () => ({ auctions: [], hasMore: false, nextCursor: null }),
         getBidHistory: async () => ({ bids: [], hasMore: false, nextCursor: null }),
       };
-      const adapter = new AuctionServiceAdapter(mockService as any);
+      const adapter = new AuctionServiceAdapter(mockService as unknown as AuctionService);
 
       const result = await adapter.getAuction('nonexistent');
 
@@ -59,7 +60,7 @@ describe('AuctionServiceAdapter', () => {
         }),
         getBidHistory: async () => ({ bids: [], hasMore: false, nextCursor: null }),
       };
-      const adapter = new AuctionServiceAdapter(mockService as any);
+      const adapter = new AuctionServiceAdapter(mockService as unknown as AuctionService);
 
       const result = await adapter.getAuctions();
 
@@ -77,7 +78,7 @@ describe('AuctionServiceAdapter', () => {
         },
         getBidHistory: async () => ({ bids: [], hasMore: false, nextCursor: null }),
       };
-      const adapter = new AuctionServiceAdapter(mockService as any);
+      const adapter = new AuctionServiceAdapter(mockService as unknown as AuctionService);
 
       const result = await adapter.getAuctions();
 
@@ -102,7 +103,7 @@ describe('AuctionServiceAdapter', () => {
           nextCursor: null,
         }),
       };
-      const adapter = new AuctionServiceAdapter(mockService as any);
+      const adapter = new AuctionServiceAdapter(mockService as unknown as AuctionService);
 
       const result = await adapter.getBidHistory('auction-1', 20);
 
@@ -120,7 +121,7 @@ describe('AuctionServiceAdapter', () => {
           throw new Error('Service down');
         },
       };
-      const adapter = new AuctionServiceAdapter(mockService as any);
+      const adapter = new AuctionServiceAdapter(mockService as unknown as AuctionService);
 
       const result = await adapter.getBidHistory('auction-1', 20);
 

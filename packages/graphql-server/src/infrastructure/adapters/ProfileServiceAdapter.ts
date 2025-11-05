@@ -2,8 +2,10 @@
  * ProfileServiceAdapter
  *
  * Adapter that bridges ProfileService to IProfileRepository interface.
- * This is the Adapter Pattern in action - we're adapting an existing service
- * to a new interface without modifying the existing service.
+ * Transforms DAL Profile (fullName?: string | undefined) to Domain Profile (fullName: string).
+ *
+ * Advanced TypeScript Pattern: Required Field Transformation
+ * Ensures optional fields from DAL are converted to required fields with defaults
  *
  * Benefits:
  * - Decouples use cases from concrete ProfileService implementation
@@ -59,6 +61,7 @@ export class ProfileServiceAdapter implements IProfileRepository {
    */
   constructor(private readonly profileService: ProfileService) {}
 
+
   /**
    * Find profile by user ID.
    *
@@ -88,7 +91,14 @@ export class ProfileServiceAdapter implements IProfileRepository {
     try {
       // Call ProfileService.getProfileById
       // Note: UserId is a branded type but is compatible with string at runtime
-      const profile = await this.profileService.getProfileById(id);
+      const dalProfile = await this.profileService.getProfileById(id);
+
+      // Transform optional fields from undefined to empty strings for domain
+      const profile = dalProfile ? {
+        ...dalProfile,
+        fullName: dalProfile.fullName || '',
+        bio: dalProfile.bio || '',
+      } as Profile : null;
 
       // Return success with profile data (may be null if not found)
       return {
@@ -126,7 +136,14 @@ export class ProfileServiceAdapter implements IProfileRepository {
   async findByHandle(handle: string): AsyncResult<Profile | null> {
     try {
       // Call ProfileService.getProfileByHandle
-      const profile = await this.profileService.getProfileByHandle(handle);
+      const dalProfile = await this.profileService.getProfileByHandle(handle);
+
+      // Transform optional fields from undefined to empty strings for domain
+      const profile = dalProfile ? {
+        ...dalProfile,
+        fullName: dalProfile.fullName || '',
+        bio: dalProfile.bio || '',
+      } as Profile : null;
 
       // Return success with profile data (may be null if not found)
       return {
