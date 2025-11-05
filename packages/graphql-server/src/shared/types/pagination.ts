@@ -201,6 +201,50 @@ export interface PaginationArgs {
 }
 
 /**
+ * PaginatedResult<T> - Simple paginated response
+ *
+ * Used for basic pagination (not Relay connections).
+ * Contains items and metadata about pagination state.
+ *
+ * This is a simpler alternative to the full Relay Connection pattern
+ * for cases where cursor-based pagination is unnecessary or overkill.
+ * Useful for basic "Load More" UIs or simple pagination.
+ *
+ * @template T - The type of items in the result
+ *
+ * @example
+ * ```typescript
+ * const result: PaginatedResult<Post> = {
+ *   items: [post1, post2],
+ *   hasMore: true,
+ *   cursor: 'cursor-abc',
+ *   totalCount: 42
+ * };
+ * ```
+ */
+export interface PaginatedResult<T> {
+  /**
+   * Array of items in this page.
+   */
+  items: T[];
+
+  /**
+   * Whether more items exist after this page.
+   */
+  hasMore: boolean;
+
+  /**
+   * Optional cursor for fetching the next page.
+   */
+  cursor?: string;
+
+  /**
+   * Optional total count of all items (expensive to compute).
+   */
+  totalCount?: number;
+}
+
+/**
  * CursorData<T> - Data structure encoded in a cursor
  *
  * Defines what information is stored inside an opaque cursor.
