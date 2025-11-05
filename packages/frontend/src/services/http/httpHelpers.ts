@@ -7,10 +7,10 @@
  * Retry configuration interface
  */
 export interface RetryConfig {
-  maxRetries: number;
-  baseDelay: number;
-  maxDelay: number;
-  retryCondition: (error: unknown) => boolean;
+    maxRetries: number;
+    baseDelay: number;
+    maxDelay: number;
+    retryCondition: (error: unknown) => boolean;
 }
 
 // ============================================================================
@@ -23,13 +23,13 @@ export interface RetryConfig {
  * @returns Parsed object or null if parsing fails
  */
 export const parseAuthStorage = (key: string): Record<string, any> | null => {
-  try {
-    const item = localStorage.getItem(key);
-    if (!item) return null;
-    return JSON.parse(item);
-  } catch {
-    return null;
-  }
+    try {
+        const item = localStorage.getItem(key);
+        if (!item) return null;
+        return JSON.parse(item);
+    } catch {
+        return null;
+    }
 };
 
 /**
@@ -39,11 +39,11 @@ export const parseAuthStorage = (key: string): Record<string, any> | null => {
  * @returns Headers object
  */
 export const createRequestHeaders = (
-  includeAuth: boolean,
-  baseHeaders?: Record<string, string>
+    includeAuth: boolean,
+    baseHeaders?: Record<string, string>
 ): Record<string, string> => ({
-  'Content-Type': 'application/json',
-  ...baseHeaders
+    'Content-Type': 'application/json',
+    ...baseHeaders
 });
 
 /**
@@ -53,14 +53,14 @@ export const createRequestHeaders = (
  * @returns New headers object with Authorization if token exists
  */
 export const addAuthHeader = (
-  headers: Record<string, string>,
-  token: string | null
+    headers: Record<string, string>,
+    token: string | null
 ): Record<string, string> => {
-  if (!token) return { ...headers };
-  return {
-    ...headers,
-    Authorization: `Bearer ${token}`
-  };
+    if (!token) return { ...headers };
+    return {
+        ...headers,
+        Authorization: `Bearer ${token}`
+    };
 };
 
 /**
@@ -69,8 +69,8 @@ export const addAuthHeader = (
  * @returns JSON string or undefined
  */
 export const buildRequestBody = (data?: unknown): string | undefined => {
-  if (data === undefined) return undefined;
-  return JSON.stringify(data);
+    if (data === undefined) return undefined;
+    return JSON.stringify(data);
 };
 
 /**
@@ -87,8 +87,8 @@ export const parseResponseJson = async <T>(response: Response): Promise<T> => aw
  * @returns Validated and typed data
  */
 export const validateWithSchema = <T>(
-  schema: { parse: (data: unknown) => T },
-  data: unknown
+    schema: { parse: (data: unknown) => T },
+    data: unknown
 ): T => schema.parse(data);
 
 // ============================================================================
@@ -110,8 +110,8 @@ export const shouldRetryError = (error: unknown, config: RetryConfig): boolean =
  * @returns Delay in milliseconds with jitter
  */
 export const calculateDelay = (attempt: number, config: RetryConfig): number => {
-  const delay = config.baseDelay * Math.pow(2, attempt);
-  return Math.min(delay + Math.random() * 1000, config.maxDelay);
+    const delay = config.baseDelay * Math.pow(2, attempt);
+    return Math.min(delay + Math.random() * 1000, config.maxDelay);
 };
 
 /**
@@ -120,4 +120,4 @@ export const calculateDelay = (attempt: number, config: RetryConfig): number => 
  * @returns Promise that resolves after the delay
  */
 export const sleep = (ms: number): Promise<void> =>
-  new Promise(resolve => setTimeout(resolve, ms));
+    new Promise(resolve => setTimeout(resolve, ms));
