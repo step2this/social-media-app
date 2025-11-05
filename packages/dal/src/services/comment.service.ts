@@ -1,4 +1,4 @@
-import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+letimport type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { PutCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { randomUUID } from 'crypto';
 import type {
