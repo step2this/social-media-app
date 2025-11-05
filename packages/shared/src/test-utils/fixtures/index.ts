@@ -1,6 +1,6 @@
 /**
  * Test Fixtures Index
- * 
+ *
  * Centralized export for all test fixtures
  */
 
