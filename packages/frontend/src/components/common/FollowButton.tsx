@@ -1,45 +1,39 @@
 import { useState } from 'react';
-import { useFollow, type UseFollowOptions } from '../../hooks/useFollow.js';
+import { useFollow } from '../../hooks/useFollow.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import './FollowButton.css';
 
 interface FollowButtonProps {
   userId: string;
-  initialIsFollowing?: boolean;
-  initialFollowersCount?: number;
-  initialFollowingCount?: number;
+  isFollowing: boolean;  // Now required - passed from parent query
   onFollowStatusChange?: () => void | Promise<void>;
 }
 
 /**
  * FollowButton component with optimistic updates and hover states
- * Follows Instagram-style interaction patterns
+ *
+ * This component reads follow state from parent props (ProfilePage query data),
+ * not from local state. The useFollow hook only provides mutation functions.
+ *
+ * Relay automatically updates the parent query when mutations complete,
+ * triggering a re-render with new isFollowing state.
  */
 export const FollowButton = ({
   userId,
-  initialIsFollowing,
-  initialFollowersCount,
-  initialFollowingCount,
+  isFollowing,
   onFollowStatusChange
 }: FollowButtonProps) => {
   const { user, isAuthenticated } = useAuth();
   const [isHovering, setIsHovering] = useState(false);
 
-  const options: UseFollowOptions = {
-    initialIsFollowing,
-    initialFollowersCount,
-    initialFollowingCount,
-    onFollowStatusChange
-  };
-
+  // Hook provides mutation functions only
   const {
-    isFollowing,
-    isLoading,
-    error,
     followUser,
     unfollowUser,
+    isLoading,
+    error,
     clearError
-  } = useFollow(userId, options);
+  } = useFollow(userId);
 
   // Don't show button for current user or if not authenticated
   if (!isAuthenticated || user?.id === userId) {

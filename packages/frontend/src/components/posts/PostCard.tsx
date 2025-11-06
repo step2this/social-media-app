@@ -6,7 +6,6 @@ import type { PostCardRelayLikeMutation } from './__generated__/PostCardRelayLik
 import type { PostCardRelayUnlikeMutation } from './__generated__/PostCardRelayUnlikeMutation.graphql';
 import { MaterialIcon } from '../common/MaterialIcon';
 import { UserLink } from '../common/UserLink';
-import { FollowButton } from '../common/FollowButton';
 import { CommentList } from '../comments/CommentList';
 import { DevFeedSourceBadge, type FeedSource } from '../dev';
 import './PostCard.css';
@@ -165,7 +164,7 @@ export const PostCardRelay: React.FC<PostCardRelayProps> = ({
               className="post-card__username"
             />
           </div>
-          {!isOwnPost && <FollowButton userId={post.userId} />}
+          {/* FollowButton temporarily removed - needs isFollowing from query */}
         </div>
 
         {post.caption && (

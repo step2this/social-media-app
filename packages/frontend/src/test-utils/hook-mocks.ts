@@ -69,18 +69,16 @@ export interface UseAuthReturn {
 }
 
 /**
- * Return type for useFollow hook
+ * Return type for useFollow hook (refactored - no state duplication)
+ * 
+ * The hook now provides mutation functions only. State should be read
+ * from the parent component's query data (e.g., ProfilePage query).
  */
 export interface UseFollowReturn {
-  isFollowing: boolean;
-  followersCount: number;
-  followingCount: number;
   isLoading: boolean;
   error: string | null;
   followUser: () => Promise<void>;
   unfollowUser: () => Promise<void>;
-  toggleFollow: () => Promise<void>;
-  fetchFollowStatus: () => Promise<void>;
   clearError: () => void;
 }
 
@@ -167,18 +165,16 @@ export const mockUseAuthUnauthenticated = (): UseAuthReturn => createMockUseAuth
   });
 
 /**
- * Create a mock return value for useFollow hook
+ * Create a mock return value for useFollow hook (refactored version)
+ * 
+ * The hook now only provides mutation functions and loading/error state.
+ * State should be passed to components via props from parent queries.
  */
 export const createMockUseFollowReturn = (overrides?: Partial<UseFollowReturn>): UseFollowReturn => ({
-  isFollowing: false,
-  followersCount: 0,
-  followingCount: 0,
   isLoading: false,
   error: null,
   followUser: vi.fn(),
   unfollowUser: vi.fn(),
-  toggleFollow: vi.fn(),
-  fetchFollowStatus: vi.fn(),
   clearError: vi.fn(),
   ...overrides
 });

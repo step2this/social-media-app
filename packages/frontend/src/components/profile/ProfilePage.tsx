@@ -224,8 +224,7 @@ function ProfilePageInner() {
           <div style={{ marginTop: '1rem', textAlign: 'center' }}>
             <FollowButton
               userId={profile.id}
-              initialIsFollowing={profile.isFollowing}
-              initialFollowersCount={profile.followersCount}
+              isFollowing={profile.isFollowing ?? false}
               onFollowStatusChange={handleFollowStatusChange}
             />
           </div>
