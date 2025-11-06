@@ -7,9 +7,20 @@
 
 import { ApolloServer } from '@apollo/server';
 import depthLimit from 'graphql-depth-limit';
-import { typeDefs } from './schema/typeDefs.js';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { resolvers } from './schema/resolvers/index.js';
 import type { GraphQLContext } from './context.js';
+
+// Load schema from single source of truth (root schema.graphql)
+// This prevents schema duplication and drift
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const typeDefs = readFileSync(
+  join(__dirname, '../../../schema.graphql'),
+  'utf-8'
+);
 
 /**
  * Creates a new Apollo Server instance
