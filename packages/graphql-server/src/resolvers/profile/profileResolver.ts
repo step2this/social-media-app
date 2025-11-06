@@ -1,14 +1,15 @@
 /**
  * profileResolver - Get Profile by Handle
  *
- * Fetches a user's public profile by their handle.
+ * Fetches a user's public profile by their handle using hexagonal architecture.
  * Public operation - no authentication required.
  */
 
 import { Container } from '../../infrastructure/di/Container.js';
 import type { QueryResolvers } from '../../schema/generated/types';
-import { ProfileAdapter } from '../../infrastructure/adapters/ProfileAdapter';
-import type { ProfileService } from '@social-media-app/dal';
+import { GetProfileByHandle } from '../../application/use-cases/profile/GetProfileByHandle.js';
+import { Handle } from '../../shared/types/index.js';
+import { ErrorFactory } from '../../infrastructure/errors/ErrorFactory.js';
 
 /**
  * Create the profile resolver with DI container.
@@ -18,9 +19,21 @@ import type { ProfileService } from '@social-media-app/dal';
  */
 export const createProfileResolver = (container: Container): QueryResolvers['profile'] => {
   return async (_parent: any, args: { handle: string }) => {
-    const profileService = container.resolve<ProfileService>('ProfileService');
-    const adapter = new ProfileAdapter(profileService);
+    // Resolve use case from container
+    const useCase = container.resolve<GetProfileByHandle>('GetProfileByHandle');
 
-    return adapter.getProfileByHandle(args.handle);
+    // Execute use case
+    const result = await useCase.execute({ handle: Handle(args.handle) });
+
+    // Handle result
+    if (!result.success) {
+      throw ErrorFactory.internalServerError(result.error.message);
+    }
+
+    if (!result.data) {
+      throw ErrorFactory.notFound('Profile', args.handle);
+    }
+
+    return result.data as any;
   };
 };

@@ -1,16 +1,16 @@
 /**
  * meResolver - Get Current User Profile
  *
- * Returns the profile of the authenticated user.
+ * Returns the profile of the authenticated user using hexagonal architecture.
  * Requires authentication via withAuth HOC.
  */
 
-import { GraphQLError } from 'graphql';
 import { withAuth } from '../../infrastructure/resolvers/withAuth.js';
 import { Container } from '../../infrastructure/di/Container.js';
 import type { QueryResolvers } from '../../schema/generated/types';
-import { ProfileAdapter } from '../../infrastructure/adapters/ProfileAdapter';
-import type { ProfileService } from '@social-media-app/dal';
+import { GetCurrentUserProfile } from '../../application/use-cases/profile/GetCurrentUserProfile.js';
+import { UserId } from '../../shared/types/index.js';
+import { ErrorFactory } from '../../infrastructure/errors/ErrorFactory.js';
 
 /**
  * Create the me resolver with DI container.
@@ -20,15 +20,21 @@ import type { ProfileService } from '@social-media-app/dal';
  */
 export const createMeResolver = (container: Container): QueryResolvers['me'] => {
   return withAuth(async (_parent: any, _args: any, context: any) => {
-    const profileService = container.resolve<ProfileService>('ProfileService');
-    const adapter = new ProfileAdapter(profileService);
+    // Resolve use case from container
+    const useCase = container.resolve<GetCurrentUserProfile>('GetCurrentUserProfile');
 
-    const profile = await adapter.getCurrentUserProfile(context.userId!);
+    // Execute use case
+    const result = await useCase.execute({ userId: UserId(context.userId!) });
 
-    if (!profile) {
-      throw new GraphQLError('Profile not found for authenticated user');
+    // Handle result
+    if (!result.success) {
+      throw ErrorFactory.internalServerError(result.error.message);
     }
 
-    return profile;
+    if (!result.data) {
+      throw ErrorFactory.notFound('Profile', context.userId!);
+    }
+
+    return result.data as any;
   });
 };
