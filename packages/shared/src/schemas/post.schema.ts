@@ -122,19 +122,11 @@ export const PostWithAuthorSchema = PostSchema.pick({
 });
 
 /**
- * @deprecated Use PostWithAuthorSchema instead
- * Kept for backward compatibility during migration
- */
-export const FeedPostItemSchema = PostWithAuthorSchema;
-
-/**
  * Type exports
  */
 export type Post = z.infer<typeof PostSchema>;
 export type PostGridItem = z.infer<typeof PostGridItemSchema>;
 export type PostWithAuthor = z.infer<typeof PostWithAuthorSchema>;
-/** @deprecated Use PostWithAuthor instead */
-export type FeedPostItem = z.infer<typeof FeedPostItemSchema>;
 export type CreatePostRequest = z.infer<typeof CreatePostRequestSchema>;
 export type UpdatePostRequest = z.infer<typeof UpdatePostRequestSchema>;
 export type GetUserPostsRequest = z.infer<typeof GetUserPostsRequestSchema>;
