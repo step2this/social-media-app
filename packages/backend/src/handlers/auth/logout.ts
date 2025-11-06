@@ -9,9 +9,9 @@ import { successResponse } from '../../utils/responses.js';
 
 /**
  * Lambda handler for user logout
- * 
+ *
  * Invalidates user's refresh token to log them out. Logout is idempotent - always succeeds.
- * 
+ *
  * @route POST /auth/logout
  * @middleware withErrorHandling - Converts errors to HTTP responses
  * @middleware withLogging - Structured logging with correlation IDs

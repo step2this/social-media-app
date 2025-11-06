@@ -8,9 +8,9 @@ import { successResponse } from '../../utils/responses.js';
 
 /**
  * Lambda handler for user login
- * 
+ *
  * Authenticates a user with email and password, returning JWT tokens on success.
- * 
+ *
  * @route POST /auth/login
  * @middleware withErrorHandling - Converts errors to HTTP responses
  * @middleware withLogging - Structured logging with correlation IDs

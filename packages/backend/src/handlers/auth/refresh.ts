@@ -8,9 +8,9 @@ import { successResponse } from '../../utils/responses.js';
 
 /**
  * Lambda handler for token refresh
- * 
+ *
  * Validates and refreshes a user's JWT tokens using their refresh token.
- * 
+ *
  * @route POST /auth/refresh
  * @middleware withErrorHandling - Converts errors to HTTP responses (including auth errors)
  * @middleware withLogging - Structured logging with correlation IDs
