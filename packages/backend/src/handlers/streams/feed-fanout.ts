@@ -4,6 +4,7 @@ import { unmarshall } from '@aws-sdk/util-dynamodb';
 import pLimit from 'p-limit';
 import { createDynamoDBClient, getTableName, createS3Client, getS3BucketName, getCloudFrontDomain } from '../../utils/dynamodb.js';
 import { FeedService, FollowService, ProfileService } from '@social-media-app/dal';
+import { createStreamLogger } from '../../infrastructure/middleware/streamLogger.js';
 
 /**
  * Stream processor for feed fan-out on post creation
@@ -25,6 +26,8 @@ import { FeedService, FollowService, ProfileService } from '@social-media-app/da
  * - Atomic operations prevent race conditions
  * - Celebrity threshold configurable via env var
  * - Services initialized at container scope for warm start optimization
+ * 
+ * Features structured logging with batch metrics, performance tracking, and celebrity bypass events
  *
  * @see FeedService.writeFeedItem for materialized feed writes
  * @see FollowService.getAllFollowers for follower list retrieval
@@ -41,6 +44,7 @@ const cloudFrontDomain = getCloudFrontDomain();
 const feedService = new FeedService(dynamoClient, tableName);
 const followService = new FollowService(dynamoClient, tableName);
 const profileService = new ProfileService(dynamoClient, tableName, bucketName, cloudFrontDomain, s3Client);
+const logger = createStreamLogger('FeedFanout');
 
 export const handler: DynamoDBStreamHandler = async (
   event: DynamoDBStreamEvent
@@ -51,106 +55,108 @@ export const handler: DynamoDBStreamHandler = async (
     process.env.CELEBRITY_FOLLOWER_THRESHOLD ?? '5000',
     10
   );
+  
+  const context = logger.startBatch(event.Records.length);
 
   // Process all records in parallel for better performance
-  const processPromises = event.Records.map(async (record) => {
-    try {
-      // Only process INSERT events
-      if (record.eventName !== 'INSERT') {
-        return;
-      }
-
-      // Get the new image
-      const newImage = record.dynamodb?.NewImage;
-      if (!newImage) {
-        console.error('[FeedFanout] No NewImage in stream record:', record);
-        return;
-      }
-
-      // Only process POST entities (check Keys, not NewImage)
-      // SK format: POST#<timestamp>#<postId>
-      const skValue = record.dynamodb?.Keys?.SK?.S;
-      if (!skValue?.startsWith('POST#')) {
-        return;
-      }
-
-      // Filter out undefined values before unmarshalling
-      // (test records can have undefined for optional fields)
-      const filteredImage = Object.fromEntries(
-        Object.entries(newImage).filter(([, value]) => value !== undefined)
-      );
-
-      // Unmarshall DynamoDB AttributeValue to JS object
-      const postData = unmarshall(filteredImage as any);
-
-      // Validate required fields
-      // Note: Post entity uses 'id' not 'postId'
-      if (!postData.userId || !postData.id || !postData.userHandle || !postData.createdAt) {
-        console.error('[FeedFanout] Missing required fields in post entity', {
-          id: postData.id,
-          userId: postData.userId,
-          userHandle: postData.userHandle,
-          createdAt: postData.createdAt
-        });
-        return;
-      }
-
-      const authorId = postData.userId as string;
-      const postId = postData.id as string;
-      const authorHandle = postData.userHandle as string;
-      const createdAt = postData.createdAt as string;
-
-      // Fetch author profile to get full name and profile picture
-      // Posts don't store this, so we need to enrich from profile
-      let authorFullName: string | undefined;
-      let authorProfilePictureUrl: string | undefined;
-
-      try {
-        const authorProfile = await profileService.getProfileById(authorId);
-        if (authorProfile) {
-          authorFullName = authorProfile.fullName;
-          authorProfilePictureUrl = authorProfile.profilePictureUrl;
+  const results = await Promise.all(
+    event.Records.map((record) =>
+      logger.processRecord(record, async () => {
+        // Only process INSERT events
+        if (record.eventName !== 'INSERT') {
+          return;
         }
-      } catch (error) {
-        console.warn('[FeedFanout] Could not fetch author profile', {
-          authorId,
-          postId,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
-        // Continue with undefined values - feed items will still work
-      }
 
-      // Get author's follower count
-      const followerCount = await followService.getFollowerCount(authorId);
+        // Get the new image
+        const newImage = record.dynamodb?.NewImage;
+        if (!newImage) {
+          logger.logError('No NewImage in stream record');
+          return;
+        }
 
-      // Celebrity bypass: skip fan-out if follower count >= threshold
-      if (followerCount >= celebrityThreshold) {
-        console.log('[FeedFanout] Celebrity bypass', {
-          userId: authorId,
-          followerCount,
-          threshold: celebrityThreshold,
-          postId
-        });
-        return;
-      }
+        // Only process POST entities (check Keys, not NewImage)
+        // SK format: POST#<timestamp>#<postId>
+        const skValue = record.dynamodb?.Keys?.SK?.S;
+        if (!skValue?.startsWith('POST#')) {
+          return;
+        }
 
-      // Get all followers
-      const followers = await followService.getAllFollowers(authorId);
+        // Filter out undefined values before unmarshalling
+        // (test records can have undefined for optional fields)
+        const filteredImage = Object.fromEntries(
+          Object.entries(newImage).filter(([, value]) => value !== undefined)
+        );
 
-      if (followers.length === 0) {
-        // No followers, nothing to do
-        return;
-      }
+        // Unmarshall DynamoDB AttributeValue to JS object
+        const postData = unmarshall(filteredImage as any);
 
-      // Create concurrency limit to prevent memory explosion and DynamoDB throttling
-      // Max 100 concurrent writes prevents OOM and reduces throttling by 80-90%
-      const limit = pLimit(100);
+        // Validate required fields
+        // Note: Post entity uses 'id' not 'postId'
+        if (!postData.userId || !postData.id || !postData.userHandle || !postData.createdAt) {
+          logger.logError('Missing required fields in post entity', undefined, {
+            id: postData.id,
+            userId: postData.userId,
+            userHandle: postData.userHandle,
+            createdAt: postData.createdAt
+          });
+          return;
+        }
 
-      // Fan-out to all followers with controlled concurrency
-      await Promise.all(
-        followers.map((followerId) =>
-          limit(async () => {
-            try {
+        const authorId = postData.userId as string;
+        const postId = postData.id as string;
+        const authorHandle = postData.userHandle as string;
+        const createdAt = postData.createdAt as string;
+
+        // Fetch author profile to get full name and profile picture
+        // Posts don't store this, so we need to enrich from profile
+        let authorFullName: string | undefined;
+        let authorProfilePictureUrl: string | undefined;
+
+        try {
+          const authorProfile = await profileService.getProfileById(authorId);
+          if (authorProfile) {
+            authorFullName = authorProfile.fullName;
+            authorProfilePictureUrl = authorProfile.profilePictureUrl;
+          }
+        } catch (error) {
+          logger.logWarn('Could not fetch author profile', {
+            authorId,
+            postId,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+          // Continue with undefined values - feed items will still work
+        }
+
+        // Get author's follower count
+        const followerCount = await followService.getFollowerCount(authorId);
+
+        // Celebrity bypass: skip fan-out if follower count >= threshold
+        if (followerCount >= celebrityThreshold) {
+          logger.logInfo('Celebrity bypass - skipping fan-out', {
+            userId: authorId,
+            followerCount,
+            threshold: celebrityThreshold,
+            postId
+          });
+          return;
+        }
+
+        // Get all followers
+        const followers = await followService.getAllFollowers(authorId);
+
+        if (followers.length === 0) {
+          // No followers, nothing to do
+          return;
+        }
+
+        // Create concurrency limit to prevent memory explosion and DynamoDB throttling
+        // Max 100 concurrent writes prevents OOM and reduces throttling by 80-90%
+        const limit = pLimit(100);
+
+        // Fan-out to all followers with controlled concurrency
+        const fanoutResults = await Promise.allSettled(
+          followers.map((followerId) =>
+            limit(async () => {
               await feedService.writeFeedItem({
                 userId: followerId,
                 postId,
@@ -166,34 +172,31 @@ export const handler: DynamoDBStreamHandler = async (
                 isLiked: false, // Always false at creation time
                 createdAt
               });
-            } catch (error) {
-              // Log error but continue processing other followers
-              console.error('[FeedFanout] Error writing feed item', {
-                followerId,
-                postId,
-                authorId,
-                error: error instanceof Error ? error.message : 'Unknown error'
-              });
-            }
-          })
-        )
-      );
+            })
+          )
+        );
 
-      console.log('[FeedFanout] Fanned out post', {
-        postId,
-        authorId,
-        followerCount: followers.length
-      });
-    } catch (error) {
-      // Log error but don't throw (prevents stream poisoning)
-      console.error('[FeedFanout] Error processing stream record:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        eventId: record.eventID,
-        eventName: record.eventName
-      });
-    }
-  });
+        // Log fanout failures
+        const failures = fanoutResults.filter(r => r.status === 'rejected');
+        if (failures.length > 0) {
+          logger.logWarn('Some feed writes failed', {
+            postId,
+            authorId,
+            totalFollowers: followers.length,
+            failures: failures.length,
+            successRate: `${((followers.length - failures.length) / followers.length * 100).toFixed(1)}%`
+          });
+        }
 
-  // Wait for all records to be processed
-  await Promise.all(processPromises);
+        logger.logInfo('Successfully fanned out post', {
+          postId,
+          authorId,
+          followerCount: followers.length,
+          successCount: followers.length - failures.length
+        });
+      })
+    )
+  );
+
+  logger.endBatch(context, results);
 };

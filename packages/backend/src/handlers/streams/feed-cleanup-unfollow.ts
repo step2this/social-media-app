@@ -2,6 +2,7 @@
 import type { DynamoDBStreamEvent, DynamoDBStreamHandler } from 'aws-lambda';
 import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
 import { FeedService } from '@social-media-app/dal';
+import { createStreamLogger } from '../../infrastructure/middleware/streamLogger.js';
 
 /**
  * Stream processor for feed cleanup on unfollow
@@ -25,6 +26,8 @@ import { FeedService } from '@social-media-app/dal';
  * - PK: USER#<followerId>
  * - SK: FOLLOW#<followingId>#<timestamp>
  * - Extract both IDs to delete feed items
+ * 
+ * Features structured logging with batch metrics and performance tracking
  *
  * @see FeedService.deleteFeedItemsForUser for deletion logic
  */
@@ -33,72 +36,69 @@ import { FeedService } from '@social-media-app/dal';
 const dynamoClient = createDynamoDBClient();
 const tableName = getTableName();
 const feedService = new FeedService(dynamoClient, tableName);
+const logger = createStreamLogger('FeedCleanupUnfollow');
 
 export const handler: DynamoDBStreamHandler = async (
   event: DynamoDBStreamEvent
 ): Promise<void> => {
+  const context = logger.startBatch(event.Records.length);
+
   // Process all records in parallel
-  const processPromises = event.Records.map(async (record) => {
-    try {
-      // Only process REMOVE events
-      if (record.eventName !== 'REMOVE') {
-        return;
-      }
+  const results = await Promise.all(
+    event.Records.map((record) =>
+      logger.processRecord(record, async () => {
+        // Only process REMOVE events
+        if (record.eventName !== 'REMOVE') {
+          return;
+        }
 
-      // Only process FOLLOW entities (check Keys SK starts with "FOLLOW#")
-      const skValue = record.dynamodb?.Keys?.SK?.S;
-      if (!skValue || !skValue.startsWith('FOLLOW#')) {
-        return;
-      }
+        // Only process FOLLOW entities (check Keys SK starts with "FOLLOW#")
+        const skValue = record.dynamodb?.Keys?.SK?.S;
+        if (!skValue || !skValue.startsWith('FOLLOW#')) {
+          return;
+        }
 
-      // Extract followerId from PK: USER#<followerId>
-      const pkValue = record.dynamodb?.Keys?.PK?.S;
-      if (!pkValue || !pkValue.startsWith('USER#')) {
-        console.error('[FeedCleanupUnfollow] Invalid PK format', { pkValue });
-        return;
-      }
-      const followerId = pkValue.substring(5); // Remove "USER#" prefix
+        // Extract followerId from PK: USER#<followerId>
+        const pkValue = record.dynamodb?.Keys?.PK?.S;
+        if (!pkValue || !pkValue.startsWith('USER#')) {
+          logger.logError('Invalid PK format', undefined, { pkValue });
+          return;
+        }
+        const followerId = pkValue.substring(5); // Remove "USER#" prefix
 
-      // Extract followingId from SK: FOLLOW#<followingId>#<timestamp>
-      // Handle both formats: FOLLOW#<id>#<timestamp> and FOLLOW#<id>
-      const skParts = skValue.split('#');
-      if (skParts.length < 2) {
-        console.error('[FeedCleanupUnfollow] Invalid SK format', { skValue });
-        return;
-      }
-      const followingId = skParts[1]; // Get ID from FOLLOW#<id>#...
+        // Extract followingId from SK: FOLLOW#<followingId>#<timestamp>
+        // Handle both formats: FOLLOW#<id>#<timestamp> and FOLLOW#<id>
+        const skParts = skValue.split('#');
+        if (skParts.length < 2) {
+          logger.logError('Invalid SK format', undefined, { skValue });
+          return;
+        }
+        const followingId = skParts[1]; // Get ID from FOLLOW#<id>#...
 
-      if (!followerId || !followingId) {
-        console.error('[FeedCleanupUnfollow] Missing followerId or followingId', {
+        if (!followerId || !followingId) {
+          logger.logError('Missing followerId or followingId', undefined, {
+            followerId,
+            followingId,
+            pkValue,
+            skValue
+          });
+          return;
+        }
+
+        // Delete all feed items from this author in the follower's feed
+        const result = await feedService.deleteFeedItemsForUser({
+          userId: followerId,
+          authorId: followingId
+        });
+
+        logger.logInfo('Successfully cleaned up feed items', {
           followerId,
           followingId,
-          pkValue,
-          skValue
+          deletedCount: result.deletedCount
         });
-        return;
-      }
+      })
+    )
+  );
 
-      // Delete all feed items from this author in the follower's feed
-      const result = await feedService.deleteFeedItemsForUser({
-        userId: followerId,
-        authorId: followingId
-      });
-
-      console.log('[FeedCleanupUnfollow] Cleaned up feed items', {
-        followerId,
-        followingId,
-        deletedCount: result.deletedCount
-      });
-    } catch (error) {
-      // Log error but don't throw (prevents stream poisoning)
-      console.error('[FeedCleanupUnfollow] Error processing stream record:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        eventId: record.eventID,
-        eventName: record.eventName
-      });
-    }
-  });
-
-  // Wait for all records to be processed
-  await Promise.all(processPromises);
+  logger.endBatch(context, results);
 };

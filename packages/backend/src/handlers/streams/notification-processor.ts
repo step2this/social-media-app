@@ -3,6 +3,9 @@ import type { AttributeValue } from '@aws-sdk/client-dynamodb';
 import { NotificationService, ProfileService } from '@social-media-app/dal';
 import type { CreateNotificationRequest } from '@social-media-app/shared';
 import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
+import { createStreamLogger } from '../../infrastructure/middleware/streamLogger.js';
+
+const logger = createStreamLogger('NotificationProcessor');
 
 /**
  * Type alias for DynamoDB stream record image (AttributeValue map)
@@ -41,6 +44,8 @@ interface ActorInfo {
  * - Only processes relevant entity types (LIKE, COMMENT, FOLLOW)
  * - Continues processing other records even if one fails
  * - Uses sparse GSI2 index for unread notifications via NotificationService
+ * 
+ * Features structured logging with batch metrics and performance tracking
  *
  * @example
  * // Example stream record for LIKE:
@@ -67,56 +72,55 @@ export const handler: DynamoDBStreamHandler = async (
   const tableName = getTableName();
   const notificationService = new NotificationService(dynamoClient, tableName);
   const profileService = new ProfileService(dynamoClient, tableName);
+  
+  const context = logger.startBatch(event.Records.length);
 
   // Process all records in parallel using Promise.allSettled for graceful error handling
   // This ensures one failed notification doesn't block others
-  const processPromises = event.Records.map(async (record) => {
-    try {
-      // Only process INSERT events
-      if (record.eventName !== 'INSERT') {
-        return;
-      }
+  const results = await Promise.all(
+    event.Records.map((record) =>
+      logger.processRecord(record, async () => {
+        // Only process INSERT events
+        if (record.eventName !== 'INSERT') {
+          return;
+        }
 
-      // Get NewImage from stream record
-      const image = record.dynamodb?.NewImage;
-      if (!image) {
-        console.warn('No NewImage in stream record:', record);
-        return;
-      }
+        // Get NewImage from stream record
+        const image = record.dynamodb?.NewImage;
+        if (!image) {
+          logger.logWarn('No NewImage in stream record');
+          return;
+        }
 
-      // Extract entity type
-      const entityType = image.entityType?.S;
-      if (!entityType) {
-        return;
-      }
+        // Extract entity type
+        const entityType = image.entityType?.S;
+        if (!entityType) {
+          return;
+        }
 
-      // Route to appropriate handler based on entity type
-      switch (entityType) {
-        case 'LIKE':
-          await processLikeEntity(image as unknown as StreamImage, notificationService);
-          break;
+        // Route to appropriate handler based on entity type
+        switch (entityType) {
+          case 'LIKE':
+            await processLikeEntity(image as unknown as StreamImage, notificationService);
+            break;
 
-        case 'COMMENT':
-          await processCommentEntity(image as unknown as StreamImage, notificationService, profileService);
-          break;
+          case 'COMMENT':
+            await processCommentEntity(image as unknown as StreamImage, notificationService, profileService);
+            break;
 
-        case 'FOLLOW':
-          await processFollowEntity(image as unknown as StreamImage, notificationService);
-          break;
+          case 'FOLLOW':
+            await processFollowEntity(image as unknown as StreamImage, notificationService);
+            break;
 
-        default:
-          // Ignore other entity types (PROFILE, POST, etc.)
-          break;
-      }
-    } catch (error) {
-      // Log error but continue processing other records
-      console.error('Error processing stream record:', error);
-      console.error('Record:', JSON.stringify(record, null, 2));
-    }
-  });
+          default:
+            // Ignore other entity types (PROFILE, POST, etc.)
+            break;
+        }
+      })
+    )
+  );
 
-  // Wait for all processing to complete
-  await Promise.allSettled(processPromises);
+  logger.endBatch(context, results);
 };
 
 /**

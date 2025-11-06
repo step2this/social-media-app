@@ -3,6 +3,7 @@ import type { DynamoDBStreamEvent, DynamoDBStreamHandler } from 'aws-lambda';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
 import { FeedService } from '@social-media-app/dal';
+import { createStreamLogger } from '../../infrastructure/middleware/streamLogger.js';
 
 /**
  * Stream processor for feed cleanup on post deletion
@@ -21,6 +22,8 @@ import { FeedService } from '@social-media-app/dal';
  * - Uses FeedService.deleteFeedItemsByPost (table SCAN)
  * - Cost scales with total feed items, not post followers
  * - TODO: Will benefit from GSI4 optimization (99% cost reduction)
+ * 
+ * Features structured logging with batch metrics and performance tracking
  *
  * @see FeedService.deleteFeedItemsByPost for deletion logic
  */
@@ -29,67 +32,62 @@ import { FeedService } from '@social-media-app/dal';
 const dynamoClient = createDynamoDBClient();
 const tableName = getTableName();
 const feedService = new FeedService(dynamoClient, tableName);
+const logger = createStreamLogger('FeedCleanupPostDelete');
 
 export const handler: DynamoDBStreamHandler = async (
   event: DynamoDBStreamEvent
 ): Promise<void> => {
+  const context = logger.startBatch(event.Records.length);
+
   // Process all records in parallel
-  const processPromises = event.Records.map(async (record) => {
-    try {
-      // Only process REMOVE events
-      if (record.eventName !== 'REMOVE') {
-        return;
-      }
+  const results = await Promise.all(
+    event.Records.map((record) =>
+      logger.processRecord(record, async () => {
+        // Only process REMOVE events
+        if (record.eventName !== 'REMOVE') {
+          return;
+        }
 
-      // Only process POST entities (check Keys SK)
-      // SK must be exactly 'POST' (primary post entity)
-      // Ignore timeline copies with SK='POST#<timestamp>#<postId>'
-      const skValue = record.dynamodb?.Keys?.SK?.S;
-      if (skValue !== 'POST') {
-        return;
-      }
+        // Only process POST entities (check Keys SK)
+        // SK must be exactly 'POST' (primary post entity)
+        // Ignore timeline copies with SK='POST#<timestamp>#<postId>'
+        const skValue = record.dynamodb?.Keys?.SK?.S;
+        if (skValue !== 'POST') {
+          return;
+        }
 
-      // Get the old image (deleted post data)
-      const oldImage = record.dynamodb?.OldImage;
-      if (!oldImage) {
-        console.error('[FeedCleanupPostDelete] No OldImage in stream record:', record);
-        return;
-      }
+        // Get the old image (deleted post data)
+        const oldImage = record.dynamodb?.OldImage;
+        if (!oldImage) {
+          logger.logError('No OldImage in stream record');
+          return;
+        }
 
-      // Filter out undefined values before unmarshalling
-      const filteredImage = Object.fromEntries(
-        Object.entries(oldImage).filter(([, value]) => value !== undefined)
-      );
+        // Filter out undefined values before unmarshalling
+        const filteredImage = Object.fromEntries(
+          Object.entries(oldImage).filter(([, value]) => value !== undefined)
+        );
 
-      // Unmarshall DynamoDB AttributeValue to JS object
-      const postData = unmarshall(filteredImage as any);
+        // Unmarshall DynamoDB AttributeValue to JS object
+        const postData = unmarshall(filteredImage as any);
 
-      // Extract postId (note: Post entity uses 'id' not 'postId')
-      const postId = postData.id as string;
-      if (!postId) {
-        console.error('[FeedCleanupPostDelete] Missing id in deleted post', {
-          postData
+        // Extract postId (note: Post entity uses 'id' not 'postId')
+        const postId = postData.id as string;
+        if (!postId) {
+          logger.logError('Missing id in deleted post', undefined, { postData });
+          return;
+        }
+
+        // Delete all feed items for this post
+        const result = await feedService.deleteFeedItemsByPost({ postId });
+
+        logger.logInfo('Successfully cleaned up feed items', {
+          postId,
+          deletedCount: result.deletedCount
         });
-        return;
-      }
+      })
+    )
+  );
 
-      // Delete all feed items for this post
-      const result = await feedService.deleteFeedItemsByPost({ postId });
-
-      console.log('[FeedCleanupPostDelete] Cleaned up feed items', {
-        postId,
-        deletedCount: result.deletedCount
-      });
-    } catch (error) {
-      // Log error but don't throw (prevents stream poisoning)
-      console.error('[FeedCleanupPostDelete] Error processing stream record:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        eventId: record.eventID,
-        eventName: record.eventName
-      });
-    }
-  });
-
-  // Wait for all records to be processed
-  await Promise.all(processPromises);
+  logger.endBatch(context, results);
 };

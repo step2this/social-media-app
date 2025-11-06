@@ -16,19 +16,21 @@ import {
   tracedOperation,
   traceCacheOperation
 } from '../../utils/index.js';
+import { createStreamLogger } from '../../infrastructure/middleware/streamLogger.js';
 
 /**
  * Container scope - initialized once per Lambda warm start
  * Redis client and cache service for feed event processing
  */
 let cacheService: RedisCacheService | undefined;
+const logger = createStreamLogger('KinesisFeedConsumer');
 
 try {
   const redisClient = createRedisClient();
   cacheService = new RedisCacheService(redisClient);
-  console.log('[KinesisFeedConsumer] Redis cache initialized');
+  logger.logInfo('Redis cache initialized');
 } catch (error) {
-  console.error('[KinesisFeedConsumer] Redis initialization failed', error);
+  logger.logError('Redis initialization failed', error instanceof Error ? error : undefined);
   throw error; // Critical failure for consumer
 }
 
@@ -56,7 +58,7 @@ async function handlePostCreated(event: PostCreatedEvent): Promise<void> {
     await cacheService!.cachePost(event.postId, cachedPost);
   });
 
-  console.log('[KinesisFeedConsumer] Cached POST_CREATED', { postId: event.postId });
+  logger.logInfo('Cached POST_CREATED', { postId: event.postId });
 }
 
 /**
@@ -71,7 +73,7 @@ async function handlePostRead(event: PostReadEvent): Promise<void> {
     await cacheService!.markPostAsRead(event.userId, event.postId);
   });
 
-  console.log('[KinesisFeedConsumer] Processed POST_READ', {
+  logger.logInfo('Processed POST_READ', {
     userId: event.userId,
     postId: event.postId
   });
@@ -100,14 +102,14 @@ async function handlePostLiked(event: PostLikedEvent): Promise<void> {
       traceCacheOperation('set', `post:${event.postId}`, false);
       await cacheService!.cachePost(event.postId, updatedPost);
 
-      console.log('[KinesisFeedConsumer] Updated POST_LIKED', {
+      logger.logInfo('Updated POST_LIKED', {
         postId: event.postId,
         liked: event.liked,
         newLikesCount: updatedPost.likesCount
       });
     } else {
       // Cache miss is okay - post might not be in cache
-      console.log('[KinesisFeedConsumer] Processed POST_LIKED (cache miss)', {
+      logger.logInfo('Processed POST_LIKED (cache miss)', {
         postId: event.postId,
         liked: event.liked
       });
@@ -127,7 +129,7 @@ async function handlePostDeleted(event: PostDeletedEvent): Promise<void> {
     await cacheService!.invalidatePost(event.postId);
   });
 
-  console.log('[KinesisFeedConsumer] Invalidated POST_DELETED', { postId: event.postId });
+  logger.logInfo('Invalidated POST_DELETED', { postId: event.postId });
 }
 
 /**
@@ -162,60 +164,67 @@ async function processEvent(event: FeedEvent): Promise<void> {
  * @description Processes feed events from Kinesis stream and updates Redis cache
  * @trace Captures stream processing with subsegments for each record
  *
+ * Features structured logging with batch metrics and performance tracking
+ *
  * @param event - The Kinesis stream event
  * @returns Batch item failures for retry
  */
 export const handler: KinesisStreamHandler = async (event): Promise<KinesisStreamBatchResponse> => {
   const batchItemFailures: KinesisStreamBatchResponse['batchItemFailures'] = [];
+  const context = logger.startBatch(event.Records.length);
 
   // Add trace annotations for batch context
   addTraceAnnotation('operationType', 'KINESIS_FEED_CONSUMER');
   addTraceAnnotation('recordCount', event.Records.length);
   addTraceAnnotation('eventSourceArn', event.Records[0]?.eventSourceARN || 'unknown');
 
-  for (const record of event.Records) {
-    const sequenceNumber = record.kinesis.sequenceNumber;
+  const results = await Promise.all(
+    event.Records.map((record) =>
+      logger.processRecord(record, async () => {
+        const sequenceNumber = record.kinesis.sequenceNumber;
 
-    try {
-      // Decode and validate Kinesis record data
-      const payload = await tracedOperation('DecodeRecord', async () => {
-        const decoded = Buffer.from(record.kinesis.data, 'base64').toString('utf-8');
-        return JSON.parse(decoded);
-      });
+        try {
+          // Decode and validate Kinesis record data
+          const payload = await tracedOperation('DecodeRecord', async () => {
+            const decoded = Buffer.from(record.kinesis.data, 'base64').toString('utf-8');
+            return JSON.parse(decoded);
+          });
 
-      // Validate event against schema
-      const feedEvent = await tracedOperation('ValidateEvent', async () => {
-        return FeedEventSchema.parse(payload);
-      });
+          // Validate event against schema
+          const feedEvent = await tracedOperation('ValidateEvent', async () => {
+            return FeedEventSchema.parse(payload);
+          });
 
-      // Process the event with tracing
-      await tracedOperation(`Process_${feedEvent.eventType}`, async () => {
-        await processEvent(feedEvent);
-      });
+          // Process the event with tracing
+          await tracedOperation(`Process_${feedEvent.eventType}`, async () => {
+            await processEvent(feedEvent);
+          });
 
-      console.log('[KinesisFeedConsumer] Successfully processed record', {
-        sequenceNumber,
-        eventType: feedEvent.eventType
-      });
-    } catch (error) {
-      console.error('[KinesisFeedConsumer] Failed to process record', {
-        sequenceNumber,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+          logger.logInfo('Successfully processed record', {
+            sequenceNumber,
+            eventType: feedEvent.eventType
+          });
+        } catch (error) {
+          // Capture error in X-Ray trace
+          captureTraceError(error, {
+            operation: 'processKinesisRecord',
+            sequenceNumber,
+            partitionKey: record.kinesis.partitionKey
+          });
 
-      // Capture error in X-Ray trace
-      captureTraceError(error, {
-        operation: 'processKinesisRecord',
-        sequenceNumber,
-        partitionKey: record.kinesis.partitionKey
-      });
+          // Track failed records for retry
+          batchItemFailures.push({
+            itemIdentifier: sequenceNumber
+          });
 
-      // Track failed records for retry
-      batchItemFailures.push({
-        itemIdentifier: sequenceNumber
-      });
-    }
-  }
+          // Re-throw to be caught by processRecord
+          throw error;
+        }
+      })
+    )
+  );
+
+  logger.endBatch(context, results);
 
   // Add batch processing results to trace
   addTraceAnnotation('successCount', event.Records.length - batchItemFailures.length);

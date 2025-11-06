@@ -8,6 +8,9 @@ import {
   calculateCounterDelta,
   createUpdateExpression
 } from '../../utils/stream-counter-helpers.js';
+import { createStreamLogger } from '../../infrastructure/middleware/streamLogger.js';
+
+const logger = createStreamLogger('FollowCounter');
 
 /**
  * Stream processor for updating user follow counts
@@ -17,88 +20,94 @@ import {
  * - Decrements followingCount for follower and followersCount for followee when FOLLOW entity is removed
  *
  * Uses atomic ADD operation to handle concurrent follows safely
+ * 
+ * Features structured logging with batch metrics and performance tracking
  */
 export const handler: DynamoDBStreamHandler = async (
   event: DynamoDBStreamEvent
 ): Promise<void> => {
   const dynamoClient = createDynamoDBClient();
   const tableName = getTableName();
+  
+  const context = logger.startBatch(event.Records.length);
 
   // Process all records in parallel for better performance
-  const processPromises = event.Records.map(async (record) => {
-    try {
-      // Only process INSERT and REMOVE events
-      if (!shouldProcessRecord(record.eventName)) {
-        return;
-      }
+  const results = await Promise.all(
+    event.Records.map((record) =>
+      logger.processRecord(record, async () => {
+        // Only process INSERT and REMOVE events
+        if (!shouldProcessRecord(record.eventName)) {
+          return;
+        }
 
-      // Get the appropriate image based on event type
-      const image = getStreamRecordImage(record);
-      if (!image) {
-        console.warn('No image in stream record:', record);
-        return;
-      }
+        // Get the appropriate image based on event type
+        const image = getStreamRecordImage(record);
+        if (!image) {
+          logger.logWarn('No image in stream record');
+          return;
+        }
 
-      // Only process FOLLOW entities (SK starts with "FOLLOW#")
-      const sk = image.SK?.S;
-      if (!sk) {
-        return;
-      }
+        // Only process FOLLOW entities (SK starts with "FOLLOW#")
+        const sk = image.SK?.S;
+        if (!sk) {
+          return;
+        }
 
-      const skEntity = parseSKEntity(sk);
-      if (!skEntity || skEntity.entityType !== 'FOLLOW') {
-        return;
-      }
+        const skEntity = parseSKEntity(sk);
+        if (!skEntity || skEntity.entityType !== 'FOLLOW') {
+          return;
+        }
 
-      // Extract follower PK (format: USER#<followerId>)
-      const followerPK = image.PK?.S;
-      if (!followerPK || !followerPK.startsWith('USER#')) {
-        console.warn('Invalid PK format:', followerPK);
-        return;
-      }
+        // Extract follower PK (format: USER#<followerId>)
+        const followerPK = image.PK?.S;
+        if (!followerPK || !followerPK.startsWith('USER#')) {
+          logger.logWarn('Invalid PK format', { followerPK });
+          return;
+        }
 
-      // Extract followee PK from GSI2PK (format: USER#<followeeId>)
-      const followeePK = image.GSI2PK?.S;
-      if (!followeePK || !followeePK.startsWith('USER#')) {
-        console.warn('Invalid GSI2PK format:', followeePK);
-        return;
-      }
+        // Extract followee PK from GSI2PK (format: USER#<followeeId>)
+        const followeePK = image.GSI2PK?.S;
+        if (!followeePK || !followeePK.startsWith('USER#')) {
+          logger.logWarn('Invalid GSI2PK format', { followeePK });
+          return;
+        }
 
-      // Calculate counter delta
-      const delta = calculateCounterDelta(
-        record.eventName!,
-        record.dynamodb?.NewImage,
-        record.dynamodb?.OldImage
-      );
+        // Calculate counter delta
+        const delta = calculateCounterDelta(
+          record.eventName!,
+          record.dynamodb?.NewImage,
+          record.dynamodb?.OldImage
+        );
 
-      // Update follower's followingCount
-      await updateCounter(
-        dynamoClient,
-        tableName,
-        followerPK,
-        'followingCount',
-        delta
-      );
+        // Update follower's followingCount
+        await updateCounter(
+          dynamoClient,
+          tableName,
+          followerPK,
+          'followingCount',
+          delta
+        );
 
-      // Update followee's followersCount
-      await updateCounter(
-        dynamoClient,
-        tableName,
-        followeePK,
-        'followersCount',
-        delta
-      );
+        // Update followee's followersCount
+        await updateCounter(
+          dynamoClient,
+          tableName,
+          followeePK,
+          'followersCount',
+          delta
+        );
 
-      console.log(`Successfully updated follow counts for ${followerPK} → ${followeePK} by ${delta}`);
-    } catch (error) {
-      console.error('Error processing stream record:', error);
-      console.error('Record:', JSON.stringify(record, null, 2));
-      // Continue processing other records even if one fails
-    }
-  });
+        logger.logInfo('Successfully updated follow counts', {
+          follower: followerPK,
+          followee: followeePK,
+          delta,
+          operation: delta > 0 ? 'follow' : 'unfollow'
+        });
+      })
+    )
+  );
 
-  // Wait for all updates to complete
-  await Promise.all(processPromises);
+  logger.endBatch(context, results);
 };
 
 /**
@@ -133,7 +142,7 @@ const updateCounter = async (
       ExpressionAttributeValues
     }));
   } catch (error) {
-    console.error(`Failed to update ${counterField} for ${pk}:`, error);
+    logger.logError(`Failed to update ${counterField} for ${pk}`, error instanceof Error ? error : undefined);
     // Don't throw - allow other updates to continue
   }
 };
