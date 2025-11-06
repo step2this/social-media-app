@@ -1,48 +1,44 @@
 /**
  * Comments Resolver
  *
- * GraphQL resolver for fetching paginated comments on a post.
- * Uses CommentAdapter for type transformation from domain to GraphQL types.
+ * GraphQL resolver for fetching paginated comments on a post using hexagonal architecture.
+ * Requires authentication via withAuth HOC.
  */
 
+import { withAuth } from '../../infrastructure/resolvers/withAuth.js';
+import { Container } from '../../infrastructure/di/Container.js';
 import type { QueryResolvers } from '../../schema/generated/types';
-import { CommentAdapter } from '../../infrastructure/adapters/CommentAdapter';
-import { GraphQLError } from 'graphql';
+import { GetCommentsByPost } from '../../application/use-cases/comment/GetCommentsByPost.js';
+import { ErrorFactory } from '../../infrastructure/errors/ErrorFactory.js';
 
 /**
- * Comments Query Resolver
+ * Create the comments resolver with DI container.
  *
- * Fetches paginated comments for a post. Requires authentication.
- * Returns GraphQL CommentConnection with proper type transformation.
+ * @param container - DI container for resolving services
+ * @returns GraphQL resolver for Query.comments
  */
-export const commentsResolver: QueryResolvers['comments'] = async (
-  _parent,
-  args,
-  context
-) => {
-  // Require authentication
-  if (!context.userId) {
-    throw new GraphQLError('Authentication required', {
-      extensions: { code: 'UNAUTHENTICATED' },
-    });
-  }
+export const createCommentsResolver = (container: Container): QueryResolvers['comments'] => {
+  return withAuth(async (_parent: any, args: { postId: string; limit?: number | null; cursor?: string | null }, _context: any) => {
+    // Validate required args
+    if (!args.postId) {
+      throw ErrorFactory.badRequest('postId is required');
+    }
 
-  // Validate required args
-  if (!args.postId) {
-    throw new GraphQLError('postId is required', {
-      extensions: { code: 'BAD_USER_INPUT' },
-    });
-  }
+    // Resolve use case from container
+    const useCase = container.resolve<GetCommentsByPost>('GetCommentsByPost');
 
-  // Create adapter with comment service from context
-  const commentAdapter = new CommentAdapter(context.services.commentService);
+    // Execute use case
+    const result = await useCase.execute(
+      args.postId,
+      args.limit ?? 20,
+      args.cursor ?? undefined
+    );
 
-  const first = args.limit ?? 20;
+    // Handle result
+    if (!result.success) {
+      throw ErrorFactory.internalServerError(result.error.message);
+    }
 
-  // Delegate to adapter - handles all transformation and validation
-  return commentAdapter.getCommentsByPostId({
-    postId: args.postId,
-    first,
-    after: args.cursor ?? undefined,
+    return result.data as any;
   });
 };
