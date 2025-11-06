@@ -123,7 +123,7 @@ function handleError(error: unknown, correlationId?: string): APIGatewayProxyRes
  * @returns Middleware function that handles errors
  */
 export const withErrorHandling = (): Middleware => {
-  return async (event, context, next) => {
+  return async (event, _context, next) => {
     const correlationId = event.requestContext?.requestId;
 
     try {

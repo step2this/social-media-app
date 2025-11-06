@@ -1,54 +1,30 @@
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { LoginRequestSchema, z } from '@social-media-app/shared';
-import { createDefaultAuthService } from '@social-media-app/dal';
-import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
-import { createJWTProvider, getJWTConfigFromEnv } from '../../utils/jwt.js';
-import { successResponse, validationErrorResponse, unauthorizedResponse, internalServerErrorResponse } from '../../utils/responses.js';
+import { LoginRequestSchema } from '@social-media-app/shared';
+import { compose } from '../../infrastructure/middleware/compose.js';
+import { withErrorHandling } from '../../infrastructure/middleware/withErrorHandling.js';
+import { withLogging } from '../../infrastructure/middleware/withLogging.js';
+import { withValidation } from '../../infrastructure/middleware/withValidation.js';
+import { withServices } from '../../infrastructure/middleware/withServices.js';
+import { successResponse } from '../../utils/responses.js';
 
 /**
  * Lambda handler for user login
+ * 
+ * Authenticates a user with email and password, returning JWT tokens on success.
+ * 
+ * @route POST /auth/login
+ * @middleware withErrorHandling - Converts errors to HTTP responses
+ * @middleware withLogging - Structured logging with correlation IDs
+ * @middleware withValidation - Validates request body against LoginRequestSchema
+ * @middleware withServices - Injects authService into context
  */
-export const handler = async (
-  event: APIGatewayProxyEventV2
-): Promise<APIGatewayProxyResultV2> => {
-  try {
-    // Parse and validate request body
-    const body = event.body ? JSON.parse(event.body) : {};
-    const validatedRequest = LoginRequestSchema.parse(body);
-
-    // Initialize dependencies
-    const dynamoClient = createDynamoDBClient();
-    const tableName = getTableName();
-    const jwtConfig = getJWTConfigFromEnv();
-    const jwtProvider = createJWTProvider(jwtConfig);
-
-    // Create auth service
-    const authService = createDefaultAuthService(dynamoClient, tableName, jwtProvider);
-
-    // Attempt to login user
-    const response = await authService.login(validatedRequest);
-
+export const handler = compose(
+  withErrorHandling(),
+  withLogging(),
+  withValidation(LoginRequestSchema),
+  withServices(['authService']),
+  async (_event, context) => {
+    // Business logic only - middleware handles validation, logging, and errors
+    const response = await context.services.authService.login(context.validatedInput);
     return successResponse(200, response);
-
-  } catch (error) {
-    // Handle validation errors
-    if (error instanceof z.ZodError) {
-      return validationErrorResponse(error.errors);
-    }
-
-    // Handle authentication errors
-    if (error instanceof Error) {
-      if (error.message === 'Invalid email or password') {
-        return unauthorizedResponse(error.message);
-      }
-
-      // Log unexpected errors but don't expose details
-      console.error('Login error:', error.message, {
-        email: 'redacted',
-        requestId: event.requestContext?.requestId
-      });
-    }
-
-    return internalServerErrorResponse();
   }
-};
+);

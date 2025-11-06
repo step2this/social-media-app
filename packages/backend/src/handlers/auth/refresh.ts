@@ -1,57 +1,30 @@
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { RefreshTokenRequestSchema, z } from '@social-media-app/shared';
-import { createDefaultAuthService } from '@social-media-app/dal';
-import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
-import { createJWTProvider, getJWTConfigFromEnv } from '../../utils/jwt.js';
-import { successResponse, validationErrorResponse, unauthorizedResponse, internalServerErrorResponse } from '../../utils/responses.js';
+import { RefreshTokenRequestSchema } from '@social-media-app/shared';
+import { compose } from '../../infrastructure/middleware/compose.js';
+import { withErrorHandling } from '../../infrastructure/middleware/withErrorHandling.js';
+import { withLogging } from '../../infrastructure/middleware/withLogging.js';
+import { withValidation } from '../../infrastructure/middleware/withValidation.js';
+import { withServices } from '../../infrastructure/middleware/withServices.js';
+import { successResponse } from '../../utils/responses.js';
 
 /**
  * Lambda handler for token refresh
+ * 
+ * Validates and refreshes a user's JWT tokens using their refresh token.
+ * 
+ * @route POST /auth/refresh
+ * @middleware withErrorHandling - Converts errors to HTTP responses (including auth errors)
+ * @middleware withLogging - Structured logging with correlation IDs
+ * @middleware withValidation - Validates request body against RefreshTokenRequestSchema
+ * @middleware withServices - Injects authService into context
  */
-export const handler = async (
-  event: APIGatewayProxyEventV2
-): Promise<APIGatewayProxyResultV2> => {
-  try {
-    // Parse and validate request body
-    const body = event.body ? JSON.parse(event.body) : {};
-    const validatedRequest = RefreshTokenRequestSchema.parse(body);
-
-    // Initialize dependencies
-    const dynamoClient = createDynamoDBClient();
-    const tableName = getTableName();
-    const jwtConfig = getJWTConfigFromEnv();
-    const jwtProvider = createJWTProvider(jwtConfig);
-
-    // Create auth service
-    const authService = createDefaultAuthService(dynamoClient, tableName, jwtProvider);
-
-    // Attempt to refresh token
-    const response = await authService.refreshToken(validatedRequest);
-
+export const handler = compose(
+  withErrorHandling(),
+  withLogging(),
+  withValidation(RefreshTokenRequestSchema),
+  withServices(['authService']),
+  async (_event, context) => {
+    // Business logic only - middleware handles validation, logging, and errors
+    const response = await context.services.authService.refreshToken(context.validatedInput);
     return successResponse(200, response);
-
-  } catch (error) {
-    // Handle validation errors
-    if (error instanceof z.ZodError) {
-      return validationErrorResponse(error.errors);
-    }
-
-    // Handle refresh token errors
-    if (error instanceof Error) {
-      if (
-        error.message === 'Invalid refresh token' ||
-        error.message === 'Refresh token expired' ||
-        error.message === 'User not found'
-      ) {
-        return unauthorizedResponse(error.message);
-      }
-
-      // Log unexpected errors but don't expose details
-      console.error('Token refresh error:', error.message, {
-        requestId: event.requestContext?.requestId
-      });
-    }
-
-    return internalServerErrorResponse();
   }
-};
+);

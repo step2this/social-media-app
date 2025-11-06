@@ -1,71 +1,54 @@
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { LogoutRequestSchema, z } from '@social-media-app/shared';
-import { createDefaultAuthService } from '@social-media-app/dal';
-import { createDynamoDBClient, getTableName } from '../../utils/dynamodb.js';
-import { createJWTProvider, getJWTConfigFromEnv, extractTokenFromHeader, verifyAccessToken } from '../../utils/jwt.js';
-import { successResponse, validationErrorResponse, unauthorizedResponse } from '../../utils/responses.js';
+import { LogoutRequestSchema } from '@social-media-app/shared';
+import { compose } from '../../infrastructure/middleware/compose.js';
+import { withErrorHandling } from '../../infrastructure/middleware/withErrorHandling.js';
+import { withLogging } from '../../infrastructure/middleware/withLogging.js';
+import { withValidation } from '../../infrastructure/middleware/withValidation.js';
+import { withServices } from '../../infrastructure/middleware/withServices.js';
+import { withAuth } from '../../infrastructure/middleware/withAuth.js';
+import { successResponse } from '../../utils/responses.js';
 
 /**
  * Lambda handler for user logout
+ * 
+ * Invalidates user's refresh token to log them out. Logout is idempotent - always succeeds.
+ * 
+ * @route POST /auth/logout
+ * @middleware withErrorHandling - Converts errors to HTTP responses
+ * @middleware withLogging - Structured logging with correlation IDs
+ * @middleware withAuth - Validates access token and extracts userId
+ * @middleware withValidation - Validates request body against LogoutRequestSchema
+ * @middleware withServices - Injects authService into context
  */
-export const handler = async (
-  event: APIGatewayProxyEventV2
-): Promise<APIGatewayProxyResultV2> => {
-  try {
-    // Extract and verify access token from Authorization header
-    const authHeader = event.headers?.Authorization || event.headers?.authorization;
-    const accessToken = extractTokenFromHeader(authHeader);
+export const handler = compose(
+  withErrorHandling(),
+  withLogging(),
+  withAuth(), // Required - extracts userId from JWT
+  withValidation(LogoutRequestSchema),
+  withServices(['authService']),
+  async (_event, context) => {
+    try {
+      // Business logic - invalidate refresh token
+      await context.services.authService.logout(
+        context.validatedInput.refreshToken,
+        context.userId // Guaranteed to exist due to withAuth middleware
+      );
 
-    if (!accessToken) {
-      return unauthorizedResponse('Access token required');
-    }
+      return successResponse(200, {
+        success: true,
+        message: 'Logged out successfully'
+      });
+    } catch (error) {
+      // Log warning but always return success (idempotent operation)
+      console.warn('[LOGOUT_ERROR]', {
+        correlationId: context.correlationId,
+        userId: context.userId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
 
-    const jwtConfig = getJWTConfigFromEnv();
-    const decodedToken = await verifyAccessToken(accessToken, jwtConfig.secret);
-
-    if (!decodedToken) {
-      return unauthorizedResponse('Invalid access token');
-    }
-
-    // Parse and validate request body
-    const body = event.body ? JSON.parse(event.body) : {};
-    const validatedRequest = LogoutRequestSchema.parse(body);
-
-    // Initialize dependencies
-    const dynamoClient = createDynamoDBClient();
-    const tableName = getTableName();
-    const jwtProvider = createJWTProvider(jwtConfig);
-
-    // Create auth service
-    const authService = createDefaultAuthService(dynamoClient, tableName, jwtProvider);
-
-    // Logout user by invalidating refresh token
-    await authService.logout(validatedRequest.refreshToken, decodedToken.userId);
-
-    return successResponse(200, {
-      success: true,
-      message: 'Logged out successfully'
-    });
-
-  } catch (error) {
-    // Handle validation errors
-    if (error instanceof z.ZodError) {
-      return validationErrorResponse(error.errors);
-    }
-
-    // Handle logout errors
-    if (error instanceof Error) {
-      // Log error but always return success for logout (idempotent operation)
-      console.warn('Logout warning:', error.message, {
-        userId: 'redacted',
-        requestId: event.requestContext?.requestId
+      return successResponse(200, {
+        success: true,
+        message: 'Logged out successfully'
       });
     }
-
-    // Always return success for logout to be idempotent
-    return successResponse(200, {
-      success: true,
-      message: 'Logged out successfully'
-    });
   }
-};
+);

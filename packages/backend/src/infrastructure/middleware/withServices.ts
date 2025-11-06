@@ -64,7 +64,7 @@ export type ServiceName = 'authService';
  * ```
  */
 export const withServices = (serviceNames: ServiceName[]): Middleware => {
-  return async (event, context, next) => {
+  return async (_event, context, next) => {
     // Initialize context.services if not already present
     if (!context.services) {
       context.services = {};
