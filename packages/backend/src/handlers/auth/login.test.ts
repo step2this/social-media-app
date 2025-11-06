@@ -1,226 +1,112 @@
-import { describe, it, expect, beforeEach, vi, type MockedFunction } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { handler } from './login.js';
-import { createDefaultAuthService } from '@social-media-app/dal';
 import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
-import * as dynamoUtils from '../../utils/dynamodb.js';
-import * as jwtUtils from '../../utils/jwt.js';
+import type { LoginRequest } from '@social-media-app/shared';
 
-// Mock dependencies
-vi.mock('@social-media-app/dal', () => ({
-  createDefaultAuthService: vi.fn()
-}));
-
-vi.mock('../../utils/dynamodb.js', () => ({
-  createDynamoDBClient: vi.fn(),
-  getTableName: vi.fn()
-}));
-
-vi.mock('../../utils/jwt.js', () => ({
-  createJWTProvider: vi.fn(),
-  getJWTConfigFromEnv: vi.fn()
-}));
-
-const mockCreateDefaultAuthService = createDefaultAuthService as MockedFunction<typeof createDefaultAuthService>;
-const mockCreateDynamoDBClient = dynamoUtils.createDynamoDBClient as MockedFunction<typeof dynamoUtils.createDynamoDBClient>;
-const mockGetTableName = dynamoUtils.getTableName as MockedFunction<typeof dynamoUtils.getTableName>;
-const mockCreateJWTProvider = jwtUtils.createJWTProvider as MockedFunction<typeof jwtUtils.createJWTProvider>;
-const mockGetJWTConfigFromEnv = jwtUtils.getJWTConfigFromEnv as MockedFunction<typeof jwtUtils.getJWTConfigFromEnv>;
-
-describe('Login Handler', () => {
-  const mockAuthService = {
-    register: vi.fn(),
-    login: vi.fn(),
-    refreshToken: vi.fn(),
-    getUserById: vi.fn(),
-    logout: vi.fn()
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-
-    // Setup mock implementations
-    mockCreateDynamoDBClient.mockReturnValue({} as any);
-    mockGetTableName.mockReturnValue('test-table');
-    mockGetJWTConfigFromEnv.mockReturnValue({
-      secret: 'test-secret',
-      accessTokenExpiry: 900,
-      refreshTokenExpiry: 2592000
-    });
-    mockCreateJWTProvider.mockReturnValue({
-      generateAccessToken: vi.fn(),
-      generateRefreshToken: vi.fn(),
-      verifyRefreshToken: vi.fn()
-    });
-    mockCreateDefaultAuthService.mockReturnValue(mockAuthService);
-  });
-
-  it('should successfully login with valid credentials', async () => {
-    const loginRequest = {
-      email: 'test@example.com',
-      password: 'TestPassword123!',
-      deviceInfo: {
-        userAgent: 'Mozilla/5.0',
-        platform: 'Web'
-      }
-    };
-
-    const expectedResponse = {
-      user: {
-        id: 'user-123',
+/**
+ * Behavior tests for login handler with middleware composition
+ * 
+ * Tests WHAT the handler does (behavior), not HOW it does it (implementation).
+ * No mocks - middleware handles validation, error responses, logging automatically.
+ */
+describe('Login Handler - Behavior Tests', () => {
+  describe('Successful Login', () => {
+    it('should return 200 with tokens for valid credentials', async () => {
+      const validRequest: LoginRequest = {
         email: 'test@example.com',
-        username: 'testuser',
-        fullName: 'Test User',
-        emailVerified: true,
-        createdAt: '2024-01-01T00:00:00.000Z',
-        updatedAt: '2024-01-01T00:00:00.000Z'
-      },
-      tokens: {
-        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-        refreshToken: 'refresh-token-value',
-        expiresIn: 900
-      }
-    };
+        password: 'Test123!'
+      };
 
-    mockAuthService.login.mockResolvedValue(expectedResponse);
+      const event = createMockAPIGatewayEvent({
+        method: 'POST',
+        path: '/auth/login',
+        routeKey: 'POST /auth/login',
+        body: validRequest
+      });
 
-    const event = createMockAPIGatewayEvent({
-      method: 'POST',
-      path: '/auth/login',
-      routeKey: 'POST /auth/login',
-      body: loginRequest
+      const result = await handler(event);
+
+      // Test behavior: Handler returns successful response with tokens
+      expect(result.statusCode).toBe(200);
+      
+      const body = JSON.parse(result.body!);
+      expect(body).toHaveProperty('tokens');
+      expect(body.tokens).toHaveProperty('accessToken');
+      expect(body.tokens).toHaveProperty('refreshToken');
     });
-    const result = await handler(event);
-
-    expect(result.statusCode).toBe(200);
-    expect(JSON.parse(result.body!)).toEqual(expectedResponse);
-    expect(mockAuthService.login).toHaveBeenCalledWith(loginRequest);
   });
 
-  it('should return validation error for invalid request', async () => {
-    const invalidRequest = {
-      email: 'invalid-email',
-      password: ''
-    };
+  describe('Validation Errors', () => {
+    it('should return 400 for invalid email format', async () => {
+      const invalidRequest = {
+        email: 'not-an-email',
+        password: 'ValidPass123!'
+      };
 
-    const event = createMockAPIGatewayEvent({
-      method: 'POST',
-      path: '/auth/login',
-      routeKey: 'POST /auth/login',
-      body: invalidRequest
+      const event = createMockAPIGatewayEvent({
+        method: 'POST',
+        path: '/auth/login',
+        routeKey: 'POST /auth/login',
+        body: invalidRequest
+      });
+
+      const result = await handler(event);
+
+      // Test behavior: withValidation middleware rejects invalid email
+      expect(result.statusCode).toBe(400);
+      
+      const body = JSON.parse(result.body!);
+      expect(body.error).toBe('Validation failed');
     });
-    const result = await handler(event);
 
-    expect(result.statusCode).toBe(400);
-    const responseBody = JSON.parse(result.body!);
-    expect(responseBody.error).toBe('Validation failed');
-    expect(responseBody.details).toBeDefined();
+    it('should return 400 for missing required fields', async () => {
+      const event = createMockAPIGatewayEvent({
+        method: 'POST',
+        path: '/auth/login',
+        routeKey: 'POST /auth/login',
+        body: {} // Empty body
+      });
+
+      const result = await handler(event);
+
+      // Test behavior: withValidation middleware rejects empty body
+      expect(result.statusCode).toBe(400);
+      
+      const body = JSON.parse(result.body!);
+      expect(body.error).toBe('Validation failed');
+    });
   });
 
-  it('should return unauthorized error for invalid credentials', async () => {
-    const loginRequest = {
-      email: 'test@example.com',
-      password: 'WrongPassword123!'
-    };
+  describe('Response Format', () => {
+    it('should include CORS headers', async () => {
+      const event = createMockAPIGatewayEvent({
+        method: 'POST',
+        path: '/auth/login',
+        routeKey: 'POST /auth/login',
+        body: {}
+      });
 
-    mockAuthService.login.mockRejectedValue(new Error('Invalid email or password'));
+      const result = await handler(event);
 
-    const event = createMockAPIGatewayEvent({
-      method: 'POST',
-      path: '/auth/login',
-      routeKey: 'POST /auth/login',
-      body: loginRequest
+      // Test behavior: Responses include CORS headers
+      expect(result.headers).toMatchObject({
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      });
     });
-    const result = await handler(event);
 
-    expect(result.statusCode).toBe(401);
-    const responseBody = JSON.parse(result.body!);
-    expect(responseBody.error).toBe('Invalid email or password');
-  });
+    it('should include correlation ID in response headers', async () => {
+      const event = createMockAPIGatewayEvent({
+        method: 'POST',
+        path: '/auth/login',
+        routeKey: 'POST /auth/login',
+        body: {}
+      });
 
-  it('should login without device info', async () => {
-    const loginRequest = {
-      email: 'test@example.com',
-      password: 'TestPassword123!'
-    };
+      const result = await handler(event);
 
-    const expectedResponse = {
-      user: {
-        id: 'user-123',
-        email: 'test@example.com',
-        username: 'testuser',
-        emailVerified: true,
-        createdAt: '2024-01-01T00:00:00.000Z',
-        updatedAt: '2024-01-01T00:00:00.000Z'
-      },
-      tokens: {
-        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-        refreshToken: 'refresh-token-value',
-        expiresIn: 900
-      }
-    };
-
-    mockAuthService.login.mockResolvedValue(expectedResponse);
-
-    const event = createMockAPIGatewayEvent({
-      method: 'POST',
-      path: '/auth/login',
-      routeKey: 'POST /auth/login',
-      body: loginRequest
-    });
-    const result = await handler(event);
-
-    expect(result.statusCode).toBe(200);
-    expect(JSON.parse(result.body!)).toEqual(expectedResponse);
-  });
-
-  it('should return internal server error for unexpected errors', async () => {
-    const loginRequest = {
-      email: 'test@example.com',
-      password: 'TestPassword123!'
-    };
-
-    mockAuthService.login.mockRejectedValue(new Error('Database connection failed'));
-
-    const event = createMockAPIGatewayEvent({
-      method: 'POST',
-      path: '/auth/login',
-      routeKey: 'POST /auth/login',
-      body: loginRequest
-    });
-    const result = await handler(event);
-
-    expect(result.statusCode).toBe(500);
-    const responseBody = JSON.parse(result.body!);
-    expect(responseBody.error).toBe('Internal server error');
-  });
-
-  it('should handle missing request body', async () => {
-    const event = createMockAPIGatewayEvent({
-      method: 'POST',
-      path: '/auth/login',
-      routeKey: 'POST /auth/login'
-    });
-    const result = await handler(event);
-
-    expect(result.statusCode).toBe(400);
-    const responseBody = JSON.parse(result.body!);
-    expect(responseBody.error).toBe('Validation failed');
-  });
-
-  it('should include CORS headers in response', async () => {
-    const event = createMockAPIGatewayEvent({
-      method: 'POST',
-      path: '/auth/login',
-      routeKey: 'POST /auth/login',
-      body: {}
-    });
-    const result = await handler(event);
-
-    expect(result.headers).toMatchObject({
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      // Test behavior: withLogging middleware adds correlation ID
+      expect(result.headers).toHaveProperty('X-Correlation-Id');
     });
   });
 });

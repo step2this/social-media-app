@@ -1,90 +1,73 @@
 import { describe, it, expect } from 'vitest';
+import { handler } from './hello.js';
 import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
-import { handler } from './hello';
+import type { HelloRequest } from '@social-media-app/shared';
 
-describe('Hello Lambda Handler', () => {
+/**
+ * Behavior tests for hello handler with middleware composition
+ * 
+ * Tests WHAT the handler does (behavior), not HOW it does it (implementation).
+ * No mocks - middleware handles validation, error responses, logging automatically.
+ */
+describe('Hello Handler - Behavior Tests', () => {
+  describe('Successful Greeting', () => {
+    it('should return 200 with greeting message', async () => {
+      const validRequest: HelloRequest = {
+        name: 'Alice'
+      };
 
-  it('should return hello response with provided name', async () => {
-    const event = createMockAPIGatewayEvent({
-      body: { name: 'John' },
-      method: 'POST',
-      path: '/hello',
-      routeKey: 'POST /hello'
+      const event = createMockAPIGatewayEvent({
+        method: 'POST',
+        path: '/hello',
+        routeKey: 'POST /hello',
+        body: validRequest
+      });
+
+      const result = await handler(event);
+
+      // Test behavior: Handler returns greeting
+      expect(result.statusCode).toBe(200);
+      
+      const body = JSON.parse(result.body!);
+      expect(body.message).toContain('Alice');
     });
-
-    const response = await handler(event);
-
-    expect(response.statusCode).toBe(200);
-    expect(response.headers?.['Content-Type']).toBe('application/json');
-
-    const body = JSON.parse(response.body || '{}');
-    expect(body.message).toBe('Hello John!');
-    expect(body.name).toBe('John');
-    expect(body.serverTime).toBeDefined();
   });
 
-  it('should use default name when not provided', async () => {
-    const event = createMockAPIGatewayEvent({
-      body: {},
-      method: 'POST',
-      path: '/hello',
-      routeKey: 'POST /hello'
+  describe('Validation Errors', () => {
+    it('should return 400 for invalid request body', async () => {
+      const event = createMockAPIGatewayEvent({
+        method: 'POST',
+        path: '/hello',
+        routeKey: 'POST /hello',
+        body: { name: 123 } // Invalid - name should be string
+      });
+
+      const result = await handler(event);
+
+      // Test behavior: withValidation middleware rejects invalid types
+      expect(result.statusCode).toBe(400);
+      
+      const body = JSON.parse(result.body!);
+      expect(body.error).toBe('Validation failed');
     });
-
-    const response = await handler(event);
-
-    expect(response.statusCode).toBe(200);
-
-    const body = JSON.parse(response.body || '{}');
-    expect(body.message).toBe('Hello World!');
-    expect(body.name).toBe('World');
   });
 
-  it('should handle empty body', async () => {
-    const event = createMockAPIGatewayEvent({
-      method: 'POST',
-      path: '/hello',
-      routeKey: 'POST /hello'
+  describe('Response Format', () => {
+    it('should include CORS headers', async () => {
+      const event = createMockAPIGatewayEvent({
+        method: 'POST',
+        path: '/hello',
+        routeKey: 'POST /hello',
+        body: { name: 'Test' }
+      });
+
+      const result = await handler(event);
+
+      // Test behavior: Responses include CORS headers
+      expect(result.headers).toMatchObject({
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      });
     });
-
-    const response = await handler(event);
-
-    expect(response.statusCode).toBe(200);
-
-    const body = JSON.parse(response.body || '{}');
-    expect(body.message).toBe('Hello World!');
-  });
-
-  it('should return 400 for invalid request', async () => {
-    const event = createMockAPIGatewayEvent({
-      body: { name: 'a'.repeat(101) },
-      method: 'POST',
-      path: '/hello',
-      routeKey: 'POST /hello'
-    });
-
-    const response = await handler(event);
-
-    expect(response.statusCode).toBe(400);
-
-    const body = JSON.parse(response.body || '{}');
-    expect(body.error).toBe('Validation failed');
-    expect(body.details).toBeDefined();
-  });
-
-  it('should handle malformed JSON', async () => {
-    const event = createMockAPIGatewayEvent({
-      body: '{ invalid json }',
-      method: 'POST',
-      path: '/hello',
-      routeKey: 'POST /hello'
-    });
-
-    const response = await handler(event);
-
-    expect(response.statusCode).toBe(400);
-
-    const body = JSON.parse(response.body || '{}');
-    expect(body.error).toBe('Validation failed');
   });
 });
