@@ -5,7 +5,7 @@ import type { LoginRequest } from '@social-media-app/shared';
 
 /**
  * Behavior tests for login handler with middleware composition
- * 
+ *
  * Tests WHAT the handler does (behavior), not HOW it does it (implementation).
  * No mocks - middleware handles validation, error responses, logging automatically.
  */
@@ -28,7 +28,7 @@ describe('Login Handler - Behavior Tests', () => {
 
       // Test behavior: Handler returns successful response with tokens
       expect(result.statusCode).toBe(200);
-      
+
       const body = JSON.parse(result.body!);
       expect(body).toHaveProperty('tokens');
       expect(body.tokens).toHaveProperty('accessToken');
@@ -54,7 +54,7 @@ describe('Login Handler - Behavior Tests', () => {
 
       // Test behavior: withValidation middleware rejects invalid email
       expect(result.statusCode).toBe(400);
-      
+
       const body = JSON.parse(result.body!);
       expect(body.error).toBe('Validation failed');
     });
@@ -71,7 +71,7 @@ describe('Login Handler - Behavior Tests', () => {
 
       // Test behavior: withValidation middleware rejects empty body
       expect(result.statusCode).toBe(400);
-      
+
       const body = JSON.parse(result.body!);
       expect(body.error).toBe('Validation failed');
     });

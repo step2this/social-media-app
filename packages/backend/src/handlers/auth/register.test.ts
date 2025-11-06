@@ -5,10 +5,10 @@ import type { RegisterRequest } from '@social-media-app/shared';
 
 /**
  * Behavior tests for register handler with middleware composition
- * 
+ *
  * Tests WHAT the handler does (behavior), not HOW it does it (implementation).
  * No mocks - middleware handles validation, error responses, logging automatically.
- * 
+ *
  * Test categories:
  * 1. Successful registration
  * 2. Validation errors (handled by withValidation middleware)
@@ -34,7 +34,7 @@ describe('Register Handler - Behavior Tests', () => {
 
       // Test behavior: Handler returns successful response
       expect(result.statusCode).toBe(201);
-      
+
       const body = JSON.parse(result.body!);
       expect(body).toHaveProperty('user');
       expect(body.user).toMatchObject({
@@ -63,7 +63,7 @@ describe('Register Handler - Behavior Tests', () => {
 
       // Test behavior: withValidation middleware rejects invalid email
       expect(result.statusCode).toBe(400);
-      
+
       const body = JSON.parse(result.body!);
       expect(body.error).toBe('Validation failed');
       expect(body.details).toBeDefined();
@@ -87,7 +87,7 @@ describe('Register Handler - Behavior Tests', () => {
 
       // Test behavior: withValidation middleware rejects weak password
       expect(result.statusCode).toBe(400);
-      
+
       const body = JSON.parse(result.body!);
       expect(body.error).toBe('Validation failed');
     });
@@ -104,7 +104,7 @@ describe('Register Handler - Behavior Tests', () => {
 
       // Test behavior: withValidation middleware rejects empty body
       expect(result.statusCode).toBe(400);
-      
+
       const body = JSON.parse(result.body!);
       expect(body.error).toBe('Validation failed');
     });

@@ -8,9 +8,9 @@ import { successResponse } from '../../utils/responses.js';
 
 /**
  * Lambda handler for user login
- *
+ * 
  * Authenticates a user with email and password, returning JWT tokens on success.
- *
+ * 
  * @route POST /auth/login
  * @middleware withErrorHandling - Converts errors to HTTP responses
  * @middleware withLogging - Structured logging with correlation IDs
@@ -24,7 +24,8 @@ export const handler = compose(
   withServices(['authService']),
   async (_event, context) => {
     // Business logic only - middleware handles validation, logging, and errors
-    const response = await context.services.authService.login(context.validatedInput);
+    // Non-null assertion safe: withServices middleware guarantees authService exists
+    const response = await context.services!.authService.login(context.validatedInput);
     return successResponse(200, response);
   }
 );

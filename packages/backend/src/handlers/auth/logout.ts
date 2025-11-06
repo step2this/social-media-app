@@ -9,9 +9,9 @@ import { successResponse } from '../../utils/responses.js';
 
 /**
  * Lambda handler for user logout
- *
+ * 
  * Invalidates user's refresh token to log them out. Logout is idempotent - always succeeds.
- *
+ * 
  * @route POST /auth/logout
  * @middleware withErrorHandling - Converts errors to HTTP responses
  * @middleware withLogging - Structured logging with correlation IDs
@@ -28,9 +28,10 @@ export const handler = compose(
   async (_event, context) => {
     try {
       // Business logic - invalidate refresh token
-      await context.services.authService.logout(
+      // Non-null assertions safe: middleware guarantees these exist
+      await context.services!.authService.logout(
         context.validatedInput.refreshToken,
-        context.userId // Guaranteed to exist due to withAuth middleware
+        context.userId! // withAuth middleware guarantees userId exists
       );
 
       return successResponse(200, {

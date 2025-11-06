@@ -33,6 +33,13 @@
 import type { DynamoDBRecord, KinesisStreamRecord } from 'aws-lambda';
 
 /**
+ * Type guard to check if a stream record is a DynamoDB record
+ */
+function isDynamoDBRecord(record: DynamoDBRecord | KinesisStreamRecord): record is DynamoDBRecord {
+  return 'eventID' in record;
+}
+
+/**
  * Batch processing context for tracking metrics
  */
 export interface BatchContext {
@@ -124,13 +131,13 @@ export function createStreamLogger(handlerName: string): StreamLogger {
     record: DynamoDBRecord | KinesisStreamRecord,
     processor: () => Promise<T>
   ): Promise<ProcessingResult> {
-    // Extract record ID based on record type
+    // Extract record ID based on record type using type guard
     let recordId: string;
-    if ('eventID' in record) {
+    if (isDynamoDBRecord(record)) {
       // DynamoDB Stream Record
       recordId = record.eventID || 'unknown';
     } else {
-      // Kinesis Stream Record
+      // Kinesis Stream Record (type guard ensures this is KinesisStreamRecord)
       recordId = record.kinesis.sequenceNumber;
     }
     

@@ -8,9 +8,9 @@ import { successResponse } from '../../utils/responses.js';
 
 /**
  * Lambda handler for user registration
- *
+ * 
  * Creates a new user account with email, username, and password.
- *
+ * 
  * @route POST /auth/register
  * @middleware withErrorHandling - Converts errors to HTTP responses (including conflict errors)
  * @middleware withLogging - Structured logging with correlation IDs
@@ -24,7 +24,8 @@ export const handler = compose(
   withServices(['authService']),
   async (_event, context) => {
     // Business logic only - middleware handles validation, logging, and errors
-    const response = await context.services.authService.register(context.validatedInput);
+    // Non-null assertion safe: withServices middleware guarantees authService exists
+    const response = await context.services!.authService.register(context.validatedInput);
     return successResponse(201, response);
   }
 );

@@ -8,9 +8,9 @@ import { successResponse } from '../../utils/responses.js';
 
 /**
  * Lambda handler for token refresh
- *
+ * 
  * Validates and refreshes a user's JWT tokens using their refresh token.
- *
+ * 
  * @route POST /auth/refresh
  * @middleware withErrorHandling - Converts errors to HTTP responses (including auth errors)
  * @middleware withLogging - Structured logging with correlation IDs
@@ -24,7 +24,8 @@ export const handler = compose(
   withServices(['authService']),
   async (_event, context) => {
     // Business logic only - middleware handles validation, logging, and errors
-    const response = await context.services.authService.refreshToken(context.validatedInput);
+    // Non-null assertion safe: withServices middleware guarantees authService exists
+    const response = await context.services!.authService.refreshToken(context.validatedInput);
     return successResponse(200, response);
   }
 );
