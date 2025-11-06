@@ -124,7 +124,16 @@ export function createStreamLogger(handlerName: string): StreamLogger {
     record: DynamoDBRecord | KinesisStreamRecord,
     processor: () => Promise<T>
   ): Promise<ProcessingResult> {
-    const recordId = 'eventID' in record ? record.eventID : record.kinesis.sequenceNumber;
+    // Extract record ID based on record type
+    let recordId: string;
+    if ('eventID' in record) {
+      // DynamoDB Stream Record
+      recordId = record.eventID || 'unknown';
+    } else {
+      // Kinesis Stream Record
+      recordId = record.kinesis.sequenceNumber;
+    }
+    
     const startTime = Date.now();
 
     try {
@@ -133,7 +142,7 @@ export function createStreamLogger(handlerName: string): StreamLogger {
 
       return {
         success: true,
-        recordId: recordId || 'unknown',
+        recordId,
         duration
       };
     } catch (error) {
@@ -154,7 +163,7 @@ export function createStreamLogger(handlerName: string): StreamLogger {
 
       return {
         success: false,
-        recordId: recordId || 'unknown',
+        recordId,
         error: error instanceof Error ? error : new Error(String(error)),
         duration
       };
