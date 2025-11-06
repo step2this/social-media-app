@@ -23,44 +23,14 @@ async function loadHandlers() {
     console.log('📦 Loading Lambda handlers...');
 
     const handlerMappings = [
+      // Auth handlers (REST-based JWT authentication)
       { name: 'authLogin', path: './dist/handlers/auth/login.js' },
       { name: 'authRegister', path: './dist/handlers/auth/register.js' },
       { name: 'authProfile', path: './dist/handlers/auth/profile.js' },
       { name: 'authLogout', path: './dist/handlers/auth/logout.js' },
       { name: 'authRefresh', path: './dist/handlers/auth/refresh.js' },
-      { name: 'profileGetProfile', path: './dist/handlers/profile/get-profile.js' },
-      { name: 'profileGetCurrentProfile', path: './dist/handlers/profile/get-current-profile.js' },
-      { name: 'profileUpdateProfile', path: './dist/handlers/profile/update-profile.js' },
-      { name: 'profileGetUploadUrl', path: './dist/handlers/profile/get-upload-url.js' },
-      { name: 'postsCreatePost', path: './dist/handlers/posts/create-post.js' },
-      { name: 'postsUpdatePost', path: './dist/handlers/posts/update-post.js' },
-      { name: 'postsGetUserPosts', path: './dist/handlers/posts/get-user-posts.js' },
-      { name: 'postsDeletePost', path: './dist/handlers/posts/delete-post.js' },
-      { name: 'postsGetPost', path: './dist/handlers/posts/get-post.js' },
-      { name: 'feedGetFeed', path: './dist/handlers/feed/get-feed.js' },
-      { name: 'feedGetFollowingFeed', path: './dist/handlers/feed/get-following-feed.js' },
-      { name: 'feedGetExploreFeed', path: './dist/handlers/feed/get-explore-feed.js' },
-      { name: 'feedMarkRead', path: './dist/handlers/feed/mark-read.js' },
-      { name: 'likesLikePost', path: './dist/handlers/likes/like-post.js' },
-      { name: 'likesUnlikePost', path: './dist/handlers/likes/unlike-post.js' },
-      { name: 'likesGetLikeStatus', path: './dist/handlers/likes/get-like-status.js' },
-      { name: 'followsFollowUser', path: './dist/handlers/follows/follow-user.js' },
-      { name: 'followsUnfollowUser', path: './dist/handlers/follows/unfollow-user.js' },
-      { name: 'followsGetFollowStatus', path: './dist/handlers/follows/get-follow-status.js' },
-      { name: 'commentsCreateComment', path: './dist/handlers/comments/create-comment.js' },
-      { name: 'commentsDeleteComment', path: './dist/handlers/comments/delete-comment.js' },
-      { name: 'commentsGetComments', path: './dist/handlers/comments/get-comments.js' },
-      { name: 'notificationsGetNotifications', path: './dist/handlers/notifications/get-notifications.js' },
-      { name: 'notificationsGetUnreadCount', path: './dist/handlers/notifications/get-unread-count.js' },
-      { name: 'notificationsMarkRead', path: './dist/handlers/notifications/mark-notification-read.js' },
-      { name: 'notificationsMarkAllRead', path: './dist/handlers/notifications/mark-all-notifications-read.js' },
-      { name: 'notificationsDelete', path: './dist/handlers/notifications/delete-notification.js' },
-      { name: 'auctionsCreate', path: './dist/handlers/auctions/create-auction.js' },
-      { name: 'auctionsGet', path: './dist/handlers/auctions/get-auction.js' },
-      { name: 'auctionsList', path: './dist/handlers/auctions/list-auctions.js' },
-      { name: 'auctionsActivate', path: './dist/handlers/auctions/activate-auction.js' },
-      { name: 'auctionsPlaceBid', path: './dist/handlers/auctions/place-bid.js' },
-      { name: 'auctionsGetBidHistory', path: './dist/handlers/auctions/get-bid-history.js' },
+      
+      // Utility handlers (health check, dev tools)
       { name: 'hello', path: './dist/handlers/hello.js' }
     ];
 
@@ -281,7 +251,16 @@ const callHandler = async (handlerName, req, res) => {
   }
 };
 
-// Auth routes
+// ============================================================================
+// REST API Routes
+// ============================================================================
+// All business logic routes have been removed - use GraphQL for:
+// - Posts, Feeds, Profiles, Likes, Comments, Follows, Notifications, Auctions
+//
+// Only auth and utility routes remain below:
+// ============================================================================
+
+// Auth routes (JWT-based authentication - remains REST)
 app.post('/auth/login', (req, res) => callHandler('authLogin', req, res));
 app.post('/auth/register', (req, res) => callHandler('authRegister', req, res));
 app.get('/auth/profile', (req, res) => callHandler('authProfile', req, res));
@@ -289,63 +268,7 @@ app.put('/auth/profile', (req, res) => callHandler('authProfile', req, res));
 app.post('/auth/logout', (req, res) => callHandler('authLogout', req, res));
 app.post('/auth/refresh', (req, res) => callHandler('authRefresh', req, res));
 
-// Profile routes
-app.get('/profile/me', (req, res) => callHandler('profileGetCurrentProfile', req, res));
-app.get('/profile/:handle', (req, res) => callHandler('profileGetProfile', req, res));
-app.put('/profile', (req, res) => callHandler('profileUpdateProfile', req, res));
-app.post('/profile/upload-url', (req, res) => callHandler('profileGetUploadUrl', req, res));
-
-// Posts routes
-app.post('/posts', (req, res) => callHandler('postsCreatePost', req, res));
-app.put('/posts/:postId', (req, res) => callHandler('postsUpdatePost', req, res));
-app.get('/profile/:handle/posts', (req, res) => callHandler('postsGetUserPosts', req, res));
-app.get('/posts/my', (req, res) => callHandler('postsGetMyPosts', req, res));
-app.delete('/posts/:postId', (req, res) => callHandler('postsDeletePost', req, res));
-app.get('/posts/:postId', (req, res) => callHandler('postsGetPost', req, res));
-
-// Feed routes
-app.get('/feed', (req, res) => callHandler('feedGetFeed', req, res));
-app.get('/feed/following', (req, res) => callHandler('feedGetFollowingFeed', req, res));
-app.get('/feed/explore', (req, res) => callHandler('feedGetExploreFeed', req, res));
-app.post('/feed/read', (req, res) => callHandler('feedMarkRead', req, res));
-
-// Like routes
-app.post('/likes', (req, res) => callHandler('likesLikePost', req, res));
-app.delete('/likes', (req, res) => callHandler('likesUnlikePost', req, res));
-app.get('/likes/:postId', (req, res) => callHandler('likesGetLikeStatus', req, res));
-
-// Follow routes
-app.post('/follows', (req, res) => callHandler('followsFollowUser', req, res));
-app.delete('/follows', (req, res) => callHandler('followsUnfollowUser', req, res));
-// Support RESTful pattern: DELETE /follows/:userId
-app.delete('/follows/:userId', (req, res) => {
-  // Extract userId from path and add to body before calling handler
-  req.rawBody = JSON.stringify({ userId: req.params.userId });
-  callHandler('followsUnfollowUser', req, res);
-});
-app.get('/follows/:userId/status', (req, res) => callHandler('followsGetFollowStatus', req, res));
-
-// Comment routes
-app.post('/comments', (req, res) => callHandler('commentsCreateComment', req, res));
-app.delete('/comments', (req, res) => callHandler('commentsDeleteComment', req, res));
-app.get('/comments', (req, res) => callHandler('commentsGetComments', req, res));
-
-// Notification routes
-app.get('/notifications', (req, res) => callHandler('notificationsGetNotifications', req, res));
-app.get('/notifications/unread-count', (req, res) => callHandler('notificationsGetUnreadCount', req, res));
-app.put('/notifications/:id/read', (req, res) => callHandler('notificationsMarkRead', req, res));
-app.put('/notifications/mark-all-read', (req, res) => callHandler('notificationsMarkAllRead', req, res));
-app.delete('/notifications/:id', (req, res) => callHandler('notificationsDelete', req, res));
-
-// Auction routes
-app.post('/auctions', (req, res) => callHandler('auctionsCreate', req, res));
-app.get('/auctions/:auctionId', (req, res) => callHandler('auctionsGet', req, res));
-app.get('/auctions', (req, res) => callHandler('auctionsList', req, res));
-app.post('/auctions/:auctionId/activate', (req, res) => callHandler('auctionsActivate', req, res));
-app.post('/bids', (req, res) => callHandler('auctionsPlaceBid', req, res));
-app.get('/auctions/:auctionId/bids', (req, res) => callHandler('auctionsGetBidHistory', req, res));
-
-// Hello endpoint
+// Utility routes
 app.get('/hello', (req, res) => callHandler('hello', req, res));
 
 // Catch-all for undefined routes (disabled for now due to Express 5 compatibility)
@@ -418,39 +341,24 @@ async function startServer() {
     console.log(`🔑 Table: ${process.env.TABLE_NAME || 'undefined'}`);
     console.log(`📦 Handlers: ${Object.keys(handlers).length} loaded`);
     console.log(`🔄 Stream Processor: ${streamProcessor ? 'Running' : 'Disabled'}`);
-    console.log(`\n🌐 Available endpoints:`);
-    console.log(`  POST /auth/login`);
-    console.log(`  POST /auth/register`);
-    console.log(`  GET  /auth/profile`);
-    console.log(`  PUT  /auth/profile`);
-    console.log(`  POST /auth/logout`);
-    console.log(`  POST /auth/refresh`);
-    console.log(`  GET  /profile/me`);
-    console.log(`  GET  /profile/:handle`);
-    console.log(`  PUT  /profile`);
-    console.log(`  POST /profile/upload-url`);
-    console.log(`  POST /posts`);
-    console.log(`  PUT  /posts/:postId`);
-    console.log(`  GET  /posts/:handle`);
-    console.log(`  GET  /posts/my`);
-    console.log(`  DELETE /posts/:postId`);
-    console.log(`  GET  /posts/:postId`);
-    console.log(`  POST /likes`);
-    console.log(`  DELETE /likes`);
-    console.log(`  GET  /likes/:postId`);
-    console.log(`  POST /follows`);
-    console.log(`  DELETE /follows`);
-    console.log(`  GET  /follows/:userId/status`);
-    console.log(`  GET  /notifications`);
-    console.log(`  GET  /notifications/unread-count`);
-    console.log(`  PUT  /notifications/:id/read`);
-    console.log(`  PUT  /notifications/mark-all-read`);
-    console.log(`  DELETE /notifications/:id`);
-    console.log(`  GET  /hello`);
-    console.log(`  GET  /health`);
+    console.log(`\n🌐 Available REST endpoints (Auth + Utilities only):`);
+    console.log(`\n  📝 Authentication:`);
+    console.log(`    POST /auth/login`);
+    console.log(`    POST /auth/register`);
+    console.log(`    GET  /auth/profile`);
+    console.log(`    PUT  /auth/profile`);
+    console.log(`    POST /auth/logout`);
+    console.log(`    POST /auth/refresh`);
+    console.log(`\n  🔧 Utilities:`);
+    console.log(`    GET  /hello`);
+    console.log(`    GET  /health`);
     if (process.env.NODE_ENV === 'development' || process.env.USE_LOCALSTACK === 'true') {
-      console.log(`  GET  /dev/cache-status (dev only)`);
+      console.log(`\n  🛠️  Development Tools:`);
+      console.log(`    GET  /dev/cache-status`);
+      console.log(`    GET  /dev/kinesis-records`);
     }
+    console.log(`\n  ℹ️  All business operations (posts, feeds, likes, etc.) use GraphQL`);
+    console.log(`     GraphQL endpoint: http://localhost:4000/graphql`);
   });
 }
 
