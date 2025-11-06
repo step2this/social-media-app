@@ -566,30 +566,365 @@ return result.data;
 
 ### **Priority 2: High (Weeks 2-3)**
 
-#### **Task 2.1: Add Middleware for Backend Handlers**
+#### **Task 2.1: Add Middleware for Backend Handlers** ⚠️ EXPANDED SCOPE
 
-**Create Files**:
-- `/packages/backend/src/infrastructure/middleware/authMiddleware.ts`
-- `/packages/backend/src/infrastructure/middleware/validationMiddleware.ts`
-- `/packages/backend/src/infrastructure/middleware/errorMiddleware.ts`
-- `/packages/backend/src/infrastructure/middleware/compose.ts`
+**Status**: NOT STARTED - Scope expanded from 4 to 9 files after codebase analysis
 
-**Example Implementation**:
+**Original Task 2.1** listed 4 middleware files, but analysis reveals **7 middleware patterns + 2 DI infrastructure files needed**.
+
+---
+
+### 📊 **Gap Analysis: Current vs. Required**
+
+**Current State** (Backend has ZERO middleware):
+- ❌ No `/infrastructure` directory exists
+- ❌ Manual auth in every handler (~8-10 lines repeated)
+- ❌ Manual validation in every handler (~5-8 lines repeated)
+- ❌ Manual error handling in every handler (~15-20 lines repeated)
+- ❌ Manual service DI in every handler (~10-15 lines repeated)
+- ❌ Manual CORS headers in response utilities
+- ❌ No request tracing/logging infrastructure
+
+**Impact**: Every handler contains **~40-50 lines of boilerplate** code.
+
+---
+
+### 📋 **Complete File List**
+
+**Middleware Files** (7):
+1. `/packages/backend/src/infrastructure/middleware/authMiddleware.ts` - JWT authentication
+2. `/packages/backend/src/infrastructure/middleware/validationMiddleware.ts` - Zod schema validation
+3. `/packages/backend/src/infrastructure/middleware/errorMiddleware.ts` - Centralized error handling
+4. `/packages/backend/src/infrastructure/middleware/corsMiddleware.ts` - CORS configuration ⚠️ NEW
+5. `/packages/backend/src/infrastructure/middleware/diMiddleware.ts` - Service injection ⚠️ NEW
+6. `/packages/backend/src/infrastructure/middleware/tracingMiddleware.ts` - Request tracing ⚠️ NEW
+7. `/packages/backend/src/infrastructure/middleware/compose.ts` - Middleware pipeline
+
+**DI Infrastructure** (2):
+8. `/packages/backend/src/infrastructure/di/Container.ts` - DI container ⚠️ NEW
+9. `/packages/backend/src/infrastructure/di/registerServices.ts` - Service registration ⚠️ NEW
+
+**Test Files** (9):
+- One test file per middleware/DI file above
+
+---
+
+### 🎯 **Implementation Plan**
+
+#### **Phase 1: Core Infrastructure** (1-2 days)
+
+**Files to Create**:
 ```typescript
-// ✅ Middleware composition
+// /packages/backend/src/infrastructure/di/Container.ts
+export class Container {
+  private services = new Map<string, any>();
+  
+  register<T>(name: string, factory: () => T): void {
+    this.services.set(name, factory);
+  }
+  
+  resolve<T>(name: string): T {
+    const factory = this.services.get(name);
+    if (!factory) throw new Error(`Service not found: ${name}`);
+    return factory();
+  }
+}
+
+// /packages/backend/src/infrastructure/di/registerServices.ts
+export const registerBackendServices = (container: Container): void => {
+  // Register DynamoDB client
+  container.register('DynamoDBClient', () => createDynamoDBClient());
+  
+  // Register DAL services
+  container.register('AuthService', () => {
+    const client = container.resolve('DynamoDBClient');
+    return createDefaultAuthService(client, tableName, jwtProvider);
+  });
+  
+  // ... register all services
+};
+
+// /packages/backend/src/infrastructure/middleware/compose.ts
+type Middleware = (event: any, context: any, next: () => Promise<any>) => Promise<any>;
+
+export const compose = (...middlewares: Middleware[]) => {
+  return async (event: APIGatewayProxyEventV2) => {
+    const context: any = { event };
+    
+    const executeMiddleware = async (index: number): Promise<any> => {
+      if (index === middlewares.length) {
+        return middlewares[middlewares.length - 1](event, context, async () => {});
+      }
+      return middlewares[index](event, context, () => executeMiddleware(index + 1));
+    };
+    
+    return executeMiddleware(0);
+  };
+};
+```
+
+---
+
+#### **Phase 2: Essential Middleware** (2-3 days)
+
+**1. errorMiddleware.ts** - Centralized error handling:
+```typescript
+export const withErrorHandling = () => {
+  return async (event: APIGatewayProxyEventV2, context: any, next: () => Promise<any>) => {
+    try {
+      return await next();
+    } catch (error) {
+      // Handle Zod validation errors
+      if (error instanceof z.ZodError) {
+        return errorResponse(400, 'Invalid request data', error.errors);
+      }
+      
+      // Handle auth errors
+      if (error instanceof Error && error.message.includes('Unauthorized')) {
+        return errorResponse(401, 'Unauthorized');
+      }
+      
+      // Log and return 500
+      console.error('Handler error:', error);
+      return errorResponse(500, 'Internal server error');
+    }
+  };
+};
+```
+
+**2. validationMiddleware.ts** - Schema validation:
+```typescript
+export const withValidation = <T>(schema: z.ZodSchema<T>) => {
+  return async (event: APIGatewayProxyEventV2, context: any, next: () => Promise<any>) => {
+    // Parse body
+    const body = event.body ? JSON.parse(event.body) : {};
+    
+    // Validate
+    const validatedInput = schema.parse(body);
+    
+    // Add to context
+    context.validatedInput = validatedInput;
+    
+    return next();
+  };
+};
+```
+
+**3. diMiddleware.ts** - Service injection:
+```typescript
+export const withServices = (serviceNames: string[]) => {
+  return async (event: APIGatewayProxyEventV2, context: any, next: () => Promise<any>) => {
+    // Get container from global or create
+    const container = getGlobalContainer();
+    
+    // Resolve services
+    context.services = {};
+    for (const name of serviceNames) {
+      context.services[name] = container.resolve(name);
+    }
+    
+    return next();
+  };
+};
+```
+
+---
+
+#### **Phase 3: Auth & CORS** (1-2 days)
+
+**4. authMiddleware.ts** - JWT authentication:
+```typescript
+export const withAuth = () => {
+  return async (event: APIGatewayProxyEventV2, context: any, next: () => Promise<any>) => {
+    const authResult = await authenticateRequest(event);
+    
+    if (!authResult.success) {
+      return errorResponse(authResult.statusCode, authResult.message);
+    }
+    
+    // Add userId to context
+    context.userId = authResult.userId;
+    context.authPayload = authResult.payload;
+    
+    return next();
+  };
+};
+```
+
+**5. corsMiddleware.ts** - CORS handling:
+```typescript
+interface CORSConfig {
+  origin?: string;
+  methods?: string[];
+  headers?: string[];
+}
+
+export const withCORS = (config?: CORSConfig) => {
+  return async (event: APIGatewayProxyEventV2, context: any, next: () => Promise<any>) => {
+    const response = await next();
+    
+    // Add CORS headers to response
+    response.headers = {
+      ...response.headers,
+      'Access-Control-Allow-Origin': config?.origin ?? '*',
+      'Access-Control-Allow-Methods': config?.methods?.join(', ') ?? 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': config?.headers?.join(', ') ?? 'Content-Type, Authorization'
+    };
+    
+    return response;
+  };
+};
+```
+
+---
+
+#### **Phase 4: Observability** (1 day)
+
+**6. tracingMiddleware.ts** - Request tracing:
+```typescript
+export const withTracing = (options?: { logBody?: boolean }) => {
+  return async (event: APIGatewayProxyEventV2, context: any, next: () => Promise<any>) => {
+    const requestId = event.requestContext?.requestId ?? `req_${Date.now()}`;
+    const startTime = Date.now();
+    
+    console.log(`[${requestId}] START ${event.requestContext?.http?.method} ${event.rawPath}`);
+    
+    if (options?.logBody) {
+      console.log(`[${requestId}] Body:`, event.body);
+    }
+    
+    try {
+      const response = await next();
+      const duration = Date.now() - startTime;
+      console.log(`[${requestId}] END ${response.statusCode} (${duration}ms)`);
+      return response;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      console.error(`[${requestId}] ERROR (${duration}ms):`, error);
+      throw error;
+    }
+  };
+};
+```
+
+---
+
+#### **Phase 5: Handler Migration** (3-4 days)
+
+**Before** (`auth/login.ts` - 54 lines):
+```typescript
+export const handler = async (event: APIGatewayProxyEventV2) => {
+  try {
+    // Manual JSON parsing
+    const body = event.body ? JSON.parse(event.body) : {};
+    const validatedRequest = LoginRequestSchema.parse(body);
+    
+    // Manual service instantiation
+    const dynamoClient = createDynamoDBClient();
+    const tableName = getTableName();
+    const jwtConfig = getJWTConfigFromEnv();
+    const jwtProvider = createJWTProvider(jwtConfig);
+    const authService = createDefaultAuthService(dynamoClient, tableName, jwtProvider);
+    
+    // Business logic
+    const response = await authService.login(validatedRequest);
+    return successResponse(200, response);
+    
+  } catch (error) {
+    // Manual error handling (20 lines)
+    if (error instanceof z.ZodError) {
+      return validationErrorResponse(error.errors);
+    }
+    // ... more error handling
+    return internalServerErrorResponse();
+  }
+};
+```
+
+**After** (`auth/login.ts` - 8 lines, **85% reduction**):
+```typescript
 export const handler = compose(
-  withAuth(),
-  withValidation(CreatePostRequestSchema),
+  withCORS(),
+  withTracing(),
+  withValidation(LoginRequestSchema),
+  withServices(['authService']),
   withErrorHandling(),
   async (event, context) => {
-    const useCase = context.container.resolve<CreatePost>('CreatePost');
-    const result = await useCase.execute(context.validatedInput);
-    return successResponse(201, result.data);
+    const response = await context.services.authService.login(context.validatedInput);
+    return successResponse(200, response);
   }
 );
 ```
 
-**Estimated Time**: 1 week
+**Handlers to Migrate**:
+- Auth handlers (5 files): login, register, profile, logout, refresh
+- Stream handlers (8 files): feed-fanout, comment-counter, etc.
+- Dev/health handlers (3 files): hello, health, cache-status
+
+---
+
+### 📊 **Impact Summary**
+
+**Code Reduction**:
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| **Lines per handler** | ~40-50 | ~8-12 | 75-85% reduction |
+| **Repeated code** | ~600 lines | ~100 lines | 83% reduction |
+| **Auth boilerplate** | 8-10 lines × 16 handlers | 1 middleware | ~140 lines saved |
+| **Validation boilerplate** | 5-8 lines × 16 handlers | 1 middleware | ~100 lines saved |
+| **Error handling** | 15-20 lines × 16 handlers | 1 middleware | ~280 lines saved |
+
+**Total Impact**: **~520 lines removed** from handlers
+
+---
+
+### ⏱️ **Revised Time Estimate**
+
+| Phase | Tasks | Time |
+|-------|-------|------|
+| **Phase 1** | Core infrastructure (Container, compose) | 1-2 days |
+| **Phase 2** | Essential middleware (error, validation, DI) | 2-3 days |
+| **Phase 3** | Auth & CORS | 1-2 days |
+| **Phase 4** | Observability (tracing) | 1 day |
+| **Phase 5** | Handler migration (16 handlers) | 3-4 days |
+| **Testing** | Write tests for all middleware | 2 days |
+
+**Total: 10-14 days** (2-3 weeks)
+
+**Original Estimate**: 1 week (7 days) - **UNDERESTIMATED by 40-100%**
+
+---
+
+### ✅ **Success Criteria**
+
+- [ ] All 7 middleware files created with tests
+- [ ] DI container implemented and tested
+- [ ] All 16 handlers migrated to middleware pattern
+- [ ] Zero manual auth/validation/error handling in handlers
+- [ ] 75%+ code reduction in handler files
+- [ ] All tests passing
+- [ ] Documentation updated
+
+---
+
+### 📝 **Notes**
+
+**Why This Matters**:
+- Similar to Task 1.1 (listed 2 adapters, actually 10), Task 2.1's scope expanded significantly
+- Current handlers have **~600 lines of repeated boilerplate** code
+- No middleware infrastructure exists - starting from scratch
+- Backend architecture lags behind GraphQL server's hexagonal architecture
+
+**After Task 2.1**:
+- ✅ Consistent middleware pattern across all handlers
+- ✅ Single source of truth for auth/validation/errors
+- ✅ 75%+ reduction in handler boilerplate
+- ✅ Backend architecture aligned with GraphQL server
+- ✅ Easy to add new handlers (8 lines vs 50 lines)
+
+**Dependencies**:
+- None - can start immediately
+- Should complete before Task 1.3 (backend hexagonal architecture)
 
 ---
 
