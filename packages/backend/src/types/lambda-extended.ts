@@ -15,7 +15,7 @@ import type { ServiceContainer } from '../infrastructure/di/Container.js'
 
 /**
  * Augmented Lambda Event with middleware properties
- * 
+ *
  * Extends the base APIGatewayProxyEventV2 with properties added by our middleware:
  * - services: Awilix-injected services
  * - validatedBody: Zod-validated request body
@@ -58,7 +58,7 @@ export interface AugmentedLambdaEvent extends APIGatewayProxyEventV2 {
 
 /**
  * Augmented Lambda Handler type
- * 
+ *
  * Use this instead of APIGatewayProxyHandlerV2 to get access to augmented properties
  */
 export type AugmentedLambdaHandler = (

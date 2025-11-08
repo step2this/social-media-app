@@ -61,8 +61,8 @@ export function zodValidator<T>(
       const event = request.event
 
       // Parse body if it's a string, otherwise use as-is (already parsed by httpJsonBodyParser)
-      const body = typeof event.body === 'string' && event.body 
-        ? JSON.parse(event.body) 
+      const body = typeof event.body === 'string' && event.body
+        ? JSON.parse(event.body)
         : (event.body || {})
 
       try {

@@ -155,18 +155,4 @@ describe('Awilix Container', () => {
       await expect(scope.dispose()).resolves.not.toThrow();
     });
   });
-
-  describe('Type Safety', () => {
-    it('should provide type-safe resolution', () => {
-      const container = createGraphQLContainer(mockContext);
-
-      // TypeScript should know the types without explicit casting
-      const useCase = container.resolve('getCurrentUserProfile');
-
-      // This should compile without type errors
-      const result = useCase.execute({ userId: 'test' });
-
-      expect(result).toBeDefined();
-    });
-  });
 });

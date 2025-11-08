@@ -23,7 +23,6 @@
 import {
   createContainer,
   asClass,
-  asFunction,
   asValue,
   InjectionMode,
   type AwilixContainer,
@@ -65,6 +64,16 @@ import { GetBidHistory } from '../../application/use-cases/auction/GetBidHistory
 export interface GraphQLContainer {
   // Context (provided externally)
   context: GraphQLContext;
+
+  // DAL Services (internal - used for adapter injection)
+  // These are registered so Awilix can inject them into repository adapters
+  profileService: GraphQLContext['services']['profileService'];
+  postService: GraphQLContext['services']['postService'];
+  commentService: GraphQLContext['services']['commentService'];
+  followService: GraphQLContext['services']['followService'];
+  likeService: GraphQLContext['services']['likeService'];
+  notificationService: GraphQLContext['services']['notificationService'];
+  auctionService: GraphQLContext['services']['auctionService'];
 
   // Repository Layer (adapters wrapping DAL services)
   profileRepository: ProfileServiceAdapter;

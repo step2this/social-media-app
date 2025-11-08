@@ -17,9 +17,9 @@ import type { AugmentedLambdaHandler } from '../../types/lambda-extended.js'
 const refreshHandler: AugmentedLambdaHandler = async (event) => {
   const { authService } = event.services!
   const request = event.validatedBody as RefreshTokenRequest
-  
+
   const response = await authService.refreshToken(request)
-  
+
   return {
     statusCode: 200,
     headers: {
