@@ -10,10 +10,7 @@
 
 import { RegisterRequestSchema, type RegisterRequest } from '@social-media-app/shared'
 import { createHandler } from '../../infrastructure/middleware/index.js'
-import type { APIGatewayProxyHandlerV2 } from 'aws-lambda'
-
-// Import module augmentation to access custom event properties
-import type {} from '../../types/lambda-extended'
+import type { AugmentedLambdaHandler } from '../../types/lambda-extended.js'
 
 /**
  * Handler implementation - services injected via Awilix
@@ -25,7 +22,7 @@ import type {} from '../../types/lambda-extended'
  * - Header normalization
  * - Service injection (Awilix)
  */
-const registerHandler: APIGatewayProxyHandlerV2 = async (event) => {
+const registerHandler: AugmentedLambdaHandler = async (event) => {
   // Services injected by Awilix middleware
   const { authService } = event.services!
 

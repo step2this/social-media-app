@@ -12,9 +12,7 @@
 
 import type { MiddlewareObj } from '@middy/core'
 import { z } from 'zod'
-
-// Force TypeScript to process module augmentation
-import type {} from '../../types/lambda-extended'
+import { isAugmentedLambdaEvent } from '../../types/type-guards.js'
 
 /**
  * HTTP error with statusCode for Middy's error handler
@@ -55,21 +53,28 @@ export function zodValidator<T>(
 ): MiddlewareObj {
   return {
     before: async (request): Promise<void> => {
-      // Cast event to APIGatewayProxyEventV2 to access augmented properties
-      const event = request.event as import('aws-lambda').APIGatewayProxyEventV2
+      // Type guard provides type-safe access to augmented properties
+      if (!isAugmentedLambdaEvent(request.event)) {
+        throw new Error('Invalid Lambda event type in zodValidator')
+      }
+
+      const event = request.event
 
       // Parse body if it's a string, otherwise use as-is (already parsed by httpJsonBodyParser)
-      const body = typeof event.body === 'string' && event.body ? JSON.parse(event.body) : (event.body || {})
+      const body = typeof event.body === 'string' && event.body 
+        ? JSON.parse(event.body) 
+        : (event.body || {})
 
       try {
+        // TypeScript knows validatedBody exists!
         event.validatedBody = schema.parse(body)
       } catch (error) {
         if (error instanceof z.ZodError) {
-          throw new Error(JSON.stringify({
-            statusCode: 400,
-            message: 'Validation failed',
-            errors: error.errors
-          }))
+          throw new HttpError(
+            'Validation failed',
+            400,
+            error.errors
+          )
         }
         throw error
       }

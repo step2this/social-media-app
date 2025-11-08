@@ -10,15 +10,12 @@
 
 import { UpdateProfileWithHandleRequestSchema, type UpdateProfileWithHandleRequest } from '@social-media-app/shared'
 import { createHandler } from '../../infrastructure/middleware/index.js'
-import type { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2 } from 'aws-lambda'
-
-// Import module augmentation to access custom event properties
-import type {} from '../../types/lambda-extended'
+import type { AugmentedLambdaHandler } from '../../types/lambda-extended.js'
 
 /**
  * GET handler implementation - services injected via Awilix
  */
-const getProfileHandler: APIGatewayProxyHandlerV2 = async (event) => {
+const getProfileHandler: AugmentedLambdaHandler = async (event) => {
   // Services injected by Awilix middleware
   const { profileService } = event.services!
 
@@ -54,7 +51,7 @@ const getProfileHandler: APIGatewayProxyHandlerV2 = async (event) => {
 /**
  * PUT handler implementation - services injected via Awilix
  */
-const updateProfileHandler: APIGatewayProxyHandlerV2 = async (event) => {
+const updateProfileHandler: AugmentedLambdaHandler = async (event) => {
   // Services injected by Awilix middleware
   const { profileService } = event.services!
 
@@ -80,14 +77,14 @@ const updateProfileHandler: APIGatewayProxyHandlerV2 = async (event) => {
 /**
  * Main handler that routes to appropriate function based on HTTP method
  */
-const routingHandler: APIGatewayProxyHandlerV2 = async (event) => {
+const routingHandler: AugmentedLambdaHandler = async (event, context) => {
   const method = event.requestContext.http.method
 
   switch (method) {
     case 'GET':
-      return getProfileHandler(event)
+      return getProfileHandler(event, context)
     case 'PUT':
-      return updateProfileHandler(event)
+      return updateProfileHandler(event, context)
     default:
       return {
         statusCode: 405,

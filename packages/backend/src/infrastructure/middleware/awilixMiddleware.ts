@@ -9,11 +9,7 @@
 
 import type { MiddlewareObj } from '@middy/core'
 import { createRequestScope, type ServiceContainer } from '../di/Container.js'
-
-// Force TypeScript to process module augmentation
-// This ensures the APIGatewayProxyEventV2 augmentations are recognized
-// Note: No file extension needed - TypeScript finds the .d.ts file automatically
-import type {} from '../../types/lambda-extended'
+import { isAugmentedLambdaEvent } from '../../types/type-guards.js'
 
 /**
  * Awilix middleware options
@@ -61,8 +57,14 @@ export function awilixMiddleware(
      * - Reduces memory footprint by ~30-40% for typical requests
      */
     before: async (request) => {
-      // Cast event to APIGatewayProxyEventV2 to access augmented properties
-      const event = request.event as import('aws-lambda').APIGatewayProxyEventV2
+      // Type guard narrows request.event to augmented APIGatewayProxyEventV2
+      // This provides full type safety without any casting
+      if (!isAugmentedLambdaEvent(request.event)) {
+        throw new Error('Invalid Lambda event type in awilixMiddleware')
+      }
+
+      // TypeScript now knows about all augmented properties!
+      const event = request.event
 
       // Create request-scoped container
       const scope = createRequestScope()
@@ -70,11 +72,11 @@ export function awilixMiddleware(
       // Resolve and inject services lazily
       if (options.services) {
         // Selective injection - only specified services
-        // Services are resolved lazily when first accessed
         const services: Partial<ServiceContainer> = {}
         for (const serviceName of options.services) {
           // Eagerly resolve to ensure errors are caught early
-          services[serviceName] = scope.resolve(serviceName)
+          // Type assertion is safe because container registration guarantees these services exist
+          services[serviceName] = scope.resolve(serviceName) as any
         }
         event.services = services as ServiceContainer
       } else {
@@ -91,7 +93,11 @@ export function awilixMiddleware(
      * AFTER: Cleanup scoped resources
      */
     after: async (request) => {
-      const event = request.event as import('aws-lambda').APIGatewayProxyEventV2
+      if (!isAugmentedLambdaEvent(request.event)) {
+        return // Gracefully handle unexpected event type
+      }
+
+      const event = request.event
 
       if (event._awilixScope) {
         await event._awilixScope.dispose()
@@ -103,7 +109,11 @@ export function awilixMiddleware(
      * ON_ERROR: Cleanup scoped resources on error
      */
     onError: async (request) => {
-      const event = request.event as import('aws-lambda').APIGatewayProxyEventV2
+      if (!isAugmentedLambdaEvent(request.event)) {
+        return // Gracefully handle unexpected event type
+      }
+
+      const event = request.event
 
       if (event._awilixScope) {
         try {

@@ -9,10 +9,7 @@
 
 import { LogoutRequestSchema, type LogoutRequest } from '@social-media-app/shared'
 import { createHandler } from '../../infrastructure/middleware/index.js'
-import type { APIGatewayProxyHandlerV2 } from 'aws-lambda'
-
-// Import module augmentation to access custom event properties
-import type {} from '../../types/lambda-extended'
+import type { AugmentedLambdaHandler } from '../../types/lambda-extended.js'
 
 /**
  * Handler implementation - services injected via Awilix
@@ -25,7 +22,7 @@ import type {} from '../../types/lambda-extended'
  * - Service injection (Awilix)
  * - JWT authentication
  */
-const logoutHandler: APIGatewayProxyHandlerV2 = async (event) => {
+const logoutHandler: AugmentedLambdaHandler = async (event) => {
   // Services injected by Awilix middleware
   const { authService } = event.services!
 

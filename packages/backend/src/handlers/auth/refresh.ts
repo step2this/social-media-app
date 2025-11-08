@@ -9,31 +9,17 @@
 
 import { RefreshTokenRequestSchema, type RefreshTokenRequest } from '@social-media-app/shared'
 import { createHandler } from '../../infrastructure/middleware/index.js'
-import type { APIGatewayProxyHandlerV2 } from 'aws-lambda'
-
-// Import module augmentation to access custom event properties
-import type {} from '../../types/lambda-extended'
+import type { AugmentedLambdaHandler } from '../../types/lambda-extended.js'
 
 /**
  * Handler implementation - services injected via Awilix
- *
- * No middleware concerns - Middy handles:
- * - JSON parsing
- * - Validation
- * - Error handling
- * - Header normalization
- * - Service injection (Awilix)
  */
-const refreshHandler: APIGatewayProxyHandlerV2 = async (event) => {
-  // Services injected by Awilix middleware
+const refreshHandler: AugmentedLambdaHandler = async (event) => {
   const { authService } = event.services!
-
-  // Type-safe access to validated input
   const request = event.validatedBody as RefreshTokenRequest
-
-  // Business logic only - delegate to authService
+  
   const response = await authService.refreshToken(request)
-
+  
   return {
     statusCode: 200,
     headers: {
@@ -44,10 +30,7 @@ const refreshHandler: APIGatewayProxyHandlerV2 = async (event) => {
   }
 }
 
-/**
- * Export Middy-wrapped handler with Awilix service injection
- */
 export const handler = createHandler(refreshHandler, {
   validation: RefreshTokenRequestSchema,
-  services: ['authService'] // ← Awilix injects authService
+  services: ['authService']
 })

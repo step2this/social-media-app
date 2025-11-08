@@ -14,13 +14,13 @@ import middy from '@middy/core'
 import httpErrorHandler from '@middy/http-error-handler'
 import httpJsonBodyParser from '@middy/http-json-body-parser'
 import httpHeaderNormalizer from '@middy/http-header-normalizer'
-import type { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2 } from 'aws-lambda'
 import type { z } from 'zod'
 
 import { zodValidator } from './zodValidator.js'
 import { jwtAuth } from './jwtAuth.js'
-import { awilixMiddleware, type AwilixMiddlewareOptions } from './awilixMiddleware.js'
+import { awilixMiddleware } from './awilixMiddleware.js'
 import type { ServiceContainer } from '../di/Container.js'
+import type { AugmentedLambdaHandler } from '../../types/lambda-extended.js'
 
 /**
  * Handler configuration options
@@ -86,7 +86,7 @@ export interface HandlerConfig {
  * ```
  */
 export function createHandler(
-  handler: APIGatewayProxyHandlerV2,
+  handler: AugmentedLambdaHandler,
   config: HandlerConfig = {}
 ): middy.MiddyfiedHandler {
   const middleware = middy(handler)

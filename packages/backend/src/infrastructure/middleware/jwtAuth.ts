@@ -10,18 +10,9 @@
  * @module middleware/jwtAuth
  */
 
-import type { MiddlewareObj, Request } from '@middy/core'
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda'
+import type { MiddlewareObj } from '@middy/core'
 import { verifyAccessToken, getJWTConfigFromEnv } from '../../utils/jwt.js'
-
-// Force TypeScript to process module augmentation
-import type {} from '../../types/lambda-extended'
-
-/**
- * Typed request with our augmented APIGatewayProxyEventV2
- * This includes all properties from lambda-extended.d.ts module augmentation
- */
-type LambdaRequest = Request<APIGatewayProxyEventV2, APIGatewayProxyResultV2>
+import { isAugmentedLambdaEvent } from '../../types/type-guards.js'
 
 /**
  * HTTP error with statusCode for Middy's error handler
@@ -75,8 +66,12 @@ export function jwtAuth(
 
   return {
     before: async (request): Promise<void> => {
-      // Cast event to access APIGatewayProxyEventV2 properties
-      const event = request.event as any as import('aws-lambda').APIGatewayProxyEventV2
+      // Type guard provides type-safe access to augmented properties
+      if (!isAugmentedLambdaEvent(request.event)) {
+        throw new Error('Invalid Lambda event type in jwtAuth')
+      }
+
+      const event = request.event
 
       const authHeader = event.headers?.authorization || event.headers?.Authorization
 
@@ -100,6 +95,7 @@ export function jwtAuth(
           return
         }
 
+        // TypeScript knows these properties exist!
         event.userId = payload.userId
         event.authPayload = payload
       } catch (error) {
