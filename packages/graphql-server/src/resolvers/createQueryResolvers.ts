@@ -1,25 +1,23 @@
 /**
  * Type-Safe Resolver Factory
  *
- * Creates GraphQL Query resolvers with automatic Awilix container injection.
- * Uses advanced TypeScript patterns to eliminate repetitive boilerplate.
+ * Creates GraphQL Query resolvers with dependency injection via Awilix container.
+ * Each resolver explicitly extracts the container from context and calls the factory.
  *
  * Architecture:
- * 1. Generic helper extracts container from context
- * 2. Resolver factories receive container automatically
- * 3. Type-safe via inference (no manual type annotations needed)
+ * 1. Resolver gets context with Awilix container
+ * 2. Resolver calls factory function with container
+ * 3. Factory returns configured resolver
+ * 4. Resolver executes and returns result
  *
  * Benefits:
- * - DRY: Single helper for all resolvers
  * - Type-safe: Full TypeScript inference
- * - Maintainable: One place to update resolver pattern
- * - Zero overhead: Compiles to same JS
+ * - Explicit: Clear dependency flow
+ * - Debuggable: Easy to trace execution
  */
 
 import type { QueryResolvers } from '../schema/generated/types.js';
 import type { GraphQLResolveInfo } from 'graphql';
-import type { AwilixContainer } from 'awilix';
-import type { GraphQLContainer } from '../infrastructure/di/awilix-container.js';
 import type { GraphQLContext } from '../context.js';
 
 import { createMeResolver, createProfileResolver } from './profile/index.js';
@@ -35,72 +33,251 @@ import { createAuctionsResolver } from './auction/auctionsResolver.js';
 import { createBidsResolver } from './auction/bidsResolver.js';
 
 /**
- * Higher-order function that wraps a resolver factory with automatic container injection
- *
- * This eliminates the need to manually extract container from context in each resolver.
- * Uses TypeScript's type inference to automatically infer all types.
- * Handles GraphQL resolver types that may be `undefined`.
- *
- * @param factory - Resolver factory function that takes a container
- * @returns GraphQL resolver function with automatic container injection
- *
- * @example
- * ```typescript
- * const resolvers = {
- *   me: withContainer(createMeResolver),
- *   profile: withContainer(createProfileResolver),
- * };
- * ```
- */
-function withContainer<TResolver extends ((...args: any[]) => any) | undefined>(
-  factory: (container: AwilixContainer<GraphQLContainer>) => TResolver
-): TResolver {
-  return ((...args: any[]) => {
-    const context = args[2] as GraphQLContext;
-    const resolver = factory(context.container);
-    if (!resolver) return undefined;
-    return resolver(...args);
-  }) as TResolver;
-}
-
-/**
  * Create all Query resolvers with dependency injection
  *
- * Uses withContainer helper to eliminate boilerplate and maintain type safety.
- * Each resolver factory receives the Awilix container automatically.
+ * Each resolver extracts the Awilix container from context and uses it
+ * to get the appropriate use case. This pattern is explicit and type-safe.
  *
  * @returns Complete QueryResolvers object for GraphQL schema
  */
 export function createQueryResolvers(): QueryResolvers {
   return {
-    // Profile queries
-    me: withContainer(createMeResolver),
-    profile: withContainer(createProfileResolver),
+    /**
+     * Query.me - Get current user's profile
+     * Requires authentication
+     */
+    me: async (
+      _parent: unknown,
+      _args: unknown,
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
+      const resolver = createMeResolver(context.container);
+      if (!resolver) {
+        throw new Error('Failed to create me resolver');
+      }
+      return resolver(_parent, _args, context, info);
+    },
 
-    // Post queries
-    post: withContainer(createPostResolver),
-    userPosts: withContainer(createUserPostsResolver),
+    /**
+     * Query.profile - Get public profile by handle
+     * Public - no authentication required
+     */
+    profile: async (
+      _parent: unknown,
+      args: { handle: string },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
+      const resolver = createProfileResolver(context.container);
+      if (!resolver) {
+        throw new Error('Failed to create profile resolver');
+      }
+      return resolver(_parent, args, context, info);
+    },
 
-    // Feed queries
-    followingFeed: withContainer(createFollowingFeedResolver),
-    exploreFeed: withContainer(createExploreFeedResolver),
+    /**
+     * Query.post - Get single post by ID
+     * Public - no authentication required
+     */
+    post: async (
+      _parent: unknown,
+      args: { id: string },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
+      const resolver = createPostResolver(context.container);
+      if (!resolver) {
+        throw new Error('Failed to create post resolver');
+      }
+      return resolver(_parent, args, context, info);
+    },
 
-    // Comment queries
-    comments: withContainer(createCommentsResolver),
+    /**
+     * Query.userPosts - Get paginated posts for a user
+     * Public - no authentication required
+     */
+    userPosts: async (
+      _parent: unknown,
+      args: { handle: string; first?: number | null; after?: string | null },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
+      const resolver = createUserPostsResolver(context.container);
+      if (!resolver) {
+        throw new Error('Failed to create userPosts resolver');
+      }
+      return resolver(_parent, args, context, info);
+    },
 
-    // Follow queries
-    followStatus: withContainer(createFollowStatusResolver),
+    /**
+     * Query.followingFeed - Get posts from followed users
+     * Requires authentication
+     */
+    followingFeed: async (
+      _parent: unknown,
+      args: { first?: number | null; after?: string | null },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
+      const resolver = createFollowingFeedResolver(context.container);
+      if (!resolver) {
+        throw new Error('Failed to create followingFeed resolver');
+      }
+      return resolver(_parent, args, context, info);
+    },
 
-    // Like queries
-    postLikeStatus: withContainer(createPostLikeStatusResolver),
+    /**
+     * Query.exploreFeed - Get explore feed (public posts)
+     * Public - no authentication required
+     */
+    exploreFeed: async (
+      _parent: unknown,
+      args: { first?: number | null; after?: string | null },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
+      const resolver = createExploreFeedResolver(context.container);
+      if (!resolver) {
+        throw new Error('Failed to create exploreFeed resolver');
+      }
+      return resolver(_parent, args, context, info);
+    },
 
-    // Notification queries
-    notifications: withContainer(createNotificationsResolver),
-    unreadNotificationsCount: withContainer(createUnreadNotificationsCountResolver),
+    /**
+     * Query.comments - Get paginated comments for a post
+     * Requires authentication
+     */
+    comments: async (
+      _parent: unknown,
+      args: { postId: string; first?: number | null; after?: string | null },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
+      const resolver = createCommentsResolver(context.container);
+      if (!resolver) {
+        throw new Error('Failed to create comments resolver');
+      }
+      return resolver(_parent, args, context, info);
+    },
 
-    // Auction queries
-    auction: withContainer(createAuctionResolver),
-    auctions: withContainer(createAuctionsResolver),
-    bids: withContainer(createBidsResolver),
+    /**
+     * Query.followStatus - Check if current user follows another user
+     * Requires authentication
+     */
+    followStatus: async (
+      _parent: unknown,
+      args: { followeeId: string },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
+      const resolver = createFollowStatusResolver(context.container);
+      if (!resolver) {
+        throw new Error('Failed to create followStatus resolver');
+      }
+      return resolver(_parent, args, context, info);
+    },
+
+    /**
+     * Query.postLikeStatus - Check if current user liked a post
+     * Requires authentication
+     */
+    postLikeStatus: async (
+      _parent: unknown,
+      args: { postId: string },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
+      const resolver = createPostLikeStatusResolver(context.container);
+      if (!resolver) {
+        throw new Error('Failed to create postLikeStatus resolver');
+      }
+      return resolver(_parent, args, context, info);
+    },
+
+    /**
+     * Query.notifications - Get paginated notifications for current user
+     * Requires authentication
+     */
+    notifications: async (
+      _parent: unknown,
+      args: { first?: number | null; after?: string | null },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
+      const resolver = createNotificationsResolver(context.container);
+      if (!resolver) {
+        throw new Error('Failed to create notifications resolver');
+      }
+      return resolver(_parent, args, context, info);
+    },
+
+    /**
+     * Query.unreadNotificationsCount - Get count of unread notifications
+     * Requires authentication
+     */
+    unreadNotificationsCount: async (
+      _parent: unknown,
+      _args: unknown,
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
+      const resolver = createUnreadNotificationsCountResolver(context.container);
+      if (!resolver) {
+        throw new Error('Failed to create unreadNotificationsCount resolver');
+      }
+      return resolver(_parent, _args, context, info);
+    },
+
+    /**
+     * Query.auction - Get single auction by ID
+     * Public - no authentication required
+     */
+    auction: async (
+      _parent: unknown,
+      args: { id: string },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
+      const resolver = createAuctionResolver(context.container);
+      if (!resolver) {
+        throw new Error('Failed to create auction resolver');
+      }
+      return resolver(_parent, args, context, info);
+    },
+
+    /**
+     * Query.auctions - Get paginated auctions with optional filtering
+     * Public - no authentication required
+     */
+    auctions: async (
+      _parent: unknown,
+      args: { status?: string | null; limit?: number | null; cursor?: string | null },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
+      const resolver = createAuctionsResolver(context.container);
+      if (!resolver) {
+        throw new Error('Failed to create auctions resolver');
+      }
+      return resolver(_parent, args, context, info);
+    },
+
+    /**
+     * Query.bids - Get paginated bid history for an auction
+     * Public - no authentication required
+     */
+    bids: async (
+      _parent: unknown,
+      args: { auctionId: string; limit?: number | null; cursor?: string | null },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
+      const resolver = createBidsResolver(context.container);
+      if (!resolver) {
+        throw new Error('Failed to create bids resolver');
+      }
+      return resolver(_parent, args, context, info);
+    },
   };
 }
