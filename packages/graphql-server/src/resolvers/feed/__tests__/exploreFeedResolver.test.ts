@@ -8,8 +8,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createContainer, asValue, InjectionMode, type AwilixContainer } from 'awilix';
 import type { GraphQLContainer } from '../../../infrastructure/di/awilix-container.js';
+import type { GraphQLContext } from '../../../context.js';
 import { createExploreFeedResolver } from '../exploreFeedResolver.js';
 import { UserId, Cursor } from '../../../shared/types/index.js';
+
+/**
+ * Create a mock GraphQL context with all required fields
+ */
+function createMockContext(overrides?: Partial<GraphQLContext>): GraphQLContext {
+  return {
+    userId: null,
+    correlationId: 'test-correlation-id',
+    dynamoClient: {} as any,
+    tableName: 'test-table',
+    services: {} as any,
+    loaders: {} as any,
+    container: {} as any,
+    ...overrides,
+  };
+}
 
 describe('exploreFeedResolver', () => {
   let container: AwilixContainer<GraphQLContainer>;
@@ -57,7 +74,7 @@ describe('exploreFeedResolver', () => {
       });
 
       const resolver = createExploreFeedResolver(container);
-      const result = await resolver({}, { first: 10 }, { userId: undefined }, {} as any);
+      const result = await resolver({}, { first: 10 }, createMockContext({ userId: null }), {} as any);
 
       expect(result.edges).toHaveLength(1);
       expect(mockUseCase.execute).toHaveBeenCalledWith({
@@ -102,7 +119,7 @@ describe('exploreFeedResolver', () => {
       const result = await resolver(
         {},
         { first: 10 },
-        { userId: UserId('user-123') },
+        createMockContext({ userId: UserId('user-123') }),
         {} as any
       );
 
@@ -149,7 +166,7 @@ describe('exploreFeedResolver', () => {
       const result = await resolver(
         {},
         { first: 10, after: 'cursor-10' },
-        { userId: undefined },
+        createMockContext({ userId: null }),
         {} as any
       );
 
@@ -177,7 +194,7 @@ describe('exploreFeedResolver', () => {
       });
 
       const resolver = createExploreFeedResolver(container);
-      const result = await resolver({}, { first: 10 }, { userId: undefined }, {} as any);
+      const result = await resolver({}, { first: 10 }, createMockContext({ userId: null }), {} as any);
 
       expect(result.edges).toHaveLength(0);
       expect(result.pageInfo.hasNextPage).toBe(false);

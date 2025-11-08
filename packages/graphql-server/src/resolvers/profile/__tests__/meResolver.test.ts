@@ -9,8 +9,28 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GraphQLError } from 'graphql';
 import { createContainer, asValue, InjectionMode, type AwilixContainer } from 'awilix';
 import type { GraphQLContainer } from '../../../infrastructure/di/awilix-container.js';
+import type { GraphQLContext } from '../../../context.js';
 import { createMeResolver } from '../meResolver.js';
-import { UserId } from '../../../shared/types/index.js';
+
+/**
+ * Helper to create a complete mock GraphQLContext with all required fields
+ */
+function createMockContext(
+  overrides: Partial<GraphQLContext> = {}
+): GraphQLContext {
+  const container = createContainer<GraphQLContainer>({ injectionMode: InjectionMode.CLASSIC });
+  
+  return {
+    userId: null,
+    correlationId: 'test-correlation-id',
+    dynamoClient: {} as any,
+    tableName: 'test-table',
+    services: {} as any,
+    loaders: {} as any,
+    container,
+    ...overrides,
+  };
+}
 
 describe('meResolver', () => {
   let container: AwilixContainer<GraphQLContainer>;
@@ -39,7 +59,8 @@ describe('meResolver', () => {
       });
 
       const resolver = createMeResolver(container);
-      const result = await resolver!({}, {}, { userId: UserId('user-123') }, {} as any);
+      const mockContext = createMockContext({ userId: 'user-123', container });
+      const result = await resolver!({}, {}, mockContext, {} as any);
 
       expect(result).toEqual(mockProfile);
       expect(mockUseCase.execute).toHaveBeenCalledWith({ userId: 'user-123' });
@@ -47,13 +68,14 @@ describe('meResolver', () => {
 
     it('should throw UNAUTHENTICATED when no userId', async () => {
       const resolver = createMeResolver(container);
+      const mockContext = createMockContext({ userId: null, container });
 
       await expect(
-        resolver!({}, {}, { userId: undefined }, {} as any)
+        resolver!({}, {}, mockContext, {} as any)
       ).rejects.toThrow(GraphQLError);
 
       await expect(
-        resolver!({}, {}, { userId: undefined }, {} as any)
+        resolver!({}, {}, mockContext, {} as any)
       ).rejects.toThrow('authenticated');
 
       expect(mockUseCase.execute).not.toHaveBeenCalled();
@@ -68,13 +90,14 @@ describe('meResolver', () => {
       });
 
       const resolver = createMeResolver(container);
+      const mockContext = createMockContext({ userId: 'user-123', container });
 
       await expect(
-        resolver!({}, {}, { userId: UserId('user-123') }, {} as any)
+        resolver!({}, {}, mockContext, {} as any)
       ).rejects.toThrow(GraphQLError);
 
       await expect(
-        resolver!({}, {}, { userId: UserId('user-123') }, {} as any)
+        resolver!({}, {}, mockContext, {} as any)
       ).rejects.toThrow('Profile service unavailable');
     });
   });

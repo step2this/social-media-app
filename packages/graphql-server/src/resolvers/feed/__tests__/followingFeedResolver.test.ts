@@ -9,8 +9,25 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GraphQLError } from 'graphql';
 import { createContainer, asValue, InjectionMode, type AwilixContainer } from 'awilix';
 import type { GraphQLContainer } from '../../../infrastructure/di/awilix-container.js';
+import type { GraphQLContext } from '../../../context.js';
 import { createFollowingFeedResolver } from '../followingFeedResolver.js';
 import { UserId, Cursor } from '../../../shared/types/index.js';
+
+/**
+ * Helper function to create a mock GraphQL context with all required fields
+ */
+function createMockContext(overrides?: Partial<GraphQLContext>): GraphQLContext {
+  return {
+    userId: null,
+    correlationId: 'test-correlation-id',
+    dynamoClient: {} as any,
+    tableName: 'test-table',
+    services: {} as any,
+    loaders: {} as any,
+    container: {} as any,
+    ...overrides,
+  };
+}
 
 describe('followingFeedResolver', () => {
   let container: AwilixContainer<GraphQLContainer>;
@@ -58,12 +75,8 @@ describe('followingFeedResolver', () => {
       });
 
       const resolver = createFollowingFeedResolver(container);
-      const result = await resolver(
-        {},
-        { first: 10 },
-        { userId: UserId('user-123') },
-        {} as any
-      );
+      const context = createMockContext({ userId: UserId('user-123') });
+      const result = await resolver({}, { first: 10 }, context, {} as any);
 
       expect(result.edges).toHaveLength(1);
       expect(result.pageInfo.hasNextPage).toBe(true);
@@ -71,13 +84,14 @@ describe('followingFeedResolver', () => {
 
     it('should throw UNAUTHENTICATED when no userId', async () => {
       const resolver = createFollowingFeedResolver(container);
+      const context = createMockContext({ userId: undefined });
 
       await expect(
-        resolver({}, { first: 10 }, { userId: undefined }, {} as any)
+        resolver({}, { first: 10 }, context, {} as any)
       ).rejects.toThrow(GraphQLError);
 
       await expect(
-        resolver({}, { first: 10 }, { userId: undefined }, {} as any)
+        resolver({}, { first: 10 }, context, {} as any)
       ).rejects.toThrow('authenticated');
 
       expect(mockUseCase.execute).not.toHaveBeenCalled();
@@ -116,10 +130,11 @@ describe('followingFeedResolver', () => {
       });
 
       const resolver = createFollowingFeedResolver(container);
+      const context = createMockContext({ userId: UserId('user-123') });
       const result = await resolver(
         {},
         { first: 10, after: 'cursor-10' },
-        { userId: UserId('user-123') },
+        context,
         {} as any
       );
 
@@ -147,10 +162,11 @@ describe('followingFeedResolver', () => {
       });
 
       const resolver = createFollowingFeedResolver(container);
+      const context = createMockContext({ userId: UserId('user-123') });
       const result = await resolver(
         {},
         { first: 10 },
-        { userId: UserId('user-123') },
+        context,
         {} as any
       );
 
