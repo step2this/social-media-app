@@ -39,7 +39,7 @@ import { NotificationServiceAdapter } from '../adapters/NotificationServiceAdapt
 import { AuctionServiceAdapter } from '../adapters/AuctionServiceAdapter.js';
 import { FeedServiceAdapter } from '../adapters/FeedServiceAdapter.js';
 
-// Use Cases
+// Query Use Cases
 import { GetCurrentUserProfile } from '../../application/use-cases/profile/GetCurrentUserProfile.js';
 import { GetProfileByHandle } from '../../application/use-cases/profile/GetProfileByHandle.js';
 import { GetPostById } from '../../application/use-cases/post/GetPostById.js';
@@ -54,6 +54,26 @@ import { GetUnreadNotificationsCount } from '../../application/use-cases/notific
 import { GetAuction } from '../../application/use-cases/auction/GetAuction.js';
 import { GetAuctions } from '../../application/use-cases/auction/GetAuctions.js';
 import { GetBidHistory } from '../../application/use-cases/auction/GetBidHistory.js';
+
+// Mutation Use Cases
+import { CreatePost } from '../../application/use-cases/post/CreatePost.js';
+import { UpdatePost } from '../../application/use-cases/post/UpdatePost.js';
+import { DeletePost } from '../../application/use-cases/post/DeletePost.js';
+import { LikePost } from '../../application/use-cases/like/LikePost.js';
+import { UnlikePost } from '../../application/use-cases/like/UnlikePost.js';
+import { FollowUser } from '../../application/use-cases/follow/FollowUser.js';
+import { UnfollowUser } from '../../application/use-cases/follow/UnfollowUser.js';
+import { CreateComment } from '../../application/use-cases/comment/CreateComment.js';
+import { DeleteComment } from '../../application/use-cases/comment/DeleteComment.js';
+import { UpdateProfile } from '../../application/use-cases/profile/UpdateProfile.js';
+import { GetProfilePictureUploadUrl } from '../../application/use-cases/profile/GetProfilePictureUploadUrl.js';
+import { MarkNotificationAsRead } from '../../application/use-cases/notification/MarkNotificationAsRead.js';
+import { MarkAllNotificationsAsRead } from '../../application/use-cases/notification/MarkAllNotificationsAsRead.js';
+import { DeleteNotification } from '../../application/use-cases/notification/DeleteNotification.js';
+import { MarkFeedItemsAsRead } from '../../application/use-cases/feed/MarkFeedItemsAsRead.js';
+import { CreateAuction } from '../../application/use-cases/auction/CreateAuction.js';
+import { ActivateAuction } from '../../application/use-cases/auction/ActivateAuction.js';
+import { PlaceBid } from '../../application/use-cases/auction/PlaceBid.js';
 
 /**
  * Container interface - all resolvable dependencies
@@ -74,6 +94,7 @@ export interface GraphQLContainer {
   likeService: GraphQLContext['services']['likeService'];
   notificationService: GraphQLContext['services']['notificationService'];
   auctionService: GraphQLContext['services']['auctionService'];
+  feedService: GraphQLContext['services']['feedService'];
 
   // Repository Layer (adapters wrapping DAL services)
   profileRepository: ProfileServiceAdapter;
@@ -86,6 +107,7 @@ export interface GraphQLContainer {
   feedRepository: FeedServiceAdapter;
 
   // Use Case Layer (business logic)
+  // Query Use Cases
   getCurrentUserProfile: GetCurrentUserProfile;
   getProfileByHandle: GetProfileByHandle;
   getPostById: GetPostById;
@@ -100,6 +122,26 @@ export interface GraphQLContainer {
   getAuction: GetAuction;
   getAuctions: GetAuctions;
   getBidHistory: GetBidHistory;
+
+  // Mutation Use Cases
+  createPost: CreatePost;
+  updatePost: UpdatePost;
+  deletePost: DeletePost;
+  likePost: LikePost;
+  unlikePost: UnlikePost;
+  followUser: FollowUser;
+  unfollowUser: UnfollowUser;
+  createComment: CreateComment;
+  deleteComment: DeleteComment;
+  updateProfile: UpdateProfile;
+  getProfilePictureUploadUrl: GetProfilePictureUploadUrl;
+  markNotificationAsRead: MarkNotificationAsRead;
+  markAllNotificationsAsRead: MarkAllNotificationsAsRead;
+  deleteNotification: DeleteNotification;
+  markFeedItemsAsRead: MarkFeedItemsAsRead;
+  createAuction: CreateAuction;
+  activateAuction: ActivateAuction;
+  placeBid: PlaceBid;
 }
 
 /**
@@ -153,6 +195,7 @@ export function createGraphQLContainer(
     likeService: asValue(context.services.likeService),
     notificationService: asValue(context.services.notificationService),
     auctionService: asValue(context.services.auctionService),
+    feedService: asValue(context.services.feedService),
   });
 
   // ============================================
@@ -219,6 +262,122 @@ export function createGraphQLContainer(
     getAuction: asClass(GetAuction).scoped(),
     getAuctions: asClass(GetAuctions).scoped(),
     getBidHistory: asClass(GetBidHistory).scoped(),
+
+    // ============================================
+    // Mutation Use Cases
+    // ============================================
+    // Mutation use cases accept a services object wrapper
+    // Must use factory pattern with asValue(new UseCase({ services }))
+
+    // Post mutation use cases
+    createPost: asValue(
+      new CreatePost({
+        profileService: context.services.profileService,
+        postService: context.services.postService,
+      })
+    ),
+    updatePost: asValue(
+      new UpdatePost({
+        postService: context.services.postService,
+      })
+    ),
+    deletePost: asValue(
+      new DeletePost({
+        postService: context.services.postService,
+      })
+    ),
+
+    // Like mutation use cases
+    likePost: asValue(
+      new LikePost({
+        likeService: context.services.likeService,
+      })
+    ),
+    unlikePost: asValue(
+      new UnlikePost({
+        likeService: context.services.likeService,
+      })
+    ),
+
+    // Follow mutation use cases
+    followUser: asValue(
+      new FollowUser({
+        followService: context.services.followService,
+      })
+    ),
+    unfollowUser: asValue(
+      new UnfollowUser({
+        followService: context.services.followService,
+      })
+    ),
+
+    // Comment mutation use cases
+    createComment: asValue(
+      new CreateComment({
+        profileService: context.services.profileService,
+        postService: context.services.postService,
+        commentService: context.services.commentService,
+      })
+    ),
+    deleteComment: asValue(
+      new DeleteComment({
+        commentService: context.services.commentService,
+      })
+    ),
+
+    // Profile mutation use cases
+    updateProfile: asValue(
+      new UpdateProfile({
+        profileService: context.services.profileService,
+      })
+    ),
+    getProfilePictureUploadUrl: asValue(
+      new GetProfilePictureUploadUrl({
+        profileService: context.services.profileService,
+      })
+    ),
+
+    // Notification mutation use cases
+    markNotificationAsRead: asValue(
+      new MarkNotificationAsRead({
+        notificationService: context.services.notificationService,
+      })
+    ),
+    markAllNotificationsAsRead: asValue(
+      new MarkAllNotificationsAsRead({
+        notificationService: context.services.notificationService,
+      })
+    ),
+    deleteNotification: asValue(
+      new DeleteNotification({
+        notificationService: context.services.notificationService,
+      })
+    ),
+
+    // Feed mutation use cases
+    markFeedItemsAsRead: asValue(
+      new MarkFeedItemsAsRead({
+        feedService: context.services.feedService,
+      })
+    ),
+
+    // Auction mutation use cases
+    createAuction: asValue(
+      new CreateAuction({
+        profileService: context.services.profileService,
+        auctionService: context.services.auctionService,
+      })
+    ),
+    activateAuction: asValue(
+      new ActivateAuction({
+        auctionService: context.services.auctionService,
+      })
+    ),
+    placeBid: asValue(
+      new PlaceBid({
+        auctionService: context.services.auctionService,
+      })
+    ),
   });
 
   return container;

@@ -4,7 +4,18 @@
  * Implements all root-level Mutation resolvers for the GraphQL schema.
  * Handles write operations for auth, posts, comments, likes, and follows.
  *
- * Uses Zod schemas from @social-media-app/shared for business rule validation.
+ * Phase 3 Migration (COMPLETE):
+ * - All non-auth mutations migrated to use case pattern
+ * - Auth mutations (register, login, refreshToken, logout) use direct implementation
+ * - Full type safety with branded types
+ * - Consistent error handling via ErrorFactory and use case Result types
+ * - Zod validation preserved for createAuction and placeBid
+ *
+ * Benefits:
+ * - 100% testable business logic (isolated in use cases)
+ * - Type-safe with branded types (UserId, PostId, etc.)
+ * - Consistent error handling
+ * - Clean separation of concerns
  */
 
 import { GraphQLError } from 'graphql';
@@ -14,267 +25,179 @@ import {
   CreateAuctionRequestSchema,
   PlaceBidRequestSchema,
 } from '@social-media-app/shared';
+import { withAuth } from '../../infrastructure/resolvers/withAuth.js';
+import { executeUseCase } from '../../infrastructure/resolvers/helpers/useCase.js';
+import { UserId, PostId } from '../../shared/types/index.js';
 
 /**
  * Mutation resolvers
  *
  * Implements:
+ * Auth (direct implementation):
  * - register(input: RegisterInput!): AuthPayload!
  * - login(input: LoginInput!): AuthPayload!
  * - refreshToken(refreshToken: String!): AuthPayload!
  * - logout(): LogoutResponse!
- * - createPost(input: CreatePostInput!): CreatePostPayload!
- * - updatePost(id: ID!, input: UpdatePostInput!): Post!
- * - deletePost(id: ID!): DeleteResponse!
- * - createComment(input: CreateCommentInput!): Comment!
- * - deleteComment(id: ID!): DeleteResponse!
- * - likePost(postId: ID!): LikeResponse!
- * - unlikePost(postId: ID!): LikeResponse!
- * - followUser(userId: ID!): FollowResponse!
- * - unfollowUser(userId: ID!): FollowResponse!
+ *
+ * Mutations (use case pattern - PHASE 3):
+ * - createPost, updatePost, deletePost
+ * - likePost, unlikePost
+ * - followUser, unfollowUser
+ * - createComment, deleteComment
+ * - updateProfile, getProfilePictureUploadUrl
+ * - markNotificationAsRead, markAllNotificationsAsRead, deleteNotification
+ * - markFeedItemsAsRead
+ * - createAuction, activateAuction, placeBid
  */
 export const Mutation: MutationResolvers = {
+  // ============================================================================
+  // POST MUTATIONS
+  // ============================================================================
+
   /**
    * Create a new post
    * Requires authentication
    */
-  createPost: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('You must be authenticated to create a post', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
-
-    // Get user profile to get handle
-    const userProfile = await context.services.profileService.getProfileById(context.userId);
-    if (!userProfile) {
-      throw new GraphQLError('User profile not found', {
-        extensions: { code: 'NOT_FOUND' },
-      });
-    }
-
-    // Generate presigned URLs for image upload
-    const imageUploadData = await context.services.profileService.generatePresignedUrl(
-      context.userId,
+  createPost: withAuth(async (_parent, args, context) => {
+    return executeUseCase(
+      context.container.resolve('createPost'),
       {
-        fileType: args.input.fileType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-        purpose: 'post-image',
-      }
-    );
-
-    // Create post placeholder with presigned URLs
-    const post = await context.services.postService.createPost(
-      context.userId,
-      userProfile.handle,
-      {
+        userId: UserId(context.userId),
         fileType: args.input.fileType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
         caption: args.input.caption ?? undefined,
-      },
-      imageUploadData.publicUrl,
-      imageUploadData.thumbnailUrl || imageUploadData.publicUrl
-    );
-
-    return {
-      post,
-      uploadUrl: imageUploadData.uploadUrl,
-      thumbnailUploadUrl: imageUploadData.thumbnailUrl || imageUploadData.uploadUrl,
-    } as any;
-  },
+      }
+    ) as any;
+  }),
 
   /**
    * Update an existing post
    * Requires authentication and ownership
    */
-  updatePost: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('You must be authenticated to update a post', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
-
-    // Update post (service handles ownership check)
-    const result = await context.services.postService.updatePost(
-      args.id,
-      context.userId,
+  updatePost: withAuth(async (_parent, args, context) => {
+    return executeUseCase(
+      context.container.resolve('updatePost'),
       {
+        postId: PostId(args.id),
+        userId: UserId(context.userId),
         caption: args.input.caption ?? undefined,
       }
-    );
-
-    if (!result) {
-      throw new GraphQLError('Post not found or you do not have permission to update it', {
-        extensions: { code: 'NOT_FOUND' },
-      });
-    }
-
-    return result as any;
-  },
+    ) as any;
+  }),
 
   /**
    * Delete a post
    * Requires authentication and ownership
    */
-  deletePost: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('You must be authenticated to delete a post', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
+  deletePost: withAuth(async (_parent, args, context) => {
+    return executeUseCase(
+      context.container.resolve('deletePost'),
+      {
+        postId: PostId(args.id),
+        userId: UserId(context.userId),
+      }
+    );
+  }),
 
-    // Delete post (service handles ownership check)
-    const success = await context.services.postService.deletePost(args.id, context.userId);
-
-    if (!success) {
-      throw new GraphQLError('Post not found or you do not have permission to delete it', {
-        extensions: { code: 'NOT_FOUND' },
-      });
-    }
-
-    return { success: true };
-  },
+  // ============================================================================
+  // LIKE MUTATIONS
+  // ============================================================================
 
   /**
    * Like a post
    * Requires authentication
    */
-  likePost: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('You must be authenticated to like a post', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
-
-    // Like post (service handles getting post metadata)
-    const result = await context.services.likeService.likePost(
-      context.userId,
-      args.postId,
-      '', // postUserId - service will fetch this
-      ''  // postSK - service will fetch this
+  likePost: withAuth(async (_parent, args, context) => {
+    return executeUseCase(
+      context.container.resolve('likePost'),
+      {
+        userId: UserId(context.userId),
+        postId: PostId(args.postId),
+      }
     );
-
-    return result;
-  },
+  }),
 
   /**
    * Unlike a post
    * Requires authentication
    */
-  unlikePost: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('You must be authenticated to unlike a post', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
+  unlikePost: withAuth(async (_parent, args, context) => {
+    return executeUseCase(
+      context.container.resolve('unlikePost'),
+      {
+        userId: UserId(context.userId),
+        postId: PostId(args.postId),
+      }
+    );
+  }),
 
-    // Unlike post
-    const result = await context.services.likeService.unlikePost(context.userId, args.postId);
-
-    return result;
-  },
+  // ============================================================================
+  // FOLLOW MUTATIONS
+  // ============================================================================
 
   /**
    * Follow a user
    * Requires authentication
    */
-  followUser: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('You must be authenticated to follow a user', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
-
-    // Cannot follow yourself
-    if (context.userId === args.userId) {
-      throw new GraphQLError('You cannot follow yourself', {
-        extensions: { code: 'BAD_REQUEST' },
-      });
-    }
-
-    // Follow user
-    const result = await context.services.followService.followUser(context.userId, args.userId);
-
-    return result;
-  },
+  followUser: withAuth(async (_parent, args, context) => {
+    return executeUseCase(
+      context.container.resolve('followUser'),
+      {
+        followerId: UserId(context.userId),
+        followeeId: UserId(args.userId),
+      }
+    );
+  }),
 
   /**
    * Unfollow a user
    * Requires authentication
    */
-  unfollowUser: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('You must be authenticated to unfollow a user', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
+  unfollowUser: withAuth(async (_parent, args, context) => {
+    return executeUseCase(
+      context.container.resolve('unfollowUser'),
+      {
+        followerId: UserId(context.userId),
+        followeeId: UserId(args.userId),
+      }
+    );
+  }),
 
-    // Unfollow user
-    const result = await context.services.followService.unfollowUser(context.userId, args.userId);
-
-    return result;
-  },
+  // ============================================================================
+  // COMMENT MUTATIONS
+  // ============================================================================
 
   /**
    * Create a comment
    * Requires authentication
    */
-  createComment: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('You must be authenticated to create a comment', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
-
-    // Get user profile for handle
-    const profile = await context.services.profileService.getProfileById(context.userId);
-    if (!profile) {
-      throw new GraphQLError('User profile not found', {
-        extensions: { code: 'NOT_FOUND' },
-      });
-    }
-
-    // Get post to extract postUserId and postSK
-    const post = await context.services.postService.getPostById(args.input.postId);
-    if (!post) {
-      throw new GraphQLError('Post not found', {
-        extensions: { code: 'NOT_FOUND' },
-      });
-    }
-
-    // Create comment with all required parameters
-    const comment = await context.services.commentService.createComment(
-      context.userId,
-      args.input.postId,
-      profile.handle,
-      args.input.content,
-      post.userId,
-      `POST#${post.createdAt}#${post.id}`
-    );
-
-    return comment as any;
-  },
+  createComment: withAuth(async (_parent, args, context) => {
+    return executeUseCase(
+      context.container.resolve('createComment'),
+      {
+        userId: UserId(context.userId),
+        postId: PostId(args.input.postId),
+        content: args.input.content,
+      }
+    ) as any;
+  }),
 
   /**
    * Delete a comment
    * Requires authentication and ownership
    */
-  deleteComment: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('You must be authenticated to delete a comment', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
+  deleteComment: withAuth(async (_parent, args, context) => {
+    return executeUseCase(
+      context.container.resolve('deleteComment'),
+      {
+        commentId: args.id,
+        userId: UserId(context.userId),
+      }
+    );
+  }),
 
-    // Delete comment (service handles ownership check)
-    const success = await context.services.commentService.deleteComment(args.id, context.userId);
-
-    if (!success) {
-      throw new GraphQLError('Comment not found or you do not have permission to delete it', {
-        extensions: { code: 'NOT_FOUND' },
-      });
-    }
-
-    return { success: true };
-  },
+  // ============================================================================
+  // AUTH MUTATIONS (Direct Implementation - Not Migrated in Phase 3)
+  // ============================================================================
 
   /**
    * Register a new user
@@ -478,224 +401,107 @@ export const Mutation: MutationResolvers = {
     return { success: true };
   },
 
+  // ============================================================================
+  // PROFILE MUTATIONS
+  // ============================================================================
+
   /**
    * Update profile information
    * Requires authentication
    */
-  updateProfile: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('Authentication required', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
-
-    try {
-      // Update profile via ProfileService
-      // Convert InputMaybe<string> to string | undefined
-      // Note: displayName is in GraphQL schema but not supported by DAL UpdateProfileWithHandleRequest
-      const updatedProfile = await context.services.profileService.updateProfile(
-        context.userId,
-        {
-          handle: args.input.handle ?? undefined,
-          fullName: args.input.fullName ?? undefined,
-          bio: args.input.bio ?? undefined,
-        }
-      );
-
-      return updatedProfile;
-    } catch (error) {
-      // Handle specific errors
-      if (error instanceof Error) {
-        if (error.message.includes('Handle is already taken')) {
-          throw new GraphQLError(error.message, {
-            extensions: { code: 'BAD_REQUEST' },
-          });
-        }
+  updateProfile: withAuth(async (_parent, args, context) => {
+    return executeUseCase(
+      context.container.resolve('updateProfile'),
+      {
+        userId: UserId(context.userId),
+        handle: args.input.handle ?? undefined,
+        fullName: args.input.fullName ?? undefined,
+        bio: args.input.bio ?? undefined,
       }
-      // Re-throw as internal server error for unexpected errors
-      throw new GraphQLError('Failed to update profile', {
-        extensions: { code: 'INTERNAL_SERVER_ERROR' },
-      });
-    }
-  },
+    );
+  }),
 
   /**
    * Get presigned URL for profile picture upload
    * Requires authentication
    */
-  getProfilePictureUploadUrl: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('Authentication required', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
-
-    try {
-      // Get presigned URL from ProfileService
-      const result = await context.services.profileService.generatePresignedUrl(
-        context.userId,
-        {
-          fileType: (args.fileType || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-          purpose: 'profile-picture',
-        }
-      );
-
-      return {
-        uploadUrl: result.uploadUrl,
-      };
-    } catch (error) {
-      // Handle S3/configuration errors
-      if (error instanceof Error) {
-        throw new GraphQLError(error.message, {
-          extensions: { code: 'INTERNAL_SERVER_ERROR' },
-        });
+  getProfilePictureUploadUrl: withAuth(async (_parent, args, context) => {
+    return executeUseCase(
+      context.container.resolve('getProfilePictureUploadUrl'),
+      {
+        userId: UserId(context.userId),
+        fileType: (args.fileType || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
       }
-      throw new GraphQLError('Failed to generate upload URL', {
-        extensions: { code: 'INTERNAL_SERVER_ERROR' },
-      });
-    }
-  },
+    );
+  }),
+
+  // ============================================================================
+  // NOTIFICATION MUTATIONS
+  // ============================================================================
 
   /**
    * Mark a notification as read
    * Requires authentication and ownership
    */
   // @ts-ignore - DAL Notification type differs from GraphQL Notification type (status enum values differ)
-  markNotificationAsRead: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('Authentication required', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
-
-    try {
-      // Mark notification as read
-      const result = await context.services.notificationService.markAsRead({
-        userId: context.userId,
+  markNotificationAsRead: withAuth(async (_parent, args, context) => {
+    return executeUseCase(
+      context.container.resolve('markNotificationAsRead'),
+      {
+        userId: UserId(context.userId),
         notificationId: args.id,
-      });
-
-      if (!result.notification) {
-        throw new GraphQLError('Notification not found', {
-          extensions: { code: 'NOT_FOUND' },
-        });
       }
-
-      return result.notification;
-    } catch (error) {
-      // Handle specific errors
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
-      if (error instanceof Error) {
-        if (error.message.includes('Notification not found')) {
-          throw new GraphQLError(error.message, {
-            extensions: { code: 'NOT_FOUND' },
-          });
-        }
-        if (error.message.includes('Unauthorized')) {
-          throw new GraphQLError(error.message, {
-            extensions: { code: 'FORBIDDEN' },
-          });
-        }
-      }
-      // Re-throw as internal server error
-      throw new GraphQLError('Failed to mark notification as read', {
-        extensions: { code: 'INTERNAL_SERVER_ERROR' },
-      });
-    }
-  },
+    );
+  }),
 
   /**
    * Mark all notifications as read
    * Requires authentication
    */
-  markAllNotificationsAsRead: async (_parent, _args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('Authentication required', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
-
-    // Mark all notifications as read
-    const result = await context.services.notificationService.markAllAsRead({
-      userId: context.userId,
-    });
-
-    return {
-      updatedCount: result.updatedCount,
-    };
-  },
+  markAllNotificationsAsRead: withAuth(async (_parent, _args, context) => {
+    return executeUseCase(
+      context.container.resolve('markAllNotificationsAsRead'),
+      {
+        userId: UserId(context.userId),
+      }
+    );
+  }),
 
   /**
    * Delete a notification
    * Requires authentication and ownership (idempotent)
    */
-  deleteNotification: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('Authentication required', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
-
-    try {
-      // Delete notification (idempotent)
-      await context.services.notificationService.deleteNotification({
-        userId: context.userId,
+  deleteNotification: withAuth(async (_parent, args, context) => {
+    return executeUseCase(
+      context.container.resolve('deleteNotification'),
+      {
+        userId: UserId(context.userId),
         notificationId: args.id,
-      });
-
-      return { success: true };
-    } catch (error) {
-      // Handle specific errors
-      if (error instanceof Error) {
-        if (error.message.includes('Unauthorized')) {
-          throw new GraphQLError(error.message, {
-            extensions: { code: 'FORBIDDEN' },
-          });
-        }
       }
-      // For idempotent behavior, still return success for other errors
-      return { success: true };
-    }
-  },
+    );
+  }),
+
+  // ============================================================================
+  // FEED MUTATIONS
+  // ============================================================================
 
   /**
    * Mark feed items as read
    * Requires authentication
    */
-  markFeedItemsAsRead: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('Authentication required', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
-
-    try {
-      // Mark feed items as read
-      const result = await context.services.feedService.markFeedItemsAsRead({
-        userId: context.userId,
+  markFeedItemsAsRead: withAuth(async (_parent, args, context) => {
+    return executeUseCase(
+      context.container.resolve('markFeedItemsAsRead'),
+      {
+        userId: UserId(context.userId),
         postIds: args.postIds,
-      });
-
-      return {
-        updatedCount: result.updatedCount,
-      };
-    } catch (error) {
-      // Handle validation errors
-      if (error instanceof Error) {
-        if (error.message.includes('Invalid UUID')) {
-          throw new GraphQLError(error.message, {
-            extensions: { code: 'BAD_REQUEST' },
-          });
-        }
       }
-      // Re-throw as internal server error
-      throw new GraphQLError('Failed to mark feed items as read', {
-        extensions: { code: 'INTERNAL_SERVER_ERROR' },
-      });
-    }
-  },
+    );
+  }),
+
+  // ============================================================================
+  // AUCTION MUTATIONS
+  // ============================================================================
 
   /**
    * Create a new auction
@@ -709,13 +515,7 @@ export const Mutation: MutationResolvers = {
    * - Times: endTime must be after startTime
    */
   // @ts-ignore - DAL Auction type differs from GraphQL Auction type (seller/winner field resolvers handle missing fields)
-  createAuction: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('Authentication required', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
-
+  createAuction: withAuth(async (_parent, args, context) => {
     // ✅ Validate input with Zod schema (business rules)
     const validationResult = CreateAuctionRequestSchema.safeParse(args.input);
 
@@ -731,36 +531,20 @@ export const Mutation: MutationResolvers = {
     // Use validated data (with Zod transformations applied)
     const validatedInput = validationResult.data;
 
-    // Generate S3 presigned URL for auction image upload (if fileType provided)
-    let uploadUrl: string | undefined;
-    let publicUrl: string | undefined;
-
-    if (validatedInput.fileType) {
-      // Use ProfileService to generate presigned URL (same pattern as createPost)
-      const imageUploadData = await context.services.profileService.generatePresignedUrl(
-        context.userId,
-        {
-          fileType: validatedInput.fileType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-          purpose: 'auction-image',
-        }
-      );
-
-      uploadUrl = imageUploadData.uploadUrl;
-      publicUrl = imageUploadData.publicUrl;
-    }
-
-    // Create auction with public URL
-    const auction = await context.services.auctionService.createAuction(
-      context.userId,
-      validatedInput,
-      publicUrl
+    return executeUseCase(
+      context.container.resolve('createAuction'),
+      {
+        userId: UserId(context.userId),
+        title: validatedInput.title,
+        description: validatedInput.description,
+        startingPrice: validatedInput.startingPrice,
+        reservePrice: validatedInput.reservePrice,
+        startTime: validatedInput.startTime,
+        endTime: validatedInput.endTime,
+        fileType: validatedInput.fileType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' | undefined,
+      }
     );
-
-    return {
-      auction,
-      uploadUrl,
-    };
-  },
+  }),
 
   /**
    * Activate an auction
@@ -768,21 +552,15 @@ export const Mutation: MutationResolvers = {
    * Transitions auction from 'pending' to 'active' status
    */
   // @ts-ignore - DAL Auction type differs from GraphQL Auction type (seller/winner field resolvers handle missing fields)
-  activateAuction: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('Authentication required', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
-
-    // Activate auction (service handles ownership check)
-    const auction = await context.services.auctionService.activateAuction(
-      args.id,
-      context.userId
+  activateAuction: withAuth(async (_parent, args, context) => {
+    return executeUseCase(
+      context.container.resolve('activateAuction'),
+      {
+        auctionId: args.id,
+        userId: UserId(context.userId),
+      }
     );
-
-    return auction;
-  },
+  }),
 
   /**
    * Place a bid on an auction
@@ -793,13 +571,7 @@ export const Mutation: MutationResolvers = {
    * - Amount: positive number, max 2 decimal places
    * - AuctionId: valid UUID format
    */
-  placeBid: async (_parent, args, context) => {
-    if (!context.userId) {
-      throw new GraphQLError('Authentication required', {
-        extensions: { code: 'UNAUTHENTICATED' },
-      });
-    }
-
+  placeBid: withAuth(async (_parent, args, context) => {
     // ✅ Validate input with Zod schema (business rules)
     const validationResult = PlaceBidRequestSchema.safeParse(args.input);
 
@@ -815,15 +587,13 @@ export const Mutation: MutationResolvers = {
     // Use validated data (with Zod transformations applied)
     const validatedInput = validationResult.data;
 
-    // Place bid (service handles validation and updates auction)
-    const result = await context.services.auctionService.placeBid(
-      context.userId,
-      validatedInput
-    );
-
-    return {
-      bid: result.bid,
-      auction: result.auction,
-    } as any;
-  },
+    return executeUseCase(
+      context.container.resolve('placeBid'),
+      {
+        userId: UserId(context.userId),
+        auctionId: validatedInput.auctionId,
+        amount: validatedInput.amount,
+      }
+    ) as any;
+  }),
 };
