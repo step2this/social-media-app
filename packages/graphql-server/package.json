@@ -28,6 +28,7 @@
     "@social-media-app/aws-utils": "workspace:*",
     "@social-media-app/dal": "workspace:*",
     "@social-media-app/shared": "workspace:*",
+    "awilix": "^12.0.5",
     "cors": "^2.8.5",
     "dataloader": "^2.2.3",
     "dotenv": "^16.4.5",
