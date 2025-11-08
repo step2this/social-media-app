@@ -164,7 +164,7 @@ describe('Field Resolvers', () => {
     it('should return null when user is not authenticated', async () => {
       const mockAuctionService = {} as any;
       const mockCommentService = {} as unknown as CommentService;
-      
+
       // Create container for unauthenticated context
       const unauthContainer = createContainer<GraphQLContainer>({
         injectionMode: InjectionMode.CLASSIC,
@@ -388,7 +388,7 @@ describe('Field Resolvers', () => {
     it('should return null when user is not authenticated', async () => {
       const mockAuctionService = {} as any;
       const mockCommentService = {} as unknown as CommentService;
-      
+
       // Create container for unauthenticated context
       const unauthContainer = createContainer<GraphQLContainer>({
         injectionMode: InjectionMode.CLASSIC,
