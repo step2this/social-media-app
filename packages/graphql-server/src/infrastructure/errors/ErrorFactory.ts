@@ -84,10 +84,10 @@ import type { ErrorCode } from '@social-media-app/shared/errors';
 export class ErrorFactory {
   /**
    * Convert domain AppError to GraphQL error (PRIMARY METHOD)
-   * 
+   *
    * This is the primary method for error handling in resolvers.
    * Preserves all error context including correlation IDs.
-   * 
+   *
    * @example
    * ```typescript
    * try {
@@ -112,6 +112,54 @@ export class ErrorFactory {
         timestamp: error.timestamp
       }
     });
+  }
+
+  /**
+   * Convert use case error to GraphQL error
+   *
+   * This method handles errors from use case Result types.
+   * It intelligently converts AppError instances and generic Errors.
+   *
+   * @param error - Error from use case Result (AppError or generic Error)
+   * @returns GraphQLError with appropriate code and message
+   *
+   * @example
+   * ```typescript
+   * const result = await useCase.execute(input);
+   * if (!result.success) {
+   *   throw ErrorFactory.fromUseCaseError(result.error);
+   * }
+   * ```
+   */
+  static fromUseCaseError(error: Error | AppError): GraphQLError {
+    // If it's an AppError, use the specialized converter
+    if (error instanceof AppError) {
+      return this.fromAppError(error);
+    }
+
+    // If it's a recognized error subclass, map it appropriately
+    if (error instanceof NotFoundError) {
+      return this.create(error.message, 'NOT_FOUND');
+    }
+
+    if (error instanceof ConflictError) {
+      return this.create(error.message, 'CONFLICT');
+    }
+
+    if (error instanceof UnauthorizedError) {
+      return this.create(error.message, 'UNAUTHORIZED');
+    }
+
+    if (error instanceof ForbiddenError) {
+      return this.create(error.message, 'FORBIDDEN');
+    }
+
+    if (error instanceof ValidationError) {
+      return this.create(error.message, 'BAD_REQUEST');
+    }
+
+    // Generic error - return as internal server error
+    return this.internalServerError(error.message);
   }
 
   /**

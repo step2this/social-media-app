@@ -41,11 +41,14 @@ import { UserId } from '../../shared/types/index.js';
  * The wrapped resolver receives a context where `userId` is guaranteed to exist
  * (non-optional), providing type safety for authenticated operations.
  *
+ * This version preserves all context properties, making it compatible with
+ * GraphQLContext and other extended context types.
+ *
  * @param resolver - The resolver function to wrap (requires authenticated context)
  * @returns A new resolver that enforces authentication before calling the original
  *
  * @template TSource - The parent object type
- * @template TContext - The context type (must extend AuthContext)
+ * @template TContext - The context type (must have userId property)
  * @template TArgs - The arguments type
  * @template TReturn - The return type
  *
@@ -56,9 +59,10 @@ import { UserId } from '../../shared/types/index.js';
  * import { withAuth } from './withAuth.js';
  * import { QueryResolvers } from '../generated/types.js';
  *
- * const meResolver = withAuth<any, GraphQLContext, any, Profile>(
+ * const meResolver = withAuth(
  *   async (_parent, _args, context) => {
- *     // context.userId is UserId (not UserId | undefined)
+ *     // context.userId is string (non-null)
+ *     // context.container is available (preserved from GraphQLContext)
  *     const profile = await profileRepository.findById(context.userId);
  *     if (!profile.success) {
  *       throw new Error('Profile not found');
@@ -68,8 +72,8 @@ import { UserId } from '../../shared/types/index.js';
  * );
  * ```
  */
-export function withAuth<TSource, TContext extends AuthContext, TArgs, TReturn>(
-  resolver: GraphQLFieldResolver<TSource, TContext & { userId: UserId }, TArgs, TReturn>
+export function withAuth<TSource, TContext extends { userId: string | null }, TArgs, TReturn>(
+  resolver: GraphQLFieldResolver<TSource, Omit<TContext, 'userId'> & { userId: string }, TArgs, TReturn>
 ): GraphQLFieldResolver<TSource, TContext, TArgs, TReturn> {
   return async (source, args, context, info) => {
     const authGuard = new AuthGuard();
@@ -81,10 +85,11 @@ export function withAuth<TSource, TContext extends AuthContext, TArgs, TReturn>(
 
     // Create new context with guaranteed userId
     // This provides type safety for the wrapped resolver
+    // userId is now non-null string (not string | null)
     const authenticatedContext = {
       ...context,
       userId: authResult.data,
-    } as TContext & { userId: UserId };
+    } as Omit<TContext, 'userId'> & { userId: string };
 
     return resolver(source, args, authenticatedContext, info);
   };
