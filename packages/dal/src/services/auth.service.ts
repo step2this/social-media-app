@@ -13,6 +13,11 @@ import type {
 import type {
   UpdateProfileWithHandleRequest
 } from '@social-media-app/shared';
+import {
+  ConflictError,
+  UnauthorizedError,
+  NotFoundError
+} from '@social-media-app/shared/errors';
 import { randomBytes, pbkdf2Sync, timingSafeEqual } from 'crypto';
 import {
   calculateRefreshTokenExpiry,
@@ -135,7 +140,11 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
     );
 
     if (existingEmailUser.Items && existingEmailUser.Items.length > 0) {
-      throw new Error('Email already registered');
+      throw new ConflictError(
+        'Email already registered',
+        'email',
+        request.email
+      );
     }
 
     // Check if username already exists
@@ -144,7 +153,11 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
     );
 
     if (existingUsernameUser.Items && existingUsernameUser.Items.length > 0) {
-      throw new Error('Username already taken');
+      throw new ConflictError(
+        'Username already taken',
+        'username',
+        request.username
+      );
     }
 
     // Create user
@@ -203,7 +216,10 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
     );
 
     if (!userQuery.Items || userQuery.Items.length === 0) {
-      throw new Error('Invalid email or password');
+      throw new UnauthorizedError(
+        'Invalid email or password',
+        'invalid_credentials'
+      );
     }
 
     const user = userQuery.Items[0] as UserEntity;
@@ -216,7 +232,10 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
     );
 
     if (!isValidPassword) {
-      throw new Error('Invalid email or password');
+      throw new UnauthorizedError(
+        'Invalid email or password',
+        'invalid_credentials'
+      );
     }
 
     // Generate tokens
@@ -268,7 +287,10 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
     );
 
     if (!tokenQuery.Items || tokenQuery.Items.length === 0) {
-      throw new Error('Invalid refresh token');
+      throw new UnauthorizedError(
+        'Invalid refresh token',
+        'invalid_token'
+      );
     }
 
     const tokenEntity = tokenQuery.Items[0] as RefreshTokenEntity;
@@ -283,7 +305,10 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
           SK: tokenEntity.SK
         }
       }));
-      throw new Error('Refresh token expired');
+      throw new UnauthorizedError(
+        'Refresh token expired',
+        'token_expired'
+      );
     }
 
     // Get user
@@ -296,7 +321,7 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
     }));
 
     if (!user.Item) {
-      throw new Error('User not found');
+      throw new NotFoundError('User', tokenEntity.userId);
     }
 
     const userEntity = user.Item as UserEntity;
@@ -393,7 +418,7 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
     // Get current user first
     const currentUser = await getUserById(userId);
     if (!currentUser) {
-      throw new Error('User not found');
+      throw new NotFoundError('User', userId);
     }
 
     // Build update expression using utility

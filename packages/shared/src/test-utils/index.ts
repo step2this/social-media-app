@@ -28,6 +28,7 @@ export {
 
 export {
   errorScenarios,
+  dalErrorScenarios,
   type ErrorScenario
 } from './error-scenarios.js';
 
