@@ -67,9 +67,17 @@ export function zodValidator<T>(
 ): MiddlewareObj {
   return {
     before: async (request: MiddyRequest): Promise<void> => {
-      // Parse body as JSON, default to empty object if not present
-      const bodyText = request.event.body
-      const body = bodyText ? JSON.parse(bodyText) : {}
+      // Get body - httpJsonBodyParser middleware has already parsed it
+      // If body is a string, it hasn't been parsed yet (e.g. in direct tests)
+      let body: unknown
+
+      if (typeof request.event.body === 'string') {
+        // Body is still a string - parse it
+        body = request.event.body ? JSON.parse(request.event.body) : {}
+      } else {
+        // Body has already been parsed by httpJsonBodyParser
+        body = request.event.body ?? {}
+      }
 
       try {
         // Validate and parse with Zod schema
