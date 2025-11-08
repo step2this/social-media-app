@@ -176,3 +176,74 @@ export const errorScenarios = {
     },
   },
 } as const;
+
+/**
+ * DAL Error Scenarios
+ * 
+ * Error scenarios specific to DAL layer behavioral testing.
+ * Used to verify that DAL services throw appropriate custom errors.
+ */
+export const dalErrorScenarios = {
+  /**
+   * Auth service errors
+   */
+  auth: {
+    emailAlreadyRegistered: {
+      message: 'Email already registered',
+      code: 'CONFLICT',
+      field: 'email'
+    },
+    usernameAlreadyTaken: {
+      message: 'Username already taken',
+      code: 'CONFLICT',
+      field: 'username'
+    },
+    invalidCredentials: {
+      message: 'Invalid email or password',
+      code: 'UNAUTHORIZED',
+      reason: 'invalid_credentials'
+    },
+    userNotFound: {
+      message: 'User not found',
+      code: 'NOT_FOUND',
+      entity: 'User'
+    }
+  },
+
+  /**
+   * Profile service errors
+   */
+  profile: {
+    handleAlreadyTaken: {
+      message: 'Handle is already taken',
+      code: 'CONFLICT',
+      field: 'handle'
+    },
+    profileNotFound: {
+      message: 'Profile not found',
+      code: 'NOT_FOUND',
+      entity: 'Profile'
+    },
+    s3NotConfigured: {
+      message: 'S3 bucket not configured',
+      code: 'CONFIGURATION_ERROR',
+      configKey: 'S3_BUCKET_NAME'
+    }
+  },
+
+  /**
+   * Post service errors
+   */
+  post: {
+    notOwner: {
+      message: 'You can only update your own posts',
+      code: 'FORBIDDEN',
+      resourceType: 'Post'
+    },
+    postNotFound: {
+      message: 'Post not found',
+      code: 'NOT_FOUND',
+      entity: 'Post'
+    }
+  }
+} as const;
