@@ -94,6 +94,7 @@ export interface GraphQLContainer {
   likeService: GraphQLContext['services']['likeService'];
   notificationService: GraphQLContext['services']['notificationService'];
   auctionService: GraphQLContext['services']['auctionService'];
+  feedService: GraphQLContext['services']['feedService'];
 
   // Repository Layer (adapters wrapping DAL services)
   profileRepository: ProfileServiceAdapter;
@@ -106,6 +107,7 @@ export interface GraphQLContainer {
   feedRepository: FeedServiceAdapter;
 
   // Use Case Layer (business logic)
+  // Query Use Cases
   getCurrentUserProfile: GetCurrentUserProfile;
   getProfileByHandle: GetProfileByHandle;
   getPostById: GetPostById;
@@ -120,6 +122,26 @@ export interface GraphQLContainer {
   getAuction: GetAuction;
   getAuctions: GetAuctions;
   getBidHistory: GetBidHistory;
+
+  // Mutation Use Cases
+  createPost: CreatePost;
+  updatePost: UpdatePost;
+  deletePost: DeletePost;
+  likePost: LikePost;
+  unlikePost: UnlikePost;
+  followUser: FollowUser;
+  unfollowUser: UnfollowUser;
+  createComment: CreateComment;
+  deleteComment: DeleteComment;
+  updateProfile: UpdateProfile;
+  getProfilePictureUploadUrl: GetProfilePictureUploadUrl;
+  markNotificationAsRead: MarkNotificationAsRead;
+  markAllNotificationsAsRead: MarkAllNotificationsAsRead;
+  deleteNotification: DeleteNotification;
+  markFeedItemsAsRead: MarkFeedItemsAsRead;
+  createAuction: CreateAuction;
+  activateAuction: ActivateAuction;
+  placeBid: PlaceBid;
 }
 
 /**
@@ -173,6 +195,7 @@ export function createGraphQLContainer(
     likeService: asValue(context.services.likeService),
     notificationService: asValue(context.services.notificationService),
     auctionService: asValue(context.services.auctionService),
+    feedService: asValue(context.services.feedService),
   });
 
   // ============================================
@@ -239,6 +262,122 @@ export function createGraphQLContainer(
     getAuction: asClass(GetAuction).scoped(),
     getAuctions: asClass(GetAuctions).scoped(),
     getBidHistory: asClass(GetBidHistory).scoped(),
+
+    // ============================================
+    // Mutation Use Cases
+    // ============================================
+    // Mutation use cases accept a services object wrapper
+    // Must use factory pattern with asValue(new UseCase({ services }))
+
+    // Post mutation use cases
+    createPost: asValue(
+      new CreatePost({
+        profileService: context.services.profileService,
+        postService: context.services.postService,
+      })
+    ),
+    updatePost: asValue(
+      new UpdatePost({
+        postService: context.services.postService,
+      })
+    ),
+    deletePost: asValue(
+      new DeletePost({
+        postService: context.services.postService,
+      })
+    ),
+
+    // Like mutation use cases
+    likePost: asValue(
+      new LikePost({
+        likeService: context.services.likeService,
+      })
+    ),
+    unlikePost: asValue(
+      new UnlikePost({
+        likeService: context.services.likeService,
+      })
+    ),
+
+    // Follow mutation use cases
+    followUser: asValue(
+      new FollowUser({
+        followService: context.services.followService,
+      })
+    ),
+    unfollowUser: asValue(
+      new UnfollowUser({
+        followService: context.services.followService,
+      })
+    ),
+
+    // Comment mutation use cases
+    createComment: asValue(
+      new CreateComment({
+        profileService: context.services.profileService,
+        postService: context.services.postService,
+        commentService: context.services.commentService,
+      })
+    ),
+    deleteComment: asValue(
+      new DeleteComment({
+        commentService: context.services.commentService,
+      })
+    ),
+
+    // Profile mutation use cases
+    updateProfile: asValue(
+      new UpdateProfile({
+        profileService: context.services.profileService,
+      })
+    ),
+    getProfilePictureUploadUrl: asValue(
+      new GetProfilePictureUploadUrl({
+        profileService: context.services.profileService,
+      })
+    ),
+
+    // Notification mutation use cases
+    markNotificationAsRead: asValue(
+      new MarkNotificationAsRead({
+        notificationService: context.services.notificationService,
+      })
+    ),
+    markAllNotificationsAsRead: asValue(
+      new MarkAllNotificationsAsRead({
+        notificationService: context.services.notificationService,
+      })
+    ),
+    deleteNotification: asValue(
+      new DeleteNotification({
+        notificationService: context.services.notificationService,
+      })
+    ),
+
+    // Feed mutation use cases
+    markFeedItemsAsRead: asValue(
+      new MarkFeedItemsAsRead({
+        feedService: context.services.feedService,
+      })
+    ),
+
+    // Auction mutation use cases
+    createAuction: asValue(
+      new CreateAuction({
+        profileService: context.services.profileService,
+        auctionService: context.services.auctionService,
+      })
+    ),
+    activateAuction: asValue(
+      new ActivateAuction({
+        auctionService: context.services.auctionService,
+      })
+    ),
+    placeBid: asValue(
+      new PlaceBid({
+        auctionService: context.services.auctionService,
+      })
+    ),
   });
 
   return container;
