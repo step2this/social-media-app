@@ -1,106 +1,145 @@
 /**
- * Dependency Injection Container for Backend Lambda Handlers
+ * Awilix Container Setup for Backend Lambda Handlers
  *
- * Lightweight DI container for managing service dependencies in Lambda handlers.
- * Provides type-safe service registration and resolution with lazy initialization.
+ * Replaces custom Container with Awilix for:
+ * - Automatic dependency injection
+ * - Proper lifecycle management
+ * - Type-safe service resolution
  *
- * @example
- * ```typescript
- * const container = new Container();
- *
- * // Register services with factory functions (lazy initialization)
- * container.register('DynamoDBClient', () => createDynamoDBClient());
- * container.register('AuthService', () => {
- *   const client = container.resolve('DynamoDBClient');
- *   return createDefaultAuthService(client, tableName, jwtProvider);
- * });
- *
- * // Resolve services when needed
- * const authService = container.resolve<AuthService>('AuthService');
- * ```
+ * @module infrastructure/di
  */
 
-export class Container {
-  private services = new Map<string, () => any>();
-  private singletons = new Map<string, any>();
+import { createContainer, asFunction, asValue, InjectionMode, type AwilixContainer } from 'awilix'
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
+import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb'
+import type { AuthServiceDependencies } from '@social-media-app/dal'
+import { createDefaultAuthService, ProfileService } from '@social-media-app/dal'
+import { createJWTProvider, getJWTConfigFromEnv } from '../../utils/jwt.js'
 
-  /**
-   * Register a service with a factory function.
-   *
-   * The factory function will be called lazily when the service is first resolved.
-   * Services are singletons - the factory is only called once per service name.
-   *
-   * @param name - Unique service identifier
-   * @param factory - Function that creates the service instance
-   *
-   * @example
-   * ```typescript
-   * container.register('PostService', () => new PostService(dynamoClient, tableName));
-   * ```
-   */
-  register<T>(name: string, factory: () => T): void {
-    if (this.services.has(name)) {
-      throw new Error(`Service "${name}" is already registered`);
-    }
-    this.services.set(name, factory as () => any);
+/**
+ * Service container type - all resolvable services
+ */
+export interface ServiceContainer {
+  // AWS Clients
+  dynamoClient: DynamoDBDocumentClient
+  tableName: string
+
+  // Auth
+  jwtProvider: AuthServiceDependencies['jwtProvider']
+  authService: ReturnType<typeof createDefaultAuthService>
+
+  // Profile
+  profileService: ProfileService
+
+  // Add more services as needed
+}
+
+/**
+ * Create and configure Awilix container with all services
+ *
+ * Lifecycle Management:
+ * - SINGLETON: Created once, reused across requests (AWS clients)
+ * - SCOPED: Created per-request, cleaned up after (services)
+ *
+ * @returns Configured Awilix container
+ */
+export function createAwilixContainer(): AwilixContainer<ServiceContainer> {
+  const container = createContainer<ServiceContainer>({
+    injectionMode: InjectionMode.PROXY // Enable auto-injection
+  })
+
+  // ============================================
+  // Layer 1: AWS Infrastructure (SINGLETON)
+  // ============================================
+
+  container.register({
+    // DynamoDB Client - singleton for Lambda cold start optimization
+    dynamoClient: asFunction(() => {
+      const client = new DynamoDBClient({
+        region: process.env.AWS_REGION || 'us-east-1',
+        endpoint: process.env.DYNAMODB_ENDPOINT // LocalStack support
+      })
+      return DynamoDBDocumentClient.from(client, {
+        marshallOptions: {
+          removeUndefinedValues: true,
+          convertClassInstanceToMap: true
+        }
+      })
+    }).singleton(),
+
+    // Table name from environment
+    tableName: asValue(process.env.TABLE_NAME || 'social-media-app-dev')
+  })
+
+  // ============================================
+  // Layer 2: Authentication (SINGLETON)
+  // ============================================
+
+  container.register({
+    // JWT Provider - singleton (stateless)
+    jwtProvider: asFunction(() => {
+      const jwtConfig = getJWTConfigFromEnv()
+      return createJWTProvider(jwtConfig)
+    }).singleton()
+  })
+
+  // ============================================
+  // Layer 3: Domain Services (SCOPED)
+  // ============================================
+
+  container.register({
+    // Auth Service - scoped per request
+    authService: asFunction(({ dynamoClient, tableName, jwtProvider }) => {
+      return createDefaultAuthService(dynamoClient, tableName, jwtProvider)
+    }).scoped(),
+
+    // Profile Service - scoped per request
+    profileService: asFunction(({ dynamoClient, tableName }) => {
+      return new ProfileService(dynamoClient, tableName)
+    }).scoped()
+
+    // TODO: Add more services as we migrate
+  })
+
+  return container
+}
+
+/**
+ * Singleton container instance for Lambda cold starts
+ * Reused across invocations within same Lambda container
+ */
+let containerInstance: AwilixContainer<ServiceContainer> | null = null
+
+/**
+ * Get or create singleton container
+ *
+ * Lambda optimization: Container persists across warm invocations
+ * Singletons are truly singleton, scoped services are fresh per-request
+ */
+export function getContainer(): AwilixContainer<ServiceContainer> {
+  if (!containerInstance) {
+    containerInstance = createAwilixContainer()
   }
+  return containerInstance
+}
 
-  /**
-   * Resolve a service by name.
-   *
-   * Returns the singleton instance, creating it on first access.
-   * Throws if the service is not registered.
-   *
-   * @param name - Service identifier
-   * @returns The resolved service instance
-   *
-   * @example
-   * ```typescript
-   * const postService = container.resolve<PostService>('PostService');
-   * ```
-   */
-  resolve<T>(name: string): T {
-    // Check if already instantiated (singleton pattern)
-    if (this.singletons.has(name)) {
-      return this.singletons.get(name) as T;
-    }
+/**
+ * Create request-scoped container
+ *
+ * Called per Lambda invocation to create fresh scoped services
+ * while reusing singleton infrastructure (AWS clients)
+ *
+ * @returns Scoped container for single request
+ */
+export function createRequestScope(): AwilixContainer<ServiceContainer> {
+  return getContainer().createScope()
+}
 
-    // Get factory function
-    const factory = this.services.get(name);
-    if (!factory) {
-      throw new Error(`Service "${name}" is not registered`);
-    }
-
-    // Create instance and cache it
-    const instance = factory();
-    this.singletons.set(name, instance);
-    return instance as T;
-  }
-
-  /**
-   * Check if a service is registered.
-   *
-   * @param name - Service identifier
-   * @returns True if the service is registered
-   */
-  has(name: string): boolean {
-    return this.services.has(name);
-  }
-
-  /**
-   * Clear all registered services and singletons.
-   * Useful for testing or hot-reloading scenarios.
-   */
-  clear(): void {
-    this.services.clear();
-    this.singletons.clear();
-  }
-
-  /**
-   * Get all registered service names.
-   * Useful for debugging or inspection.
-   */
-  getRegisteredServices(): string[] {
-    return Array.from(this.services.keys());
-  }
+/**
+ * Reset container (testing only)
+ *
+ * Allows tests to create fresh container with mocked dependencies
+ */
+export function resetContainer(): void {
+  containerInstance = null
 }
