@@ -1,27 +1,34 @@
 /**
- * Register Handler (Middy Version)
+ * Register Handler (Awilix Version)
  *
- * Migrated from custom middleware composition to Middy.
+ * Demonstrates Awilix + Middy integration.
+ * Services are injected automatically via middleware.
  * Creates new user accounts with email, username, and password.
  *
  * @route POST /auth/register
  */
 
 import { RegisterRequestSchema, type RegisterRequest } from '@social-media-app/shared'
-import { authService } from '../../utils/services.js'
-import { createHandler } from '../../infrastructure/middleware-v2/index.js'
+import { createHandler } from '../../infrastructure/middleware/index.js'
 import type { APIGatewayProxyHandlerV2 } from 'aws-lambda'
 
+// Import module augmentation to access custom event properties
+import type {} from '../../types/lambda-extended'
+
 /**
- * Handler implementation - pure business logic
+ * Handler implementation - services injected via Awilix
  *
  * No middleware concerns - Middy handles:
  * - JSON parsing
  * - Validation
  * - Error handling
  * - Header normalization
+ * - Service injection (Awilix)
  */
 const registerHandler: APIGatewayProxyHandlerV2 = async (event) => {
+  // Services injected by Awilix middleware
+  const { authService } = event.services!
+
   // Type-safe access to validated input
   const request = event.validatedBody as RegisterRequest
 
@@ -39,8 +46,9 @@ const registerHandler: APIGatewayProxyHandlerV2 = async (event) => {
 }
 
 /**
- * Export Middy-wrapped handler with middleware stack
+ * Export Middy-wrapped handler with Awilix service injection
  */
 export const handler = createHandler(registerHandler, {
-  validation: RegisterRequestSchema
+  validation: RegisterRequestSchema,
+  services: ['authService'] // ← Awilix injects authService
 })

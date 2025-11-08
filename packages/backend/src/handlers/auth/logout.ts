@@ -1,55 +1,81 @@
-import { LogoutRequestSchema } from '@social-media-app/shared';
-import { compose } from '../../infrastructure/middleware/compose.js';
-import { withErrorHandling } from '../../infrastructure/middleware/withErrorHandling.js';
-import { withLogging } from '../../infrastructure/middleware/withLogging.js';
-import { withValidation } from '../../infrastructure/middleware/withValidation.js';
-import { withServices } from '../../infrastructure/middleware/withServices.js';
-import { withAuth } from '../../infrastructure/middleware/withAuth.js';
-import { successResponse } from '../../utils/responses.js';
-
 /**
- * Lambda handler for user logout
+ * Logout Handler (Awilix Version)
  *
+ * Demonstrates Awilix + Middy integration.
  * Invalidates user's refresh token to log them out. Logout is idempotent - always succeeds.
  *
  * @route POST /auth/logout
- * @middleware withErrorHandling - Converts errors to HTTP responses
- * @middleware withLogging - Structured logging with correlation IDs
- * @middleware withAuth - Validates access token and extracts userId
- * @middleware withValidation - Validates request body against LogoutRequestSchema
- * @middleware withServices - Injects authService into context
  */
-export const handler = compose(
-  withErrorHandling(),
-  withLogging(),
-  withAuth(), // Required - extracts userId from JWT
-  withValidation(LogoutRequestSchema),
-  withServices(['authService']),
-  async (_event, context) => {
-    try {
-      // Business logic - invalidate refresh token
-      // Non-null assertions safe: middleware guarantees these exist
-      await context.services!.authService.logout(
-        context.validatedInput.refreshToken,
-        context.userId! // withAuth middleware guarantees userId exists
-      );
 
-      return successResponse(200, {
+import { LogoutRequestSchema, type LogoutRequest } from '@social-media-app/shared'
+import { createHandler } from '../../infrastructure/middleware/index.js'
+import type { APIGatewayProxyHandlerV2 } from 'aws-lambda'
+
+// Import module augmentation to access custom event properties
+import type {} from '../../types/lambda-extended'
+
+/**
+ * Handler implementation - services injected via Awilix
+ *
+ * No middleware concerns - Middy handles:
+ * - JSON parsing
+ * - Validation
+ * - Error handling
+ * - Header normalization
+ * - Service injection (Awilix)
+ * - JWT authentication
+ */
+const logoutHandler: APIGatewayProxyHandlerV2 = async (event) => {
+  // Services injected by Awilix middleware
+  const { authService } = event.services!
+
+  // Type-safe access to validated input
+  const request = event.validatedBody as LogoutRequest
+
+  // JWT middleware guarantees userId exists
+  const userId = event.userId!
+
+  try {
+    // Business logic - invalidate refresh token
+    await authService.logout(request.refreshToken, userId)
+
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({
         success: true,
         message: 'Logged out successfully'
-      });
-    } catch (error) {
-      // Log warning but always return success (idempotent operation)
-      console.warn('[LOGOUT_ERROR]', {
-        correlationId: context.correlationId,
-        userId: context.userId,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      })
+    }
+  } catch (error) {
+    // Log warning but always return success (idempotent operation)
+    console.warn('[LOGOUT_ERROR]', {
+      userId,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
 
-      return successResponse(200, {
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({
         success: true,
         message: 'Logged out successfully'
-      });
+      })
     }
   }
-);
+}
+
+/**
+ * Export Middy-wrapped handler with Awilix service injection
+ */
+export const handler = createHandler(logoutHandler, {
+  auth: true, // Requires JWT
+  validation: LogoutRequestSchema,
+  services: ['authService'] // ← Awilix injects authService
+})
