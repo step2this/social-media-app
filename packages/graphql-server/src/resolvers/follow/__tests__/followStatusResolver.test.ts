@@ -13,6 +13,7 @@ import { createFollowStatusResolver } from '../followStatusResolver';
 import { GetFollowStatus } from '../../../application/use-cases/follow/GetFollowStatus';
 import { FakeFollowRepository } from '../../../../__tests__/helpers/fake-repositories';
 import type { GraphQLContext } from '../../../context';
+import { createMockGraphQLContext } from '../../../__tests__/helpers/mock-context-factory.js';
 
 describe('followStatusResolver', () => {
   let container: AwilixContainer<GraphQLContainer>;
@@ -37,7 +38,7 @@ describe('followStatusResolver', () => {
     const result = await resolver!(
       {} as any,
       { followeeId: 'user-2' },
-      { userId: 'user-1' } as GraphQLContext,
+      createMockGraphQLContext({ userId: 'user-1' }),
       {} as GraphQLResolveInfo
     );
 
@@ -55,7 +56,7 @@ describe('followStatusResolver', () => {
     const result = await resolver!(
       {} as any,
       { followeeId: 'user-2' },
-      { userId: 'user-1' } as GraphQLContext,
+      createMockGraphQLContext({ userId: 'user-1' }),
       {} as GraphQLResolveInfo
     );
 
@@ -76,7 +77,7 @@ describe('followStatusResolver', () => {
     const result = await resolver!(
       {} as any,
       { followeeId: 'user-2' },
-      { userId: 'user-1' } as GraphQLContext,
+      createMockGraphQLContext({ userId: 'user-1' }),
       {} as GraphQLResolveInfo
     );
 

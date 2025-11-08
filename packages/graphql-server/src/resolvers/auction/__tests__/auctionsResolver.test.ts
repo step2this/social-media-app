@@ -10,10 +10,10 @@ import type { GraphQLResolveInfo } from 'graphql';
 import { createContainer, asValue, type AwilixContainer } from 'awilix';
 import { createAuctionsResolver } from '../auctionsResolver';
 import type { GraphQLContainer } from '../../../infrastructure/di/awilix-container';
-import type { GraphQLContext } from '../../../context';
 import { GetAuctions } from '../../../application/use-cases/auction/GetAuctions';
 import { FakeAuctionRepository } from '../../../../__tests__/helpers/fake-repositories';
 import { createMockAuctions } from '@social-media-app/shared/test-utils/fixtures';
+import { createMockGraphQLContext } from '../../../__tests__/helpers/mock-context-factory.js';
 
 describe('auctionsResolver', () => {
   let container: AwilixContainer<GraphQLContainer>;
@@ -32,7 +32,7 @@ describe('auctionsResolver', () => {
 
     const _parent: any = {};
     const args: { limit: number } = { limit: 20 };
-    const context: GraphQLContext = {} as GraphQLContext;
+    const context = createMockGraphQLContext();
     const _info: GraphQLResolveInfo = {} as GraphQLResolveInfo;
 
     const result = await resolver!(_parent, args, context, _info);
@@ -53,7 +53,7 @@ describe('auctionsResolver', () => {
 
     const _parent: any = {};
     const args: { status: string; limit: number } = { status: 'ACTIVE', limit: 20 };
-    const context: GraphQLContext = {} as GraphQLContext;
+    const context = createMockGraphQLContext();
     const _info: GraphQLResolveInfo = {} as GraphQLResolveInfo;
 
     const result = await resolver!(_parent, args, context, _info);
@@ -71,7 +71,7 @@ describe('auctionsResolver', () => {
 
     const _parent: any = {};
     const args: { limit: number } = { limit: 20 };
-    const context: GraphQLContext = {} as GraphQLContext;
+    const context = createMockGraphQLContext();
     const _info: GraphQLResolveInfo = {} as GraphQLResolveInfo;
 
     const result = await resolver!(_parent, args, context, _info);

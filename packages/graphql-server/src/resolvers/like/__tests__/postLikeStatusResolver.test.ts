@@ -13,7 +13,7 @@ import { createPostLikeStatusResolver } from '../postLikeStatusResolver';
 import { GetPostLikeStatus } from '../../../application/use-cases/like/GetPostLikeStatus';
 import { FakeLikeRepository } from '../../../../__tests__/helpers/fake-repositories';
 import { createMockLiked } from '@social-media-app/shared/test-utils/fixtures';
-import type { GraphQLContext } from '../../../context';
+import { createMockGraphQLContext } from '../../../__tests__/helpers/mock-context-factory';
 
 describe('postLikeStatusResolver', () => {
   let container: AwilixContainer<GraphQLContainer>;
@@ -38,7 +38,7 @@ describe('postLikeStatusResolver', () => {
     const result = await resolver!(
       {} as any,
       { postId: 'post-1' },
-      { userId: 'user-1' } as GraphQLContext,
+      createMockGraphQLContext({ userId: 'user-1' }),
       {} as GraphQLResolveInfo
     );
 
@@ -57,7 +57,7 @@ describe('postLikeStatusResolver', () => {
     const result = await resolver!(
       {} as any,
       { postId: 'post-1' },
-      { userId: 'user-1' } as GraphQLContext,
+      createMockGraphQLContext({ userId: 'user-1' }),
       {} as GraphQLResolveInfo
     );
 
@@ -79,7 +79,7 @@ describe('postLikeStatusResolver', () => {
     const result = await resolver!(
       {} as any,
       { postId: 'post-1' },
-      { userId: 'user-1' } as GraphQLContext,
+      createMockGraphQLContext({ userId: 'user-1' }),
       {} as GraphQLResolveInfo
     );
 

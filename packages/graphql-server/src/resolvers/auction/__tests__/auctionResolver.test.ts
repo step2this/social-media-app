@@ -10,10 +10,10 @@ import type { GraphQLResolveInfo } from 'graphql';
 import { createContainer, asValue, type AwilixContainer } from 'awilix';
 import { createAuctionResolver } from '../auctionResolver';
 import type { GraphQLContainer } from '../../../infrastructure/di/awilix-container';
-import type { GraphQLContext } from '../../../context';
 import { GetAuction } from '../../../application/use-cases/auction/GetAuction';
 import { FakeAuctionRepository } from '../../../../__tests__/helpers/fake-repositories';
 import { createMockAuction } from '@social-media-app/shared/test-utils/fixtures';
+import { createMockGraphQLContext } from '../../../__tests__/helpers/mock-context-factory.js';
 
 describe('auctionResolver', () => {
   let container: AwilixContainer<GraphQLContainer>;
@@ -32,7 +32,7 @@ describe('auctionResolver', () => {
 
     const _parent: any = {};
     const args: { id: string } = { id: 'auction-1' };
-    const context: GraphQLContext = {} as GraphQLContext;
+    const context = createMockGraphQLContext();
     const _info: GraphQLResolveInfo = {} as GraphQLResolveInfo;
 
     const result = await resolver!(_parent, args, context, _info);
@@ -49,7 +49,7 @@ describe('auctionResolver', () => {
 
     const _parent: any = {};
     const args: { id: string } = { id: 'nonexistent' };
-    const context: GraphQLContext = {} as GraphQLContext;
+    const context = createMockGraphQLContext();
     const _info: GraphQLResolveInfo = {} as GraphQLResolveInfo;
 
     await expect(resolver!(_parent, args, context, _info)).rejects.toThrow('Auction not found');
@@ -69,7 +69,7 @@ describe('auctionResolver', () => {
 
     const _parent: any = {};
     const args: { id: string } = { id: 'auction-1' };
-    const context: GraphQLContext = {} as GraphQLContext;
+    const context = createMockGraphQLContext();
     const _info: GraphQLResolveInfo = {} as GraphQLResolveInfo;
 
     const result = await resolver!(_parent, args, context, _info);

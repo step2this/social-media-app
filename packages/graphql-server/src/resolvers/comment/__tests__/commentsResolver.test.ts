@@ -14,6 +14,7 @@ import { GetCommentsByPost } from '../../../application/use-cases/comment/GetCom
 import { FakeCommentRepository } from '../../../../__tests__/helpers/fake-repositories';
 import { createMockComments } from '@social-media-app/shared/test-utils/fixtures';
 import type { GraphQLContext } from '../../../context';
+import { createMockGraphQLContext } from '../../../__tests__/helpers/mock-context-factory.js';
 
 describe('commentsResolver', () => {
   let container: AwilixContainer<GraphQLContainer>;
@@ -34,10 +35,11 @@ describe('commentsResolver', () => {
     });
     resolver = createCommentsResolver(container);
 
+    const context = createMockGraphQLContext();
     const result = await resolver!(
       {} as any,
       { postId: 'post-1', limit: 20 },
-      {} as GraphQLContext,
+      context,
       {} as GraphQLResolveInfo
     );
 
@@ -55,10 +57,11 @@ describe('commentsResolver', () => {
     });
     resolver = createCommentsResolver(container);
 
+    const context = createMockGraphQLContext();
     const result = await resolver!(
       {} as any,
       { postId: 'post-1', limit: 20 },
-      {} as GraphQLContext,
+      context,
       {} as GraphQLResolveInfo
     );
 
@@ -75,10 +78,11 @@ describe('commentsResolver', () => {
     });
     resolver = createCommentsResolver(container);
 
+    const context = createMockGraphQLContext();
     const result = await resolver!(
       {} as any,
       { postId: 'post-1', limit: 20 },
-      {} as GraphQLContext,
+      context,
       {} as GraphQLResolveInfo
     );
 
