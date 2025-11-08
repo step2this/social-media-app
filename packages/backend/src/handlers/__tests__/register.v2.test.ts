@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { handler } from '../auth/register.v2.js' // Not created yet - will fail to import
+import { handler } from '../auth/register.v2.js'
 import type { RegisterRequest } from '@social-media-app/shared'
 import { createMockLambdaEvent } from '../../test/utils/test-factories.js'
 
