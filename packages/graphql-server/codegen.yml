@@ -5,6 +5,52 @@ generates:
       - typescript
       - typescript-resolvers
     config:
+      # ===================================
+      # Context Configuration
+      # ===================================
       contextType: "../../context#GraphQLContext"
-      useIndexSignature: true
-      maybeValue: T | null
+
+      # ===================================
+      # Type Mappers (Domain Types)
+      # ===================================
+      # Map GraphQL types to domain types from repositories
+      # This allows resolvers to return domain objects directly
+      # and field resolvers handle computed/relationship fields
+      mappers:
+        Profile: "../../domain/repositories/IProfileRepository#Profile as DomainProfile"
+        PublicProfile: "../../domain/repositories/IProfileRepository#Profile as DomainPublicProfile"
+        Post: "../../domain/repositories/IPostRepository#Post as DomainPost"
+        Auction: "../../domain/repositories/IAuctionRepository#Auction as DomainAuction"
+        Comment: "../../domain/repositories/ICommentRepository#Comment as DomainComment"
+        Notification: "../../domain/repositories/INotificationRepository#Notification as DomainNotification"
+
+      # ===================================
+      # Nullability & Type Safety
+      # ===================================
+      maybeValue: T | null              # null instead of undefined
+      inputMaybeValue: T | null         # consistent with outputs
+      enumsAsTypes: true                # Better TypeScript enums
+      useIndexSignature: false          # Stricter type checking (no arbitrary fields)
+
+      # ===================================
+      # Resolver Configuration
+      # ===================================
+      # Allow partial resolvers (field resolvers don't need all fields)
+      avoidOptionals: false
+
+      # Default mapper for flexible composition
+      defaultMapper: Partial<{T}>
+
+      # ===================================
+      # Import Configuration
+      # ===================================
+      # Generate ESM imports with type-only imports
+      useTypeImports: true
+
+      # ===================================
+      # Naming Conventions
+      # ===================================
+      # Keep GraphQL naming as-is
+      namingConvention:
+        typeNames: keep
+        enumValues: keep

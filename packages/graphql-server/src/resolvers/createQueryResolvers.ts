@@ -1,44 +1,44 @@
 /**
- * Type-Safe Resolver Factory
+ * Type-Safe Query Resolvers with Explicit Parameter Typing
  *
- * Creates GraphQL Query resolvers with dependency injection via Awilix container.
- * Each resolver explicitly extracts the container from context and calls the factory.
+ * This file contains all GraphQL Query resolvers with:
+ * - Explicit parameter typing (required for GraphQL Codegen union types)
+ * - Direct use case composition (no factory indirection)
+ * - Proper argument transformation (GraphQL args → use case inputs)
+ * - Type-safe error handling
+ * - Authentication guards where needed
  *
- * Architecture:
- * 1. Resolver gets context with Awilix container
- * 2. Resolver calls factory function with container
- * 3. Factory returns configured resolver
- * 4. Resolver executes and returns result
- *
- * Benefits:
- * - Type-safe: Full TypeScript inference
- * - Explicit: Clear dependency flow
- * - Debuggable: Easy to trace execution
+ * Architecture Notes:
+ * - All resolver parameters are explicitly typed (GraphQL Codegen best practice)
+ * - Some resolvers compose multiple use cases (e.g., handle lookup → posts fetch)
+ * - GraphQL args don't always match use case inputs 1:1 - translation is needed
+ * - Domain Connection<T> types are returned (field resolvers add computed fields)
  */
 
-import type { QueryResolvers } from '../schema/generated/types.js';
-import type { GraphQLResolveInfo } from 'graphql';
+import type {
+  QueryResolvers,
+  QueryMeArgs,
+  QueryProfileArgs,
+  QueryPostArgs,
+  QueryUserPostsArgs,
+  QueryFollowingFeedArgs,
+  QueryExploreFeedArgs,
+  QueryCommentsArgs,
+  QueryFollowStatusArgs,
+  QueryPostLikeStatusArgs,
+  QueryNotificationsArgs,
+  QueryUnreadNotificationsCountArgs,
+  QueryAuctionArgs,
+  QueryAuctionsArgs,
+  QueryBidsArgs,
+} from '../schema/generated/types.js';
 import type { GraphQLContext } from '../context.js';
-
-import { createMeResolver, createProfileResolver } from './profile/index.js';
-import { createPostResolver, createUserPostsResolver } from './post/index.js';
-import { createFollowingFeedResolver, createExploreFeedResolver } from './feed/index.js';
-import { createCommentsResolver } from './comment/commentsResolver.js';
-import { createFollowStatusResolver } from './follow/followStatusResolver.js';
-import { createPostLikeStatusResolver } from './like/postLikeStatusResolver.js';
-import { createNotificationsResolver } from './notification/notificationsResolver.js';
-import { createUnreadNotificationsCountResolver } from './notification/unreadNotificationsCountResolver.js';
-import { createAuctionResolver } from './auction/auctionResolver.js';
-import { createAuctionsResolver } from './auction/auctionsResolver.js';
-import { createBidsResolver } from './auction/bidsResolver.js';
+import { requireAuth } from '../infrastructure/resolvers/helpers/requireAuth.js';
+import { Handle, UserId, PostId, AuctionId, Cursor } from '../shared/types/index.js';
+import { ErrorFactory } from '../infrastructure/errors/ErrorFactory.js';
 
 /**
- * Create all Query resolvers with dependency injection
- *
- * Each resolver extracts the Awilix container from context and uses it
- * to get the appropriate use case. This pattern is explicit and type-safe.
- *
- * @returns Complete QueryResolvers object for GraphQL schema
+ * Create all Query resolvers with direct use case composition
  */
 export function createQueryResolvers(): QueryResolvers {
   return {
@@ -48,15 +48,23 @@ export function createQueryResolvers(): QueryResolvers {
      */
     me: async (
       _parent: unknown,
-      _args: unknown,
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
+      _args: QueryMeArgs,
+      context: GraphQLContext
     ) => {
-      const resolver = createMeResolver(context.container);
-      if (!resolver) {
-        throw new Error('Failed to create me resolver');
+      requireAuth(context, 'view profile');
+
+      const useCase = context.container.resolve('getCurrentUserProfile');
+      const result = await useCase.execute({ userId: UserId(context.userId) });
+
+      if (!result.success) {
+        throw ErrorFactory.internalServerError(result.error.message);
       }
-      return resolver(_parent, _args, context, info);
+
+      if (!result.data) {
+        throw ErrorFactory.notFound('Profile', context.userId);
+      }
+
+      return result.data as any;
     },
 
     /**
@@ -65,15 +73,21 @@ export function createQueryResolvers(): QueryResolvers {
      */
     profile: async (
       _parent: unknown,
-      args: { handle: string },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
+      args: QueryProfileArgs,
+      context: GraphQLContext
     ) => {
-      const resolver = createProfileResolver(context.container);
-      if (!resolver) {
-        throw new Error('Failed to create profile resolver');
+      const useCase = context.container.resolve('getProfileByHandle');
+      const result = await useCase.execute({ handle: Handle(args.handle) });
+
+      if (!result.success) {
+        throw ErrorFactory.internalServerError(result.error.message);
       }
-      return resolver(_parent, args, context, info);
+
+      if (!result.data) {
+        throw ErrorFactory.notFound('Profile', args.handle);
+      }
+
+      return result.data as any;
     },
 
     /**
@@ -82,32 +96,67 @@ export function createQueryResolvers(): QueryResolvers {
      */
     post: async (
       _parent: unknown,
-      args: { id: string },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
+      args: QueryPostArgs,
+      context: GraphQLContext
     ) => {
-      const resolver = createPostResolver(context.container);
-      if (!resolver) {
-        throw new Error('Failed to create post resolver');
+      const useCase = context.container.resolve('getPostById');
+      const result = await useCase.execute({ postId: PostId(args.id) });
+
+      if (!result.success) {
+        throw ErrorFactory.internalServerError(result.error.message);
       }
-      return resolver(_parent, args, context, info);
+
+      if (!result.data) {
+        throw ErrorFactory.notFound('Post', args.id);
+      }
+
+      return result.data as any;
     },
 
     /**
      * Query.userPosts - Get paginated posts for a user
      * Public - no authentication required
+     *
+     * Two-step process:
+     * 1. Look up profile by handle to get userId
+     * 2. Fetch posts for that userId
      */
     userPosts: async (
       _parent: unknown,
-      args: { handle: string; first?: number | null; after?: string | null },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
+      args: QueryUserPostsArgs,
+      context: GraphQLContext
     ) => {
-      const resolver = createUserPostsResolver(context.container);
-      if (!resolver) {
-        throw new Error('Failed to create userPosts resolver');
+      // Step 1: Look up profile by handle
+      const profileUseCase = context.container.resolve('getProfileByHandle');
+      const profileResult = await profileUseCase.execute({ handle: Handle(args.handle) });
+
+      if (!profileResult.success) {
+        throw ErrorFactory.internalServerError(profileResult.error.message);
       }
-      return resolver(_parent, args, context, info);
+
+      if (!profileResult.data) {
+        throw ErrorFactory.notFound('Profile', args.handle);
+      }
+
+      // Step 2: Fetch posts with pagination
+      const postsUseCase = context.container.resolve('getUserPosts');
+      const first = args.first ?? 20;
+      const after = args.after ? Cursor(args.after) : undefined;
+
+      if (first <= 0) {
+        throw ErrorFactory.badRequest('first must be greater than 0');
+      }
+
+      const postsResult = await postsUseCase.execute({
+        userId: UserId(profileResult.data.id),
+        pagination: { first, after },
+      });
+
+      if (!postsResult.success) {
+        throw ErrorFactory.internalServerError(postsResult.error.message);
+      }
+
+      return postsResult.data as any;
     },
 
     /**
@@ -116,15 +165,29 @@ export function createQueryResolvers(): QueryResolvers {
      */
     followingFeed: async (
       _parent: unknown,
-      args: { first?: number | null; after?: string | null },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
+      args: QueryFollowingFeedArgs,
+      context: GraphQLContext
     ) => {
-      const resolver = createFollowingFeedResolver(context.container);
-      if (!resolver) {
-        throw new Error('Failed to create followingFeed resolver');
+      requireAuth(context, 'view following feed');
+
+      const useCase = context.container.resolve('getFollowingFeed');
+      const first = args.first ?? 20;
+      const after = args.after ? Cursor(args.after) : undefined;
+
+      if (first <= 0) {
+        throw ErrorFactory.badRequest('first must be greater than 0');
       }
-      return resolver(_parent, args, context, info);
+
+      const result = await useCase.execute({
+        userId: UserId(context.userId),
+        pagination: { first, after },
+      });
+
+      if (!result.success) {
+        throw ErrorFactory.internalServerError(result.error.message);
+      }
+
+      return result.data as any;
     },
 
     /**
@@ -133,32 +196,55 @@ export function createQueryResolvers(): QueryResolvers {
      */
     exploreFeed: async (
       _parent: unknown,
-      args: { first?: number | null; after?: string | null },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
+      args: QueryExploreFeedArgs,
+      context: GraphQLContext
     ) => {
-      const resolver = createExploreFeedResolver(context.container);
-      if (!resolver) {
-        throw new Error('Failed to create exploreFeed resolver');
+      const useCase = context.container.resolve('getExploreFeed');
+      const first = args.first ?? 20;
+      const after = args.after ? Cursor(args.after) : undefined;
+
+      if (first <= 0) {
+        throw ErrorFactory.badRequest('first must be greater than 0');
       }
-      return resolver(_parent, args, context, info);
+
+      const result = await useCase.execute({
+        pagination: { first, after },
+      });
+
+      if (!result.success) {
+        throw ErrorFactory.internalServerError(result.error.message);
+      }
+
+      return result.data as any;
     },
 
     /**
      * Query.comments - Get paginated comments for a post
-     * Requires authentication
+     * Public - no authentication required
      */
     comments: async (
       _parent: unknown,
-      args: { postId: string; first?: number | null; after?: string | null },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
+      args: QueryCommentsArgs,
+      context: GraphQLContext
     ) => {
-      const resolver = createCommentsResolver(context.container);
-      if (!resolver) {
-        throw new Error('Failed to create comments resolver');
+      const useCase = context.container.resolve('getCommentsByPost');
+      const first = args.first ?? 20;
+      const after = args.after ? Cursor(args.after) : undefined;
+
+      if (first <= 0) {
+        throw ErrorFactory.badRequest('first must be greater than 0');
       }
-      return resolver(_parent, args, context, info);
+
+      const result = await useCase.execute({
+        postId: PostId(args.postId),
+        pagination: { first, after },
+      });
+
+      if (!result.success) {
+        throw ErrorFactory.internalServerError(result.error.message);
+      }
+
+      return result.data as any;
     },
 
     /**
@@ -167,15 +253,22 @@ export function createQueryResolvers(): QueryResolvers {
      */
     followStatus: async (
       _parent: unknown,
-      args: { followeeId: string },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
+      args: QueryFollowStatusArgs,
+      context: GraphQLContext
     ) => {
-      const resolver = createFollowStatusResolver(context.container);
-      if (!resolver) {
-        throw new Error('Failed to create followStatus resolver');
+      requireAuth(context, 'check follow status');
+
+      const useCase = context.container.resolve('getFollowStatus');
+      const result = await useCase.execute({
+        followerId: UserId(context.userId),
+        followeeId: UserId(args.userId),
+      });
+
+      if (!result.success) {
+        throw ErrorFactory.internalServerError(result.error.message);
       }
-      return resolver(_parent, args, context, info);
+
+      return result.data as any;
     },
 
     /**
@@ -184,15 +277,22 @@ export function createQueryResolvers(): QueryResolvers {
      */
     postLikeStatus: async (
       _parent: unknown,
-      args: { postId: string },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
+      args: QueryPostLikeStatusArgs,
+      context: GraphQLContext
     ) => {
-      const resolver = createPostLikeStatusResolver(context.container);
-      if (!resolver) {
-        throw new Error('Failed to create postLikeStatus resolver');
+      requireAuth(context, 'check like status');
+
+      const useCase = context.container.resolve('getPostLikeStatus');
+      const result = await useCase.execute({
+        userId: UserId(context.userId),
+        postId: PostId(args.postId),
+      });
+
+      if (!result.success) {
+        throw ErrorFactory.internalServerError(result.error.message);
       }
-      return resolver(_parent, args, context, info);
+
+      return result.data as any;
     },
 
     /**
@@ -201,15 +301,29 @@ export function createQueryResolvers(): QueryResolvers {
      */
     notifications: async (
       _parent: unknown,
-      args: { first?: number | null; after?: string | null },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
+      args: QueryNotificationsArgs,
+      context: GraphQLContext
     ) => {
-      const resolver = createNotificationsResolver(context.container);
-      if (!resolver) {
-        throw new Error('Failed to create notifications resolver');
+      requireAuth(context, 'view notifications');
+
+      const useCase = context.container.resolve('getNotifications');
+      const first = args.first ?? 20;
+      const after = args.after ? Cursor(args.after) : undefined;
+
+      if (first <= 0) {
+        throw ErrorFactory.badRequest('first must be greater than 0');
       }
-      return resolver(_parent, args, context, info);
+
+      const result = await useCase.execute({
+        userId: UserId(context.userId),
+        pagination: { first, after },
+      });
+
+      if (!result.success) {
+        throw ErrorFactory.internalServerError(result.error.message);
+      }
+
+      return result.data as any;
     },
 
     /**
@@ -218,15 +332,19 @@ export function createQueryResolvers(): QueryResolvers {
      */
     unreadNotificationsCount: async (
       _parent: unknown,
-      _args: unknown,
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
+      _args: QueryUnreadNotificationsCountArgs,
+      context: GraphQLContext
     ) => {
-      const resolver = createUnreadNotificationsCountResolver(context.container);
-      if (!resolver) {
-        throw new Error('Failed to create unreadNotificationsCount resolver');
+      requireAuth(context, 'view notification count');
+
+      const useCase = context.container.resolve('getUnreadNotificationsCount');
+      const result = await useCase.execute({ userId: UserId(context.userId) });
+
+      if (!result.success) {
+        throw ErrorFactory.internalServerError(result.error.message);
       }
-      return resolver(_parent, _args, context, info);
+
+      return result.data as any;
     },
 
     /**
@@ -235,15 +353,21 @@ export function createQueryResolvers(): QueryResolvers {
      */
     auction: async (
       _parent: unknown,
-      args: { id: string },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
+      args: QueryAuctionArgs,
+      context: GraphQLContext
     ) => {
-      const resolver = createAuctionResolver(context.container);
-      if (!resolver) {
-        throw new Error('Failed to create auction resolver');
+      const useCase = context.container.resolve('getAuction');
+      const result = await useCase.execute({ auctionId: AuctionId(args.id) });
+
+      if (!result.success) {
+        throw ErrorFactory.internalServerError(result.error.message);
       }
-      return resolver(_parent, args, context, info);
+
+      if (!result.data) {
+        throw ErrorFactory.notFound('Auction', args.id);
+      }
+
+      return result.data as any;
     },
 
     /**
@@ -252,15 +376,21 @@ export function createQueryResolvers(): QueryResolvers {
      */
     auctions: async (
       _parent: unknown,
-      args: { status?: string | null; limit?: number | null; cursor?: string | null },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
+      args: QueryAuctionsArgs,
+      context: GraphQLContext
     ) => {
-      const resolver = createAuctionsResolver(context.container);
-      if (!resolver) {
-        throw new Error('Failed to create auctions resolver');
+      const useCase = context.container.resolve('getAuctions');
+      const result = await useCase.execute({
+        status: args.status ?? undefined,
+        limit: args.limit ?? undefined,
+        cursor: args.cursor ?? undefined,
+      });
+
+      if (!result.success) {
+        throw ErrorFactory.internalServerError(result.error.message);
       }
-      return resolver(_parent, args, context, info);
+
+      return result.data as any;
     },
 
     /**
@@ -269,15 +399,21 @@ export function createQueryResolvers(): QueryResolvers {
      */
     bids: async (
       _parent: unknown,
-      args: { auctionId: string; limit?: number | null; cursor?: string | null },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
+      args: QueryBidsArgs,
+      context: GraphQLContext
     ) => {
-      const resolver = createBidsResolver(context.container);
-      if (!resolver) {
-        throw new Error('Failed to create bids resolver');
+      const useCase = context.container.resolve('getBidHistory');
+      const result = await useCase.execute({
+        auctionId: AuctionId(args.auctionId),
+        limit: args.limit ?? undefined,
+        cursor: args.cursor ?? undefined,
+      });
+
+      if (!result.success) {
+        throw ErrorFactory.internalServerError(result.error.message);
       }
-      return resolver(_parent, args, context, info);
+
+      return result.data as any;
     },
   };
 }
