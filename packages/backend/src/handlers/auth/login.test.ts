@@ -1,112 +1,199 @@
-import { describe, it, expect } from 'vitest';
-import { handler } from './login.js';
-import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
-import type { LoginRequest } from '@social-media-app/shared';
+/**
+ * TDD Tests for Login Handler (Middy Version)
+ *
+ * Behavioral tests ensuring Middy migration maintains functionality.
+ *
+ * Principles:
+ * - Test behavior, not implementation
+ * - DRY with shared test utilities
+ * - No mocks - test actual handler behavior with real authService
+ * - Edge-first testing (failures before success)
+ */
+
+import { describe, it, expect, beforeEach } from 'vitest'
+import { handler } from './login.js'
+import type { LoginRequest, RegisterRequest } from '@social-media-app/shared'
+import { createMockLambdaEvent } from '../../test/utils/test-factories.js'
+import { authService } from '../../utils/services.js'
 
 /**
- * Behavior tests for login handler with middleware composition
- *
- * Tests WHAT the handler does (behavior), not HOW it does it (implementation).
- * No mocks - middleware handles validation, error responses, logging automatically.
+ * Setup: Create a test user before login tests
+ * This ensures we have valid credentials to test against
  */
-describe('Login Handler - Behavior Tests', () => {
-  describe('Successful Login', () => {
-    it('should return 200 with tokens for valid credentials', async () => {
-      const validRequest: LoginRequest = {
-        email: 'test@example.com',
-        password: 'Test123!'
-      };
+async function createTestUser(): Promise<{ email: string; password: string }> {
+  const timestamp = Date.now()
+  const credentials = {
+    email: `login-test-${timestamp}@example.com`,
+    password: 'TestPass123!',
+    username: `logintest${timestamp}`
+  }
 
-      const event = createMockAPIGatewayEvent({
-        method: 'POST',
-        path: '/auth/login',
-        routeKey: 'POST /auth/login',
-        body: validRequest
-      });
+  const registerRequest: RegisterRequest = {
+    email: credentials.email,
+    password: credentials.password,
+    username: credentials.username
+  }
 
-      const result = await handler(event);
+  await authService.register(registerRequest)
 
-      // Test behavior: Handler returns successful response with tokens
-      expect(result.statusCode).toBe(200);
+  return {
+    email: credentials.email,
+    password: credentials.password
+  }
+}
 
-      const body = JSON.parse(result.body!);
-      expect(body).toHaveProperty('tokens');
-      expect(body.tokens).toHaveProperty('accessToken');
-      expect(body.tokens).toHaveProperty('refreshToken');
-    });
-  });
-
+describe('Login Handler V2 (Middy) - Behavior Tests', () => {
   describe('Validation Errors', () => {
     it('should return 400 for invalid email format', async () => {
       const invalidRequest = {
         email: 'not-an-email',
         password: 'ValidPass123!'
-      };
+      }
 
-      const event = createMockAPIGatewayEvent({
-        method: 'POST',
-        path: '/auth/login',
-        routeKey: 'POST /auth/login',
-        body: invalidRequest
-      });
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(invalidRequest)
+      })
 
-      const result = await handler(event);
+      const result = await handler(event, {} as any)
 
-      // Test behavior: withValidation middleware rejects invalid email
-      expect(result.statusCode).toBe(400);
+      expect(result.statusCode).toBe(400)
+    })
 
-      const body = JSON.parse(result.body!);
-      expect(body.error).toBe('Validation failed');
-    });
+    it('should return 400 for missing email', async () => {
+      const invalidRequest = {
+        password: 'ValidPass123!'
+      }
 
-    it('should return 400 for missing required fields', async () => {
-      const event = createMockAPIGatewayEvent({
-        method: 'POST',
-        path: '/auth/login',
-        routeKey: 'POST /auth/login',
-        body: {} // Empty body
-      });
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(invalidRequest)
+      })
 
-      const result = await handler(event);
+      const result = await handler(event, {} as any)
 
-      // Test behavior: withValidation middleware rejects empty body
-      expect(result.statusCode).toBe(400);
+      expect(result.statusCode).toBe(400)
+    })
 
-      const body = JSON.parse(result.body!);
-      expect(body.error).toBe('Validation failed');
-    });
-  });
+    it('should return 400 for missing password', async () => {
+      const invalidRequest = {
+        email: 'test@example.com'
+      }
 
-  describe('Response Format', () => {
-    it('should include CORS headers', async () => {
-      const event = createMockAPIGatewayEvent({
-        method: 'POST',
-        path: '/auth/login',
-        routeKey: 'POST /auth/login',
-        body: {}
-      });
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(invalidRequest)
+      })
 
-      const result = await handler(event);
+      const result = await handler(event, {} as any)
 
-      // Test behavior: Responses include CORS headers
+      expect(result.statusCode).toBe(400)
+    })
+
+    it('should return 400 for empty email', async () => {
+      const invalidRequest = {
+        email: '',
+        password: 'ValidPass123!'
+      }
+
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(invalidRequest)
+      })
+
+      const result = await handler(event, {} as any)
+
+      expect(result.statusCode).toBe(400)
+    })
+  })
+
+  describe('Successful Login', () => {
+    let testCredentials: { email: string; password: string }
+
+    beforeEach(async () => {
+      // Create a test user for login tests
+      testCredentials = await createTestUser()
+    })
+
+    it('should return 200 with tokens for valid credentials', async () => {
+      const validRequest: LoginRequest = {
+        email: testCredentials.email,
+        password: testCredentials.password
+      }
+
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(validRequest)
+      })
+
+      const result = await handler(event, {} as any)
+
+      expect(result.statusCode).toBe(200)
+
+      const body = JSON.parse(result.body!)
+      expect(body).toHaveProperty('tokens')
+      expect(body.tokens).toHaveProperty('accessToken')
+      expect(body.tokens).toHaveProperty('refreshToken')
+    })
+
+    it('should include CORS headers in response', async () => {
+      const validRequest: LoginRequest = {
+        email: testCredentials.email,
+        password: testCredentials.password
+      }
+
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(validRequest)
+      })
+
+      const result = await handler(event, {} as any)
+
       expect(result.headers).toMatchObject({
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
-      });
-    });
+      })
+    })
+  })
 
-    it('should include correlation ID in response headers', async () => {
-      const event = createMockAPIGatewayEvent({
-        method: 'POST',
-        path: '/auth/login',
-        routeKey: 'POST /auth/login',
-        body: {}
-      });
+  describe('Authentication Errors', () => {
+    it('should return 401 for non-existent user', async () => {
+      const invalidRequest: LoginRequest = {
+        email: 'nonexistent@example.com',
+        password: 'SomePassword123!'
+      }
 
-      const result = await handler(event);
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(invalidRequest)
+      })
 
-      // Test behavior: withLogging middleware adds correlation ID
-      expect(result.headers).toHaveProperty('X-Correlation-Id');
-    });
-  });
-});
+      const result = await handler(event, {} as any)
+
+      expect(result.statusCode).toBe(401)
+    })
+
+    it('should return 401 for incorrect password', async () => {
+      const testCredentials = await createTestUser()
+
+      const invalidRequest: LoginRequest = {
+        email: testCredentials.email,
+        password: 'WrongPassword123!'
+      }
+
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(invalidRequest)
+      })
+
+      const result = await handler(event, {} as any)
+
+      expect(result.statusCode).toBe(401)
+    })
+  })
+
+  describe('Edge Cases', () => {
+    it('should reject malformed JSON', async () => {
+      const event = createMockLambdaEvent({
+        body: 'not valid json{{'
+      })
+
+      const result = await handler(event, {} as any)
+
+      // Middy's httpJsonBodyParser returns 415 (Unsupported Media Type) for malformed JSON
+      expect(result.statusCode).toBe(415)
+    })
+  })
+})

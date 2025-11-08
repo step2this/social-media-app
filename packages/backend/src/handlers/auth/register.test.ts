@@ -1,148 +1,210 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { handler } from './register.js';
-import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
-import type { RegisterRequest } from '@social-media-app/shared';
+/**
+ * TDD Tests for Register Handler (Middy Version)
+ *
+ * Behavioral tests ensuring Middy migration maintains functionality.
+ *
+ * Principles:
+ * - Test behavior, not implementation
+ * - DRY with shared test utilities
+ * - No mocks - test actual handler behavior with real authService
+ * - Edge-first testing (failures before success)
+ */
+
+import { describe, it, expect } from 'vitest'
+import { handler } from './register.js'
+import type { RegisterRequest } from '@social-media-app/shared'
+import { createMockLambdaEvent } from '../../test/utils/test-factories.js'
 
 /**
- * Behavior tests for register handler with middleware composition
- *
- * Tests WHAT the handler does (behavior), not HOW it does it (implementation).
- * No mocks - middleware handles validation, error responses, logging automatically.
- *
- * Test categories:
- * 1. Successful registration
- * 2. Validation errors (handled by withValidation middleware)
- * 3. Business logic errors (handled by withErrorHandling middleware)
+ * DRY Helper: Create unique register request to avoid conflicts
  */
-describe('Register Handler - Behavior Tests', () => {
-  describe('Successful Registration', () => {
-    it('should return 201 with user data for valid registration', async () => {
-      const validRequest: RegisterRequest = {
-        email: 'newuser@example.com',
-        password: 'SecurePass123!',
-        username: 'newuser'
-      };
+function createUniqueRegisterRequest(): RegisterRequest {
+  const timestamp = Date.now()
+  return {
+    email: `test-${timestamp}@example.com`,
+    password: 'ValidPass123!',
+    username: `testuser${timestamp}`
+  }
+}
 
-      const event = createMockAPIGatewayEvent({
-        method: 'POST',
-        path: '/auth/register',
-        routeKey: 'POST /auth/register',
-        body: validRequest
-      });
-
-      const result = await handler(event);
-
-      // Test behavior: Handler returns successful response
-      expect(result.statusCode).toBe(201);
-
-      const body = JSON.parse(result.body!);
-      expect(body).toHaveProperty('user');
-      expect(body.user).toMatchObject({
-        email: validRequest.email,
-        username: validRequest.username
-      });
-    });
-  });
-
+describe('Register Handler V2 (Middy) - Behavior Tests', () => {
   describe('Validation Errors', () => {
     it('should return 400 for invalid email format', async () => {
       const invalidRequest = {
         email: 'not-an-email',
-        password: 'SecurePass123!',
-        username: 'validuser'
-      };
+        password: 'ValidPass123!',
+        username: 'testuser'
+      }
 
-      const event = createMockAPIGatewayEvent({
-        method: 'POST',
-        path: '/auth/register',
-        routeKey: 'POST /auth/register',
-        body: invalidRequest
-      });
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(invalidRequest)
+      })
 
-      const result = await handler(event);
+      const result = await handler(event, {} as any)
 
-      // Test behavior: withValidation middleware rejects invalid email
-      expect(result.statusCode).toBe(400);
-
-      const body = JSON.parse(result.body!);
-      expect(body.error).toBe('Validation failed');
-      expect(body.details).toBeDefined();
-    });
+      expect(result.statusCode).toBe(400)
+    })
 
     it('should return 400 for weak password', async () => {
       const invalidRequest = {
-        email: 'valid@example.com',
-        password: 'weak',
-        username: 'validuser'
-      };
+        email: 'test@example.com',
+        password: 'weak', // No uppercase, no special char, too short
+        username: 'testuser'
+      }
 
-      const event = createMockAPIGatewayEvent({
-        method: 'POST',
-        path: '/auth/register',
-        routeKey: 'POST /auth/register',
-        body: invalidRequest
-      });
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(invalidRequest)
+      })
 
-      const result = await handler(event);
+      const result = await handler(event, {} as any)
 
-      // Test behavior: withValidation middleware rejects weak password
-      expect(result.statusCode).toBe(400);
-
-      const body = JSON.parse(result.body!);
-      expect(body.error).toBe('Validation failed');
-    });
+      expect(result.statusCode).toBe(400)
+    })
 
     it('should return 400 for missing required fields', async () => {
-      const event = createMockAPIGatewayEvent({
-        method: 'POST',
-        path: '/auth/register',
-        routeKey: 'POST /auth/register',
-        body: {} // Empty body
-      });
+      const event = createMockLambdaEvent({
+        body: JSON.stringify({}) // Empty body
+      })
 
-      const result = await handler(event);
+      const result = await handler(event, {} as any)
 
-      // Test behavior: withValidation middleware rejects empty body
-      expect(result.statusCode).toBe(400);
+      expect(result.statusCode).toBe(400)
+    })
 
-      const body = JSON.parse(result.body!);
-      expect(body.error).toBe('Validation failed');
-    });
-  });
+    it('should return 400 for invalid username (too short)', async () => {
+      const invalidRequest = {
+        email: 'test@example.com',
+        password: 'ValidPass123!',
+        username: 'ab' // Too short (min 3)
+      }
 
-  describe('Response Format', () => {
-    it('should include CORS headers in all responses', async () => {
-      const event = createMockAPIGatewayEvent({
-        method: 'POST',
-        path: '/auth/register',
-        routeKey: 'POST /auth/register',
-        body: {}
-      });
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(invalidRequest)
+      })
 
-      const result = await handler(event);
+      const result = await handler(event, {} as any)
 
-      // Test behavior: Responses include CORS headers
+      expect(result.statusCode).toBe(400)
+    })
+  })
+
+  describe('Successful Registration', () => {
+    it('should return 201 with user and tokens for valid request', async () => {
+      const validRequest = createUniqueRegisterRequest()
+
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(validRequest)
+      })
+
+      const result = await handler(event, {} as any)
+
+      expect(result.statusCode).toBe(201)
+
+      const body = JSON.parse(result.body!)
+      expect(body).toHaveProperty('user')
+      expect(body.user).toHaveProperty('id')
+      expect(body.user.email).toBe(validRequest.email)
+      expect(body.user.username).toBe(validRequest.username)
+
+      expect(body).toHaveProperty('tokens')
+      expect(body.tokens).toHaveProperty('accessToken')
+      expect(body.tokens).toHaveProperty('refreshToken')
+      expect(body.tokens).toHaveProperty('expiresIn')
+    })
+
+    it('should include CORS headers in response', async () => {
+      const validRequest = createUniqueRegisterRequest()
+
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(validRequest)
+      })
+
+      const result = await handler(event, {} as any)
+
       expect(result.headers).toMatchObject({
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-      });
-    });
+        'Access-Control-Allow-Origin': '*'
+      })
+    })
+  })
 
-    it('should include correlation ID in response headers', async () => {
-      const event = createMockAPIGatewayEvent({
-        method: 'POST',
-        path: '/auth/register',
-        routeKey: 'POST /auth/register',
-        body: {}
-      });
+  describe('Conflict Errors', () => {
+    it('should return 409 when email already exists', async () => {
+      const request = createUniqueRegisterRequest()
 
-      const result = await handler(event);
+      // First registration - should succeed
+      const event1 = createMockLambdaEvent({
+        body: JSON.stringify(request)
+      })
+      const result1 = await handler(event1, {} as any)
+      expect(result1.statusCode).toBe(201)
 
-      // Test behavior: withLogging middleware adds correlation ID
-      expect(result.headers).toHaveProperty('X-Correlation-Id');
-      expect(result.headers!['X-Correlation-Id']).toBeDefined();
-    });
-  });
-});
+      // Second registration with same email - should fail
+      const request2 = {
+        ...request,
+        username: `different${Date.now()}` // Different username, same email
+      }
+      const event2 = createMockLambdaEvent({
+        body: JSON.stringify(request2)
+      })
+      const result2 = await handler(event2, {} as any)
+
+      expect(result2.statusCode).toBe(409)
+      const body = JSON.parse(result2.body!)
+      expect(body.error).toContain('Email already registered')
+    })
+
+    it('should return 409 when username already exists', async () => {
+      const request1 = createUniqueRegisterRequest()
+
+      // First registration - should succeed
+      const event1 = createMockLambdaEvent({
+        body: JSON.stringify(request1)
+      })
+      const result1 = await handler(event1, {} as any)
+      expect(result1.statusCode).toBe(201)
+
+      // Second registration with same username - should fail
+      const request2: RegisterRequest = {
+        email: `different-${Date.now()}@example.com`, // Different email
+        password: 'ValidPass123!',
+        username: request1.username // Same username
+      }
+      const event2 = createMockLambdaEvent({
+        body: JSON.stringify(request2)
+      })
+      const result2 = await handler(event2, {} as any)
+
+      expect(result2.statusCode).toBe(409)
+      const body = JSON.parse(result2.body!)
+      expect(body.error).toContain('Username already taken')
+    })
+  })
+
+  describe('Edge Cases', () => {
+    it('should reject empty string email', async () => {
+      const invalidRequest = {
+        email: '',
+        password: 'ValidPass123!',
+        username: 'testuser'
+      }
+
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(invalidRequest)
+      })
+
+      const result = await handler(event, {} as any)
+      expect(result.statusCode).toBe(400)
+    })
+
+    it('should reject malformed JSON', async () => {
+      const event = createMockLambdaEvent({
+        body: 'not valid json{{'
+      })
+
+      const result = await handler(event, {} as any)
+      // Middy's httpJsonBodyParser returns 415 (Unsupported Media Type) for malformed JSON
+      expect(result.statusCode).toBe(415)
+    })
+  })
+})

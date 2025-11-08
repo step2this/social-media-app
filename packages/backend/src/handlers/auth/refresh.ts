@@ -1,31 +1,46 @@
-import { RefreshTokenRequestSchema } from '@social-media-app/shared';
-import { compose } from '../../infrastructure/middleware/compose.js';
-import { withErrorHandling } from '../../infrastructure/middleware/withErrorHandling.js';
-import { withLogging } from '../../infrastructure/middleware/withLogging.js';
-import { withValidation } from '../../infrastructure/middleware/withValidation.js';
-import { withServices } from '../../infrastructure/middleware/withServices.js';
-import { successResponse } from '../../utils/responses.js';
-
 /**
- * Lambda handler for token refresh
+ * Refresh Token Handler (Middy Version)
  *
- * Validates and refreshes a user's JWT tokens using their refresh token.
+ * Migrated from custom middleware composition to Middy.
+ * Validates and refreshes JWT tokens using a refresh token.
  *
  * @route POST /auth/refresh
- * @middleware withErrorHandling - Converts errors to HTTP responses (including auth errors)
- * @middleware withLogging - Structured logging with correlation IDs
- * @middleware withValidation - Validates request body against RefreshTokenRequestSchema
- * @middleware withServices - Injects authService into context
  */
-export const handler = compose(
-  withErrorHandling(),
-  withLogging(),
-  withValidation(RefreshTokenRequestSchema),
-  withServices(['authService']),
-  async (_event, context) => {
-    // Business logic only - middleware handles validation, logging, and errors
-    // Non-null assertion safe: withServices middleware guarantees authService exists
-    const response = await context.services!.authService.refreshToken(context.validatedInput);
-    return successResponse(200, response);
+
+import { RefreshTokenRequestSchema, type RefreshTokenRequest } from '@social-media-app/shared'
+import { authService } from '../../utils/services.js'
+import { createHandler } from '../../infrastructure/middleware-v2/index.js'
+import type { APIGatewayProxyHandlerV2 } from 'aws-lambda'
+
+/**
+ * Handler implementation - pure business logic
+ *
+ * No middleware concerns - Middy handles:
+ * - JSON parsing
+ * - Validation
+ * - Error handling
+ * - Header normalization
+ */
+const refreshHandler: APIGatewayProxyHandlerV2 = async (event) => {
+  // Type-safe access to validated input
+  const request = event.validatedBody as RefreshTokenRequest
+
+  // Business logic only - delegate to authService
+  const response = await authService.refreshToken(request)
+
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*'
+    },
+    body: JSON.stringify(response)
   }
-);
+}
+
+/**
+ * Export Middy-wrapped handler with middleware stack
+ */
+export const handler = createHandler(refreshHandler, {
+  validation: RefreshTokenRequestSchema
+})
