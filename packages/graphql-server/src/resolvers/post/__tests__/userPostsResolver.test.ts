@@ -7,21 +7,31 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GraphQLError } from 'graphql';
-import { Container } from '../../../infrastructure/di/Container.js';
+import { createContainer, asValue, InjectionMode, type AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../../infrastructure/di/awilix-container.js';
 import { createUserPostsResolver } from '../userPostsResolver.js';
 import { Cursor } from '../../../shared/types/index.js';
 
 describe('userPostsResolver', () => {
-  let container: Container;
+  let container: AwilixContainer<GraphQLContainer>;
   let mockProfileUseCase: { execute: ReturnType<typeof vi.fn> };
   let mockPostsUseCase: { execute: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    container = new Container();
+    // Create Awilix container with CLASSIC injection mode
+    container = createContainer<GraphQLContainer>({
+      injectionMode: InjectionMode.CLASSIC,
+    });
+
+    // Create mock use cases
     mockProfileUseCase = { execute: vi.fn() };
     mockPostsUseCase = { execute: vi.fn() };
-    container.register('GetProfileByHandle', () => mockProfileUseCase as any);
-    container.register('GetUserPosts', () => mockPostsUseCase as any);
+
+    // Register mock use cases with camelCase keys (Awilix pattern)
+    container.register({
+      getProfileByHandle: asValue(mockProfileUseCase as any),
+      getUserPosts: asValue(mockPostsUseCase as any),
+    });
   });
 
   describe('Success cases', () => {

@@ -16,12 +16,14 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { createContainer, asValue, InjectionMode, type AwilixContainer } from 'awilix';
 import { PublicProfile as PublicProfileResolver } from '../../src/schema/resolvers/Profile.js';
 import { Post as PostResolver } from '../../src/schema/resolvers/Post.js';
 import { Comment as CommentResolver } from '../../src/schema/resolvers/Comment.js';
 import { ProfileService, FollowService, LikeService, PostService, CommentService } from '@social-media-app/dal';
 import { createLoaders } from '../../src/dataloaders/index.js';
 import type { GraphQLContext } from '../../src/context.js';
+import type { GraphQLContainer } from '../../src/infrastructure/di/awilix-container.js';
 import type { Profile, PublicProfile, Post, Comment } from '@social-media-app/shared';
 
 describe('Field Resolvers', () => {
@@ -30,6 +32,7 @@ describe('Field Resolvers', () => {
   let mockPostService: PostService;
   let mockLikeService: LikeService;
   let mockFollowService: FollowService;
+  let mockContainer: AwilixContainer<GraphQLContainer>;
 
   beforeEach(() => {
     // Create pure mock service objects (no real instantiation, no spies)
@@ -50,8 +53,27 @@ describe('Field Resolvers', () => {
       getFollowStatus: vi.fn(),
     } as unknown as FollowService;
 
+    const mockAuctionService = {} as any;
+
+    // Create Awilix container and register services with camelCase keys using asValue()
+    mockContainer = createContainer<GraphQLContainer>({
+      injectionMode: InjectionMode.CLASSIC,
+    });
+
+    // Register DAL services with camelCase keys
+    mockContainer.register({
+      profileService: asValue(mockProfileService),
+      postService: asValue(mockPostService),
+      commentService: asValue(mockCommentService),
+      followService: asValue(mockFollowService),
+      likeService: asValue(mockLikeService),
+      notificationService: asValue({} as any),
+      auctionService: asValue(mockAuctionService),
+    });
+
     mockContext = {
       userId: 'test-user-123',
+      correlationId: 'test-correlation-id',
       dynamoClient: {} as any,
       tableName: 'test-table',
       services: {
@@ -63,14 +85,15 @@ describe('Field Resolvers', () => {
         feedService: {} as any,
         notificationService: {} as any,
         authService: {} as any,
-        auctionService: {} as any,
+        auctionService: mockAuctionService,
       },
       loaders: createLoaders({
         profileService: mockProfileService,
         postService: mockPostService,
         likeService: mockLikeService,
-        auctionService: {} as any,
+        auctionService: mockAuctionService,
       }, 'test-user-123'),
+      container: mockContainer,
     };
     vi.clearAllMocks();
   });
@@ -99,7 +122,7 @@ describe('Field Resolvers', () => {
         followingCount: 50,
       });
 
-      const result = await ProfileResolver.isFollowing(
+      const result = await PublicProfileResolver.isFollowing(
         parentProfile as any,
         {},
         mockContext,
@@ -128,7 +151,7 @@ describe('Field Resolvers', () => {
         followingCount: 50,
       });
 
-      const result = await ProfileResolver.isFollowing(
+      const result = await PublicProfileResolver.isFollowing(
         parentProfile as any,
         {},
         mockContext,
@@ -139,15 +162,47 @@ describe('Field Resolvers', () => {
     });
 
     it('should return null when user is not authenticated', async () => {
+      const mockAuctionService = {} as any;
+      const mockCommentService = {} as unknown as CommentService;
+      
+      // Create container for unauthenticated context
+      const unauthContainer = createContainer<GraphQLContainer>({
+        injectionMode: InjectionMode.CLASSIC,
+      });
+
+      unauthContainer.register({
+        profileService: asValue(mockProfileService),
+        postService: asValue(mockPostService),
+        commentService: asValue(mockCommentService),
+        followService: asValue(mockFollowService),
+        likeService: asValue(mockLikeService),
+        notificationService: asValue({} as any),
+        auctionService: asValue(mockAuctionService),
+      });
+
       const unauthContext: GraphQLContext = {
         userId: null,
+        correlationId: 'test-correlation-id',
         dynamoClient: {} as any,
         tableName: 'test-table',
+        services: {
+          profileService: mockProfileService,
+          postService: mockPostService,
+          likeService: mockLikeService,
+          commentService: mockCommentService,
+          followService: mockFollowService,
+          feedService: {} as any,
+          notificationService: {} as any,
+          authService: {} as any,
+          auctionService: mockAuctionService,
+        },
         loaders: createLoaders({
           profileService: mockProfileService,
           postService: mockPostService,
           likeService: mockLikeService,
+          auctionService: mockAuctionService,
         }, null),
+        container: unauthContainer,
       };
 
       const parentProfile: PublicProfile = {
@@ -162,7 +217,7 @@ describe('Field Resolvers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      const result = await ProfileResolver.isFollowing(
+      const result = await PublicProfileResolver.isFollowing(
         parentProfile as any,
         {},
         unauthContext,
@@ -185,7 +240,7 @@ describe('Field Resolvers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       };
 
-      const result = await ProfileResolver.isFollowing(
+      const result = await PublicProfileResolver.isFollowing(
         parentProfile as any,
         {},
         mockContext,
@@ -331,15 +386,47 @@ describe('Field Resolvers', () => {
     });
 
     it('should return null when user is not authenticated', async () => {
+      const mockAuctionService = {} as any;
+      const mockCommentService = {} as unknown as CommentService;
+      
+      // Create container for unauthenticated context
+      const unauthContainer = createContainer<GraphQLContainer>({
+        injectionMode: InjectionMode.CLASSIC,
+      });
+
+      unauthContainer.register({
+        profileService: asValue(mockProfileService),
+        postService: asValue(mockPostService),
+        commentService: asValue(mockCommentService),
+        followService: asValue(mockFollowService),
+        likeService: asValue(mockLikeService),
+        notificationService: asValue({} as any),
+        auctionService: asValue(mockAuctionService),
+      });
+
       const unauthContext: GraphQLContext = {
         userId: null,
+        correlationId: 'test-correlation-id',
         dynamoClient: {} as any,
         tableName: 'test-table',
+        services: {
+          profileService: mockProfileService,
+          postService: mockPostService,
+          likeService: mockLikeService,
+          commentService: mockCommentService,
+          followService: mockFollowService,
+          feedService: {} as any,
+          notificationService: {} as any,
+          authService: {} as any,
+          auctionService: mockAuctionService,
+        },
         loaders: createLoaders({
           profileService: mockProfileService,
           postService: mockPostService,
           likeService: mockLikeService,
+          auctionService: mockAuctionService,
         }, null),
+        container: unauthContainer,
       };
 
       const parentPost: Post = {

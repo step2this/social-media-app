@@ -27,8 +27,11 @@ import { Query } from '../../src/schema/resolvers/Query.js';
 import { ProfileService, NotificationService, FeedService } from '@social-media-app/dal';
 import type { GraphQLContext } from '../../src/context.js';
 import type { Profile, Notification } from '@social-media-app/shared';
+import { createContainer, asValue, InjectionMode, type AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../src/infrastructure/di/awilix-container.js';
 
 describe('Profile & Notification Resolvers', () => {
+  let container: AwilixContainer<GraphQLContainer>;
   let mockContext: GraphQLContext;
   let mockProfileService: ProfileService;
   let mockNotificationService: NotificationService;
@@ -71,7 +74,44 @@ describe('Profile & Notification Resolvers', () => {
         auctionService: {} as any,
       },
       loaders: {} as any,
+      container: undefined as any, // Will be set after container creation
     };
+
+    // Create Awilix container with CLASSIC injection mode
+    container = createContainer<GraphQLContainer>({
+      injectionMode: InjectionMode.CLASSIC,
+    });
+
+    // Register services with camelCase keys using asValue
+    container.register({
+      profileService: asValue(mockProfileService as any),
+      notificationService: asValue(mockNotificationService as any),
+      feedService: asValue(mockFeedService as any),
+      context: asValue(mockContext),
+      getNotifications: asValue({
+        execute: async (...args: any[]) => {
+          const result = await mockNotificationService.getNotifications(...args);
+          return {
+            success: true,
+            data: result,
+            error: undefined,
+          };
+        },
+      } as any),
+      getUnreadNotificationsCount: asValue({
+        execute: async (...args: any[]) => {
+          const count = await mockNotificationService.getUnreadCount(...args);
+          return {
+            success: true,
+            data: count,
+            error: undefined,
+          };
+        },
+      } as any),
+    });
+
+    // Add container to context
+    mockContext.container = container;
 
     // Clear all mocks before each test
     vi.clearAllMocks();
