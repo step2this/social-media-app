@@ -6,18 +6,23 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Container } from '../../../infrastructure/di/Container.js';
+import { createContainer, asValue, InjectionMode, type AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../../infrastructure/di/awilix-container.js';
 import { createExploreFeedResolver } from '../exploreFeedResolver.js';
 import { UserId, Cursor } from '../../../shared/types/index.js';
 
 describe('exploreFeedResolver', () => {
-  let container: Container;
+  let container: AwilixContainer<GraphQLContainer>;
   let mockUseCase: { execute: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    container = new Container();
+    container = createContainer<GraphQLContainer>({
+      injectionMode: InjectionMode.PROXY,
+    });
     mockUseCase = { execute: vi.fn() };
-    container.register('GetExploreFeed', () => mockUseCase as any);
+    container.register({
+      getExploreFeed: asValue(mockUseCase as any),
+    });
   });
 
   describe('Anonymous access', () => {

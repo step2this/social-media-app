@@ -7,17 +7,20 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { GraphQLResolveInfo } from 'graphql';
+import { createContainer, asValue, InjectionMode, type AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../../infrastructure/di/awilix-container';
 import { createFollowStatusResolver } from '../followStatusResolver';
-import { Container } from '../../../infrastructure/di/Container';
 import { GetFollowStatus } from '../../../application/use-cases/follow/GetFollowStatus';
 import { FakeFollowRepository } from '../../../../__tests__/helpers/fake-repositories';
 import type { GraphQLContext } from '../../../context';
 
 describe('followStatusResolver', () => {
-  let container: Container;
+  let container: AwilixContainer<GraphQLContainer>;
 
   beforeEach(() => {
-    container = new Container();
+    container = createContainer<GraphQLContainer>({
+      injectionMode: InjectionMode.CLASSIC,
+    });
   });
 
   it('returns following status when user is following', async () => {
@@ -26,7 +29,9 @@ describe('followStatusResolver', () => {
     ]);
     const repository = new FakeFollowRepository(followStatus);
     const useCase = new GetFollowStatus(repository);
-    container.register('GetFollowStatus', () => useCase);
+    container.register({
+      getFollowStatus: asValue(useCase),
+    });
     const resolver = createFollowStatusResolver(container);
 
     const result = await resolver!(
@@ -42,7 +47,9 @@ describe('followStatusResolver', () => {
   it('returns not-following status when user is not following', async () => {
     const repository = new FakeFollowRepository(new Map());
     const useCase = new GetFollowStatus(repository);
-    container.register('GetFollowStatus', () => useCase);
+    container.register({
+      getFollowStatus: asValue(useCase),
+    });
     const resolver = createFollowStatusResolver(container);
 
     const result = await resolver!(
@@ -61,7 +68,9 @@ describe('followStatusResolver', () => {
     ]);
     const repository = new FakeFollowRepository(followStatus);
     const useCase = new GetFollowStatus(repository);
-    container.register('GetFollowStatus', () => useCase);
+    container.register({
+      getFollowStatus: asValue(useCase),
+    });
     const resolver = createFollowStatusResolver(container);
 
     const result = await resolver!(

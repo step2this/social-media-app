@@ -7,26 +7,31 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { GraphQLResolveInfo } from 'graphql';
+import { createContainer, asValue, InjectionMode, type AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../../infrastructure/di/awilix-container';
 import { createCommentsResolver } from '../commentsResolver';
-import { Container } from '../../../infrastructure/di/Container';
 import { GetCommentsByPost } from '../../../application/use-cases/comment/GetCommentsByPost';
 import { FakeCommentRepository } from '../../../../__tests__/helpers/fake-repositories';
 import { createMockComments } from '@social-media-app/shared/test-utils/fixtures';
 import type { GraphQLContext } from '../../../context';
 
 describe('commentsResolver', () => {
-  let container: Container;
+  let container: AwilixContainer<GraphQLContainer>;
   let resolver: ReturnType<typeof createCommentsResolver>;
 
   beforeEach(() => {
-    container = new Container();
+    container = createContainer<GraphQLContainer>({
+      injectionMode: InjectionMode.CLASSIC,
+    });
   });
 
   it('returns comments as a valid connection', async () => {
     const comments = createMockComments(5, { postId: 'post-1' });
     const repository = new FakeCommentRepository(comments);
     const useCase = new GetCommentsByPost(repository);
-    container.register('GetCommentsByPost', () => useCase);
+    container.register({
+      getCommentsByPost: asValue(useCase),
+    });
     resolver = createCommentsResolver(container);
 
     const result = await resolver!(
@@ -45,7 +50,9 @@ describe('commentsResolver', () => {
   it('returns empty connection when no comments exist', async () => {
     const repository = new FakeCommentRepository([]);
     const useCase = new GetCommentsByPost(repository);
-    container.register('GetCommentsByPost', () => useCase);
+    container.register({
+      getCommentsByPost: asValue(useCase),
+    });
     resolver = createCommentsResolver(container);
 
     const result = await resolver!(
@@ -63,7 +70,9 @@ describe('commentsResolver', () => {
     const comments = createMockComments(25, { postId: 'post-1' });
     const repository = new FakeCommentRepository(comments);
     const useCase = new GetCommentsByPost(repository);
-    container.register('GetCommentsByPost', () => useCase);
+    container.register({
+      getCommentsByPost: asValue(useCase),
+    });
     resolver = createCommentsResolver(container);
 
     const result = await resolver!(

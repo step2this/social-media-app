@@ -8,25 +8,27 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { GraphQLResolveInfo } from 'graphql';
 import { createNotificationsResolver } from '../notificationsResolver';
-import { Container } from '../../../infrastructure/di/Container';
+import { createContainer } from '../../../infrastructure/di/awilix-container';
+import type { AwilixContainer } from 'awilix';
+import { asValue } from 'awilix';
 import { GetNotifications } from '../../../application/use-cases/notification/GetNotifications';
 import { FakeNotificationRepository } from '../../../../__tests__/helpers/fake-repositories';
 import { createMockNotifications } from '@social-media-app/shared/test-utils/fixtures';
 import type { GraphQLContext } from '../../../context';
 
 describe('notificationsResolver', () => {
-  let container: Container;
+  let container: AwilixContainer;
   let resolver: ReturnType<typeof createNotificationsResolver>;
 
   beforeEach(() => {
-    container = new Container();
+    container = createContainer();
   });
 
   it('returns notifications as a valid connection', async () => {
     const notifications = createMockNotifications(5, { userId: 'user-1' });
     const repository = new FakeNotificationRepository(notifications);
     const useCase = new GetNotifications(repository);
-    container.register('GetNotifications', () => useCase);
+    container.register({ getNotifications: asValue(useCase) });
     resolver = createNotificationsResolver(container);
 
     const result = await resolver!(
@@ -44,7 +46,7 @@ describe('notificationsResolver', () => {
   it('returns empty connection when no notifications exist', async () => {
     const repository = new FakeNotificationRepository([]);
     const useCase = new GetNotifications(repository);
-    container.register('GetNotifications', () => useCase);
+    container.register({ getNotifications: asValue(useCase) });
     resolver = createNotificationsResolver(container);
 
     const result = await resolver(
@@ -62,7 +64,7 @@ describe('notificationsResolver', () => {
     const notifications = createMockNotifications(25, { userId: 'user-1' });
     const repository = new FakeNotificationRepository(notifications);
     const useCase = new GetNotifications(repository);
-    container.register('GetNotifications', () => useCase);
+    container.register({ getNotifications: asValue(useCase) });
     resolver = createNotificationsResolver(container);
 
     const result = await resolver(

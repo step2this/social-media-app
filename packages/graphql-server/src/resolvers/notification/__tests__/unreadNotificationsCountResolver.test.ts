@@ -8,18 +8,20 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { GraphQLResolveInfo } from 'graphql';
 import { createUnreadNotificationsCountResolver } from '../unreadNotificationsCountResolver';
-import { Container } from '../../../infrastructure/di/Container';
+import { createContainer } from '../../../infrastructure/di/awilix-container';
+import type { AwilixContainer } from 'awilix';
+import { asValue } from 'awilix';
 import { GetUnreadNotificationsCount } from '../../../application/use-cases/notification/GetUnreadNotificationsCount';
 import { FakeNotificationRepository } from '../../../../__tests__/helpers/fake-repositories';
 import { createMockNotifications } from '@social-media-app/shared/test-utils/fixtures';
 import type { GraphQLContext } from '../../../context';
 
 describe('unreadNotificationsCountResolver', () => {
-  let container: Container;
+  let container: AwilixContainer;
   let resolver: ReturnType<typeof createUnreadNotificationsCountResolver>;
 
   beforeEach(() => {
-    container = new Container();
+    container = createContainer();
   });
 
   it('returns count of unread notifications', async () => {
@@ -29,7 +31,7 @@ describe('unreadNotificationsCountResolver', () => {
     ];
     const repository = new FakeNotificationRepository(notifications);
     const useCase = new GetUnreadNotificationsCount(repository);
-    container.register('GetUnreadNotificationsCount', () => useCase);
+    container.register({ getUnreadNotificationsCount: asValue(useCase) });
     resolver = createUnreadNotificationsCountResolver(container);
 
     const result = await resolver!(
@@ -46,7 +48,7 @@ describe('unreadNotificationsCountResolver', () => {
     const notifications = createMockNotifications(3, { userId: 'user-1', read: true });
     const repository = new FakeNotificationRepository(notifications);
     const useCase = new GetUnreadNotificationsCount(repository);
-    container.register('GetUnreadNotificationsCount', () => useCase);
+    container.register({ getUnreadNotificationsCount: asValue(useCase) });
     resolver = createUnreadNotificationsCountResolver(container);
 
     const result = await resolver(
@@ -62,7 +64,7 @@ describe('unreadNotificationsCountResolver', () => {
   it('returns zero when no notifications exist', async () => {
     const repository = new FakeNotificationRepository([]);
     const useCase = new GetUnreadNotificationsCount(repository);
-    container.register('GetUnreadNotificationsCount', () => useCase);
+    container.register({ getUnreadNotificationsCount: asValue(useCase) });
     resolver = createUnreadNotificationsCountResolver(container);
 
     const result = await resolver(

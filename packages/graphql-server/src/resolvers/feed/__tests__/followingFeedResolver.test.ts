@@ -7,18 +7,23 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GraphQLError } from 'graphql';
-import { Container } from '../../../infrastructure/di/Container.js';
+import { createContainer, asValue, InjectionMode, type AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../../infrastructure/di/awilix-container.js';
 import { createFollowingFeedResolver } from '../followingFeedResolver.js';
 import { UserId, Cursor } from '../../../shared/types/index.js';
 
 describe('followingFeedResolver', () => {
-  let container: Container;
+  let container: AwilixContainer<GraphQLContainer>;
   let mockUseCase: { execute: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    container = new Container();
+    container = createContainer<GraphQLContainer>({
+      injectionMode: InjectionMode.PROXY,
+    });
     mockUseCase = { execute: vi.fn() };
-    container.register('GetFollowingFeed', () => mockUseCase as any);
+    container.register({
+      getFollowingFeed: asValue(mockUseCase as any),
+    });
   });
 
   describe('Authentication', () => {

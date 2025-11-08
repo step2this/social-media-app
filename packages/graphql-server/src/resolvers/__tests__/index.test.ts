@@ -6,22 +6,25 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { Container } from '../../infrastructure/di/Container.js';
+import { createContainer, asValue, type AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../infrastructure/di/awilix-container.js';
 import { createResolvers } from '../index.js';
 
 describe('createResolvers', () => {
-  let container: Container;
+  let container: AwilixContainer<GraphQLContainer>;
 
   beforeEach(() => {
-    container = new Container();
+    container = createContainer<GraphQLContainer>();
 
     // Register all required use cases
-    container.register('GetCurrentUserProfile', () => ({ execute: vi.fn() }));
-    container.register('GetProfileByHandle', () => ({ execute: vi.fn() }));
-    container.register('GetPostById', () => ({ execute: vi.fn() }));
-    container.register('GetUserPosts', () => ({ execute: vi.fn() }));
-    container.register('GetFollowingFeed', () => ({ execute: vi.fn() }));
-    container.register('GetExploreFeed', () => ({ execute: vi.fn() }));
+    container.register({
+      getCurrentUserProfile: asValue({ execute: vi.fn() }),
+      getProfileByHandle: asValue({ execute: vi.fn() }),
+      getPostById: asValue({ execute: vi.fn() }),
+      getUserPosts: asValue({ execute: vi.fn() }),
+      getFollowingFeed: asValue({ execute: vi.fn() }),
+      getExploreFeed: asValue({ execute: vi.fn() }),
+    });
   });
 
   describe('Resolver structure', () => {

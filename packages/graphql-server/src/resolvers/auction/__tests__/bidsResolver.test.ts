@@ -7,18 +7,19 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { GraphQLResolveInfo } from 'graphql';
+import { createContainer, asValue, type AwilixContainer } from 'awilix';
 import { createBidsResolver } from '../bidsResolver';
-import { Container } from '../../../infrastructure/di/Container';
+import type { GraphQLContainer } from '../../../infrastructure/di/awilix-container';
 import type { GraphQLContext } from '../../../context';
 import { GetBidHistory } from '../../../application/use-cases/auction/GetBidHistory';
 import { FakeAuctionRepository } from '../../../../__tests__/helpers/fake-repositories';
 
 describe('bidsResolver', () => {
-  let container: Container;
+  let container: AwilixContainer<GraphQLContainer>;
   let resolver: ReturnType<typeof createBidsResolver>;
 
   beforeEach(() => {
-    container = new Container();
+    container = createContainer<GraphQLContainer>();
   });
 
   it('returns bids as a valid connection', async () => {
@@ -28,7 +29,7 @@ describe('bidsResolver', () => {
     ];
     const repository = new FakeAuctionRepository([], bids);
     const useCase = new GetBidHistory(repository);
-    container.register('GetBidHistory', () => useCase);
+    container.register({ getBidHistory: asValue(useCase) });
     resolver = createBidsResolver(container);
 
     const _parent: any = {};
@@ -46,7 +47,7 @@ describe('bidsResolver', () => {
   it('returns empty connection when no bids exist', async () => {
     const repository = new FakeAuctionRepository([], []);
     const useCase = new GetBidHistory(repository);
-    container.register('GetBidHistory', () => useCase);
+    container.register({ getBidHistory: asValue(useCase) });
     resolver = createBidsResolver(container);
 
     const _parent: any = {};
@@ -70,7 +71,7 @@ describe('bidsResolver', () => {
     }));
     const repository = new FakeAuctionRepository([], bids);
     const useCase = new GetBidHistory(repository);
-    container.register('GetBidHistory', () => useCase);
+    container.register({ getBidHistory: asValue(useCase) });
     resolver = createBidsResolver(container);
 
     const _parent: any = {};

@@ -7,18 +7,21 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { GraphQLResolveInfo } from 'graphql';
+import { createContainer, asValue, InjectionMode, type AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../../infrastructure/di/awilix-container';
 import { createPostLikeStatusResolver } from '../postLikeStatusResolver';
-import { Container } from '../../../infrastructure/di/Container';
 import { GetPostLikeStatus } from '../../../application/use-cases/like/GetPostLikeStatus';
 import { FakeLikeRepository } from '../../../../__tests__/helpers/fake-repositories';
 import { createMockLiked } from '@social-media-app/shared/test-utils/fixtures';
 import type { GraphQLContext } from '../../../context';
 
 describe('postLikeStatusResolver', () => {
-  let container: Container;
+  let container: AwilixContainer<GraphQLContainer>;
 
   beforeEach(() => {
-    container = new Container();
+    container = createContainer<GraphQLContainer>({
+      injectionMode: InjectionMode.CLASSIC,
+    });
   });
 
   it('returns liked status when user has liked the post', async () => {
@@ -27,7 +30,9 @@ describe('postLikeStatusResolver', () => {
     ]);
     const repository = new FakeLikeRepository(likeStatus);
     const useCase = new GetPostLikeStatus(repository);
-    container.register('GetPostLikeStatus', () => useCase);
+    container.register({
+      getPostLikeStatus: asValue(useCase),
+    });
     const resolver = createPostLikeStatusResolver(container);
 
     const result = await resolver!(
@@ -44,7 +49,9 @@ describe('postLikeStatusResolver', () => {
   it('returns not-liked status when user has not liked the post', async () => {
     const repository = new FakeLikeRepository(new Map());
     const useCase = new GetPostLikeStatus(repository);
-    container.register('GetPostLikeStatus', () => useCase);
+    container.register({
+      getPostLikeStatus: asValue(useCase),
+    });
     const resolver = createPostLikeStatusResolver(container);
 
     const result = await resolver!(
@@ -64,7 +71,9 @@ describe('postLikeStatusResolver', () => {
     ]);
     const repository = new FakeLikeRepository(likeStatus);
     const useCase = new GetPostLikeStatus(repository);
-    container.register('GetPostLikeStatus', () => useCase);
+    container.register({
+      getPostLikeStatus: asValue(useCase),
+    });
     const resolver = createPostLikeStatusResolver(container);
 
     const result = await resolver!(

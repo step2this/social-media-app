@@ -7,17 +7,22 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GraphQLError } from 'graphql';
-import { Container } from '../../../infrastructure/di/Container.js';
+import { createContainer, asValue, InjectionMode, type AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../../infrastructure/di/awilix-container.js';
 import { createPostResolver } from '../postResolver.js';
 
 describe('postResolver', () => {
-  let container: Container;
+  let container: AwilixContainer<GraphQLContainer>;
   let mockUseCase: { execute: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    container = new Container();
+    container = createContainer<GraphQLContainer>({
+      injectionMode: InjectionMode.CLASSIC,
+    });
     mockUseCase = { execute: vi.fn() };
-    container.register('GetPostById', () => mockUseCase as any);
+    container.register({
+      getPostById: asValue(mockUseCase as any),
+    });
   });
 
   describe('Success cases', () => {

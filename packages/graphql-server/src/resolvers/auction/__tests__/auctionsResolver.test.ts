@@ -7,26 +7,27 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { GraphQLResolveInfo } from 'graphql';
+import { createContainer, asValue, type AwilixContainer } from 'awilix';
 import { createAuctionsResolver } from '../auctionsResolver';
-import { Container } from '../../../infrastructure/di/Container';
+import type { GraphQLContainer } from '../../../infrastructure/di/awilix-container';
 import type { GraphQLContext } from '../../../context';
 import { GetAuctions } from '../../../application/use-cases/auction/GetAuctions';
 import { FakeAuctionRepository } from '../../../../__tests__/helpers/fake-repositories';
 import { createMockAuctions } from '@social-media-app/shared/test-utils/fixtures';
 
 describe('auctionsResolver', () => {
-  let container: Container;
+  let container: AwilixContainer<GraphQLContainer>;
   let resolver: ReturnType<typeof createAuctionsResolver>;
 
   beforeEach(() => {
-    container = new Container();
+    container = createContainer<GraphQLContainer>();
   });
 
   it('returns auctions as a valid connection', async () => {
     const auctions = createMockAuctions(5);
     const repository = new FakeAuctionRepository(auctions, []);
     const useCase = new GetAuctions(repository);
-    container.register('GetAuctions', () => useCase);
+    container.register({ getAuctions: asValue(useCase) });
     resolver = createAuctionsResolver(container);
 
     const _parent: any = {};
@@ -47,7 +48,7 @@ describe('auctionsResolver', () => {
     ];
     const repository = new FakeAuctionRepository(auctions, []);
     const useCase = new GetAuctions(repository);
-    container.register('GetAuctions', () => useCase);
+    container.register({ getAuctions: asValue(useCase) });
     resolver = createAuctionsResolver(container);
 
     const _parent: any = {};
@@ -65,7 +66,7 @@ describe('auctionsResolver', () => {
     const auctions = createMockAuctions(25);
     const repository = new FakeAuctionRepository(auctions, []);
     const useCase = new GetAuctions(repository);
-    container.register('GetAuctions', () => useCase);
+    container.register({ getAuctions: asValue(useCase) });
     resolver = createAuctionsResolver(container);
 
     const _parent: any = {};
