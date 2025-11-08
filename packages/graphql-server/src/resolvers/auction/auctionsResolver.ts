@@ -23,8 +23,8 @@ export function createAuctionsResolver(container: AwilixContainer<GraphQLContain
     }
 
     return buildConnection({
-      items: result.data.items,
-      hasMore: result.data.hasMore,
+      items: result.data!.items,
+      hasMore: result.data!.hasMore,
       getCursorKeys: (auction) => ({
         PK: 'AUCTIONS',
         SK: `AUCTION#${auction.createdAt}#${auction.id}`,

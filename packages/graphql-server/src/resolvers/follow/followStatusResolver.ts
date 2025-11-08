@@ -21,6 +21,6 @@ export function createFollowStatusResolver(container: AwilixContainer<GraphQLCon
       throw result.error;
     }
 
-    return result.data;
+    return result.data!;
   };
 }

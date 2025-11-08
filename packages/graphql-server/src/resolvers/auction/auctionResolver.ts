@@ -19,6 +19,6 @@ export function createAuctionResolver(container: AwilixContainer<GraphQLContaine
       throw result.error;
     }
 
-    return result.data;
+    return result.data!;
   };
 }

@@ -64,64 +64,28 @@ import type { GraphQLContext } from '../context.js';
  */
 export function createQueryResolvers(): QueryResolvers {
   return {
-    me: async (
-      _parent: unknown,
-      _args: Record<string, never>,
-      context: GraphQLContext,
-      _info: GraphQLResolveInfo
-    ) => {
-      const resolver = createMeResolver(context.container);
-      return resolver(_parent, _args, context, _info);
+    me: async (_parent, _args, context, _info) => {
+      return createMeResolver(context.container)(_parent, _args, context, _info);
     },
 
-    profile: async (
-      _parent: unknown,
-      args: { handle: string },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
-    ) => {
-      const resolver = createProfileResolver(context.container);
-      return resolver(_parent, args, context, info);
+    profile: async (_parent, args, context, info) => {
+      return createProfileResolver(context.container)(_parent, args, context, info);
     },
 
-    post: async (
-      _parent: unknown,
-      args: { id: string },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
-    ) => {
-      const resolver = createPostResolver(context.container);
-      return resolver(_parent, args, context, info);
+    post: async (_parent, args, context, info) => {
+      return createPostResolver(context.container)(_parent, args, context, info);
     },
 
-    userPosts: async (
-      _parent: unknown,
-      args: { handle: string; first?: number | null; after?: string | null },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
-    ) => {
-      const resolver = createUserPostsResolver(context.container);
-      return resolver(_parent, args, context, info);
+    userPosts: async (_parent, args, context, info) => {
+      return createUserPostsResolver(context.container)(_parent, args, context, info);
     },
 
-    followingFeed: async (
-      _parent: unknown,
-      args: { first?: number | null; after?: string | null },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
-    ) => {
-      const resolver = createFollowingFeedResolver(context.container);
-      return resolver(_parent, args, context, info);
+    followingFeed: async (_parent, args, context, info) => {
+      return createFollowingFeedResolver(context.container)(_parent, args, context, info);
     },
 
-    exploreFeed: async (
-      _parent: unknown,
-      args: { first?: number | null; after?: string | null },
-      context: GraphQLContext,
-      info: GraphQLResolveInfo
-    ) => {
-      const resolver = createExploreFeedResolver(context.container);
-      return resolver(_parent, args, context, info);
+    exploreFeed: async (_parent, args, context, info) => {
+      return createExploreFeedResolver(context.container)(_parent, args, context, info);
     },
 
     // Legacy resolvers - Refactored with TDD helpers
