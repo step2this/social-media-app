@@ -24,12 +24,9 @@ import { Query } from '../../src/schema/resolvers/Query.js';
 import { ProfileService, PostService, LikeService, CommentService, FollowService } from '@social-media-app/dal';
 import type { GraphQLContext } from '../../src/context.js';
 import type { Profile, PublicProfile, Post } from '@social-media-app/shared';
-import { createContainer, asValue, InjectionMode, type AwilixContainer } from 'awilix';
-import type { GraphQLContainer } from '../../src/infrastructure/di/awilix-container.js';
 
 describe('Query Resolvers', () => {
   let mockContext: GraphQLContext;
-  let container: AwilixContainer<GraphQLContainer>;
 
   beforeEach(() => {
     // Create pure mock service objects (no real instantiation, no spies)
@@ -48,16 +45,7 @@ describe('Query Resolvers', () => {
     const mockCommentService = {} as unknown as CommentService;
     const mockFollowService = {} as unknown as FollowService;
 
-    // Create Awilix container with GraphQL use cases
-    container = createContainer<GraphQLContainer>({ injectionMode: InjectionMode.CLASSIC });
-    container.register({
-      getCurrentUserProfile: asValue({ execute: vi.fn() } as any),
-      getProfileByHandle: asValue({ execute: vi.fn() } as any),
-      getPostById: asValue({ execute: vi.fn() } as any),
-      getUserPosts: asValue({ execute: vi.fn() } as any),
-    });
-
-    // Create minimal mock context with pure mocks and container
+    // Create minimal mock context with pure mocks
     mockContext = {
       userId: 'test-user-123',
       dynamoClient: {} as any,
@@ -74,7 +62,6 @@ describe('Query Resolvers', () => {
         auctionService: {} as any,
       },
       loaders: {} as any,
-      container: container, // Add container to context
     };
 
     // Clear all mocks before each test
