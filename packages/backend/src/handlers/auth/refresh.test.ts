@@ -1,196 +1,191 @@
-import { describe, it, expect, beforeEach, vi, type MockedFunction } from 'vitest';
-import { handler } from './refresh.js';
-import { createDefaultAuthService } from '@social-media-app/dal';
-import { createMockAPIGatewayEvent } from '@social-media-app/shared/test-utils';
-import * as dynamoUtils from '../../utils/dynamodb.js';
-import * as jwtUtils from '../../utils/jwt.js';
+/**
+ * TDD Tests for Refresh Token Handler (Middy Version)
+ *
+ * Behavioral tests ensuring Middy migration maintains functionality.
+ *
+ * Principles:
+ * - Test behavior, not implementation
+ * - DRY with shared test utilities
+ * - No mocks - test actual handler behavior with real authService
+ * - Edge-first testing (failures before success)
+ */
 
-// Mock dependencies
-vi.mock('@social-media-app/dal', () => ({
-  createDefaultAuthService: vi.fn()
-}));
+import { describe, it, expect, beforeEach } from 'vitest'
+import { handler } from './refresh.js'
+import type { RefreshTokenRequest, RegisterRequest } from '@social-media-app/shared'
+import { createMockLambdaEvent } from '../../test/utils/test-factories.js'
+import { authService } from '../../utils/services.js'
 
-vi.mock('../../utils/dynamodb.js', () => ({
-  createDynamoDBClient: vi.fn(),
-  getTableName: vi.fn()
-}));
+/**
+ * Setup: Create test user and get valid refresh token
+ */
+async function createTestUserWithTokens(): Promise<{ refreshToken: string }> {
+  const timestamp = Date.now()
 
-vi.mock('../../utils/jwt.js', () => ({
-  createJWTProvider: vi.fn(),
-  getJWTConfigFromEnv: vi.fn()
-}));
+  // Register a new user
+  const registerRequest: RegisterRequest = {
+    email: `refresh-test-${timestamp}@example.com`,
+    password: 'TestPass123!',
+    username: `refreshtest${timestamp}`
+  }
 
-const mockCreateDefaultAuthService = createDefaultAuthService as MockedFunction<typeof createDefaultAuthService>;
-const mockCreateDynamoDBClient = dynamoUtils.createDynamoDBClient as MockedFunction<typeof dynamoUtils.createDynamoDBClient>;
-const mockGetTableName = dynamoUtils.getTableName as MockedFunction<typeof dynamoUtils.getTableName>;
-const mockCreateJWTProvider = jwtUtils.createJWTProvider as MockedFunction<typeof jwtUtils.createJWTProvider>;
-const mockGetJWTConfigFromEnv = jwtUtils.getJWTConfigFromEnv as MockedFunction<typeof jwtUtils.getJWTConfigFromEnv>;
+  await authService.register(registerRequest)
 
-describe('Refresh Token Handler', () => {
-  const mockAuthService = {
-    register: vi.fn(),
-    login: vi.fn(),
-    refreshToken: vi.fn(),
-    getUserById: vi.fn(),
-    logout: vi.fn()
-  };
+  // Login to get tokens
+  const loginResponse = await authService.login({
+    email: registerRequest.email,
+    password: registerRequest.password
+  })
 
-  beforeEach(() => {
-    vi.clearAllMocks();
+  return {
+    refreshToken: loginResponse.tokens.refreshToken
+  }
+}
 
-    // Setup mock implementations
-    mockCreateDynamoDBClient.mockReturnValue({} as any);
-    mockGetTableName.mockReturnValue('test-table');
-    mockGetJWTConfigFromEnv.mockReturnValue({
-      secret: 'test-secret',
-      accessTokenExpiry: 900,
-      refreshTokenExpiry: 2592000
-    });
-    mockCreateJWTProvider.mockReturnValue({
-      generateAccessToken: vi.fn(),
-      generateRefreshToken: vi.fn(),
-      verifyRefreshToken: vi.fn()
-    });
-    mockCreateDefaultAuthService.mockReturnValue(mockAuthService);
-  });
+describe('Refresh Token Handler V2 (Middy) - Behavior Tests', () => {
+  describe('Validation Errors', () => {
+    it('should return 400 for missing refresh token', async () => {
+      const invalidRequest = {}
 
-  it('should successfully refresh tokens with valid refresh token', async () => {
-    const refreshRequest = {
-      refreshToken: 'valid-refresh-token'
-    };
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(invalidRequest)
+      })
 
-    const expectedResponse = {
-      tokens: {
-        accessToken: 'new-access-token',
-        refreshToken: 'new-refresh-token',
-        expiresIn: 900
+      const result = await handler(event, {} as any)
+
+      expect(result.statusCode).toBe(400)
+    })
+
+    it('should return 400 for empty refresh token', async () => {
+      const invalidRequest = {
+        refreshToken: ''
       }
-    };
 
-    mockAuthService.refreshToken.mockResolvedValue(expectedResponse);
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(invalidRequest)
+      })
 
-    const event = createMockAPIGatewayEvent({
-      method: 'POST',
-      path: '/auth/refresh',
-      routeKey: 'POST /auth/refresh',
-      body: refreshRequest
-    });
-    const result = await handler(event);
+      const result = await handler(event, {} as any)
 
-    expect(result.statusCode).toBe(200);
-    expect(JSON.parse(result.body!)).toEqual(expectedResponse);
-    expect(mockAuthService.refreshToken).toHaveBeenCalledWith(refreshRequest);
-  });
+      expect(result.statusCode).toBe(400)
+    })
+  })
 
-  it('should return validation error for invalid request', async () => {
-    const invalidRequest = {
-      refreshToken: ''
-    };
+  describe('Successful Token Refresh', () => {
+    let testTokens: { refreshToken: string }
 
-    const event = createMockAPIGatewayEvent({
-      method: 'POST',
-      path: '/auth/refresh',
-      routeKey: 'POST /auth/refresh',
-      body: invalidRequest
-    });
-    const result = await handler(event);
+    beforeEach(async () => {
+      // Create a test user and get valid tokens
+      testTokens = await createTestUserWithTokens()
+    })
 
-    expect(result.statusCode).toBe(400);
-    const responseBody = JSON.parse(result.body!);
-    expect(responseBody.error).toBe('Validation failed');
-    expect(responseBody.details).toBeDefined();
-  });
+    it('should return 200 with new tokens for valid refresh token', async () => {
+      const validRequest: RefreshTokenRequest = {
+        refreshToken: testTokens.refreshToken
+      }
 
-  it('should return unauthorized error for invalid refresh token', async () => {
-    const refreshRequest = {
-      refreshToken: 'invalid-refresh-token'
-    };
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(validRequest)
+      })
 
-    mockAuthService.refreshToken.mockRejectedValue(new Error('Invalid refresh token'));
+      const result = await handler(event, {} as any)
 
-    const event = createMockAPIGatewayEvent({
-      method: 'POST',
-      path: '/auth/refresh',
-      routeKey: 'POST /auth/refresh',
-      body: refreshRequest
-    });
-    const result = await handler(event);
+      expect(result.statusCode).toBe(200)
 
-    expect(result.statusCode).toBe(401);
-    const responseBody = JSON.parse(result.body!);
-    expect(responseBody.error).toBe('Invalid refresh token');
-  });
+      const body = JSON.parse(result.body!)
+      expect(body).toHaveProperty('tokens')
+      expect(body.tokens).toHaveProperty('accessToken')
+      expect(body.tokens).toHaveProperty('refreshToken')
+      expect(body.tokens).toHaveProperty('expiresIn')
 
-  it('should return unauthorized error for expired refresh token', async () => {
-    const refreshRequest = {
-      refreshToken: 'expired-refresh-token'
-    };
+      // New tokens should be different from old ones
+      expect(body.tokens.refreshToken).not.toBe(testTokens.refreshToken)
+    })
 
-    mockAuthService.refreshToken.mockRejectedValue(new Error('Refresh token expired'));
+    it('should include CORS headers in response', async () => {
+      const validRequest: RefreshTokenRequest = {
+        refreshToken: testTokens.refreshToken
+      }
 
-    const event = createMockAPIGatewayEvent({
-      method: 'POST',
-      path: '/auth/refresh',
-      routeKey: 'POST /auth/refresh',
-      body: refreshRequest
-    });
-    const result = await handler(event);
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(validRequest)
+      })
 
-    expect(result.statusCode).toBe(401);
-    const responseBody = JSON.parse(result.body!);
-    expect(responseBody.error).toBe('Refresh token expired');
-  });
+      const result = await handler(event, {} as any)
 
-  it('should return unauthorized error for non-existent user', async () => {
-    const refreshRequest = {
-      refreshToken: 'valid-refresh-token'
-    };
+      expect(result.headers).toMatchObject({
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      })
+    })
+  })
 
-    mockAuthService.refreshToken.mockRejectedValue(new Error('User not found'));
+  describe('Authentication Errors', () => {
+    it('should return 401 for invalid refresh token', async () => {
+      const invalidRequest: RefreshTokenRequest = {
+        refreshToken: 'invalid-token-12345'
+      }
 
-    const event = createMockAPIGatewayEvent({
-      method: 'POST',
-      path: '/auth/refresh',
-      routeKey: 'POST /auth/refresh',
-      body: refreshRequest
-    });
-    const result = await handler(event);
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(invalidRequest)
+      })
 
-    expect(result.statusCode).toBe(401);
-    const responseBody = JSON.parse(result.body!);
-    expect(responseBody.error).toBe('User not found');
-  });
+      const result = await handler(event, {} as any)
 
-  it('should return internal server error for unexpected errors', async () => {
-    const refreshRequest = {
-      refreshToken: 'valid-refresh-token'
-    };
+      expect(result.statusCode).toBe(401)
+    })
 
-    mockAuthService.refreshToken.mockRejectedValue(new Error('Database connection failed'));
+    it('should return 401 for non-existent refresh token', async () => {
+      const invalidRequest: RefreshTokenRequest = {
+        refreshToken: 'nonexistent-token-67890-abc'
+      }
 
-    const event = createMockAPIGatewayEvent({
-      method: 'POST',
-      path: '/auth/refresh',
-      routeKey: 'POST /auth/refresh',
-      body: refreshRequest
-    });
-    const result = await handler(event);
+      const event = createMockLambdaEvent({
+        body: JSON.stringify(invalidRequest)
+      })
 
-    expect(result.statusCode).toBe(500);
-    const responseBody = JSON.parse(result.body!);
-    expect(responseBody.error).toBe('Internal server error');
-  });
+      const result = await handler(event, {} as any)
 
-  it('should handle missing request body', async () => {
-    const event = createMockAPIGatewayEvent({
-      method: 'POST',
-      path: '/auth/refresh',
-      routeKey: 'POST /auth/refresh'
-    });
-    const result = await handler(event);
+      expect(result.statusCode).toBe(401)
+    })
+  })
 
-    expect(result.statusCode).toBe(400);
-    const responseBody = JSON.parse(result.body!);
-    expect(responseBody.error).toBe('Validation failed');
-  });
-});
+  describe('Edge Cases', () => {
+    it('should reject malformed JSON', async () => {
+      const event = createMockLambdaEvent({
+        body: 'not valid json{{'
+      })
+
+      const result = await handler(event, {} as any)
+
+      // Middy's httpJsonBodyParser returns 415 (Unsupported Media Type) for malformed JSON
+      expect(result.statusCode).toBe(415)
+    })
+
+    it('should not allow reuse of already-refreshed token', async () => {
+      const testTokens = await createTestUserWithTokens()
+
+      // First refresh - should succeed
+      const firstRequest: RefreshTokenRequest = {
+        refreshToken: testTokens.refreshToken
+      }
+
+      const firstEvent = createMockLambdaEvent({
+        body: JSON.stringify(firstRequest)
+      })
+
+      const firstResult = await handler(firstEvent, {} as any)
+      expect(firstResult.statusCode).toBe(200)
+
+      // Second refresh with same token - should fail
+      const secondEvent = createMockLambdaEvent({
+        body: JSON.stringify(firstRequest)
+      })
+
+      const secondResult = await handler(secondEvent, {} as any)
+
+      // Token should be invalidated after first use
+      expect(secondResult.statusCode).toBe(401)
+    })
+  })
+})

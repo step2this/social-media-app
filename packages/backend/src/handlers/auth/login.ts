@@ -1,31 +1,46 @@
-import { LoginRequestSchema } from '@social-media-app/shared';
-import { compose } from '../../infrastructure/middleware/compose.js';
-import { withErrorHandling } from '../../infrastructure/middleware/withErrorHandling.js';
-import { withLogging } from '../../infrastructure/middleware/withLogging.js';
-import { withValidation } from '../../infrastructure/middleware/withValidation.js';
-import { withServices } from '../../infrastructure/middleware/withServices.js';
-import { successResponse } from '../../utils/responses.js';
-
 /**
- * Lambda handler for user login
+ * Login Handler (Middy Version)
  *
- * Authenticates a user with email and password, returning JWT tokens on success.
+ * Migrated from custom middleware composition to Middy.
+ * Authenticates users with email and password, returning JWT tokens.
  *
  * @route POST /auth/login
- * @middleware withErrorHandling - Converts errors to HTTP responses
- * @middleware withLogging - Structured logging with correlation IDs
- * @middleware withValidation - Validates request body against LoginRequestSchema
- * @middleware withServices - Injects authService into context
  */
-export const handler = compose(
-  withErrorHandling(),
-  withLogging(),
-  withValidation(LoginRequestSchema),
-  withServices(['authService']),
-  async (_event, context) => {
-    // Business logic only - middleware handles validation, logging, and errors
-    // Non-null assertion safe: withServices middleware guarantees authService exists
-    const response = await context.services!.authService.login(context.validatedInput);
-    return successResponse(200, response);
+
+import { LoginRequestSchema, type LoginRequest } from '@social-media-app/shared'
+import { authService } from '../../utils/services.js'
+import { createHandler } from '../../infrastructure/middleware-v2/index.js'
+import type { APIGatewayProxyHandlerV2 } from 'aws-lambda'
+
+/**
+ * Handler implementation - pure business logic
+ *
+ * No middleware concerns - Middy handles:
+ * - JSON parsing
+ * - Validation
+ * - Error handling
+ * - Header normalization
+ */
+const loginHandler: APIGatewayProxyHandlerV2 = async (event) => {
+  // Type-safe access to validated input
+  const request = event.validatedBody as LoginRequest
+
+  // Business logic only - delegate to authService
+  const response = await authService.login(request)
+
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*'
+    },
+    body: JSON.stringify(response)
   }
-);
+}
+
+/**
+ * Export Middy-wrapped handler with middleware stack
+ */
+export const handler = createHandler(loginHandler, {
+  validation: LoginRequestSchema
+})
