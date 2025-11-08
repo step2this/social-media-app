@@ -27,7 +27,7 @@ import type { GraphQLResolveInfo } from 'graphql';
 import { createMeResolver, createProfileResolver } from './profile/index.js';
 import { createPostResolver, createUserPostsResolver } from './post/index.js';
 import { createFollowingFeedResolver, createExploreFeedResolver } from './feed/index.js';
-import { commentsResolver } from './comment/commentsResolver.js';
+import { createCommentsResolver } from './comment/commentsResolver.js';
 import { createFollowStatusResolver } from './follow/followStatusResolver.js';
 import { createPostLikeStatusResolver } from './like/postLikeStatusResolver.js';
 import { createNotificationsResolver } from './notification/notificationsResolver.js';
@@ -173,9 +173,10 @@ export function createQueryResolvers(): QueryResolvers {
       _parent: unknown,
       args: { postId: string; first?: number | null; after?: string | null },
       context: GraphQLContext,
-      _info: GraphQLResolveInfo
+      info: GraphQLResolveInfo
     ) => {
-      return commentsResolver(args.postId, args.first || 10, args.after);
+      const resolver = createCommentsResolver(context.container);
+      return resolver(_parent, args, context, info);
     },
 
     followStatus: async (

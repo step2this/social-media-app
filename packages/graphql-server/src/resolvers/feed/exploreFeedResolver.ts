@@ -6,9 +6,9 @@
  * Public operation - no authentication required.
  */
 
-import { Container } from '../../infrastructure/di/Container.js';
+import type { AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../infrastructure/di/awilix-container.js';
 import type { QueryResolvers } from '../../schema/generated/types';
-import { GetExploreFeed } from '../../application/use-cases/feed/GetExploreFeed.js';
 import { Cursor } from '../../shared/types/index.js';
 import { ErrorFactory } from '../../infrastructure/errors/ErrorFactory.js';
 
@@ -18,10 +18,10 @@ import { ErrorFactory } from '../../infrastructure/errors/ErrorFactory.js';
  * @param container - DI container for resolving services
  * @returns GraphQL resolver for Query.exploreFeed
  */
-export const createExploreFeedResolver = (container: Container): QueryResolvers['exploreFeed'] => {
+export const createExploreFeedResolver = (container: AwilixContainer<GraphQLContainer>): QueryResolvers['exploreFeed'] => {
   return async (_parent: any, args: { first?: number | null; after?: string | null }, context: any) => {
     // Resolve use case from container
-    const useCase = container.resolve<GetExploreFeed>('GetExploreFeed');
+    const useCase = container.resolve('getExploreFeed');
 
     // Execute use case with optional viewer ID for personalization
     const result = await useCase.execute({

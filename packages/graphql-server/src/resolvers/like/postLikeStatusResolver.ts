@@ -6,13 +6,14 @@
  */
 
 import type { QueryResolvers } from '../../schema/generated/types';
-import type { Container } from '../../infrastructure/di/Container';
+import type { AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../infrastructure/di/awilix-container.js';
 import { requireAuth } from '../../infrastructure/resolvers/helpers/requireAuth';
 
-export function createPostLikeStatusResolver(container: Container): QueryResolvers['postLikeStatus'] {
+export function createPostLikeStatusResolver(container: AwilixContainer<GraphQLContainer>): QueryResolvers['postLikeStatus'] {
   return async (_parent, args, context, _info) => {
     const userId = requireAuth(context);
-    const useCase = container.resolve('GetPostLikeStatus');
+    const useCase = container.resolve('getPostLikeStatus');
 
     const result = await useCase.execute(userId, args.postId);
 

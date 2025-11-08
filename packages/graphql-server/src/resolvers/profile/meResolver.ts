@@ -6,22 +6,24 @@
  */
 
 import { withAuth } from '../../infrastructure/resolvers/withAuth.js';
-import { Container } from '../../infrastructure/di/Container.js';
+import type { AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../infrastructure/di/awilix-container.js';
 import type { QueryResolvers } from '../../schema/generated/types';
-import { GetCurrentUserProfile } from '../../application/use-cases/profile/GetCurrentUserProfile.js';
 import { UserId } from '../../shared/types/index.js';
 import { ErrorFactory } from '../../infrastructure/errors/ErrorFactory.js';
 
 /**
- * Create the me resolver with DI container.
+ * Create the me resolver with Awilix DI container.
  *
- * @param container - DI container for resolving services
+ * @param container - Awilix container for resolving services
  * @returns GraphQL resolver for Query.me
  */
-export const createMeResolver = (container: Container): QueryResolvers['me'] => {
+export const createMeResolver = (
+  container: AwilixContainer<GraphQLContainer>
+): QueryResolvers['me'] => {
   return withAuth(async (_parent: any, _args: any, context: any) => {
-    // Resolve use case from container
-    const useCase = container.resolve<GetCurrentUserProfile>('GetCurrentUserProfile');
+    // Resolve use case from Awilix container using camelCase key
+    const useCase = container.resolve('getCurrentUserProfile');
 
     // Execute use case
     const result = await useCase.execute({ userId: UserId(context.userId!) });

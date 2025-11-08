@@ -2,10 +2,11 @@
  * Main Resolver Factory
  *
  * Creates complete resolver map by composing individual resolver functions.
- * All resolvers are instantiated with their dependencies from the DI container.
+ * All resolvers are instantiated with their dependencies from the Awilix DI container.
  */
 
-import { Container } from '../infrastructure/di/Container.js';
+import type { AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../infrastructure/di/awilix-container.js';
 import { createMeResolver, createProfileResolver } from './profile/index.js';
 import { createPostResolver, createUserPostsResolver } from './post/index.js';
 import { createFollowingFeedResolver, createExploreFeedResolver } from './feed/index.js';
@@ -15,22 +16,21 @@ import type { Resolvers } from '../../generated/types.js';
  * Create complete resolver map with all resolvers.
  *
  * This factory function instantiates all GraphQL resolvers and wires them up
- * with their dependencies from the DI container. Each resolver is a thin
+ * with their dependencies from the Awilix DI container. Each resolver is a thin
  * wrapper around use cases from the application layer.
  *
  * Architecture:
- * - Container provides use cases
+ * - Awilix container provides use cases with automatic dependency injection
  * - Use cases implement business logic
  * - Resolvers are thin wrappers (error translation, auth, pagination)
  *
- * @param container - DI container with registered services
+ * @param container - Awilix DI container with registered services
  * @returns Complete Resolvers object for GraphQL schema
  *
  * @example
  * ```typescript
- * // In server setup:
- * const container = new Container();
- * registerServices(container, context);
+ * // In server setup (context.ts):
+ * const container = createGraphQLContainer(context);
  * const resolvers = createResolvers(container);
  *
  * const server = new ApolloServer({
@@ -39,7 +39,7 @@ import type { Resolvers } from '../../generated/types.js';
  * });
  * ```
  */
-export function createResolvers(container: Container): Resolvers {
+export function createResolvers(container: AwilixContainer<GraphQLContainer>): Resolvers {
   return {
     Query: {
       // Profile queries

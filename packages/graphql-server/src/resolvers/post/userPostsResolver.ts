@@ -9,10 +9,9 @@
  * 2. GetUserPosts - Fetches posts for that userId
  */
 
-import { Container } from '../../infrastructure/di/Container.js';
+import type { AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../infrastructure/di/awilix-container.js';
 import type { QueryResolvers, PostConnection } from '../../schema/generated/types';
-import { GetProfileByHandle } from '../../application/use-cases/profile/GetProfileByHandle.js';
-import { GetUserPosts } from '../../application/use-cases/post/GetUserPosts.js';
 import { Handle, UserId, Cursor } from '../../shared/types/index.js';
 import { ErrorFactory } from '../../infrastructure/errors/ErrorFactory.js';
 
@@ -22,12 +21,12 @@ import { ErrorFactory } from '../../infrastructure/errors/ErrorFactory.js';
  * @param container - DI container for resolving services
  * @returns GraphQL resolver for Query.userPosts
  */
-export const createUserPostsResolver = (container: Container): QueryResolvers['userPosts'] => {
+export const createUserPostsResolver = (container: AwilixContainer<GraphQLContainer>): QueryResolvers['userPosts'] => {
   return async (_parent: any, args: { handle?: string | null; first?: number | null; after?: string | null; limit?: number | null; cursor?: string | null }) => {
     try {
       // Resolve use cases from container
-      const getProfileUseCase = container.resolve<GetProfileByHandle>('GetProfileByHandle');
-      const getPostsUseCase = container.resolve<GetUserPosts>('GetUserPosts');
+      const getProfileUseCase = container.resolve('getProfileByHandle');
+      const getPostsUseCase = container.resolve('getUserPosts');
 
       // Step 1: Look up profile by handle to get userId
       const profileResult = await getProfileUseCase.execute({ handle: Handle(args.handle!) });

@@ -6,9 +6,9 @@
  */
 
 import { withAuth } from '../../infrastructure/resolvers/withAuth.js';
-import { Container } from '../../infrastructure/di/Container.js';
+import type { AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../infrastructure/di/awilix-container.js';
 import type { QueryResolvers } from '../../schema/generated/types';
-import { GetFollowingFeed } from '../../application/use-cases/feed/GetFollowingFeed.js';
 import { UserId, Cursor } from '../../shared/types/index.js';
 import { ErrorFactory } from '../../infrastructure/errors/ErrorFactory.js';
 
@@ -18,10 +18,10 @@ import { ErrorFactory } from '../../infrastructure/errors/ErrorFactory.js';
  * @param container - DI container for resolving services
  * @returns GraphQL resolver for Query.followingFeed
  */
-export const createFollowingFeedResolver = (container: Container): QueryResolvers['followingFeed'] => {
+export const createFollowingFeedResolver = (container: AwilixContainer<GraphQLContainer>): QueryResolvers['followingFeed'] => {
   return withAuth(async (_parent: any, args: { first?: number | null; after?: string | null }, context: any) => {
     // Resolve use case from container
-    const useCase = container.resolve<GetFollowingFeed>('GetFollowingFeed');
+    const useCase = container.resolve('getFollowingFeed');
 
     // Execute use case
     const result = await useCase.execute({

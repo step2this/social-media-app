@@ -5,14 +5,15 @@
  * Uses dependency injection pattern for testability.
  */
 
+import type { AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../infrastructure/di/awilix-container.js';
 import type { QueryResolvers } from '../../schema/generated/types';
-import type { Container } from '../../infrastructure/di/Container';
 import { requireValidCursor } from '../../infrastructure/resolvers/helpers/validateCursor';
 import { buildConnection } from '../../infrastructure/resolvers/helpers/ConnectionBuilder';
 
-export function createAuctionsResolver(container: Container): QueryResolvers['auctions'] {
+export function createAuctionsResolver(container: AwilixContainer<GraphQLContainer>): QueryResolvers['auctions'] {
   return async (_parent, args, _context, _info) => {
-    const useCase = container.resolve('GetAuctions');
+    const useCase = container.resolve('getAuctions');
     const cursor = requireValidCursor(args.cursor);
 
     const result = await useCase.execute(args.status, args.limit || 20, cursor);

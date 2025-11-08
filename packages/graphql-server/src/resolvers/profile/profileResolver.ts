@@ -5,22 +5,24 @@
  * Public operation - no authentication required.
  */
 
-import { Container } from '../../infrastructure/di/Container.js';
+import type { AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../infrastructure/di/awilix-container.js';
 import type { QueryResolvers } from '../../schema/generated/types';
-import { GetProfileByHandle } from '../../application/use-cases/profile/GetProfileByHandle.js';
 import { Handle } from '../../shared/types/index.js';
 import { ErrorFactory } from '../../infrastructure/errors/ErrorFactory.js';
 
 /**
- * Create the profile resolver with DI container.
+ * Create the profile resolver with Awilix DI container.
  *
- * @param container - DI container for resolving services
+ * @param container - Awilix container for resolving services
  * @returns GraphQL resolver for Query.profile
  */
-export const createProfileResolver = (container: Container): QueryResolvers['profile'] => {
+export const createProfileResolver = (
+  container: AwilixContainer<GraphQLContainer>
+): QueryResolvers['profile'] => {
   return async (_parent: any, args: { handle: string }) => {
-    // Resolve use case from container
-    const useCase = container.resolve<GetProfileByHandle>('GetProfileByHandle');
+    // Resolve use case from Awilix container using camelCase key
+    const useCase = container.resolve('getProfileByHandle');
 
     // Execute use case
     const result = await useCase.execute({ handle: Handle(args.handle) });

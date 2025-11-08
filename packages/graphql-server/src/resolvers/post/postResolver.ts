@@ -5,9 +5,9 @@
  * Public operation - no authentication required.
  */
 
-import { Container } from '../../infrastructure/di/Container.js';
+import type { AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../infrastructure/di/awilix-container.js';
 import type { QueryResolvers, Post } from '../../schema/generated/types';
-import { GetPostById } from '../../application/use-cases/post/GetPostById.js';
 import { PostId } from '../../shared/types/index.js';
 import { ErrorFactory } from '../../infrastructure/errors/ErrorFactory.js';
 
@@ -17,10 +17,10 @@ import { ErrorFactory } from '../../infrastructure/errors/ErrorFactory.js';
  * @param container - DI container for resolving services
  * @returns GraphQL resolver for Query.post
  */
-export const createPostResolver = (container: Container): QueryResolvers['post'] => {
+export const createPostResolver = (container: AwilixContainer<GraphQLContainer>): QueryResolvers['post'] => {
   return async (_parent: any, args: { id: string }) => {
     // Resolve use case from container
-    const useCase = container.resolve<GetPostById>('GetPostById');
+    const useCase = container.resolve('getPostById');
 
     // Execute use case
     const result = await useCase.execute({ postId: PostId(args.id) });
