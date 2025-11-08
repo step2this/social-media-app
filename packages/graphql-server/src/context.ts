@@ -1,11 +1,11 @@
 import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import type { AwilixContainer } from 'awilix';
 import { createDynamoDBClient, getTableName } from '@social-media-app/aws-utils';
 import { verifyAccessToken, extractTokenFromHeader, getJWTConfigFromEnv } from '@social-media-app/auth-utils';
 import { createLoaders, type DataLoaders } from './dataloaders/index.js';
 import { createServices, type Services } from './services/factory.js';
-import { Container } from './infrastructure/di/Container.js';
-import { registerServices } from './infrastructure/di/registerServices.js';
+import { createGraphQLContainer, type GraphQLContainer } from './infrastructure/di/awilix-container.js';
 
 /**
  * GraphQL Context
@@ -28,8 +28,8 @@ export interface GraphQLContext {
   // DataLoaders for batching and caching queries (solves N+1 problem)
   loaders: DataLoaders;
 
-  // DI Container (created once per request for clean architecture resolvers)
-  container: Container;
+  // Awilix DI Container (created once per request for clean architecture resolvers)
+  container: AwilixContainer<GraphQLContainer>;
 }
 
 /**
@@ -58,6 +58,9 @@ export async function createContext(
     }
   }
 
+  // Generate correlation ID for distributed tracing
+  const correlationId = event.requestContext?.requestId || `gql-${Date.now()}-${Math.random()}`;
+
   // Create all DAL services using factory pattern (eliminates duplication)
   const services = createServices(dynamoClient, tableName);
 
@@ -72,18 +75,19 @@ export async function createContext(
     userId
   );
 
-  // Create context object (needed for registerServices)
+  // Create context object (needed for createGraphQLContainer)
   const context: GraphQLContext = {
     userId,
+    correlationId,
     dynamoClient,
     tableName,
     services,
     loaders,
   } as GraphQLContext;
 
-  // Create DI container once per request
-  const container = new Container();
-  registerServices(container, context);
+  // Create Awilix DI container once per request
+  // This replaces the old custom Container + registerServices pattern
+  const container = createGraphQLContainer(context);
   context.container = container;
 
   return context;
