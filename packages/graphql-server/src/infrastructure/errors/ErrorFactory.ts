@@ -1,46 +1,54 @@
 /**
- * ErrorFactory
+ * ErrorFactory - Converts domain errors to GraphQL errors
  *
  * Factory for creating standardized GraphQL errors with consistent error codes.
- * Provides type-safe error creation methods for common error scenarios.
+ * Serves two primary purposes:
+ * 1. Convert AppError instances from domain/DAL layer to GraphQL errors (primary use)
+ * 2. Provide convenience methods for creating errors directly (backward compatibility)
  *
- * This replaces scattered error creation across resolvers:
+ * Architecture:
+ * - Domain/DAL layer throws AppError with business context
+ * - GraphQL resolvers catch AppError and convert using fromAppError()
+ * - Error codes are shared across all layers (single source of truth)
  *
- * Before:
+ * Before (scattered error creation):
  * ```typescript
  * throw new GraphQLError('You must be authenticated', {
  *   extensions: { code: 'UNAUTHENTICATED' }
  * });
  * ```
  *
- * After:
+ * After (domain error conversion):
  * ```typescript
- * throw ErrorFactory.unauthenticated();
+ * try {
+ *   const result = await useCase.execute(args);
+ *   if (!result.success) throw ErrorFactory.fromAppError(result.error);
+ * } catch (error) {
+ *   if (error instanceof AppError) {
+ *     throw ErrorFactory.fromAppError(error);
+ *   }
+ *   throw ErrorFactory.internalServerError();
+ * }
  * ```
  *
  * Benefits:
+ * - Unified error handling across all layers
  * - Consistent error messages and codes
- * - Type-safe error codes (ErrorCode type)
- * - Less boilerplate
- * - Easier to maintain
- * - Self-documenting error scenarios
+ * - Rich error context from domain layer
+ * - Correlation IDs for distributed tracing
+ * - Type-safe error handling
  */
 
 import { GraphQLError } from 'graphql';
-
-/**
- * ErrorCode - Standard GraphQL error codes
- *
- * These codes follow GraphQL best practices and Apollo Server conventions.
- *
- * @see https://www.apollographql.com/docs/apollo-server/data/errors/#built-in-error-codes
- */
-export type ErrorCode =
-  | 'UNAUTHENTICATED'     // User is not authenticated (401)
-  | 'UNAUTHORIZED'        // User is authenticated but lacks permissions (403)
-  | 'NOT_FOUND'           // Resource not found (404)
-  | 'BAD_REQUEST'         // Invalid input or request (400)
-  | 'INTERNAL_SERVER_ERROR'; // Unexpected server error (500)
+import { 
+  AppError, 
+  NotFoundError, 
+  ConflictError,
+  UnauthorizedError,
+  ForbiddenError,
+  ValidationError
+} from '@social-media-app/shared/errors';
+import type { ErrorCode } from '@social-media-app/shared/errors';
 
 /**
  * ErrorFactory - Factory for creating GraphQL errors
@@ -75,27 +83,75 @@ export type ErrorCode =
  */
 export class ErrorFactory {
   /**
-   * Create a GraphQLError with a specific code.
+   * Convert domain AppError to GraphQL error (PRIMARY METHOD)
+   * 
+   * This is the primary method for error handling in resolvers.
+   * Preserves all error context including correlation IDs.
+   * 
+   * @example
+   * ```typescript
+   * try {
+   *   const result = await useCase.execute(args);
+   *   if (!result.success) {
+   *     throw ErrorFactory.fromAppError(result.error);
+   *   }
+   * } catch (error) {
+   *   if (error instanceof AppError) {
+   *     throw ErrorFactory.fromAppError(error);
+   *   }
+   *   throw ErrorFactory.internalServerError();
+   * }
+   * ```
+   */
+  static fromAppError(error: AppError): GraphQLError {
+    return new GraphQLError(error.message, {
+      extensions: {
+        code: error.code,
+        correlationId: error.correlationId,
+        context: error.context,
+        timestamp: error.timestamp
+      }
+    });
+  }
+
+  /**
+   * Create a GraphQLError with a specific code and optional correlation ID.
    *
    * This is the base method used by all other factory methods.
    * Prefer using specific methods (unauthenticated(), notFound(), etc.)
-   * over this generic method.
+   * or fromAppError() over this generic method.
+   *
+   * When a correlation ID is provided, it's included in the error extensions
+   * for distributed tracing and debugging.
    *
    * @param message - The error message to display
    * @param code - The error code (type-safe)
-   * @returns A GraphQLError with the specified message and code
+   * @param correlationId - Optional correlation ID for tracing
+   * @returns A GraphQLError with the specified message, code, and correlation ID
    *
    * @example
    * ```typescript
-   * const error = ErrorFactory.create('Invalid input', 'BAD_REQUEST');
+   * const error = ErrorFactory.create(
+   *   'Invalid input',
+   *   'VALIDATION_ERROR',
+   *   context.correlationId
+   * );
    * throw error;
    * ```
    */
-  static create(message: string, code: ErrorCode): GraphQLError {
+  private static create(
+    message: string,
+    code: ErrorCode,
+    correlationId?: string
+  ): GraphQLError {
+    const extensions: Record<string, any> = { code };
+    
+    if (correlationId) {
+      extensions.correlationId = correlationId;
+    }
+
     return new GraphQLError(message, {
-      extensions: {
-        code,
-      },
+      extensions,
     });
   }
 
@@ -106,20 +162,21 @@ export class ErrorFactory {
    * Maps to HTTP 401 Unauthorized.
    *
    * @param message - Optional custom message (defaults to standard message)
+   * @param correlationId - Optional correlation ID for tracing
    * @returns GraphQLError with UNAUTHENTICATED code
    *
    * @example
    * ```typescript
    * if (!context.userId) {
-   *   throw ErrorFactory.unauthenticated();
+   *   throw ErrorFactory.unauthenticated(undefined, context.correlationId);
    * }
    *
    * // With custom message:
-   * throw ErrorFactory.unauthenticated('Please log in to continue');
+   * throw ErrorFactory.unauthenticated('Please log in to continue', context.correlationId);
    * ```
    */
-  static unauthenticated(message = 'You must be authenticated to access this resource'): GraphQLError {
-    return this.create(message, 'UNAUTHENTICATED');
+  static unauthenticated(message = 'You must be authenticated to access this resource', correlationId?: string): GraphQLError {
+    return this.create(message, 'UNAUTHENTICATED', correlationId);
   }
 
   /**
@@ -133,17 +190,18 @@ export class ErrorFactory {
    * - UNAUTHORIZED: User is logged in but can't perform this action
    *
    * @param message - Optional custom message (defaults to standard message)
+   * @param correlationId - Optional correlation ID for tracing
    * @returns GraphQLError with UNAUTHORIZED code
    *
    * @example
    * ```typescript
    * if (post.userId !== context.userId) {
-   *   throw ErrorFactory.unauthorized('You cannot delete this post');
+   *   throw ErrorFactory.unauthorized('You cannot delete this post', context.correlationId);
    * }
    * ```
    */
-  static unauthorized(message = 'You do not have permission to perform this action'): GraphQLError {
-    return this.create(message, 'UNAUTHORIZED');
+  static unauthorized(message = 'You do not have permission to perform this action', correlationId?: string): GraphQLError {
+    return this.create(message, 'UNAUTHORIZED', correlationId);
   }
 
   /**
@@ -154,18 +212,19 @@ export class ErrorFactory {
    *
    * @param entity - The entity type (e.g., 'User', 'Post', 'Comment')
    * @param id - The ID that was not found
+   * @param correlationId - Optional correlation ID for tracing
    * @returns GraphQLError with NOT_FOUND code
    *
    * @example
    * ```typescript
    * const post = await postService.getById(id);
    * if (!post) {
-   *   throw ErrorFactory.notFound('Post', id);
+   *   throw ErrorFactory.notFound('Post', id, context.correlationId);
    * }
    * ```
    */
-  static notFound(entity: string, id: string): GraphQLError {
-    return this.create(`${entity} not found: ${id}`, 'NOT_FOUND');
+  static notFound(entity: string, id: string, correlationId?: string): GraphQLError {
+    return this.create(`${entity} not found: ${id}`, 'NOT_FOUND', correlationId);
   }
 
   /**
@@ -175,21 +234,22 @@ export class ErrorFactory {
    * Maps to HTTP 400 Bad Request.
    *
    * @param message - The validation error message
+   * @param correlationId - Optional correlation ID for tracing
    * @returns GraphQLError with BAD_REQUEST code
    *
    * @example
    * ```typescript
    * if (!email.includes('@')) {
-   *   throw ErrorFactory.badRequest('Email must be a valid email address');
+   *   throw ErrorFactory.badRequest('Email must be a valid email address', context.correlationId);
    * }
    *
    * if (password.length < 8) {
-   *   throw ErrorFactory.badRequest('Password must be at least 8 characters');
+   *   throw ErrorFactory.badRequest('Password must be at least 8 characters', context.correlationId);
    * }
    * ```
    */
-  static badRequest(message: string): GraphQLError {
-    return this.create(message, 'BAD_REQUEST');
+  static badRequest(message: string, correlationId?: string): GraphQLError {
+    return this.create(message, 'BAD_REQUEST', correlationId);
   }
 
   /**
@@ -202,6 +262,7 @@ export class ErrorFactory {
    * Use generic messages in production.
    *
    * @param message - Optional custom message (defaults to generic message)
+   * @param correlationId - Optional correlation ID for tracing
    * @returns GraphQLError with INTERNAL_SERVER_ERROR code
    *
    * @example
@@ -214,11 +275,11 @@ export class ErrorFactory {
    *   logger.error('Database error:', error);
    *
    *   // Return generic error to client
-   *   throw ErrorFactory.internalServerError();
+   *   throw ErrorFactory.internalServerError(undefined, context.correlationId);
    * }
    * ```
    */
-  static internalServerError(message = 'An internal server error occurred'): GraphQLError {
-    return this.create(message, 'INTERNAL_SERVER_ERROR');
+  static internalServerError(message = 'An internal server error occurred', correlationId?: string): GraphQLError {
+    return this.create(message, 'INTERNAL_SERVER_ERROR', correlationId);
   }
 }
