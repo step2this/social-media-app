@@ -7,7 +7,7 @@
  * Architecture:
  * 1. Generic helper extracts container from context
  * 2. Resolver factories receive container automatically
- * 3. Type-safe argument and return type inference
+ * 3. Type-safe via inference (no manual type annotations needed)
  *
  * Benefits:
  * - DRY: Single helper for all resolvers
@@ -35,22 +35,11 @@ import { createAuctionsResolver } from './auction/auctionsResolver.js';
 import { createBidsResolver } from './auction/bidsResolver.js';
 
 /**
- * Generic resolver type that takes a container and returns a GraphQL resolver
- */
-type ResolverFactory<TArgs = any, TResult = any> = (
-  container: AwilixContainer<GraphQLContainer>
-) => (
-  parent: unknown,
-  args: TArgs,
-  context: GraphQLContext,
-  info: GraphQLResolveInfo
-) => Promise<TResult> | TResult;
-
-/**
  * Higher-order function that wraps a resolver factory with automatic container injection
  *
  * This eliminates the need to manually extract container from context in each resolver.
- * Uses generics to maintain full type safety for arguments and return types.
+ * Uses TypeScript's type inference to automatically infer all types.
+ * Handles GraphQL resolver types that may be `undefined`.
  *
  * @param factory - Resolver factory function that takes a container
  * @returns GraphQL resolver function with automatic container injection
@@ -63,18 +52,15 @@ type ResolverFactory<TArgs = any, TResult = any> = (
  * };
  * ```
  */
-function withContainer<TArgs, TResult>(
-  factory: ResolverFactory<TArgs, TResult>
-) {
-  return async (
-    parent: unknown,
-    args: TArgs,
-    context: GraphQLContext,
-    info: GraphQLResolveInfo
-  ): Promise<TResult> => {
+function withContainer<TResolver extends ((...args: any[]) => any) | undefined>(
+  factory: (container: AwilixContainer<GraphQLContainer>) => TResolver
+): TResolver {
+  return ((...args: any[]) => {
+    const context = args[2] as GraphQLContext;
     const resolver = factory(context.container);
-    return resolver(parent, args, context, info);
-  };
+    if (!resolver) return undefined;
+    return resolver(...args);
+  }) as TResolver;
 }
 
 /**
