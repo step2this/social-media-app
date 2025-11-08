@@ -8,20 +8,19 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { GraphQLResolveInfo } from 'graphql';
 import { createNotificationsResolver } from '../notificationsResolver';
-import { createContainer } from '../../../infrastructure/di/awilix-container';
-import type { AwilixContainer } from 'awilix';
-import { asValue } from 'awilix';
+import { createContainer, asValue, InjectionMode, type AwilixContainer } from 'awilix';
+import type { GraphQLContainer } from '../../../infrastructure/di/awilix-container';
 import { GetNotifications } from '../../../application/use-cases/notification/GetNotifications';
 import { FakeNotificationRepository } from '../../../../__tests__/helpers/fake-repositories';
 import { createMockNotifications } from '@social-media-app/shared/test-utils/fixtures';
 import type { GraphQLContext } from '../../../context';
 
 describe('notificationsResolver', () => {
-  let container: AwilixContainer;
+  let container: AwilixContainer<GraphQLContainer>;
   let resolver: ReturnType<typeof createNotificationsResolver>;
 
   beforeEach(() => {
-    container = createContainer();
+    container = createContainer<GraphQLContainer>({ injectionMode: InjectionMode.CLASSIC });
   });
 
   it('returns notifications as a valid connection', async () => {
