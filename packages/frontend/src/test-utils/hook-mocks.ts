@@ -70,7 +70,7 @@ export interface UseAuthReturn {
 
 /**
  * Return type for useFollow hook (refactored - no state duplication)
- * 
+ *
  * The hook now provides mutation functions only. State should be read
  * from the parent component's query data (e.g., ProfilePage query).
  */
@@ -166,7 +166,7 @@ export const mockUseAuthUnauthenticated = (): UseAuthReturn => createMockUseAuth
 
 /**
  * Create a mock return value for useFollow hook (refactored version)
- * 
+ *
  * The hook now only provides mutation functions and loading/error state.
  * State should be passed to components via props from parent queries.
  */

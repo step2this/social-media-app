@@ -20,7 +20,7 @@ const logger = createStreamLogger('FollowCounter');
  * - Decrements followingCount for follower and followersCount for followee when FOLLOW entity is removed
  *
  * Uses atomic ADD operation to handle concurrent follows safely
- * 
+ *
  * Features structured logging with batch metrics and performance tracking
  */
 export const handler: DynamoDBStreamHandler = async (
@@ -28,7 +28,7 @@ export const handler: DynamoDBStreamHandler = async (
 ): Promise<void> => {
   const dynamoClient = createDynamoDBClient();
   const tableName = getTableName();
-  
+
   const context = logger.startBatch(event.Records.length);
 
   // Process all records in parallel for better performance

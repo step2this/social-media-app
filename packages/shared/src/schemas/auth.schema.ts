@@ -70,9 +70,6 @@ export const VerifyEmailRequestSchema = z.object({
   token: VerificationTokenField
 });
 
-// Use centralized user request schema - no need for auth-specific duplicate
-// export const UpdateUserProfileRequestSchema = UpdateUserRequestSchema;
-
 /**
  * Response schemas
  */
@@ -81,9 +78,6 @@ export const AuthTokensSchema = z.object({
   refreshToken: RefreshTokenField,
   expiresIn: z.number().positive()
 });
-
-// Use centralized user schema - no need for auth-specific duplicate
-// export const UserProfileSchema = UserSchema;
 
 export const RegisterResponseSchema = z.object({
   user: UserSchema.pick({
@@ -128,12 +122,7 @@ export const VerifyEmailResponseSchema = z.object({
   message: z.string()
 });
 
-// Profile endpoint responses need Profile data, not just User data
-// This should use ProfileResponseSchema from profile.schema.ts
-// GetProfileResponseSchema is deprecated - use ProfileResponseSchema instead
-
-// Use centralized user response schema - no need for auth-specific duplicate
-// export const UpdateUserProfileResponseSchema = UpdateUserResponseSchema;
+// Profile endpoint responses use ProfileResponseSchema from profile.schema.ts
 
 /**
  * Type exports
@@ -155,6 +144,5 @@ export type VerifyEmailResponse = z.infer<typeof VerifyEmailResponseSchema>;
 // Use centralized user types - re-export for convenience
 export type UpdateUserProfileRequest = UpdateUserRequest;
 export type UpdateUserProfileResponse = UpdateUserResponse;
-// export type GetProfileResponse = z.infer<typeof GetProfileResponseSchema>; // Deprecated - use ProfileResponse from profile.schema.ts
 export type UserProfile = User;
 export type AuthTokens = z.infer<typeof AuthTokensSchema>;

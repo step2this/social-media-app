@@ -23,42 +23,46 @@
  * ```
  */
 
+import { 
+  getOrCreateCorrelationId, 
+  addCorrelationIdToHeaders,
+  createStructuredLogger,
+  logError
+} from '@social-media-app/shared';
 import type { Middleware } from './compose.js';
-
-/**
- * Structured log entry interface
- */
-interface LogEntry {
-  correlationId: string;
-  [key: string]: any;
-}
 
 /**
  * Logging middleware factory
  *
  * Logs structured JSON for easy parsing in CloudWatch Logs.
- * Includes correlation IDs from API Gateway request context.
+ * Uses shared utilities for correlation ID management and structured logging.
  *
  * @returns Middleware function that logs requests/responses
  */
 export const withLogging = (): Middleware => {
   return async (event, context, next) => {
-    const correlationId = event.requestContext?.requestId || crypto.randomUUID();
+    // Extract or generate correlation ID
+    const correlationId = getOrCreateCorrelationId(
+      event.headers || {},
+      event.requestContext?.requestId
+    );
     const startTime = Date.now();
 
     // Add correlation ID to context for downstream middleware
     context.correlationId = correlationId;
 
-    // Log request start
-    console.log(JSON.stringify({
-      level: 'INFO',
-      type: 'REQUEST_START',
+    // Create logger instance
+    const logger = createStructuredLogger({
       correlationId,
+      defaultMetadata: { service: 'backend-lambda' }
+    });
+
+    // Log request start
+    logger.info('REQUEST_START', 'Processing Lambda request', {
       path: event.rawPath,
       method: event.requestContext?.http?.method,
-      userId: context.userId || 'anonymous',
-      timestamp: new Date().toISOString()
-    } as LogEntry));
+      userId: context.userId || 'anonymous'
+    });
 
     try {
       const response = await next();
@@ -66,23 +70,19 @@ export const withLogging = (): Middleware => {
 
       // Log successful response
       const statusCode = typeof response === 'object' && 'statusCode' in response ? response.statusCode : 200;
-      console.log(JSON.stringify({
-        level: 'INFO',
-        type: 'REQUEST_COMPLETE',
-        correlationId,
+      logger.info('REQUEST_COMPLETE', 'Lambda request completed successfully', {
         statusCode,
-        duration,
-        timestamp: new Date().toISOString()
-      } as LogEntry));
+        duration
+      });
 
       // Add correlation ID to response headers for client-side tracing
       if (typeof response === 'object' && response !== null) {
         return {
           ...response,
-          headers: {
-            ...(('headers' in response && typeof response.headers === 'object' ? response.headers : {}) as Record<string, string>),
-            'X-Correlation-Id': correlationId
-          }
+          headers: addCorrelationIdToHeaders(
+            ('headers' in response && typeof response.headers === 'object' ? response.headers : {}) as Record<string, string>,
+            correlationId
+          )
         };
       }
 
@@ -90,19 +90,11 @@ export const withLogging = (): Middleware => {
     } catch (error) {
       const duration = Date.now() - startTime;
 
-      // Log error (withErrorHandling will handle the response)
-      console.error(JSON.stringify({
-        level: 'ERROR',
-        type: 'REQUEST_ERROR',
-        correlationId,
+      // Log error using shared utility
+      logError('REQUEST_ERROR', correlationId, error as Error, {
         duration,
-        error: error instanceof Error ? {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
-        } : String(error),
-        timestamp: new Date().toISOString()
-      } as LogEntry));
+        service: 'backend-lambda'
+      });
 
       // Re-throw for error handling middleware
       throw error;

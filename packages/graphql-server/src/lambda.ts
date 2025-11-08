@@ -88,6 +88,12 @@
 
 import type { APIGatewayProxyEvent, APIGatewayProxyEventV2, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { startServerAndCreateLambdaHandler, handlers } from '@as-integrations/aws-lambda';
+import { 
+  getOrCreateCorrelationId,
+  addCorrelationIdToHeaders,
+  createStructuredLogger,
+  logError 
+} from '@social-media-app/shared';
 import { createApolloServer } from './server.js';
 import { createContext } from './context.js';
 
@@ -182,16 +188,35 @@ export async function handler(
   event: APIGatewayProxyEvent,
   lambdaContext: Context
 ): Promise<APIGatewayProxyResult> {
+  // Extract or generate correlation ID for this request
+  const correlationId = getOrCreateCorrelationId(
+    event.headers || {},
+    event.requestContext?.requestId
+  );
+  const startTime = Date.now();
+
+  // Create logger instance for this request
+  const logger = createStructuredLogger({
+    correlationId,
+    defaultMetadata: { service: 'graphql-server' }
+  });
+
   try {
     // Initialize Apollo Server on first invocation (cold start)
     if (!serverInstance) {
-      console.log('[Lambda] Cold start: Creating Apollo Server instance');
+      logger.info('COLD_START', 'Creating Apollo Server instance');
       serverInstance = createApolloServer();
       await serverInstance.start();
-      console.log('[Lambda] Apollo Server started successfully');
+      logger.info('SERVER_STARTED', 'Apollo Server started successfully');
     } else {
-      console.log('[Lambda] Warm start: Reusing existing Apollo Server instance');
+      logger.info('WARM_START', 'Reusing existing Apollo Server instance');
     }
+
+    // Log request start
+    logger.info('REQUEST_START', 'Processing GraphQL request', {
+      path: event.path,
+      method: event.httpMethod
+    });
 
     // Create Lambda handler with Apollo Server integration
     // Uses APIGatewayProxyEventV2 request handler which is compatible with our context
@@ -200,14 +225,19 @@ export async function handler(
       handlers.createAPIGatewayProxyEventV2RequestHandler(),
       {
         // Create context for each request
-        // Context includes authenticated userId, DynamoDB client, and table name
+        // Context includes authenticated userId, DynamoDB client, and correlation ID
         context: async ({ event: eventV2 }) => {
           try {
-            return await createContext(eventV2);
+            const ctx = await createContext(eventV2);
+            // Add correlation ID to context for resolvers
+            return {
+              ...ctx,
+              correlationId
+            };
           } catch (error) {
-            console.error('[Lambda] Error creating context:', error);
-            // Return default context with null userId on error
-            // This allows unauthenticated requests to proceed
+            logError('CONTEXT_ERROR', correlationId, error as Error, {
+              service: 'graphql-server'
+            });
             throw error;
           }
         },
@@ -218,16 +248,60 @@ export async function handler(
     // Convert V1 event to V2 format for the handler
     const eventV2 = convertV1ToV2(event);
     const result = await lambdaHandler(eventV2, lambdaContext, {} as any);
-    return result as APIGatewayProxyResult;
+    
+    const duration = Date.now() - startTime;
+    
+    // Handle void return (should not happen in normal operation)
+    if (!result) {
+      logger.error('HANDLER_ERROR', 'Lambda handler returned void');
+      return {
+        statusCode: 500,
+        headers: addCorrelationIdToHeaders(
+          { 'Content-Type': 'application/json' },
+          correlationId
+        ),
+        body: JSON.stringify({
+          errors: [
+            {
+              message: 'Internal server error',
+              extensions: {
+                code: 'INTERNAL_SERVER_ERROR',
+              },
+            },
+          ],
+        }),
+      };
+    }
+    
+    // Log successful response
+    logger.info('REQUEST_COMPLETE', 'GraphQL request completed successfully', {
+      statusCode: result.statusCode,
+      duration
+    });
+
+    // Add correlation ID to response headers
+    return {
+      ...result,
+      headers: addCorrelationIdToHeaders(
+        result.headers as Record<string, string>,
+        correlationId
+      )
+    } as APIGatewayProxyResult;
   } catch (error) {
-    // Handle server initialization or GraphQL execution failures
-    console.error('[Lambda] Handler error:', error);
+    const duration = Date.now() - startTime;
+
+    // Log error using shared utility
+    logError('REQUEST_ERROR', correlationId, error as Error, {
+      duration,
+      service: 'graphql-server'
+    });
 
     return {
       statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: addCorrelationIdToHeaders(
+        { 'Content-Type': 'application/json' },
+        correlationId
+      ),
       body: JSON.stringify({
         errors: [
           {

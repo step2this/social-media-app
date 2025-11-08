@@ -8,9 +8,9 @@ import { successResponse } from '../../utils/responses.js';
 
 /**
  * Lambda handler for user registration
- * 
+ *
  * Creates a new user account with email, username, and password.
- * 
+ *
  * @route POST /auth/register
  * @middleware withErrorHandling - Converts errors to HTTP responses (including conflict errors)
  * @middleware withLogging - Structured logging with correlation IDs

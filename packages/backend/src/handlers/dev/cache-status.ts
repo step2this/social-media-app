@@ -1,4 +1,4 @@
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
+import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { DescribeStreamCommand } from '@aws-sdk/client-kinesis';
 import Redis from 'ioredis';
 import { successResponse, errorResponse } from '../../utils/index.js';
@@ -8,6 +8,9 @@ import {
   getKinesisStreamName,
   isLocalStackEnvironment
 } from '../../utils/aws-config.js';
+import { compose } from '../../infrastructure/middleware/compose.js';
+import { withErrorHandling } from '../../infrastructure/middleware/withErrorHandling.js';
+import { withLogging } from '../../infrastructure/middleware/withLogging.js';
 
 /**
  * Cache status response structure
@@ -34,14 +37,11 @@ interface CacheStatusResponse {
 /**
  * Lambda handler for cache status endpoint
  * Development-only endpoint for monitoring Redis and Kinesis status
- *
- * @param _event - API Gateway proxy event (unused, but required for Lambda signature)
- * @returns API Gateway proxy result with cache status
  */
-export const handler = async (
-  _event: APIGatewayProxyEventV2
-): Promise<APIGatewayProxyResultV2> => {
-  try {
+export const handler = compose(
+  withErrorHandling(),
+  withLogging(),
+  async (_event: APIGatewayProxyEventV2) => {
     // Only allow in development environment
     const isDevelopment = process.env.NODE_ENV === 'development' || isLocalStackEnvironment();
     if (!isDevelopment) {
@@ -141,12 +141,5 @@ export const handler = async (
     }
 
     return successResponse(200, response);
-  } catch (error) {
-    console.error('[dev/cache-status] Unexpected error:', error);
-    return errorResponse(
-      500,
-      'Failed to retrieve cache status',
-      error instanceof Error ? error.message : undefined
-    );
   }
-};
+);

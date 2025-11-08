@@ -11,9 +11,9 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda
 
 /**
  * Lambda handler for getting user profile (GET /auth/profile)
- * 
+ *
  * Retrieves the authenticated user's complete profile.
- * 
+ *
  * @middleware withErrorHandling - Converts errors to HTTP responses
  * @middleware withLogging - Structured logging with correlation IDs
  * @middleware withAuth - Validates access token and extracts userId (required)
@@ -42,9 +42,9 @@ const getHandler = compose(
 
 /**
  * Lambda handler for updating user profile (PUT /auth/profile)
- * 
+ *
  * Updates the authenticated user's profile information.
- * 
+ *
  * @middleware withErrorHandling - Converts errors to HTTP responses
  * @middleware withLogging - Structured logging with correlation IDs
  * @middleware withAuth - Validates access token and extracts userId (required)
@@ -74,7 +74,7 @@ const updateHandler = compose(
 
 /**
  * Main handler that routes to appropriate function based on HTTP method
- * 
+ *
  * @route GET /auth/profile - Get user profile
  * @route PUT /auth/profile - Update user profile
  */

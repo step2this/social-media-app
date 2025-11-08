@@ -26,7 +26,7 @@ import { createStreamLogger } from '../../infrastructure/middleware/streamLogger
  * - PK: USER#<followerId>
  * - SK: FOLLOW#<followingId>#<timestamp>
  * - Extract both IDs to delete feed items
- * 
+ *
  * Features structured logging with batch metrics and performance tracking
  *
  * @see FeedService.deleteFeedItemsForUser for deletion logic

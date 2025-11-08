@@ -3,7 +3,7 @@ import {
   PaginationRequestSchema,
   PaginationResponseSchema
 } from './base.schema.js';
-import { FeedPostItemSchema } from './post.schema.js';
+import { PostWithAuthorSchema } from './post.schema.js';
 
 /**
  * Feed request schema - for fetching the explore/feed page
@@ -15,11 +15,11 @@ export const FeedRequestSchema = PaginationRequestSchema.extend({
 
 /**
  * Feed response schema
- * Returns FeedPostItem array (with full images and author info)
+ * Returns PostWithAuthor array (with full images and author info)
  * Includes pagination metadata and total count
  */
 export const FeedResponseSchema = PaginationResponseSchema.extend({
-  posts: z.array(FeedPostItemSchema),
+  posts: z.array(PostWithAuthorSchema),
   totalCount: z.number().int().nonnegative().optional(),
   source: z.enum(['materialized', 'query-time', 'hybrid']).optional()
 });

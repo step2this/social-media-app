@@ -1,19 +1,19 @@
 /**
  * Feed item mapping utilities
- * Provides pure functional mappers for converting FeedItemEntity to FeedPostItem domain objects
+ * Provides pure functional mappers for converting FeedItemEntity to PostWithAuthor domain objects
  */
 
-import type { FeedPostItem } from '@social-media-app/shared';
+import type { PostWithAuthor } from '@social-media-app/shared';
 import type { FeedItemEntity } from '../entities/feed-item.entity.js';
 
 /**
- * Maps FeedItemEntity (DynamoDB) to FeedPostItem (domain schema)
+ * Maps FeedItemEntity (DynamoDB) to PostWithAuthor (domain schema)
  *
  * Transforms database entity to API response format.
  * Sets source to 'materialized' to indicate this came from the materialized feed cache.
  *
  * @param entity - FeedItemEntity from DynamoDB
- * @returns FeedPostItem domain object
+ * @returns PostWithAuthor domain object
  *
  * @example
  * ```typescript
@@ -21,7 +21,7 @@ import type { FeedItemEntity } from '../entities/feed-item.entity.js';
  * // Returns: { id, userId, userHandle, imageUrl, caption, likesCount, ... }
  * ```
  */
-export const mapEntityToFeedPostItem = (entity: FeedItemEntity): FeedPostItem => ({
+export const mapEntityToFeedPostItem = (entity: FeedItemEntity): PostWithAuthor => ({
   id: entity.postId,
   userId: entity.authorId,         // Author is userId for the post
   userHandle: entity.authorHandle,
@@ -39,13 +39,13 @@ export const mapEntityToFeedPostItem = (entity: FeedItemEntity): FeedPostItem =>
 });
 
 /**
- * Maps array of FeedItemEntity to FeedPostItem array
+ * Maps array of FeedItemEntity to PostWithAuthor array
  *
  * Bulk mapper for efficient transformation of multiple feed items.
  * Uses functional programming style (map) for clean, composable code.
  *
  * @param entities - Array of FeedItemEntity from DynamoDB
- * @returns Array of FeedPostItem domain objects
+ * @returns Array of PostWithAuthor domain objects
  *
  * @example
  * ```typescript
@@ -53,5 +53,5 @@ export const mapEntityToFeedPostItem = (entity: FeedItemEntity): FeedPostItem =>
  * // Returns: [{ id, userId, ... }, { id, userId, ... }, ...]
  * ```
  */
-export const mapEntitiesToFeedPostItems = (entities: FeedItemEntity[]): FeedPostItem[] =>
+export const mapEntitiesToFeedPostItems = (entities: FeedItemEntity[]): PostWithAuthor[] =>
   entities.map(mapEntityToFeedPostItem);

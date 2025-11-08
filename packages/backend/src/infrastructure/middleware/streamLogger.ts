@@ -140,7 +140,7 @@ export function createStreamLogger(handlerName: string): StreamLogger {
       // Kinesis Stream Record (type guard ensures this is KinesisStreamRecord)
       recordId = record.kinesis.sequenceNumber;
     }
-    
+
     const startTime = Date.now();
 
     try {

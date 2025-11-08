@@ -44,7 +44,7 @@ interface ActorInfo {
  * - Only processes relevant entity types (LIKE, COMMENT, FOLLOW)
  * - Continues processing other records even if one fails
  * - Uses sparse GSI2 index for unread notifications via NotificationService
- * 
+ *
  * Features structured logging with batch metrics and performance tracking
  *
  * @example
@@ -72,7 +72,7 @@ export const handler: DynamoDBStreamHandler = async (
   const tableName = getTableName();
   const notificationService = new NotificationService(dynamoClient, tableName);
   const profileService = new ProfileService(dynamoClient, tableName);
-  
+
   const context = logger.startBatch(event.Records.length);
 
   // Process all records in parallel using Promise.allSettled for graceful error handling

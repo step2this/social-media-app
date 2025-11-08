@@ -1,4 +1,4 @@
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
+import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import {
   GetShardIteratorCommand,
   GetRecordsCommand,
@@ -10,6 +10,9 @@ import {
   getKinesisStreamName,
   isLocalStackEnvironment
 } from '../../utils/aws-config.js';
+import { compose } from '../../infrastructure/middleware/compose.js';
+import { withErrorHandling } from '../../infrastructure/middleware/withErrorHandling.js';
+import { withLogging } from '../../infrastructure/middleware/withLogging.js';
 
 /**
  * Kinesis record for dev monitoring
@@ -35,14 +38,11 @@ interface GetKinesisRecordsResponse {
 /**
  * Lambda handler for Kinesis records dev endpoint
  * Development-only endpoint for monitoring Kinesis stream records
- *
- * @param event - API Gateway proxy event
- * @returns API Gateway proxy result with Kinesis records
  */
-export const handler = async (
-  event: APIGatewayProxyEventV2
-): Promise<APIGatewayProxyResultV2> => {
-  try {
+export const handler = compose(
+  withErrorHandling(),
+  withLogging(),
+  async (event: APIGatewayProxyEventV2) => {
     // Only allow in development environment
     const isDevelopment = process.env.NODE_ENV === 'development' || isLocalStackEnvironment();
     if (!isDevelopment) {
@@ -112,12 +112,5 @@ export const handler = async (
     };
 
     return successResponse(200, response);
-  } catch (error) {
-    console.error('[dev/kinesis-records] Unexpected error:', error);
-    return errorResponse(
-      500,
-      'Failed to retrieve Kinesis records',
-      error instanceof Error ? error.message : undefined
-    );
   }
-};
+);

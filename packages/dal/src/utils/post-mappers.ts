@@ -3,7 +3,7 @@
  * Provides pure functional mappers for converting PostEntity to various output types
  */
 
-import type { Post, PostGridItem, FeedPostItem, Profile } from '@social-media-app/shared';
+import type { Post, PostGridItem, PostWithAuthor, Profile } from '@social-media-app/shared';
 
 /**
  * PostEntity for DynamoDB (re-exported from service)
@@ -113,7 +113,7 @@ export const createPostMapper = <T>(config: MapperConfig) => {
         } as T;
 
       case 'feed':
-        // FeedPostItem base: full image, author info, no tags
+        // PostWithAuthor base: full image, author info, no tags
         return {
           id: base.id,
           userId: base.userId,
@@ -149,9 +149,9 @@ export const createPostMapper = <T>(config: MapperConfig) => {
  * ```
  */
 export const enrichWithProfile = (
-  feedItem: Omit<FeedPostItem, 'authorFullName' | 'authorProfilePictureUrl'>,
+  feedItem: Omit<PostWithAuthor, 'authorFullName' | 'authorProfilePictureUrl'>,
   profile: Profile
-): FeedPostItem => ({
+): PostWithAuthor => ({
   ...feedItem,
   authorFullName: profile.fullName,
   authorProfilePictureUrl: profile.profilePictureUrl
@@ -174,11 +174,11 @@ export const mapEntityToPostGridItem = createPostMapper<PostGridItem>({
 });
 
 /**
- * Convenience mapper: PostEntity → FeedPostItem base
+ * Convenience mapper: PostEntity → PostWithAuthor base
  * Note: Use enrichWithProfile() to add author profile data
  */
 export const mapEntityToFeedItemBase = createPostMapper<
-  Omit<FeedPostItem, 'authorFullName' | 'authorProfilePictureUrl'>
+  Omit<PostWithAuthor, 'authorFullName' | 'authorProfilePictureUrl'>
 >({
   type: 'feed',
   additionalFields: []

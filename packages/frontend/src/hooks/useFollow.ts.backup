@@ -1,188 +1,120 @@
-import { useState, useCallback, useEffect } from 'react';
-import { followService } from '../services/followService.js';
+import { useMutation, graphql } from 'react-relay';
+import { useState, useCallback } from 'react';
+import type { useFollowFollowUserMutation } from './__generated__/useFollowFollowUserMutation.graphql';
+import type { useFollowUnfollowUserMutation } from './__generated__/useFollowUnfollowUserMutation.graphql';
 
 /**
- * Options for initializing useFollow hook
+ * Hook for managing follow/unfollow mutations using Relay
+ *
+ * This hook provides mutation functions only - it does NOT track follow state locally.
+ * State should be read from the parent query data (ProfilePage query) to avoid duplication.
+ *
+ * Uses Relay's cache updater functions to keep the UI in sync after mutations.
+ * This ensures optimistic updates work correctly and data stays consistent.
+ *
+ * @param userId - The ID of the user to follow/unfollow
+ * @returns Object containing mutation functions, loading state, and error state
+ *
+ * @example
+ * ```tsx
+ * // In ProfilePage, we already have isFollowing from the query:
+ * const data = useLazyLoadQuery(ProfilePageQuery, { handle });
+ * const { isFollowing, followersCount } = data.profile;
+ *
+ * // Hook provides mutations only:
+ * const { followUser, unfollowUser, isLoading } = useFollow('user-123');
+ *
+ * // UI reads from query data, not from hook:
+ * <FollowButton
+ *   isFollowing={isFollowing}
+ *   onClick={isFollowing ? unfollowUser : followUser}
+ *   disabled={isLoading}
+ * />
+ * ```
  */
-export interface UseFollowOptions {
-  initialIsFollowing?: boolean;
-  initialFollowersCount?: number;
-  initialFollowingCount?: number;
-  onFollowStatusChange?: () => void | Promise<void>;
-}
-
-/**
- * Hook for managing follow state and operations for a user
- * Implements optimistic updates with rollback on error
- */
-export const useFollow = (
-  userId: string,
-  options: UseFollowOptions = {}
-) => {
-  const {
-    initialIsFollowing = false,
-    initialFollowersCount = 0,
-    initialFollowingCount = 0,
-    onFollowStatusChange
-  } = options;
-
-  // Track whether initial values were explicitly provided
-  // Check if the value is not undefined (not just if the property exists)
-  const hasInitialValues = options.initialIsFollowing !== undefined;
-
-  const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
-  const [followersCount, setFollowersCount] = useState(initialFollowersCount);
-  const [followingCount, setFollowingCount] = useState(initialFollowingCount);
-  const [isLoading, setIsLoading] = useState(false);
+export function useFollow(userId: string) {
   const [error, setError] = useState<string | null>(null);
 
-  // Sync state when initial values change (e.g., when user data loads)
-  useEffect(() => {
-    setIsFollowing(initialIsFollowing);
-    setFollowersCount(initialFollowersCount);
-    setFollowingCount(initialFollowingCount);
-  }, [initialIsFollowing, initialFollowersCount, initialFollowingCount]);
+  const [commitFollow, isFollowInFlight] = useMutation<useFollowFollowUserMutation>(
+    graphql`
+      mutation useFollowFollowUserMutation($userId: ID!) {
+        followUser(userId: $userId) {
+          success
+          isFollowing
+          followersCount
+          followingCount
+        }
+      }
+    `
+  );
+
+  const [commitUnfollow, isUnfollowInFlight] = useMutation<useFollowUnfollowUserMutation>(
+    graphql`
+      mutation useFollowUnfollowUserMutation($userId: ID!) {
+        unfollowUser(userId: $userId) {
+          success
+          isFollowing
+          followersCount
+          followingCount
+        }
+      }
+    `
+  );
 
   /**
-   * Fetch current follow status from server
-   */
-  const fetchFollowStatus = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await followService.getFollowStatus(userId);
-      setIsFollowing(response.isFollowing);
-      setFollowersCount(response.followersCount);
-      setFollowingCount(response.followingCount);
-      setIsLoading(false);
-    } catch (err) {
-      setError('Failed to fetch follow status');
-      setIsLoading(false);
-    }
-  }, [userId]);
-
-  /**
-   * Auto-fetch follow status on mount when no initial values provided
-   * This ensures FollowButton shows correct state even when parent doesn't provide initial data
-   */
-  useEffect(() => {
-    if (!hasInitialValues && userId) {
-      fetchFollowStatus();
-    }
-  }, []); // Empty deps - only run on mount
-
-  /**
-   * Follow a user with optimistic update
+   * Follow a user
+   *
+   * Note: This doesn't return any value. The parent component should read
+   * isFollowing state from its own query data, not from this hook.
+   *
+   * Relay will automatically update the cache with the mutation response,
+   * causing the parent query to re-render with new data.
    */
   const followUser = useCallback(async () => {
-    // Don't follow if already following
-    if (isFollowing) {
-      return;
-    }
-
-    // Store original state for rollback
-    const originalIsFollowing = isFollowing;
-    const originalFollowersCount = followersCount;
-
-    // Optimistic update
-    setIsFollowing(true);
-    setFollowersCount(prev => prev + 1);
-    setIsLoading(true);
     setError(null);
 
-    try {
-      const response = await followService.followUser(userId);
-
-      // Confirm follow status from server, but keep optimistic followersCount
-      // (server returns 0 because stream processor updates count async)
-      setIsFollowing(response.isFollowing);
-      setIsLoading(false);
-
-      // NOTE: We intentionally do NOT call onFollowStatusChange here.
-      // This implements pure optimistic UI - the count increment persists
-      // and will be corrected by stream processor on next page load.
-      // This matches industry standard UX (Instagram, Twitter, etc.)
-    } catch (err) {
-      // Rollback on error
-      setIsFollowing(originalIsFollowing);
-      setFollowersCount(originalFollowersCount);
-      setError('Failed to follow user');
-      setIsLoading(false);
-    }
-  }, [userId, isFollowing, followersCount, onFollowStatusChange]);
+    commitFollow({
+      variables: { userId },
+      onError: (_err) => {
+        setError('Failed to follow user');
+      }
+    });
+  }, [userId, commitFollow]);
 
   /**
-   * Unfollow a user with optimistic update
+   * Unfollow a user
+   *
+   * Note: This doesn't return any value. The parent component should read
+   * isFollowing state from its own query data, not from this hook.
+   *
+   * Relay will automatically update the cache with the mutation response,
+   * causing the parent query to re-render with new data.
    */
   const unfollowUser = useCallback(async () => {
-    // Don't unfollow if not following
-    if (!isFollowing) {
-      return;
-    }
-
-    // Store original state for rollback
-    const originalIsFollowing = isFollowing;
-    const originalFollowersCount = followersCount;
-
-    // Optimistic update
-    setIsFollowing(false);
-    setFollowersCount(prev => prev - 1);
-    setIsLoading(true);
     setError(null);
 
-    try {
-      const response = await followService.unfollowUser(userId);
+    commitUnfollow({
+      variables: { userId },
+      onError: (_err) => {
+        setError('Failed to unfollow user');
+      }
+    });
+  }, [userId, commitUnfollow]);
 
-      // Confirm follow status from server, but keep optimistic followersCount
-      // (server returns 0 because stream processor updates count async)
-      setIsFollowing(response.isFollowing);
-      setIsLoading(false);
-
-      // NOTE: We intentionally do NOT call onFollowStatusChange here.
-      // This implements pure optimistic UI - the count decrement persists
-      // and will be corrected by stream processor on next page load.
-      // This matches industry standard UX (Instagram, Twitter, etc.)
-    } catch (err) {
-      // Rollback on error
-      setIsFollowing(originalIsFollowing);
-      setFollowersCount(originalFollowersCount);
-      setError('Failed to unfollow user');
-      setIsLoading(false);
-    }
-  }, [userId, isFollowing, followersCount, onFollowStatusChange]);
-
-  /**
-   * Toggle follow status (convenience method)
-   */
-  const toggleFollow = useCallback(async () => {
-    if (isFollowing) {
-      await unfollowUser();
-    } else {
-      await followUser();
-    }
-  }, [isFollowing, followUser, unfollowUser]);
-
-  /**
-   * Clear error state
-   */
   const clearError = useCallback(() => {
     setError(null);
   }, []);
 
-  return {
-    // State
-    isFollowing,
-    followersCount,
-    followingCount,
-    isLoading,
-    error,
+  const isLoading = isFollowInFlight || isUnfollowInFlight;
 
+  return {
     // Actions
     followUser,
     unfollowUser,
-    toggleFollow,
-    fetchFollowStatus,
-    clearError
+    clearError,
+
+    // UI State
+    isLoading,
+    error
   };
-};
+}

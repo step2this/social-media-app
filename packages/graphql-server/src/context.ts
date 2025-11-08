@@ -15,6 +15,9 @@ export interface GraphQLContext {
   // Authentication
   userId: string | null;
 
+  // Distributed tracing
+  correlationId: string;
+
   // AWS Clients
   dynamoClient: DynamoDBDocumentClient;
   tableName: string;

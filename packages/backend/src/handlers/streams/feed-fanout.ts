@@ -26,7 +26,7 @@ import { createStreamLogger } from '../../infrastructure/middleware/streamLogger
  * - Atomic operations prevent race conditions
  * - Celebrity threshold configurable via env var
  * - Services initialized at container scope for warm start optimization
- * 
+ *
  * Features structured logging with batch metrics, performance tracking, and celebrity bypass events
  *
  * @see FeedService.writeFeedItem for materialized feed writes
@@ -55,7 +55,7 @@ export const handler: DynamoDBStreamHandler = async (
     process.env.CELEBRITY_FOLLOWER_THRESHOLD ?? '5000',
     10
   );
-  
+
   const context = logger.startBatch(event.Records.length);
 
   // Process all records in parallel for better performance

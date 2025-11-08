@@ -8,9 +8,9 @@ import { successResponse } from '../utils/responses.js';
 
 /**
  * Lambda handler for hello endpoint
- * 
+ *
  * Simple health check endpoint that validates input and returns a greeting.
- * 
+ *
  * @route POST /hello
  * @middleware withErrorHandling - Converts errors to HTTP responses
  * @middleware withLogging - Structured logging with correlation IDs

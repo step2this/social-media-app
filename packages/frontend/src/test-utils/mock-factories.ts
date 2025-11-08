@@ -1,4 +1,4 @@
-import type { Post, Comment, FeedPostItem, User, PublicProfile, Profile, Auction, Bid } from '@social-media-app/shared';
+import type { Post, Comment, PostWithAuthor, User, PublicProfile, Profile, Auction, Bid } from '@social-media-app/shared';
 
 /**
  * Create a mock Post for testing
@@ -53,11 +53,11 @@ export const createMockComment = (overrides?: Partial<Comment>): Comment => ({
 });
 
 /**
- * Create a mock FeedPostItem for testing
- * @param overrides - Partial FeedPostItem to override defaults
- * @returns A complete FeedPostItem object with sensible defaults
+ * Create a mock PostWithAuthor for testing
+ * @param overrides - Partial PostWithAuthor to override defaults
+ * @returns A complete PostWithAuthor object with sensible defaults
  */
-export const createMockFeedPostItem = (overrides?: Partial<FeedPostItem>): FeedPostItem => ({
+export const createMockFeedPostItem = (overrides?: Partial<PostWithAuthor>): PostWithAuthor => ({
   id: 'test-post-123',
   userId: 'test-user-123',
   userHandle: 'testuser',

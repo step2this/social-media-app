@@ -22,7 +22,7 @@ import { createStreamLogger } from '../../infrastructure/middleware/streamLogger
  * - Uses FeedService.deleteFeedItemsByPost (table SCAN)
  * - Cost scales with total feed items, not post followers
  * - TODO: Will benefit from GSI4 optimization (99% cost reduction)
- * 
+ *
  * Features structured logging with batch metrics and performance tracking
  *
  * @see FeedService.deleteFeedItemsByPost for deletion logic

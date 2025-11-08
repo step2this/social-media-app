@@ -5,7 +5,7 @@ import type { HelloRequest } from '@social-media-app/shared';
 
 /**
  * Behavior tests for hello handler with middleware composition
- * 
+ *
  * Tests WHAT the handler does (behavior), not HOW it does it (implementation).
  * No mocks - middleware handles validation, error responses, logging automatically.
  */
@@ -27,7 +27,7 @@ describe('Hello Handler - Behavior Tests', () => {
 
       // Test behavior: Handler returns greeting
       expect(result.statusCode).toBe(200);
-      
+
       const body = JSON.parse(result.body!);
       expect(body.message).toContain('Alice');
     });
@@ -46,7 +46,7 @@ describe('Hello Handler - Behavior Tests', () => {
 
       // Test behavior: withValidation middleware rejects invalid types
       expect(result.statusCode).toBe(400);
-      
+
       const body = JSON.parse(result.body!);
       expect(body.error).toBe('Validation failed');
     });

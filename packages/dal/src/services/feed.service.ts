@@ -6,7 +6,7 @@ import {
   BatchWriteCommand,
   UpdateCommand
 } from '@aws-sdk/lib-dynamodb';
-import type { FeedPostItem } from '@social-media-app/shared';
+import type { PostWithAuthor } from '@social-media-app/shared';
 import { UUIDField } from '@social-media-app/shared';
 import { z } from 'zod';
 import type { FeedItemEntity } from '../entities/feed-item.entity.js';
@@ -168,12 +168,12 @@ export class FeedService {
   }
 
   /**
-   * Convert FeedPostItem to CachedPost format
+   * Convert PostWithAuthor to CachedPost format
    *
    * @param post - Feed post item
    * @returns Cached post format for Redis
    */
-  private feedPostToCachedPost(post: FeedPostItem): CachedPost {
+  private feedPostToCachedPost(post: PostWithAuthor): CachedPost {
     return {
       id: post.id,
       authorId: post.authorId,
@@ -194,7 +194,7 @@ export class FeedService {
    * @returns Paginated feed response
    */
   private convertCachedToResponse(cached: CachedFeedResult): {
-    items: FeedPostItem[];
+    items: PostWithAuthor[];
     nextCursor?: string;
   } {
     const items = cached.posts.map(post => ({
@@ -605,7 +605,7 @@ export class FeedService {
     limit?: number;
     cursor?: string;
   }): Promise<{
-    items: FeedPostItem[];
+    items: PostWithAuthor[];
     nextCursor?: string;
   }> {
     // Validate userId
