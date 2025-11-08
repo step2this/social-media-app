@@ -19,7 +19,7 @@ function createMockContext(
   overrides: Partial<GraphQLContext> = {}
 ): GraphQLContext {
   const container = createContainer<GraphQLContainer>({ injectionMode: InjectionMode.CLASSIC });
-  
+
   return {
     userId: null,
     correlationId: 'test-correlation-id',

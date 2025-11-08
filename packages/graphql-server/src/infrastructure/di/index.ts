@@ -1,9 +1,8 @@
 /**
  * Dependency Injection
  *
- * Public exports for DI container and service registration.
- * Provides type-safe service container and automatic dependency wiring.
+ * Public exports for Awilix DI container.
+ * Provides type-safe service container and automatic dependency injection.
  */
 
-export * from './Container.js';
-export * from './registerServices.js';
+export * from './awilix-container.js';
