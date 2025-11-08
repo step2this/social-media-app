@@ -203,7 +203,8 @@ describe('Register Handler V2 (Middy) - Behavior Tests', () => {
       })
 
       const result = await handler(event, {} as any)
-      expect(result.statusCode).toBe(400)
+      // Middy's httpJsonBodyParser returns 415 (Unsupported Media Type) for malformed JSON
+      expect(result.statusCode).toBe(415)
     })
   })
 })
