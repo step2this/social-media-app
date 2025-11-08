@@ -39,7 +39,7 @@ import { NotificationServiceAdapter } from '../adapters/NotificationServiceAdapt
 import { AuctionServiceAdapter } from '../adapters/AuctionServiceAdapter.js';
 import { FeedServiceAdapter } from '../adapters/FeedServiceAdapter.js';
 
-// Use Cases
+// Query Use Cases
 import { GetCurrentUserProfile } from '../../application/use-cases/profile/GetCurrentUserProfile.js';
 import { GetProfileByHandle } from '../../application/use-cases/profile/GetProfileByHandle.js';
 import { GetPostById } from '../../application/use-cases/post/GetPostById.js';
@@ -54,6 +54,26 @@ import { GetUnreadNotificationsCount } from '../../application/use-cases/notific
 import { GetAuction } from '../../application/use-cases/auction/GetAuction.js';
 import { GetAuctions } from '../../application/use-cases/auction/GetAuctions.js';
 import { GetBidHistory } from '../../application/use-cases/auction/GetBidHistory.js';
+
+// Mutation Use Cases
+import { CreatePost } from '../../application/use-cases/post/CreatePost.js';
+import { UpdatePost } from '../../application/use-cases/post/UpdatePost.js';
+import { DeletePost } from '../../application/use-cases/post/DeletePost.js';
+import { LikePost } from '../../application/use-cases/like/LikePost.js';
+import { UnlikePost } from '../../application/use-cases/like/UnlikePost.js';
+import { FollowUser } from '../../application/use-cases/follow/FollowUser.js';
+import { UnfollowUser } from '../../application/use-cases/follow/UnfollowUser.js';
+import { CreateComment } from '../../application/use-cases/comment/CreateComment.js';
+import { DeleteComment } from '../../application/use-cases/comment/DeleteComment.js';
+import { UpdateProfile } from '../../application/use-cases/profile/UpdateProfile.js';
+import { GetProfilePictureUploadUrl } from '../../application/use-cases/profile/GetProfilePictureUploadUrl.js';
+import { MarkNotificationAsRead } from '../../application/use-cases/notification/MarkNotificationAsRead.js';
+import { MarkAllNotificationsAsRead } from '../../application/use-cases/notification/MarkAllNotificationsAsRead.js';
+import { DeleteNotification } from '../../application/use-cases/notification/DeleteNotification.js';
+import { MarkFeedItemsAsRead } from '../../application/use-cases/feed/MarkFeedItemsAsRead.js';
+import { CreateAuction } from '../../application/use-cases/auction/CreateAuction.js';
+import { ActivateAuction } from '../../application/use-cases/auction/ActivateAuction.js';
+import { PlaceBid } from '../../application/use-cases/auction/PlaceBid.js';
 
 /**
  * Container interface - all resolvable dependencies
