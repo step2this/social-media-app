@@ -22,6 +22,12 @@ import type { MutationResolvers } from '../generated/types.js';
 import { withAuth } from '../../infrastructure/resolvers/withAuth.js';
 import { executeUseCase } from '../../infrastructure/resolvers/helpers/useCase.js';
 import { UserId, PostId } from '../../shared/types/index.js';
+import type {
+  PostParent,
+  CommentParent,
+  CreatePostPayloadParent,
+  PlaceBidPayloadParent,
+} from '../../infrastructure/resolvers/helpers/resolverTypes.js';
 
 /**
  * Mutation resolvers
@@ -119,31 +125,45 @@ export const Mutation: MutationResolvers = {
   /**
    * Create a new post
    * Requires authentication
+   *
+   * Returns a CreatePostPayloadParent with partial Post data.
+   * Post field resolvers (author, isLiked) will complete the Post object.
    */
   createPost: withAuth(async (_parent, args, context) => {
-    return executeUseCase(
+    const result = await executeUseCase(
       context.container.resolve('createPost'),
       {
         userId: UserId(context.userId),
         fileType: args.input.fileType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
         caption: args.input.caption ?? undefined,
       }
-    ) as any;
+    );
+
+    // Type assertion: Use case returns PostParent (without field resolver fields).
+    // GraphQL will invoke Post field resolvers to add author and isLiked.
+    return result as CreatePostPayloadParent;
   }),
 
   /**
    * Update an existing post
    * Requires authentication and ownership
+   *
+   * Returns a PostParent with partial Post data.
+   * Post field resolvers (author, isLiked) will complete the Post object.
    */
   updatePost: withAuth(async (_parent, args, context) => {
-    return executeUseCase(
+    const result = await executeUseCase(
       context.container.resolve('updatePost'),
       {
         postId: PostId(args.id),
         userId: UserId(context.userId),
         caption: args.input.caption ?? undefined,
       }
-    ) as any;
+    );
+
+    // Type assertion: Use case returns PostParent (without field resolver fields).
+    // GraphQL will invoke Post field resolvers to add author and isLiked.
+    return result as PostParent;
   }),
 
   /**
@@ -231,16 +251,23 @@ export const Mutation: MutationResolvers = {
   /**
    * Create a comment
    * Requires authentication
+   *
+   * Returns a CommentParent with partial Comment data.
+   * Comment field resolver (author) will complete the Comment object.
    */
   createComment: withAuth(async (_parent, args, context) => {
-    return executeUseCase(
+    const result = await executeUseCase(
       context.container.resolve('createComment'),
       {
         userId: UserId(context.userId),
         postId: PostId(args.input.postId),
         content: args.input.content,
       }
-    ) as any;
+    );
+
+    // Type assertion: Use case returns CommentParent (without field resolver fields).
+    // GraphQL will invoke Comment field resolver to add author.
+    return result as CommentParent;
   }),
 
   /**
@@ -405,15 +432,22 @@ export const Mutation: MutationResolvers = {
    * Returns the created bid and updated auction
    *
    * Note: Validation moved to PlaceBid use case (business logic layer)
+   *
+   * Returns a PlaceBidPayloadParent with partial Auction data.
+   * Auction field resolvers (seller, winner) will complete the Auction object.
    */
   placeBid: withAuth(async (_parent, args, context) => {
-    return executeUseCase(
+    const result = await executeUseCase(
       context.container.resolve('placeBid'),
       {
         userId: UserId(context.userId),
         auctionId: args.input.auctionId,
         amount: args.input.amount,
       }
-    ) as any;
+    );
+
+    // Type assertion: Use case returns AuctionParent (without field resolver fields).
+    // GraphQL will invoke Auction field resolvers to add seller and winner.
+    return result as PlaceBidPayloadParent;
   }),
 };
