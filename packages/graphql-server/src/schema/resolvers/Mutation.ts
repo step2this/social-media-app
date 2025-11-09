@@ -4,30 +4,24 @@
  * Implements all root-level Mutation resolvers for the GraphQL schema.
  * Handles write operations for auth, posts, comments, likes, and follows.
  *
- * Phase 3 Migration (COMPLETE) + Auth Use Cases:
- * - ALL mutations (including auth) now use the use case pattern
+ * Phase 3 Migration (COMPLETE) + Validation Migration:
+ * - ALL mutations (including auth) use the use case pattern
+ * - ALL Zod validation now in use cases (business logic layer)
  * - Full type safety with branded types
- * - Consistent error handling via ErrorFactory and use case Result types
- * - Zod validation preserved for createAuction and placeBid
+ * - Consistent error handling via use case Result types
  *
  * Benefits:
  * - 100% testable business logic (isolated in use cases)
+ * - Validation in business logic layer (not GraphQL layer)
  * - Type-safe with branded types (UserId, PostId, etc.)
  * - Consistent error handling across all mutations
- * - Clean separation of concerns
  * - Auth logic now reusable across interfaces (GraphQL, REST, etc.)
  */
 
-import { GraphQLError } from 'graphql';
 import type { MutationResolvers } from '../generated/types.js';
-import {
-  CreateAuctionRequestSchema,
-  PlaceBidRequestSchema,
-} from '@social-media-app/shared';
 import { withAuth } from '../../infrastructure/resolvers/withAuth.js';
 import { executeUseCase } from '../../infrastructure/resolvers/helpers/useCase.js';
 import { UserId, PostId } from '../../shared/types/index.js';
-import { ErrorFactory } from '../../infrastructure/errors/ErrorFactory.js';
 
 /**
  * Mutation resolvers
@@ -370,40 +364,21 @@ export const Mutation: MutationResolvers = {
    * Requires authentication
    * Returns auction with presigned S3 upload URL for image
    *
-   * Validates input with Zod schema to enforce business rules:
-   * - Title: 3-200 characters
-   * - Description: max 2000 characters
-   * - Prices: positive, max 2 decimal places
-   * - Times: endTime must be after startTime
+   * Note: Validation moved to CreateAuction use case (business logic layer)
    */
   // @ts-ignore - DAL Auction type differs from GraphQL Auction type (seller/winner field resolvers handle missing fields)
   createAuction: withAuth(async (_parent, args, context) => {
-    // ✅ Validate input with Zod schema (business rules)
-    const validationResult = CreateAuctionRequestSchema.safeParse(args.input);
-
-    if (!validationResult.success) {
-      throw new GraphQLError('Validation failed', {
-        extensions: {
-          code: 'BAD_USER_INPUT',
-          validationErrors: validationResult.error.format(),
-        },
-      });
-    }
-
-    // Use validated data (with Zod transformations applied)
-    const validatedInput = validationResult.data;
-
     return executeUseCase(
       context.container.resolve('createAuction'),
       {
         userId: UserId(context.userId),
-        title: validatedInput.title,
-        description: validatedInput.description,
-        startingPrice: validatedInput.startingPrice,
-        reservePrice: validatedInput.reservePrice,
-        startTime: validatedInput.startTime,
-        endTime: validatedInput.endTime,
-        fileType: validatedInput.fileType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' | undefined,
+        title: args.input.title,
+        description: args.input.description,
+        startingPrice: args.input.startPrice,
+        reservePrice: args.input.reservePrice,
+        startTime: args.input.startTime,
+        endTime: args.input.endTime,
+        fileType: args.input.fileType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' | undefined,
       }
     );
   }),
@@ -429,32 +404,15 @@ export const Mutation: MutationResolvers = {
    * Requires authentication
    * Returns the created bid and updated auction
    *
-   * Validates input with Zod schema to enforce business rules:
-   * - Amount: positive number, max 2 decimal places
-   * - AuctionId: valid UUID format
+   * Note: Validation moved to PlaceBid use case (business logic layer)
    */
   placeBid: withAuth(async (_parent, args, context) => {
-    // ✅ Validate input with Zod schema (business rules)
-    const validationResult = PlaceBidRequestSchema.safeParse(args.input);
-
-    if (!validationResult.success) {
-      throw new GraphQLError('Validation failed', {
-        extensions: {
-          code: 'BAD_USER_INPUT',
-          validationErrors: validationResult.error.format(),
-        },
-      });
-    }
-
-    // Use validated data (with Zod transformations applied)
-    const validatedInput = validationResult.data;
-
     return executeUseCase(
       context.container.resolve('placeBid'),
       {
         userId: UserId(context.userId),
-        auctionId: validatedInput.auctionId,
-        amount: validatedInput.amount,
+        auctionId: args.input.auctionId,
+        amount: args.input.amount,
       }
     ) as any;
   }),
