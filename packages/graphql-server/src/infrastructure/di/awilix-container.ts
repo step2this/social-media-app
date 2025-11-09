@@ -56,6 +56,12 @@ import { GetAuctions } from '../../application/use-cases/auction/GetAuctions.js'
 import { GetBidHistory } from '../../application/use-cases/auction/GetBidHistory.js';
 
 // Mutation Use Cases
+// Auth mutations
+import { Register } from '../../application/use-cases/auth/Register.js';
+import { Login } from '../../application/use-cases/auth/Login.js';
+import { RefreshToken } from '../../application/use-cases/auth/RefreshToken.js';
+import { Logout } from '../../application/use-cases/auth/Logout.js';
+// Other mutations
 import { CreatePost } from '../../application/use-cases/post/CreatePost.js';
 import { UpdatePost } from '../../application/use-cases/post/UpdatePost.js';
 import { DeletePost } from '../../application/use-cases/post/DeletePost.js';
@@ -87,6 +93,7 @@ export interface GraphQLContainer {
 
   // DAL Services (internal - used for adapter injection)
   // These are registered so Awilix can inject them into repository adapters
+  authService: GraphQLContext['services']['authService'];
   profileService: GraphQLContext['services']['profileService'];
   postService: GraphQLContext['services']['postService'];
   commentService: GraphQLContext['services']['commentService'];
@@ -95,6 +102,8 @@ export interface GraphQLContainer {
   notificationService: GraphQLContext['services']['notificationService'];
   auctionService: GraphQLContext['services']['auctionService'];
   feedService: GraphQLContext['services']['feedService'];
+  dynamoClient: GraphQLContext['dynamoClient'];
+  tableName: GraphQLContext['tableName'];
 
   // Repository Layer (adapters wrapping DAL services)
   profileRepository: ProfileServiceAdapter;
@@ -124,6 +133,12 @@ export interface GraphQLContainer {
   getBidHistory: GetBidHistory;
 
   // Mutation Use Cases
+  // Auth mutations
+  register: Register;
+  login: Login;
+  refreshToken: RefreshToken;
+  logout: Logout;
+  // Other mutations
   createPost: CreatePost;
   updatePost: UpdatePost;
   deletePost: DeletePost;
@@ -188,6 +203,7 @@ export function createGraphQLContainer(
   // Register DAL services so Awilix can inject them into adapters
   // Using constructor parameter name matching (CLASSIC injection mode)
   container.register({
+    authService: asValue(context.services.authService),
     profileService: asValue(context.services.profileService),
     postService: asValue(context.services.postService),
     commentService: asValue(context.services.commentService),
@@ -196,6 +212,8 @@ export function createGraphQLContainer(
     notificationService: asValue(context.services.notificationService),
     auctionService: asValue(context.services.auctionService),
     feedService: asValue(context.services.feedService),
+    dynamoClient: asValue(context.dynamoClient),
+    tableName: asValue(context.tableName),
   });
 
   // ============================================
@@ -268,6 +286,33 @@ export function createGraphQLContainer(
     // ============================================
     // Mutation use cases accept a services object wrapper
     // Must use factory pattern with asValue(new UseCase({ services }))
+
+    // Auth mutation use cases
+    register: asValue(
+      new Register({
+        authService: context.services.authService,
+        profileService: context.services.profileService,
+      })
+    ),
+    login: asValue(
+      new Login({
+        authService: context.services.authService,
+        profileService: context.services.profileService,
+      })
+    ),
+    refreshToken: asValue(
+      new RefreshToken({
+        authService: context.services.authService,
+        profileService: context.services.profileService,
+        dynamoClient: context.dynamoClient,
+        tableName: context.tableName,
+      })
+    ),
+    logout: asValue(
+      new Logout({
+        // No services needed for idempotent logout
+      })
+    ),
 
     // Post mutation use cases
     createPost: asValue(
