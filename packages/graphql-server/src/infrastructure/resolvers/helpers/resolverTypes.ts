@@ -76,6 +76,7 @@ export interface CommentParent {
 export interface AuctionParent {
   id: string;
   userId: string;
+  winnerId: string | null;
   title: string;
   description: string;
   startingPrice: number;
@@ -124,4 +125,64 @@ export interface CreatePostPayloadParent {
 export interface PlaceBidPayloadParent {
   bid: BidParent;
   auction: AuctionParent;
+}
+
+/**
+ * Profile parent type
+ *
+ * Represents a user Profile as returned by updateProfile use case,
+ * without email/emailVerified/username which are immutable.
+ */
+export interface ProfileParent {
+  id: string;
+  handle: string;
+  fullName: string | null;
+  bio: string | null;
+  profilePictureUrl: string | null;
+  profilePictureThumbnailUrl: string | null;
+  followersCount: number;
+  followingCount: number;
+  postsCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * AuthTokens parent type
+ *
+ * Represents authentication tokens as returned by auth use cases,
+ * without the expiresIn field which can be computed.
+ *
+ * Field Resolvers Can Add:
+ * - expiresIn: Int (computed from JWT or constant)
+ */
+export interface AuthTokensParent {
+  accessToken: string;
+  refreshToken: string;
+}
+
+/**
+ * AuthPayload parent type
+ *
+ * Represents the authentication payload as returned by auth mutations (register, login, refreshToken),
+ * with AuthTokensParent (partial AuthTokens) that can be completed by field resolvers.
+ */
+export interface AuthPayloadParent {
+  user: {
+    id: string;
+    email: string;
+    username: string;
+    handle: string;
+    fullName: string | null;
+    bio: string | null;
+    profilePictureUrl: string | null;
+    profilePictureThumbnailUrl: string | null;
+    postsCount: number;
+    followersCount: number;
+    followingCount: number;
+    createdAt: string;
+    updatedAt: string;
+    emailVerified: boolean;
+  };
+  tokens: AuthTokensParent;
 }
