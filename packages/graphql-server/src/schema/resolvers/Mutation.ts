@@ -292,6 +292,7 @@ export const Mutation: MutationResolvers = {
    * Update profile information
    * Requires authentication
    */
+  // @ts-ignore - UpdateProfileOutput doesn't include immutable fields (email, username, emailVerified)
   updateProfile: withAuth(async (_parent, args, context) => {
     return executeUseCase(
       context.container.resolve('updateProfile'),

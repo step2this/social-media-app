@@ -48,7 +48,7 @@ export async function executeUseCase<TInput, TOutput>(
   const result = await useCase.execute(input);
 
   if (!result.success) {
-    throw ErrorFactory.fromUseCaseError(result.error);
+    throw ErrorFactory.fromUseCaseError((result as { success: false; error: Error }).error);
   }
 
   if (result.data === undefined || result.data === null) {
@@ -94,7 +94,7 @@ export async function executeOptionalUseCase<TInput, TOutput>(
 
   if (!result.success) {
     // Log error but return null for optional fields
-    console.warn('Use case failed for optional field:', result.error);
+    console.warn('Use case failed for optional field:', (result as { success: false; error: Error }).error);
     return null;
   }
 

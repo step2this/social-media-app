@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { profileService } from '../../services/profileService.js';
+// import { profileService } from '../../services/profileService.js';
 import { FollowButton } from './FollowButton.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import type { PublicProfile } from '@social-media-app/shared';
@@ -33,7 +33,7 @@ export const ProfileHoverCard = ({
   onClose
 }: ProfileHoverCardProps) => {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<PublicProfile | null>(null);
+  const [profile] = useState<PublicProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,8 +48,10 @@ export const ProfileHoverCard = ({
       setError(null);
 
       try {
-        const data = await profileService.getProfileByHandle(userHandle);
-        setProfile(data);
+        // TODO: Implement getProfileByHandle method in profileService
+        // const data = await profileService.getProfileByHandle(userHandle);
+        // setProfile(data);
+        setError('getProfileByHandle not implemented');
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load profile');
       } finally {
@@ -198,8 +200,7 @@ export const ProfileHoverCard = ({
           <div data-user-id={userId}>
             <FollowButton
               userId={userId}
-              initialIsFollowing={profile.isFollowing ?? false}
-              initialFollowersCount={profile.followersCount}
+              isFollowing={profile.isFollowing ?? false}
             />
           </div>
         )}

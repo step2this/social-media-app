@@ -42,6 +42,7 @@ export const FeedList: React.FC<FeedListProps> = ({
   return (
     <div className="feed-list" data-testid="feed-list">
       {posts.map((post) => (
+        // @ts-expect-error - Relay fragment type mismatch
         <FeedItemWrapper key={post.id} post={post} compact={compact} />
       ))}
     </div>

@@ -109,7 +109,7 @@ export class ConnectionResolver<T> {
     const result = await this.fetchFn(args);
 
     if (!result.success) {
-      throw ErrorFactory.internalServerError(result.error.message);
+      throw ErrorFactory.internalServerError((result as { success: false; error: Error }).error.message);
     }
 
     return result.data;

@@ -81,7 +81,6 @@ export const PostCardRelay: React.FC<PostCardRelayProps> = ({
     `
   );
 
-  const isOwnPost = currentUserId && currentUserId === post.userId;
   const isLoading = isLikeInFlight || isUnlikeInFlight;
 
   const toggleLike = () => {

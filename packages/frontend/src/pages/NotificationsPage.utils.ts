@@ -5,7 +5,6 @@
  * Following Single Responsibility Principle and using advanced TypeScript types
  */
 
-import type { Notification, NotificationType } from '@social-media-app/shared';
 import type {
   NotificationGroups,
   GroupNotificationsFn,

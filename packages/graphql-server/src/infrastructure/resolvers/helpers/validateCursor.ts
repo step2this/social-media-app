@@ -103,8 +103,9 @@ export function requireValidCursor(
   const result = validateCursor(cursor);
 
   if (!result.success) {
-    throw new GraphQLError(result.error.message, {
-      extensions: { code: result.error.code },
+    const error = (result as { success: false; error: { code: string; message: string } }).error;
+    throw new GraphQLError(error.message, {
+      extensions: { code: error.code },
     });
   }
 
