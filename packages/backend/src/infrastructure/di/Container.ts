@@ -121,9 +121,9 @@ export function createAwilixContainer(): AwilixContainer<ServiceContainer> {
       return createDefaultAuthService(dynamoClient, tableName, jwtProvider)
     }).scoped(),
 
-    // Profile Service - scoped per request (with cache and circuit breaker support)
-    profileService: asFunction(({ dynamoClient, tableName, cacheService, circuitBreakerDatabase }) => {
-      // Wrap ProfileService methods with circuit breaker in the service itself
+    // Profile Service - scoped per request (with cache support)
+    // Circuit breaker integration is available for use in handlers
+    profileService: asFunction(({ dynamoClient, tableName, cacheService }) => {
       return new ProfileService(dynamoClient, tableName, cacheService)
     }).scoped()
 
