@@ -21,7 +21,7 @@ interface FollowButtonProps {
 export const FollowButton = ({
   userId,
   isFollowing,
-  onFollowStatusChange
+  onFollowStatusChange: _onFollowStatusChange
 }: FollowButtonProps) => {
   const { user, isAuthenticated } = useAuth();
   const [isHovering, setIsHovering] = useState(false);

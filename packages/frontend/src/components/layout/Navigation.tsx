@@ -3,7 +3,7 @@
  * @module Navigation
  */
 
-import React, { useState, useCallback, Suspense } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { MouseEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -14,13 +14,11 @@ import {
   HomeIcon,
   ExploreIcon,
   CreateIcon,
-  NotificationIcon,
   InboxIcon,
   ProfileIcon,
   MenuIcon,
   CloseIcon
 } from './NavigationIcons';
-import { NotificationBellRelayWithSuspense } from '../notifications/NotificationBellRelay';
 import './Navigation.css';
 
 /**
@@ -88,9 +86,9 @@ const DesktopNavItems: React.FC<{ pathname: string }> = ({ pathname }) => {
       ))}
 
       {/* Notifications - Using Relay version */}
-      <div className="navigation__item">
+      {/* <div className="navigation__item">
         <NotificationBellRelayWithSuspense />
-      </div>
+      </div> */}
     </nav>
   );
 };

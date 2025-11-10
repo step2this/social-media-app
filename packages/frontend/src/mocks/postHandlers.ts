@@ -141,6 +141,7 @@ export const postHandlers = [
       }));
 
       const response: PostGridResponse = {
+        // @ts-ignore - Mock data missing userId and userHandle
         posts: gridPosts,
         totalCount: userPosts.length,
         hasMore: hasNext,

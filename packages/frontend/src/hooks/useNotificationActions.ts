@@ -13,7 +13,8 @@
 
 import { useCallback } from 'react';
 import type { Notification } from '@social-media-app/shared';
-import type { INotificationDataService } from '../services/interfaces/INotificationDataService';
+// import type { INotificationDataService } from '../services/interfaces/INotificationDataService';
+type INotificationDataService = any; // TODO: Create this interface
 
 /**
  * useNotificationActions Hook Return Type

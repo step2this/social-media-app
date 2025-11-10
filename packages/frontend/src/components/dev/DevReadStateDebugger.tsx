@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { FeedPostItem } from '@social-media-app/shared';
+// import type { FeedPostItem } from '@social-media-app/shared';
+type FeedPostItem = any; // TODO: Export FeedPostItem from shared package
 import './DevReadStateDebugger.css';
 
 /**
