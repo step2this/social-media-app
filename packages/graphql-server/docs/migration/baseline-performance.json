@@ -1,0 +1,20 @@
+{
+  "timestamp": "2025-11-10T19:03:19.986Z",
+  "node_version": "v22.21.1",
+  "measurements": {
+    "bundle_server_kb": {
+      "size_kb": 38.72,
+      "status": "success"
+    },
+    "bundle_lambda_kb": {
+      "size_kb": 108.94,
+      "status": "success"
+    },
+    "bundle_standalone-server_kb": {
+      "size_kb": 106.85,
+      "status": "success"
+    },
+    "build_time": {
+      "duration_ms": 1545,
+      "status": "success"
+    },
