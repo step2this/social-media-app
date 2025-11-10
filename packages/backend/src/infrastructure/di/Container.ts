@@ -15,6 +15,8 @@ import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb'
 import type { AuthServiceDependencies } from '@social-media-app/dal'
 import { createDefaultAuthService, ProfileService } from '@social-media-app/dal'
 import { createJWTProvider, getJWTConfigFromEnv } from '../../utils/jwt.js'
+import { createCacheServiceFromEnv, type CacheService } from '../cache/CacheService.js'
+import { createCircuitBreakerServiceFromEnv, type CircuitBreakerService } from '../circuit-breaker/CircuitBreakerService.js'
 
 /**
  * Service container type - all resolvable services
@@ -23,6 +25,14 @@ export interface ServiceContainer {
   // AWS Clients
   dynamoClient: DynamoDBDocumentClient
   tableName: string
+
+  // Cache
+  cacheService: CacheService
+
+  // Circuit Breakers
+  circuitBreakerDatabase: CircuitBreakerService
+  circuitBreakerCache: CircuitBreakerService
+  circuitBreakerExternal: CircuitBreakerService
 
   // Auth
   jwtProvider: AuthServiceDependencies['jwtProvider']
@@ -72,10 +82,28 @@ export function createAwilixContainer(): AwilixContainer<ServiceContainer> {
   })
 
   // ============================================
-  // Layer 2: Authentication (SINGLETON)
+  // Layer 2: Cache, Circuit Breakers & Authentication (SINGLETON)
   // ============================================
 
   container.register({
+    // Cache Service - singleton (shared across all requests)
+    cacheService: asFunction(() => {
+      return createCacheServiceFromEnv()
+    }).singleton(),
+
+    // Circuit Breakers - singletons (track metrics across requests)
+    circuitBreakerDatabase: asFunction(() => {
+      return createCircuitBreakerServiceFromEnv('database')
+    }).singleton(),
+
+    circuitBreakerCache: asFunction(() => {
+      return createCircuitBreakerServiceFromEnv('cache')
+    }).singleton(),
+
+    circuitBreakerExternal: asFunction(() => {
+      return createCircuitBreakerServiceFromEnv('external-api')
+    }).singleton(),
+
     // JWT Provider - singleton (stateless)
     jwtProvider: asFunction(() => {
       const jwtConfig = getJWTConfigFromEnv()
@@ -93,9 +121,10 @@ export function createAwilixContainer(): AwilixContainer<ServiceContainer> {
       return createDefaultAuthService(dynamoClient, tableName, jwtProvider)
     }).scoped(),
 
-    // Profile Service - scoped per request
-    profileService: asFunction(({ dynamoClient, tableName }) => {
-      return new ProfileService(dynamoClient, tableName)
+    // Profile Service - scoped per request (with cache and circuit breaker support)
+    profileService: asFunction(({ dynamoClient, tableName, cacheService, circuitBreakerDatabase }) => {
+      // Wrap ProfileService methods with circuit breaker in the service itself
+      return new ProfileService(dynamoClient, tableName, cacheService)
     }).scoped()
 
     // TODO: Add more services as we migrate
