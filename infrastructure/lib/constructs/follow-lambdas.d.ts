@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
-import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import type * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 interface FollowLambdasProps {
     environment: string;
     table: dynamodb.Table;

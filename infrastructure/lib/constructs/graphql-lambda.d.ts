@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
-import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-import * as s3 from 'aws-cdk-lib/aws-s3';
+import type * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import type * as s3 from 'aws-cdk-lib/aws-s3';
 /**
  * Properties for GraphQL Lambda construct
  */

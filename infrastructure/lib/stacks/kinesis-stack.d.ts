@@ -2,7 +2,7 @@ import { Stack, type StackProps } from 'aws-cdk-lib';
 import type { Construct } from 'constructs';
 import * as kinesis from 'aws-cdk-lib/aws-kinesis';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
-import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import type * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 /**
  * Configuration properties for KinesisStack

@@ -1,8 +1,8 @@
 import { Stack, type StackProps } from 'aws-cdk-lib';
 import type { Construct } from 'constructs';
-import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as kinesis from 'aws-cdk-lib/aws-kinesis';
+import type * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import type * as s3 from 'aws-cdk-lib/aws-s3';
+import type * as kinesis from 'aws-cdk-lib/aws-kinesis';
 interface ApiStackProps extends StackProps {
     environment: string;
     table: dynamodb.Table;
