@@ -45,12 +45,18 @@ import { createLoaders } from './dataloaders/index.js';
 import { createServices } from './services/factory.js';
 import { createGraphQLContainer } from './infrastructure/di/awilix-container.js';
 
-// Load environment variables from project root
-config({ path: '../../.env' });
-
-// Load schema from single source of truth (root schema.graphql)
+// Get __dirname for ESM (needed for paths)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Load environment variables from project root
+// Use process.cwd() which is more reliable - assumes server is run from project root or packages/graphql-server
+const envPath = join(process.cwd(), '.env');
+const envPathAlt = join(process.cwd(), '../../.env'); // If run from packages/graphql-server
+config({ path: envPath });
+config({ path: envPathAlt }); // Try alternative path (second call won't override existing vars)
+
+// Load schema from single source of truth (root schema.graphql)
 const typeDefs = readFileSync(
   join(__dirname, '../../../schema.graphql'),
   'utf-8'
