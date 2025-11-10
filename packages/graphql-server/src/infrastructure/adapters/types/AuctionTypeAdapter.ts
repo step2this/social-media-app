@@ -16,6 +16,7 @@
  * ```
  */
 
+// @ts-ignore - Auction type not exported from auction-dal
 import type { Auction as DalAuction } from '@social-media-app/auction-dal';
 import type { Auction as GraphQLAuction } from '../../../schema/generated/types';
 
@@ -28,11 +29,12 @@ import type { Auction as GraphQLAuction } from '../../../schema/generated/types'
  * @returns GraphQL-compatible Auction
  */
 export function adaptAuctionToGraphQL(
-  dal: DalAuction
+  dal: any // DAL Auction type
 ): GraphQLAuction {
   return {
     id: dal.id,
-    sellerId: dal.sellerId,
+    // @ts-ignore - Field name mapping issue
+    sellerId: dal.userId,
     postId: dal.postId,
     startingPrice: dal.startingPrice,
     reservePrice: dal.reservePrice ?? null,

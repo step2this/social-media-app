@@ -242,7 +242,7 @@ export class AuctionServiceUseCaseAdapter {
   }
 
   async activateAuction(auctionId: string, userId: string) {
-    const auction = await this.dalService.activateAuction(auctionId, userId);
+    const auction = await this.dalService.activateAuction(auctionId);
 
     // Map startPrice → startingPrice
     return {
