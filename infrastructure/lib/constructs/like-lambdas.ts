@@ -2,8 +2,8 @@ import { Construct } from 'constructs';
 import { Duration } from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
-import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-import * as kinesis from 'aws-cdk-lib/aws-kinesis';
+import type * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import type * as kinesis from 'aws-cdk-lib/aws-kinesis';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 
