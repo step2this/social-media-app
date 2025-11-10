@@ -39,6 +39,15 @@ import { NotificationServiceAdapter } from '../adapters/NotificationServiceAdapt
 import { AuctionServiceAdapter } from '../adapters/AuctionServiceAdapter.js';
 import { FeedServiceAdapter } from '../adapters/FeedServiceAdapter.js';
 
+// Use Case Service Adapters (transform DAL types to use case expectations)
+import {
+  ProfileServiceUseCaseAdapter,
+  PostServiceUseCaseAdapter,
+  CommentServiceUseCaseAdapter,
+  NotificationServiceUseCaseAdapter,
+  AuctionServiceUseCaseAdapter,
+} from '../adapters/use-case-service-adapters.js';
+
 // Query Use Cases
 import { GetCurrentUserProfile } from '../../application/use-cases/profile/GetCurrentUserProfile.js';
 import { GetProfileByHandle } from '../../application/use-cases/profile/GetProfileByHandle.js';
@@ -240,6 +249,17 @@ export function createGraphQLContainer(
   });
 
   // ============================================
+  // Layer 1.5: Use Case Service Adapters (VALUE)
+  // ============================================
+  // These adapters transform DAL service types to match use case expectations
+  // (e.g., optional → required fields, field name transformations)
+  const profileServiceUseCaseAdapter = new ProfileServiceUseCaseAdapter(context.services.profileService);
+  const postServiceUseCaseAdapter = new PostServiceUseCaseAdapter(context.services.postService);
+  const commentServiceUseCaseAdapter = new CommentServiceUseCaseAdapter(context.services.commentService);
+  const notificationServiceUseCaseAdapter = new NotificationServiceUseCaseAdapter(context.services.notificationService);
+  const auctionServiceUseCaseAdapter = new AuctionServiceUseCaseAdapter(context.services.auctionService);
+
+  // ============================================
   // Layer 2: Use Cases (SCOPED)
   // ============================================
   // Use cases implement business logic
@@ -291,19 +311,19 @@ export function createGraphQLContainer(
     register: asValue(
       new Register({
         authService: context.services.authService,
-        profileService: context.services.profileService,
+        profileService: profileServiceUseCaseAdapter,
       })
     ),
     login: asValue(
       new Login({
         authService: context.services.authService,
-        profileService: context.services.profileService,
+        profileService: profileServiceUseCaseAdapter,
       })
     ),
     refreshToken: asValue(
       new RefreshToken({
         authService: context.services.authService,
-        profileService: context.services.profileService,
+        profileService: profileServiceUseCaseAdapter,
         dynamoClient: context.dynamoClient,
         tableName: context.tableName,
       })
@@ -317,18 +337,18 @@ export function createGraphQLContainer(
     // Post mutation use cases
     createPost: asValue(
       new CreatePost({
-        profileService: context.services.profileService,
-        postService: context.services.postService,
+        profileService: profileServiceUseCaseAdapter,
+        postService: postServiceUseCaseAdapter,
       })
     ),
     updatePost: asValue(
       new UpdatePost({
-        postService: context.services.postService,
+        postService: postServiceUseCaseAdapter,
       })
     ),
     deletePost: asValue(
       new DeletePost({
-        postService: context.services.postService,
+        postService: postServiceUseCaseAdapter,
       })
     ),
 
@@ -359,43 +379,43 @@ export function createGraphQLContainer(
     // Comment mutation use cases
     createComment: asValue(
       new CreateComment({
-        profileService: context.services.profileService,
-        postService: context.services.postService,
-        commentService: context.services.commentService,
+        profileService: profileServiceUseCaseAdapter,
+        postService: postServiceUseCaseAdapter,
+        commentService: commentServiceUseCaseAdapter,
       })
     ),
     deleteComment: asValue(
       new DeleteComment({
-        commentService: context.services.commentService,
+        commentService: commentServiceUseCaseAdapter,
       })
     ),
 
     // Profile mutation use cases
     updateProfile: asValue(
       new UpdateProfile({
-        profileService: context.services.profileService,
+        profileService: profileServiceUseCaseAdapter,
       })
     ),
     getProfilePictureUploadUrl: asValue(
       new GetProfilePictureUploadUrl({
-        profileService: context.services.profileService,
+        profileService: profileServiceUseCaseAdapter,
       })
     ),
 
     // Notification mutation use cases
     markNotificationAsRead: asValue(
       new MarkNotificationAsRead({
-        notificationService: context.services.notificationService,
+        notificationService: notificationServiceUseCaseAdapter,
       })
     ),
     markAllNotificationsAsRead: asValue(
       new MarkAllNotificationsAsRead({
-        notificationService: context.services.notificationService,
+        notificationService: notificationServiceUseCaseAdapter,
       })
     ),
     deleteNotification: asValue(
       new DeleteNotification({
-        notificationService: context.services.notificationService,
+        notificationService: notificationServiceUseCaseAdapter,
       })
     ),
 
@@ -409,18 +429,18 @@ export function createGraphQLContainer(
     // Auction mutation use cases
     createAuction: asValue(
       new CreateAuction({
-        profileService: context.services.profileService,
-        auctionService: context.services.auctionService,
+        profileService: profileServiceUseCaseAdapter,
+        auctionService: auctionServiceUseCaseAdapter,
       })
     ),
     activateAuction: asValue(
       new ActivateAuction({
-        auctionService: context.services.auctionService,
+        auctionService: auctionServiceUseCaseAdapter,
       })
     ),
     placeBid: asValue(
       new PlaceBid({
-        auctionService: context.services.auctionService,
+        auctionService: auctionServiceUseCaseAdapter,
       })
     ),
   });

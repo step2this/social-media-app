@@ -17,7 +17,7 @@
  */
 
 // Error codes (single source of truth)
-export { ErrorCode, ERROR_CODE_TO_HTTP_STATUS } from './ErrorCodes';
+export { ErrorCode, ERROR_CODE_TO_HTTP_STATUS } from './ErrorCodes.js';
 
 // Error classes
 export {
@@ -29,7 +29,7 @@ export {
   ValidationError,
   ConfigurationError,
   DatabaseError,
-} from './AppErrors';
+} from './AppErrors.js';
 
 // Type guards
 export {
@@ -41,4 +41,4 @@ export {
   isValidationError,
   isConfigurationError,
   isDatabaseError,
-} from './AppErrors';
+} from './AppErrors.js';

@@ -39,6 +39,7 @@ export class LikeServiceAdapter implements ILikeRepository {
       return { success: true, data: domainStatus };
     }
 
-    return result;
+    // Error case - pass through
+    return { success: false, error: (result as { success: false; error: Error }).error };
   }
 }
