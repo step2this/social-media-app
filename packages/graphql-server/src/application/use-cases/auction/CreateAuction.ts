@@ -1,8 +1,25 @@
 /**
  * CreateAuction Use Case
+ *
+ * Creates a new auction with comprehensive validation.
+ *
+ * Business Rules (validated with Zod):
+ * - Title: 3-200 characters, trimmed
+ * - Description: max 2000 characters, trimmed, optional
+ * - StartingPrice: positive, max 2 decimal places
+ * - ReservePrice: positive, max 2 decimal places, >= startingPrice (optional)
+ * - Times: endTime must be after startTime
+ * - FileType: valid image MIME type (optional)
+ *
+ * Benefits:
+ * - Validation in business logic layer (not resolver)
+ * - Detailed validation errors returned via Result type
+ * - Consistent with other use cases
  */
 
 import { AsyncResult, UserId } from '../../../shared/types/index.js';
+import { CreateAuctionRequestSchema } from '@social-media-app/shared';
+import type { z } from 'zod';
 
 export type ImageFileType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
 
@@ -61,15 +78,40 @@ export class CreateAuction {
 
   async execute(input: CreateAuctionInput): AsyncResult<CreateAuctionOutput> {
     try {
+      // ✅ Validate input with Zod schema (business rules)
+      // Validates: title, description, prices, times, fileType
+      // Business rules: endTime > startTime, reservePrice >= startingPrice
+      const validationResult = CreateAuctionRequestSchema.safeParse({
+        title: input.title,
+        description: input.description,
+        startPrice: input.startingPrice,
+        reservePrice: input.reservePrice,
+        startTime: input.startTime,
+        endTime: input.endTime,
+        fileType: input.fileType,
+      });
+
+      if (!validationResult.success) {
+        // Return validation errors as a Result failure
+        const errorMessage = this.formatValidationErrors(validationResult.error);
+        return {
+          success: false,
+          error: new Error(`Validation failed: ${errorMessage}`),
+        };
+      }
+
+      // Use validated data (with Zod transformations applied, e.g., trim)
+      const validatedInput = validationResult.data;
+
       // Generate S3 presigned URL for auction image upload (if fileType provided)
       let uploadUrl: string | undefined;
       let publicUrl: string | undefined;
 
-      if (input.fileType) {
+      if (validatedInput.fileType) {
         const imageUploadData = await this.services.profileService.generatePresignedUrl(
           input.userId,
           {
-            fileType: input.fileType,
+            fileType: validatedInput.fileType as ImageFileType,
             purpose: 'auction-image',
           }
         );
@@ -78,16 +120,16 @@ export class CreateAuction {
         publicUrl = imageUploadData.publicUrl;
       }
 
-      // Create auction with public URL
+      // Create auction with public URL and validated data
       const auction = await this.services.auctionService.createAuction(
         input.userId,
         {
-          title: input.title,
-          description: input.description,
-          startingPrice: input.startingPrice,
-          reservePrice: input.reservePrice,
-          startTime: input.startTime,
-          endTime: input.endTime,
+          title: validatedInput.title,
+          description: validatedInput.description ?? '',
+          startingPrice: validatedInput.startPrice,
+          reservePrice: validatedInput.reservePrice,
+          startTime: validatedInput.startTime,
+          endTime: validatedInput.endTime,
         },
         publicUrl
       );
@@ -105,5 +147,14 @@ export class CreateAuction {
         error: error instanceof Error ? error : new Error('Failed to create auction'),
       };
     }
+  }
+
+  /**
+   * Format Zod validation errors into a readable string
+   */
+  private formatValidationErrors(error: z.ZodError): string {
+    return error.errors
+      .map((err: z.ZodIssue) => `${err.path.join('.')}: ${err.message}`)
+      .join(', ');
   }
 }
