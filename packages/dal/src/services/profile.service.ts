@@ -20,6 +20,7 @@ import {
   isGSI3ValidationError
 } from '../utils/profile-update-helpers.js';
 import { getS3BaseUrl } from '../utils/environment-config.js';
+import type { ICache } from '../interfaces/ICache.js';
 
 /**
  * Profile service for managing user profiles
@@ -29,16 +30,29 @@ export class ProfileService {
   private readonly s3BucketName: string;
   private readonly s3Client: S3Client;
   private readonly cloudFrontDomain?: string;
+  private readonly cache?: ICache;
 
   constructor(
     private readonly dynamoClient: DynamoDBDocumentClient,
     tableName: string,
-    s3BucketName?: string,
+    s3BucketName?: string | ICache,
     cloudFrontDomain?: string,
-    s3Client?: S3Client
+    s3Client?: S3Client,
+    cache?: ICache
   ) {
     this.tableName = tableName;
-    this.s3BucketName = s3BucketName || process.env.MEDIA_BUCKET_NAME || '';
+
+    // Handle overloaded 3rd parameter (s3BucketName or cache)
+    if (s3BucketName && typeof s3BucketName === 'object' && 'get' in s3BucketName) {
+      // If 3rd param is cache, treat it as cache
+      this.cache = s3BucketName as ICache;
+      this.s3BucketName = process.env.MEDIA_BUCKET_NAME || '';
+    } else {
+      // Normal case: s3BucketName is a string
+      this.s3BucketName = (s3BucketName as string | undefined) || process.env.MEDIA_BUCKET_NAME || '';
+      this.cache = cache;
+    }
+
     this.cloudFrontDomain = cloudFrontDomain || process.env.CLOUDFRONT_DOMAIN;
 
     // Create S3 client with environment-aware configuration if not provided
@@ -73,9 +87,29 @@ export class ProfileService {
   }
 
   /**
-   * Get profile by user ID
+   * Get profile by user ID (with caching support)
    */
   async getProfileById(userId: string): Promise<Profile | null> {
+    const cacheKey = `profile:${userId}`;
+
+    // Use cache.getOrSet pattern if cache available
+    if (this.cache) {
+      return this.cache.getOrSet(
+        cacheKey,
+        () => this.fetchProfileFromDB(userId),
+        300000 // 5 minutes TTL
+      );
+    }
+
+    // Fallback to direct DB call if no cache
+    return this.fetchProfileFromDB(userId);
+  }
+
+  /**
+   * Fetch profile from DynamoDB (bypassing cache)
+   * Private helper method
+   */
+  private async fetchProfileFromDB(userId: string): Promise<Profile | null> {
     const result = await this.dynamoClient.send(new GetCommand({
       TableName: this.tableName,
       Key: {
@@ -259,6 +293,12 @@ export class ProfileService {
       ExpressionAttributeValues,
       ReturnValues: 'ALL_NEW'
     }));
+
+    // Invalidate cache after update
+    if (this.cache) {
+      const cacheKey = `profile:${userId}`;
+      await this.cache.delete(cacheKey);
+    }
 
     return mapEntityToProfile(result.Attributes as UserProfileEntity);
   }

@@ -15,6 +15,7 @@ import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb'
 import type { AuthServiceDependencies } from '@social-media-app/dal'
 import { createDefaultAuthService, ProfileService } from '@social-media-app/dal'
 import { createJWTProvider, getJWTConfigFromEnv } from '../../utils/jwt.js'
+import { createCacheServiceFromEnv, type CacheService } from '../cache/CacheService.js'
 
 /**
  * Service container type - all resolvable services
@@ -23,6 +24,9 @@ export interface ServiceContainer {
   // AWS Clients
   dynamoClient: DynamoDBDocumentClient
   tableName: string
+
+  // Cache
+  cacheService: CacheService
 
   // Auth
   jwtProvider: AuthServiceDependencies['jwtProvider']
@@ -72,10 +76,15 @@ export function createAwilixContainer(): AwilixContainer<ServiceContainer> {
   })
 
   // ============================================
-  // Layer 2: Authentication (SINGLETON)
+  // Layer 2: Cache & Authentication (SINGLETON)
   // ============================================
 
   container.register({
+    // Cache Service - singleton (shared across all requests)
+    cacheService: asFunction(() => {
+      return createCacheServiceFromEnv()
+    }).singleton(),
+
     // JWT Provider - singleton (stateless)
     jwtProvider: asFunction(() => {
       const jwtConfig = getJWTConfigFromEnv()
@@ -93,9 +102,9 @@ export function createAwilixContainer(): AwilixContainer<ServiceContainer> {
       return createDefaultAuthService(dynamoClient, tableName, jwtProvider)
     }).scoped(),
 
-    // Profile Service - scoped per request
-    profileService: asFunction(({ dynamoClient, tableName }) => {
-      return new ProfileService(dynamoClient, tableName)
+    // Profile Service - scoped per request (with cache support)
+    profileService: asFunction(({ dynamoClient, tableName, cacheService }) => {
+      return new ProfileService(dynamoClient, tableName, cacheService)
     }).scoped()
 
     // TODO: Add more services as we migrate
