@@ -39,6 +39,15 @@ import { NotificationServiceAdapter } from '../adapters/NotificationServiceAdapt
 import { AuctionServiceAdapter } from '../adapters/AuctionServiceAdapter.js';
 import { FeedServiceAdapter } from '../adapters/FeedServiceAdapter.js';
 
+// Use Case Service Adapters (transform DAL types to use case expectations)
+import {
+  ProfileServiceUseCaseAdapter,
+  PostServiceUseCaseAdapter,
+  CommentServiceUseCaseAdapter,
+  NotificationServiceUseCaseAdapter,
+  AuctionServiceUseCaseAdapter,
+} from '../adapters/use-case-service-adapters.js';
+
 // Query Use Cases
 import { GetCurrentUserProfile } from '../../application/use-cases/profile/GetCurrentUserProfile.js';
 import { GetProfileByHandle } from '../../application/use-cases/profile/GetProfileByHandle.js';
@@ -240,6 +249,17 @@ export function createGraphQLContainer(
   });
 
   // ============================================
+  // Layer 1.5: Use Case Service Adapters (VALUE)
+  // ============================================
+  // These adapters transform DAL service types to match use case expectations
+  // (e.g., optional → required fields, field name transformations)
+  const profileServiceUseCaseAdapter = new ProfileServiceUseCaseAdapter(context.services.profileService);
+  const postServiceUseCaseAdapter = new PostServiceUseCaseAdapter(context.services.postService);
+  const commentServiceUseCaseAdapter = new CommentServiceUseCaseAdapter(context.services.commentService);
+  const notificationServiceUseCaseAdapter = new NotificationServiceUseCaseAdapter(context.services.notificationService);
+  const auctionServiceUseCaseAdapter = new AuctionServiceUseCaseAdapter(context.services.auctionService);
+
+  // ============================================
   // Layer 2: Use Cases (SCOPED)
   // ============================================
   // Use cases implement business logic
@@ -288,25 +308,22 @@ export function createGraphQLContainer(
     // Must use factory pattern with asValue(new UseCase({ services }))
 
     // Auth mutation use cases
-    // @ts-ignore - Service type mismatch between DAL and use case (optional vs required fields)
     register: asValue(
       new Register({
         authService: context.services.authService,
-        profileService: context.services.profileService as any,
+        profileService: profileServiceUseCaseAdapter,
       })
     ),
-    // @ts-ignore - Service type mismatch between DAL and use case (optional vs required fields)
     login: asValue(
       new Login({
         authService: context.services.authService,
-        profileService: context.services.profileService as any,
+        profileService: profileServiceUseCaseAdapter,
       })
     ),
-    // @ts-ignore - Service type mismatch between DAL and use case (optional vs required fields)
     refreshToken: asValue(
       new RefreshToken({
         authService: context.services.authService,
-        profileService: context.services.profileService as any,
+        profileService: profileServiceUseCaseAdapter,
         dynamoClient: context.dynamoClient,
         tableName: context.tableName,
       })
@@ -318,23 +335,20 @@ export function createGraphQLContainer(
     ),
 
     // Post mutation use cases
-    // @ts-ignore - Service type mismatch (caption field: optional in DAL, required in use case)
     createPost: asValue(
       new CreatePost({
-        profileService: context.services.profileService as any,
-        postService: context.services.postService as any,
+        profileService: profileServiceUseCaseAdapter,
+        postService: postServiceUseCaseAdapter,
       })
     ),
-    // @ts-ignore - Service type mismatch (caption field: optional in DAL, required in use case)
     updatePost: asValue(
       new UpdatePost({
-        postService: context.services.postService as any,
+        postService: postServiceUseCaseAdapter,
       })
     ),
-    // @ts-ignore - Service type mismatch
     deletePost: asValue(
       new DeletePost({
-        postService: context.services.postService as any,
+        postService: postServiceUseCaseAdapter,
       })
     ),
 
@@ -363,50 +377,45 @@ export function createGraphQLContainer(
     ),
 
     // Comment mutation use cases
-    // @ts-ignore - Service type mismatch (return structure differences)
     createComment: asValue(
       new CreateComment({
-        profileService: context.services.profileService as any,
-        postService: context.services.postService as any,
-        commentService: context.services.commentService as any,
+        profileService: profileServiceUseCaseAdapter,
+        postService: postServiceUseCaseAdapter,
+        commentService: commentServiceUseCaseAdapter,
       })
     ),
-    // @ts-ignore - Service type mismatch (return type: object vs boolean)
     deleteComment: asValue(
       new DeleteComment({
-        commentService: context.services.commentService as any,
+        commentService: commentServiceUseCaseAdapter,
       })
     ),
 
     // Profile mutation use cases
-    // @ts-ignore - Service type mismatch (avatarUrl vs profilePictureUrl)
     updateProfile: asValue(
       new UpdateProfile({
-        profileService: context.services.profileService as any,
+        profileService: profileServiceUseCaseAdapter,
       })
     ),
     getProfilePictureUploadUrl: asValue(
       new GetProfilePictureUploadUrl({
-        profileService: context.services.profileService as any,
+        profileService: profileServiceUseCaseAdapter,
       })
     ),
 
     // Notification mutation use cases
-    // @ts-ignore - Service type mismatch (readAt field: optional in DAL, required in use case)
     markNotificationAsRead: asValue(
       new MarkNotificationAsRead({
-        notificationService: context.services.notificationService as any,
+        notificationService: notificationServiceUseCaseAdapter,
       })
     ),
     markAllNotificationsAsRead: asValue(
       new MarkAllNotificationsAsRead({
-        notificationService: context.services.notificationService as any,
+        notificationService: notificationServiceUseCaseAdapter,
       })
     ),
-    // @ts-ignore - Service type mismatch (return type: object vs void)
     deleteNotification: asValue(
       new DeleteNotification({
-        notificationService: context.services.notificationService as any,
+        notificationService: notificationServiceUseCaseAdapter,
       })
     ),
 
@@ -418,23 +427,20 @@ export function createGraphQLContainer(
     ),
 
     // Auction mutation use cases
-    // @ts-ignore - Service type mismatch (startPrice vs startingPrice, property naming differences)
     createAuction: asValue(
       new CreateAuction({
-        profileService: context.services.profileService as any,
-        auctionService: context.services.auctionService as any,
+        profileService: profileServiceUseCaseAdapter,
+        auctionService: auctionServiceUseCaseAdapter,
       })
     ),
-    // @ts-ignore - Service type mismatch (startPrice vs startingPrice)
     activateAuction: asValue(
       new ActivateAuction({
-        auctionService: context.services.auctionService as any,
+        auctionService: auctionServiceUseCaseAdapter,
       })
     ),
-    // @ts-ignore - Service type mismatch (startPrice vs startingPrice)
     placeBid: asValue(
       new PlaceBid({
-        auctionService: context.services.auctionService as any,
+        auctionService: auctionServiceUseCaseAdapter,
       })
     ),
   });
