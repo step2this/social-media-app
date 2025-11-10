@@ -34,12 +34,12 @@ export const parseAuthStorage = (key: string): Record<string, any> | null => {
 
 /**
  * Create base request headers
- * @param includeAuth - Whether to prepare for auth header (doesn't add token yet)
+ * @param _includeAuth - Whether to prepare for auth header (doesn't add token yet)
  * @param baseHeaders - Optional custom headers to merge
  * @returns Headers object
  */
 export const createRequestHeaders = (
-    includeAuth: boolean,
+    _includeAuth: boolean,
     baseHeaders?: Record<string, string>
 ): Record<string, string> => ({
     'Content-Type': 'application/json',

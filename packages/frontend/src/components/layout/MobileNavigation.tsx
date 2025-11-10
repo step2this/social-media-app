@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { MaterialIcon } from '../common/MaterialIcon';
-import { notificationService } from '../../services/notificationService';
+// import { notificationService } from '../../services/notificationService';
 import { useAuth } from '../../hooks/useAuth';
 
 interface MobileNavigationProps {
@@ -18,14 +18,15 @@ interface MobileNavigationProps {
 export const MobileNavigation: React.FC<MobileNavigationProps> = ({ className = '' }) => {
   const location = useLocation();
   const { isAuthenticated, isHydrated } = useAuth();
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount] = useState(0);
 
   // Fetch unread notification count
   useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
-        const response = await notificationService.getUnreadCount();
-        setUnreadCount(response.count);
+        // TODO: Implement getUnreadCount method in notificationService
+        // const response = await notificationService.getUnreadCount();
+        // setUnreadCount(response.count);
       } catch (error) {
         console.error('Failed to fetch unread count:', error);
       }

@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import type { User, Notification } from '@social-media-app/shared';
+import type { User } from '@social-media-app/shared';
 import type {
   IServiceContainer,
   INavigationService,

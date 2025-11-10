@@ -120,8 +120,6 @@ export const UserLink = ({
     // Calculate available space in each direction
     const spaceBelow = viewportHeight - rect.bottom;
     const spaceAbove = rect.top;
-    const spaceRight = viewportWidth - rect.left;
-    const spaceLeft = rect.left;
 
     let x = rect.left;
     let y = rect.bottom + spacing;

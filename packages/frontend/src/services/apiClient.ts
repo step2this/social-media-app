@@ -398,10 +398,10 @@ const createApiClient = (tokenStorage: TokenStorage = defaultTokenStorage) => {
         requestSchema: LogoutRequestSchema,
         responseSchema: LogoutResponseSchema,
         includeAuth: true,
-        onSuccess: (response, storage) => {
+        onSuccess: (_response, storage) => {
           storage.clearTokens();
         },
-        onError: (error, storage) => {
+        onError: (_error, storage) => {
           storage.clearTokens();
         }
       })(sendRequest, tokenStorage, defaultRetryConfig),

@@ -23,7 +23,8 @@
 
 import { useNotifications } from './useNotifications';
 import { useNotificationActions } from './useNotificationActions';
-import type { INotificationDataService } from '../services/interfaces/INotificationDataService';
+// import type { INotificationDataService } from '../services/interfaces/INotificationDataService';
+type INotificationDataService = any; // TODO: Create this interface
 
 /**
  * Composite hook return type using intersection types

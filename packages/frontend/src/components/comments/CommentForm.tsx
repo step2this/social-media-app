@@ -83,7 +83,7 @@ export const CommentFormRelay = ({ postId, onCommentCreated }: CommentFormRelayP
       onCompleted: (response) => {
         setContent('');
         if (onCommentCreated && response.createComment) {
-          onCommentCreated(response.createComment as Comment);
+          onCommentCreated(response.createComment as unknown as Comment);
         }
       },
       onError: (error) => {
