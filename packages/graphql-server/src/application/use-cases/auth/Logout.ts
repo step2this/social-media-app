@@ -66,6 +66,7 @@ export interface LogoutServices {
  * Handles user logout (currently idempotent stub)
  */
 export class Logout {
+  // @ts-expect-error - services will be used when we implement actual logout
   constructor(private readonly services: LogoutServices) {}
 
   /**
@@ -74,6 +75,7 @@ export class Logout {
    * @param input - Logout input (userId)
    * @returns Result with success indicator
    */
+  // @ts-expect-error - input will be used when we implement actual logout
   async execute(input: LogoutInput): AsyncResult<LogoutOutput> {
     try {
       // For logout, we need the refresh token from the client
