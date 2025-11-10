@@ -35,7 +35,9 @@ import cors from 'cors';
 import { config } from 'dotenv';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
-// import { typeDefs } from './schema/typeDefs.js'; // TODO: Create typeDefs file
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { resolvers } from './schema/resolvers/index.js';
 import depthLimit from 'graphql-depth-limit';
 import type { GraphQLContext } from './context.js';
@@ -43,17 +45,18 @@ import { createDynamoDBClient, getTableName } from '@social-media-app/aws-utils'
 import { verifyAccessToken, extractTokenFromHeader, getJWTConfigFromEnv } from '@social-media-app/auth-utils';
 import { createLoaders } from './dataloaders/index.js';
 import { createServices } from './services/factory.js';
-import { createGraphQLContainer } from './infrastructure/di/index.js';
+import { createGraphQLContainer } from './infrastructure/di/awilix-container.js';
 
 // Load environment variables from project root
 config({ path: '../../.env' });
 
-// TODO: Create proper typeDefs file - this is a minimal placeholder
-const typeDefs = `#graphql
-  type Query {
-    _placeholder: String
-  }
-`;
+// Load schema from single source of truth (root schema.graphql)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const typeDefs = readFileSync(
+  join(__dirname, '../../../schema.graphql'),
+  'utf-8'
+);
 
 const app = express();
 const PORT = process.env.GRAPHQL_PORT || 4000;
@@ -97,7 +100,7 @@ async function createExpressContext({ req }: { req: express.Request }): Promise<
     userId
   );
 
-  // Create context object (needed for registerServices)
+  // Create context object
   const context: GraphQLContext = {
     userId,
     dynamoClient,
@@ -106,9 +109,9 @@ async function createExpressContext({ req }: { req: express.Request }): Promise<
     loaders,
   } as GraphQLContext;
 
-  // TODO: Create DI container once proper Container/registerServices are implemented
-  // const container = createGraphQLContainer(context);
-  // context.container = container;
+  // Create DI container once per request
+  const container = createGraphQLContainer(context);
+  context.container = container;
 
   return context;
 }
