@@ -12,7 +12,6 @@
  */
 
 import { ApolloServer } from '@apollo/server';
-import depthLimit from 'graphql-depth-limit';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -63,11 +62,6 @@ export function createApolloServerWithPothos(): ApolloServer<GraphQLContext> {
   const server = new ApolloServer<GraphQLContext>({
     schema: mergedSchema,
 
-    // Security: Query depth limit (prevent DoS attacks)
-    validationRules: [
-      depthLimit(7),
-    ],
-
     // Enable introspection for development
     introspection: process.env.NODE_ENV !== 'production',
     includeStacktraceInErrorResponses: process.env.NODE_ENV !== 'production',
@@ -106,7 +100,6 @@ export function createPothosOnlyServer(): ApolloServer<GraphQLContext> {
   const server = new ApolloServer<GraphQLContext>({
     schema: pothosSchema,
 
-    validationRules: [depthLimit(7)],
     introspection: process.env.NODE_ENV !== 'production',
     includeStacktraceInErrorResponses: process.env.NODE_ENV !== 'production',
 

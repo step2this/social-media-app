@@ -8,6 +8,7 @@
 import SchemaBuilder from '@pothos/core';
 import ScopeAuthPlugin from '@pothos/plugin-scope-auth';
 import ValidationPlugin from '@pothos/plugin-validation';
+import ComplexityPlugin from '@pothos/plugin-complexity';
 import type { GraphQLContext } from '../../context.js';
 
 /**
@@ -28,11 +29,30 @@ export const builder = new SchemaBuilder<{
   Context: GraphQLContext;
   AuthScopes: AuthScopes;
 }>({
-  plugins: [ScopeAuthPlugin, ValidationPlugin],
+  plugins: [ScopeAuthPlugin, ValidationPlugin, ComplexityPlugin],
   scopeAuth: {
     authScopes: (context: GraphQLContext) => ({
       authenticated: !!context.userId,
     }),
+  },
+  complexity: {
+    // Default complexity for any field (if not specified)
+    defaultComplexity: 1,
+
+    // Multiplier for list fields
+    defaultListMultiplier: 10,
+
+    // Global limits
+    limit: {
+      // Max total complexity for entire query
+      complexity: 1000,
+
+      // Max query depth (replaces graphql-depth-limit)
+      depth: 10,
+
+      // Max query breadth (fields per level)
+      breadth: 50,
+    },
   },
 } as any); // Type assertion needed for Pothos plugin config
 

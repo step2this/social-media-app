@@ -6,7 +6,6 @@
  */
 
 import { ApolloServer } from '@apollo/server';
-import depthLimit from 'graphql-depth-limit';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -46,13 +45,6 @@ export function createApolloServer(): ApolloServer<GraphQLContext> {
   const server = new ApolloServer<GraphQLContext>({
     typeDefs,
     resolvers,
-
-    // Security: Query depth limit (prevent DoS attacks)
-    validationRules: [
-      // Depth limit: Prevent deeply nested queries
-      // Max depth of 7 allows legitimate queries while preventing abuse
-      depthLimit(7),
-    ],
 
     // Enable introspection for development and testing
     // In production, this should be controlled via environment variable

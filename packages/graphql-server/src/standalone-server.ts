@@ -37,7 +37,6 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { resolvers } from './schema/resolvers/index.js';
-import depthLimit from 'graphql-depth-limit';
 import type { GraphQLContext } from './context.js';
 import { createDynamoDBClient, getTableName } from '@social-media-app/aws-utils';
 import { verifyAccessToken, extractTokenFromHeader, getJWTConfigFromEnv } from '@social-media-app/auth-utils';
@@ -150,11 +149,6 @@ async function startServer() {
     const server = new ApolloServer<GraphQLContext>({
       typeDefs,
       resolvers,
-
-      // Security: Query depth and complexity limits
-      validationRules: [
-        depthLimit(7), // Max query depth of 7 levels
-      ],
 
       // Development features (introspection, playground, stack traces)
       introspection: true,
