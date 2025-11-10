@@ -1,4 +1,7 @@
-import CircuitBreaker = require('opossum');
+import * as OpossumModule from 'opossum';
+
+// Handle both ESM and CJS module formats
+const CircuitBreaker = (OpossumModule as any).default || OpossumModule;
 
 /**
  * Circuit Breaker Configuration
