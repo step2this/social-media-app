@@ -85,13 +85,33 @@ export interface HandlerConfig {
  * )
  * ```
  */
+/**
+ * Conditional JSON body parser middleware
+ * Only parses JSON for methods that typically have a request body
+ */
+const conditionalJsonBodyParser = (): middy.MiddlewareObj => {
+  const parser = httpJsonBodyParser()
+
+  return {
+    before: async (request) => {
+      const method = request.event.requestContext.http.method
+      // Only parse JSON for methods that typically have a body
+      if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+        return parser.before?.(request)
+      }
+      // For GET, DELETE, etc., skip JSON parsing
+      return
+    }
+  }
+}
+
 export function createHandler(
   handler: AugmentedLambdaHandler,
   config: HandlerConfig = {}
 ): middy.MiddyfiedHandler {
   const middleware = middy(handler)
     .use(httpHeaderNormalizer())
-    .use(httpJsonBodyParser())
+    .use(conditionalJsonBodyParser())
 
   // Add JWT auth if enabled
   if (config.auth !== undefined) {
