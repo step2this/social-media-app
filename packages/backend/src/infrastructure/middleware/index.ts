@@ -89,12 +89,12 @@ export interface HandlerConfig {
  * Conditional JSON body parser middleware
  * Only parses JSON for methods that typically have a request body
  */
-const conditionalJsonBodyParser = (): middy.MiddlewareObj => {
+const conditionalJsonBodyParser = (): middy.MiddlewareObj<any, any> => {
   const parser = httpJsonBodyParser()
 
   return {
-    before: async (request) => {
-      const method = request.event.requestContext.http.method
+    before: async (request: any) => {
+      const method = request.event?.requestContext?.http?.method
       // Only parse JSON for methods that typically have a body
       if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
         return parser.before?.(request)
