@@ -1,4 +1,4 @@
-import CircuitBreaker from 'opossum';
+import CircuitBreaker = require('opossum');
 
 /**
  * Circuit Breaker Configuration
@@ -161,7 +161,7 @@ export class CircuitBreakerService {
    * Attach event listeners to track metrics and log state changes
    */
   private attachEventListeners(breaker: CircuitBreaker): void {
-    breaker.on('success', (result, latency) => {
+    breaker.on('success', (_result: unknown, latency: number) => {
       this.metrics.successCount++;
       this.metrics.totalRequests++;
       this.trackResponseTime(latency);
@@ -170,7 +170,7 @@ export class CircuitBreakerService {
       );
     });
 
-    breaker.on('failure', (error) => {
+    breaker.on('failure', (error: Error) => {
       this.metrics.failureCount++;
       this.metrics.totalRequests++;
       console.error(
@@ -213,7 +213,7 @@ export class CircuitBreakerService {
       );
     });
 
-    breaker.on('fallback', (result) => {
+    breaker.on('fallback', (result: unknown) => {
       console.log(
         `[CircuitBreaker:${this.config.name}] Fallback executed:`,
         result
