@@ -1,5 +1,8 @@
 import CircuitBreaker from 'opossum';
 
+// Type for CircuitBreaker instances
+type CircuitBreakerInstance = InstanceType<typeof CircuitBreaker>;
+
 /**
  * Circuit Breaker Configuration
  */
@@ -160,7 +163,7 @@ export class CircuitBreakerService {
   /**
    * Attach event listeners to track metrics and log state changes
    */
-  private attachEventListeners(breaker: CircuitBreaker): void {
+  private attachEventListeners(breaker: CircuitBreakerInstance): void {
     breaker.on('success', (_result: unknown, latency: number) => {
       this.metrics.successCount++;
       this.metrics.totalRequests++;
