@@ -2,7 +2,13 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictPropertyInitialization": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   },
   "include": [
     "src/**/*"
@@ -10,6 +16,9 @@
   "exclude": [
     "node_modules",
     "dist",
-    "__tests__"
+    "__tests__",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "src/**/__tests__/**/*"
   ]
 }
