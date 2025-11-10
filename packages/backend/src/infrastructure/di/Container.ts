@@ -10,10 +10,10 @@
  */
 
 import { createContainer, asFunction, asValue, InjectionMode, type AwilixContainer } from 'awilix'
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
-import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb'
+import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb'
 import type { AuthServiceDependencies } from '@social-media-app/dal'
 import { createDefaultAuthService, ProfileService } from '@social-media-app/dal'
+import { createDynamoDBClient, getTableName } from '@social-media-app/aws-utils'
 import { createJWTProvider, getJWTConfigFromEnv } from '../../utils/jwt.js'
 import { createCacheServiceFromEnv, type CacheService } from '../cache/CacheService.js'
 import { createCircuitBreakerServiceFromEnv, type CircuitBreakerService } from '../circuit-breaker/CircuitBreakerService.js'
@@ -64,21 +64,13 @@ export function createAwilixContainer(): AwilixContainer<ServiceContainer> {
 
   container.register({
     // DynamoDB Client - singleton for Lambda cold start optimization
+    // Uses aws-utils for proper LocalStack detection and configuration
     dynamoClient: asFunction(() => {
-      const client = new DynamoDBClient({
-        region: process.env.AWS_REGION || 'us-east-1',
-        endpoint: process.env.DYNAMODB_ENDPOINT // LocalStack support
-      })
-      return DynamoDBDocumentClient.from(client, {
-        marshallOptions: {
-          removeUndefinedValues: true,
-          convertClassInstanceToMap: true
-        }
-      })
+      return createDynamoDBClient()
     }).singleton(),
 
-    // Table name from environment
-    tableName: asValue(process.env.TABLE_NAME || 'social-media-app-dev')
+    // Table name from environment with LocalStack support
+    tableName: asValue(getTableName())
   })
 
   // ============================================
