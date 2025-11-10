@@ -28,10 +28,7 @@ async function loadHandlers() {
       { name: 'authRegister', path: './dist/handlers/auth/register.js' },
       { name: 'authProfile', path: './dist/handlers/auth/profile.js' },
       { name: 'authLogout', path: './dist/handlers/auth/logout.js' },
-      { name: 'authRefresh', path: './dist/handlers/auth/refresh.js' },
-
-      // Utility handlers (health check, dev tools)
-      { name: 'hello', path: './dist/handlers/hello.js' }
+      { name: 'authRefresh', path: './dist/handlers/auth/refresh.js' }
     ];
 
     for (const { name, path } of handlerMappings) {
