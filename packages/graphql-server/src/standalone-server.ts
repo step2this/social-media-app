@@ -30,11 +30,9 @@
  *   - No API Gateway event conversion needed
  */
 
-import express from 'express';
-import cors from 'cors';
 import { config } from 'dotenv';
 import { ApolloServer } from '@apollo/server';
-import { expressMiddleware } from '@apollo/server/express4';
+import { startStandaloneServer } from '@apollo/server/standalone';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -58,22 +56,23 @@ const typeDefs = readFileSync(
   'utf-8'
 );
 
-const app = express();
-const PORT = process.env.GRAPHQL_PORT || 4000;
+const PORT = parseInt(process.env.GRAPHQL_PORT || '4000', 10);
 
 /**
- * Create GraphQL context from Express request
- * Similar to createContext() but works with Express Request instead of Lambda Event
+ * Create GraphQL context from standalone server request
+ * Similar to createContext() but works with standalone server req object
  */
-async function createExpressContext({ req }: { req: express.Request }): Promise<GraphQLContext> {
+async function createStandaloneContext({ req }: { req: { headers: Record<string, string | string[] | undefined> } }): Promise<GraphQLContext> {
   // Initialize DynamoDB client using aws-utils
   const dynamoClient = createDynamoDBClient();
   const tableName = getTableName();
 
   // Extract and verify JWT token using auth-utils
   let userId: string | null = null;
-  const authHeader = req.headers.authorization;
-  const token = extractTokenFromHeader(authHeader);
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+  // Handle string[] case (multiple authorization headers - take first one)
+  const authHeaderStr = Array.isArray(authHeader) ? authHeader[0] : authHeader;
+  const token = extractTokenFromHeader(authHeaderStr);
 
   if (token) {
     try {
@@ -147,7 +146,7 @@ async function startServer() {
     console.log(`   AWS_REGION: ${process.env.AWS_REGION}`);
     console.log('');
 
-    // Create Apollo Server
+    // Create and start Apollo Server using standalone approach
     const server = new ApolloServer<GraphQLContext>({
       typeDefs,
       resolvers,
@@ -182,51 +181,23 @@ async function startServer() {
       },
     });
 
-    // Start Apollo Server
-    await server.start();
-    console.log('✅ Apollo Server started\n');
-
-    // Configure Express middleware
-    app.use(cors({
-      origin: ['http://localhost:3000', 'http://localhost:5173'], // Frontend origins
-      credentials: true,
-    }));
-
-    app.use(express.json({ limit: '10mb' })); // Match API Gateway 10MB limit
-
-    // Health check endpoint
-    app.get('/health', (_req, res) => {
-      res.json({
-        status: 'healthy',
-        service: 'graphql-server',
-        environment: process.env.NODE_ENV || 'development',
-        timestamp: new Date().toISOString()
-      });
+    // Start standalone server (handles HTTP server, CORS, and routing automatically)
+    const { url } = await startStandaloneServer(server, {
+      listen: { port: PORT },
+      context: createStandaloneContext,
     });
 
-    // Apply Apollo GraphQL middleware
-    app.use(
-      '/graphql',
-      expressMiddleware(server, {
-        context: createExpressContext,
-      })
-    );
-
-    // Start Express server
-    app.listen(PORT, () => {
-      console.log('🎉 GraphQL server ready!\n');
-      console.log(`   GraphQL endpoint: http://localhost:${PORT}/graphql`);
-      console.log(`   Health check:     http://localhost:${PORT}/health`);
-      console.log('');
-      console.log('📝 Example queries:');
-      console.log(`   curl -X POST http://localhost:${PORT}/graphql \\`);
-      console.log(`     -H "Content-Type: application/json" \\`);
-      console.log(`     -d '{"query": "{ __typename }"}'`);
-      console.log('');
-      console.log('💡 GraphQL Playground:');
-      console.log(`   Open http://localhost:${PORT}/graphql in your browser`);
-      console.log('');
-    });
+    console.log('🎉 GraphQL server ready!\n');
+    console.log(`   GraphQL endpoint: ${url}`);
+    console.log('');
+    console.log('📝 Example queries:');
+    console.log(`   curl -X POST ${url} \\`);
+    console.log(`     -H "Content-Type: application/json" \\`);
+    console.log(`     -d '{"query": "{ __typename }"}'`);
+    console.log('');
+    console.log('💡 GraphQL Playground:');
+    console.log(`   Open ${url} in your browser`);
+    console.log('');
 
   } catch (error) {
     console.error('❌ Failed to start GraphQL server:', error);
