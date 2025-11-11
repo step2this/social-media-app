@@ -11,7 +11,7 @@
 import type { ILikeRepository, LikeStatus } from '../../domain/repositories/ILikeRepository';
 import type { LikeService } from '@social-media-app/dal';
 import type { Result } from '../../shared/types/result';
-import { adaptServiceCall } from './shared/AdapterHelpers';
+import { adaptServiceCall } from './shared/AdapterHelpers.js';
 
 /**
  * Type representing DAL's LikeStatus (uses likesCount)

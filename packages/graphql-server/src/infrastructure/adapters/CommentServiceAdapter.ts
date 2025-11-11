@@ -7,7 +7,7 @@
 
 import type { ICommentRepository } from '../../domain/repositories/ICommentRepository';
 import type { CommentService } from '@social-media-app/dal';
-import { adaptServiceCall, adaptPaginatedResponse } from './shared/AdapterHelpers';
+import { adaptServiceCall, adaptPaginatedResponse } from './shared/AdapterHelpers.js';
 
 export class CommentServiceAdapter implements ICommentRepository {
   constructor(private readonly commentService: CommentService) {}
