@@ -7,7 +7,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { S3Client } from '@aws-sdk/client-s3';
 import { KinesisClient } from '@aws-sdk/client-kinesis';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 
 /**
  * Environment detection for LocalStack
