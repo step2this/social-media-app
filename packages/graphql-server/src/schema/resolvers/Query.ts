@@ -52,59 +52,7 @@ export const Query: QueryResolvers = {
   // ============================================================================
   // Note: Auth queries (me, profile) moved to Pothos schema (src/schema/pothos/queries/auth.ts)
   // Note: Posts queries (post, userPosts) moved to Pothos schema (src/schema/pothos/queries/posts.ts)
-
-  // ============================================================================
-  // FEED QUERIES
-  // ============================================================================
-
-  /**
-   * Get posts from followed users (authenticated feed)
-   *
-   * Requires authentication (enforced by withAuth HOC).
-   * Returns PostConnection with posts from users the current user follows.
-   *
-   * Type Safety:
-   * - args: { first?: number | null; after?: string | null }
-   * - return: PostConnection (non-nullable)
-   */
-  followingFeed: withAuth(async (_parent, args, context) => {
-    const result = await executeUseCase(
-      context.container.resolve('getFollowingFeed'),
-      {
-        userId: UserId(context.userId),
-        pagination: {
-          first: args.first ?? 20,
-          after: args.after ? Cursor(args.after) : undefined,
-        },
-      }
-    );
-    return result as any;
-  }),
-
-  /**
-   * Get explore feed (public posts for discovery)
-   *
-   * Public query - no authentication required.
-   * Returns PostConnection with posts for discovery.
-   * Optionally personalized if user is authenticated.
-   *
-   * Type Safety:
-   * - args: { first?: number | null; after?: string | null }
-   * - return: PostConnection (non-nullable)
-   */
-  exploreFeed: async (_parent, args, context) => {
-    const result = await executeUseCase(
-      context.container.resolve('getExploreFeed'),
-      {
-        pagination: {
-          first: args.first ?? 20,
-          after: args.after ? Cursor(args.after) : undefined,
-        },
-        viewerId: context.userId ? UserId(context.userId) : undefined,
-      }
-    );
-    return result as any;
-  },
+  // Note: Feed queries (exploreFeed, followingFeed) moved to Pothos schema (src/schema/pothos/queries/feed.ts)
 
   // ============================================================================
   // COMMENT QUERIES

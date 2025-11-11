@@ -6,11 +6,7 @@
   type Query {
     # Note: Auth queries (me, profile) moved to Pothos schema
     # Note: Posts queries (post, userPosts) moved to Pothos schema
-
-    # Feed
-    feed(limit: Int, cursor: String, first: Int, after: String): FeedConnection!
-    exploreFeed(limit: Int, cursor: String, first: Int, after: String): PostConnection!
-    followingFeed(limit: Int, cursor: String, first: Int, after: String): PostConnection!
+    # Note: Feed queries (exploreFeed, followingFeed) moved to Pothos schema
 
     # Social
     postLikeStatus(postId: ID!): LikeStatus!
@@ -47,8 +43,7 @@
     markAllNotificationsAsRead: MarkAllReadResponse!
     deleteNotification(id: ID!): DeleteResponse!
 
-    # Feed
-    markFeedItemsAsRead(postIds: [ID!]!): MarkFeedReadResponse!
+    # Note: Feed mutations (markFeedItemsAsRead) moved to Pothos schema
   }
 
   # ============================================================================
@@ -88,22 +83,7 @@
     createdAt: String!
   }
 
-  # Post type - still in SDL because Feed queries reference it
-  # Will be fully migrated to Pothos when Feed module is migrated
-  type Post {
-    id: ID!
-    userId: ID!
-    author: PublicProfile!
-    caption: String
-    imageUrl: String!
-    thumbnailUrl: String!
-    likesCount: Int!
-    commentsCount: Int!
-    isLiked: Boolean
-    createdAt: String!
-    updatedAt: String!
-    comments(first: Int, after: String): CommentConnection!
-  }
+  # Note: Post type moved to Pothos schema
 
   type Comment {
     id: ID!
@@ -141,12 +121,7 @@
     preview: String
   }
 
-  type FeedItem {
-    id: ID!
-    post: Post!
-    readAt: String
-    createdAt: String!
-  }
+  # Note: FeedItem type moved to Pothos schema
 
   # ============================================================================
   # Enums
@@ -196,17 +171,7 @@
     endCursor: String
   }
 
-  # PostConnection, PostEdge - still in SDL because Feed queries reference them
-  # Will be fully migrated to Pothos when Feed module is migrated
-  type PostConnection {
-    edges: [PostEdge!]!
-    pageInfo: PageInfo!
-  }
-
-  type PostEdge {
-    cursor: String!
-    node: Post!
-  }
+  # Note: PostConnection, PostEdge moved to Pothos schema
 
   type CommentConnection {
     edges: [CommentEdge!]!
@@ -228,15 +193,7 @@
     node: Notification!
   }
 
-  type FeedConnection {
-    edges: [FeedEdge!]!
-    pageInfo: PageInfo!
-  }
-
-  type FeedEdge {
-    cursor: String!
-    node: FeedItem!
-  }
+  # Note: FeedConnection, FeedEdge moved to Pothos schema
 
   # ============================================================================
   # Response Types
@@ -276,9 +233,7 @@
     updatedCount: Int!
   }
 
-  type MarkFeedReadResponse {
-    updatedCount: Int!
-  }
+  # Note: MarkFeedReadResponse moved to Pothos schema
 
   type PresignedUrlResponse {
     uploadUrl: String!

@@ -249,20 +249,7 @@ export const Mutation: MutationResolvers = {
   // ============================================================================
   // FEED MUTATIONS
   // ============================================================================
-
-  /**
-   * Mark feed items as read
-   * Requires authentication
-   */
-  markFeedItemsAsRead: withAuth(async (_parent, args, context) => {
-    return executeUseCase(
-      context.container.resolve('markFeedItemsAsRead'),
-      {
-        userId: UserId(context.userId),
-        postIds: args.postIds,
-      }
-    );
-  }),
+  // Note: Feed mutations (markFeedItemsAsRead) moved to Pothos schema (src/schema/pothos/mutations/feed.ts)
 
   // ============================================================================
   // AUCTION MUTATIONS

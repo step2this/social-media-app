@@ -8,7 +8,6 @@
 import { Query } from './Query.js';
 import { Mutation } from './Mutation.js';
 import { Profile, PublicProfile } from './Profile.js';
-import { Post } from './Post.js';
 import { Comment } from './Comment.js';
 import { Auction } from './Auction.js';
 
@@ -19,7 +18,7 @@ import { Auction } from './Auction.js';
  * Field resolvers handle computed/relational fields that require additional data fetching:
  * - Profile: (authenticated user's own profile - no custom resolvers)
  * - PublicProfile: isFollowing (viewing other users)
- * - Post: author, isLiked (kept in SDL for Feed queries; Post queries/mutations in Pothos)
+ * - Post: author, isLiked (moved to Pothos schema)
  * - Comment: author
  * - Auction: seller, winner
  */
@@ -28,7 +27,6 @@ export const resolvers = {
   Mutation,
   Profile,
   PublicProfile,
-  Post,
   Comment,
   Auction,
 };
