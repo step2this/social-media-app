@@ -1,8 +1,12 @@
 /**
  * Post Field Resolvers
  *
- * Implements field-level resolvers for the Post type.
+ * Implements field-level resolvers for the Post type in SDL schema.
  * Handles computed/relational fields that require additional data fetching.
+ *
+ * NOTE: Post queries and mutations have been migrated to Pothos.
+ * These field resolvers remain in SDL because Feed queries still use Post type.
+ * When Feed module is migrated to Pothos, these resolvers can be removed.
  *
  * Uses DataLoaders to solve N+1 query problem by batching and caching requests.
  */

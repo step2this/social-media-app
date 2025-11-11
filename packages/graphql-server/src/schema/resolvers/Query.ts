@@ -51,76 +51,7 @@ export const Query: QueryResolvers = {
   // PHASE 1 & 2 - Direct Implementation (NEW PATTERN)
   // ============================================================================
   // Note: Auth queries (me, profile) moved to Pothos schema (src/schema/pothos/queries/auth.ts)
-
-  /**
-   * Get single post by ID
-   *
-   * Public query - no authentication required.
-   * Returns Post if exists, null otherwise.
-   *
-   * Type Safety:
-   * - args: { id: string } (inferred from schema)
-   * - return: Post | null (nullable)
-   */
-  post: async (_parent, args, context) => {
-    const result = await executeOptionalUseCase(
-      context.container.resolve('getPostById'),
-      { postId: PostId(args.id) }
-    );
-    return result as any;
-  },
-
-  /**
-   * Get paginated posts for a user by handle
-   *
-   * Public query - no authentication required.
-   * Returns PostConnection (always succeeds, may be empty).
-   *
-   * Complex resolver: Composes two use cases:
-   * 1. Lookup profile by handle to get userId
-   * 2. Fetch posts for that userId
-   *
-   * Type Safety:
-   * - args: { handle: string; limit?: number | null; cursor?: string | null }
-   * - return: PostConnection (non-nullable)
-   */
-  userPosts: async (_parent, args, context) => {
-    // Step 1: Look up profile by handle to get userId
-    const profileResult = await context.container
-      .resolve('getProfileByHandle')
-      .execute({ handle: Handle(args.handle) });
-
-    if (!profileResult.success) {
-      throw ErrorFactory.fromUseCaseError((profileResult as { success: false; error: Error }).error);
-    }
-
-    if (!profileResult.data) {
-      throw ErrorFactory.notFound('Profile', args.handle);
-    }
-
-    // Step 2: Fetch posts for that user with pagination
-    const limit = args.limit ?? 20;
-    const cursor = args.cursor ?? undefined;
-
-    // Validate pagination parameters
-    if (limit <= 0) {
-      throw ErrorFactory.badRequest('limit must be greater than 0');
-    }
-
-    const result = await executeUseCase(
-      context.container.resolve('getUserPosts'),
-      {
-        userId: UserId(profileResult.data.id),
-        pagination: {
-          first: limit,
-          after: cursor ? Cursor(cursor) : undefined,
-        },
-      }
-    );
-
-    // Type assertion: use case returns Connection<Post> which is structurally compatible
-    return result as any;
-  },
+  // Note: Posts queries (post, userPosts) moved to Pothos schema (src/schema/pothos/queries/posts.ts)
 
   // ============================================================================
   // FEED QUERIES

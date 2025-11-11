@@ -59,64 +59,7 @@ export const Mutation: MutationResolvers = {
   // ============================================================================
   // POST MUTATIONS
   // ============================================================================
-
-  /**
-   * Create a new post
-   * Requires authentication
-   *
-   * Returns a CreatePostPayloadParent with partial Post data.
-   * Post field resolvers (author, isLiked) will complete the Post object.
-   */
-  createPost: withAuth(async (_parent, args, context) => {
-    const result = await executeUseCase(
-      context.container.resolve('createPost'),
-      {
-        userId: UserId(context.userId),
-        fileType: args.input.fileType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-        caption: args.input.caption ?? undefined,
-      }
-    );
-
-    // Type assertion: Use case returns PostParent (without field resolver fields).
-    // GraphQL will invoke Post field resolvers to add author and isLiked.
-    return result as CreatePostPayloadParent;
-  }),
-
-  /**
-   * Update an existing post
-   * Requires authentication and ownership
-   *
-   * Returns a PostParent with partial Post data.
-   * Post field resolvers (author, isLiked) will complete the Post object.
-   */
-  updatePost: withAuth(async (_parent, args, context) => {
-    const result = await executeUseCase(
-      context.container.resolve('updatePost'),
-      {
-        postId: PostId(args.id),
-        userId: UserId(context.userId),
-        caption: args.input.caption ?? undefined,
-      }
-    );
-
-    // Type assertion: Use case returns PostParent (without field resolver fields).
-    // GraphQL will invoke Post field resolvers to add author and isLiked.
-    return result as PostParent;
-  }),
-
-  /**
-   * Delete a post
-   * Requires authentication and ownership
-   */
-  deletePost: withAuth(async (_parent, args, context) => {
-    return executeUseCase(
-      context.container.resolve('deletePost'),
-      {
-        postId: PostId(args.id),
-        userId: UserId(context.userId),
-      }
-    );
-  }),
+  // Note: Posts mutations (createPost, updatePost, deletePost) moved to Pothos schema (src/schema/pothos/mutations/posts.ts)
 
   // ============================================================================
   // LIKE MUTATIONS

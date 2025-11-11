@@ -5,10 +5,7 @@
 
   type Query {
     # Note: Auth queries (me, profile) moved to Pothos schema
-
-    # Posts
-    post(id: ID!): Post
-    userPosts(handle: String!, limit: Int, cursor: String): PostConnection!
+    # Note: Posts queries (post, userPosts) moved to Pothos schema
 
     # Feed
     feed(limit: Int, cursor: String, first: Int, after: String): FeedConnection!
@@ -29,15 +26,11 @@
 
   type Mutation {
     # Note: Auth mutations (register, login, logout, refreshToken) moved to Pothos schema
+    # Note: Posts mutations (createPost, updatePost, deletePost) moved to Pothos schema
 
     # Profile
     updateProfile(input: UpdateProfileInput!): Profile!
     getProfilePictureUploadUrl(fileType: String): PresignedUrlResponse!
-
-    # Posts
-    createPost(input: CreatePostInput!): CreatePostPayload!
-    updatePost(id: ID!, input: UpdatePostInput!): Post!
-    deletePost(id: ID!): DeleteResponse!
 
     # Social
     likePost(postId: ID!): LikeResponse!
@@ -95,6 +88,8 @@
     createdAt: String!
   }
 
+  # Post type - still in SDL because Feed queries reference it
+  # Will be fully migrated to Pothos when Feed module is migrated
   type Post {
     id: ID!
     userId: ID!
@@ -183,14 +178,7 @@
     bio: String
   }
 
-  input CreatePostInput {
-    fileType: String!
-    caption: String
-  }
-
-  input UpdatePostInput {
-    caption: String
-  }
+  # Note: CreatePostInput, UpdatePostInput moved to Pothos schema
 
   input CreateCommentInput {
     postId: ID!
@@ -208,6 +196,8 @@
     endCursor: String
   }
 
+  # PostConnection, PostEdge - still in SDL because Feed queries reference them
+  # Will be fully migrated to Pothos when Feed module is migrated
   type PostConnection {
     edges: [PostEdge!]!
     pageInfo: PageInfo!
@@ -252,12 +242,7 @@
   # Response Types
   # ============================================================================
   # Note: Auth response types (AuthPayload, AuthTokens, LogoutResponse) moved to Pothos schema
-
-  type CreatePostPayload {
-    post: Post!
-    uploadUrl: String!
-    thumbnailUploadUrl: String!
-  }
+  # Note: CreatePostPayload moved to Pothos schema
 
   type LikeResponse {
     success: Boolean!

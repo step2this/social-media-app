@@ -19,7 +19,7 @@ import { Auction } from './Auction.js';
  * Field resolvers handle computed/relational fields that require additional data fetching:
  * - Profile: (authenticated user's own profile - no custom resolvers)
  * - PublicProfile: isFollowing (viewing other users)
- * - Post: author, isLiked
+ * - Post: author, isLiked (kept in SDL for Feed queries; Post queries/mutations in Pothos)
  * - Comment: author
  * - Auction: seller, winner
  */
