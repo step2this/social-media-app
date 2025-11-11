@@ -20,7 +20,7 @@ import {
 
 // Read GraphQL URL from environment variable, fallback to port 4000
 const HTTP_ENDPOINT = import.meta.env.VITE_GRAPHQL_URL || 'http://localhost:4000/graphql';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../stores/authStore.js';
 
 /**
  * Fetch function for Relay Network layer

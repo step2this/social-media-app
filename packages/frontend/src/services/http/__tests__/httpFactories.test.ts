@@ -7,9 +7,9 @@ import {
     type AuthMethodConfig,
     type TokenStorage,
     type ValidationSchema
-} from '../httpFactories.ts';
-import { createZodValidationError } from '../httpErrors.ts';
-import { type RetryConfig } from '../httpHelpers.ts';
+} from '../httpFactories.js';
+import { createZodValidationError } from '../httpErrors.js';
+import { type RetryConfig } from '../httpHelpers.js';
 
 // ============================================================================
 // Test Helpers and Mocks

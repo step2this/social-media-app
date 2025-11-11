@@ -5,7 +5,7 @@
  * Uses shared adapter helpers for DRY error handling and response mapping.
  */
 
-import type { ICommentRepository } from '../../domain/repositories/ICommentRepository';
+import type { ICommentRepository } from '../../domain/repositories/ICommentRepository.js';
 import type { CommentService } from '@social-media-app/dal';
 import { adaptServiceCall, adaptPaginatedResponse } from './shared/AdapterHelpers.js';
 

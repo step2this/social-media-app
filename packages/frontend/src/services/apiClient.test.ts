@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { apiClient } from './apiClient.ts';
+import { apiClient } from './apiClient.js';
 
 // ============================================================================
 // Test Setup and Helpers

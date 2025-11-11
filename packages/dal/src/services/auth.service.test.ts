@@ -1,6 +1,6 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, max-depth, functional/prefer-immutable-types */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createAuthService, defaultHashProvider, type AuthServiceDependencies, type UserEntity, type RefreshTokenEntity } from './auth.service';
+import { createAuthService, defaultHashProvider, type AuthServiceDependencies, type UserEntity, type RefreshTokenEntity } from './auth.service.js';
 import type { RegisterRequest, LoginRequest, RefreshTokenRequest } from '@social-media-app/shared';
 import { createMockDynamoClient, type MockDynamoClient } from '@social-media-app/shared/test-utils';
 

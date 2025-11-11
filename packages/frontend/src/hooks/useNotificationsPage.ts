@@ -21,9 +21,9 @@
  * ```
  */
 
-import { useNotifications } from './useNotifications';
-import { useNotificationActions } from './useNotificationActions';
-// import type { INotificationDataService } from '../services/interfaces/INotificationDataService';
+import { useNotifications } from './useNotifications.js';
+import { useNotificationActions } from './useNotificationActions.js';
+// import type { INotificationDataService } from '../services/interfaces/INotificationDataService.js';
 type INotificationDataService = any; // TODO: Create this interface
 
 /**

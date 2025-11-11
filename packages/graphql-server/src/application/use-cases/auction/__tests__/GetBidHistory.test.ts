@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { GetBidHistory } from '../GetBidHistory';
-import { FakeAuctionRepository } from '../../../../../__tests__/helpers/fake-repositories';
+import { GetBidHistory } from '../GetBidHistory.js';
+import { FakeAuctionRepository } from '../../../../../__tests__/helpers/fake-repositories.js';
 
 describe('GetBidHistory', () => {
   it('returns bid history for an auction', async () => {

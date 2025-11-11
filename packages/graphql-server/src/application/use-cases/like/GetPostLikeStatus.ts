@@ -5,8 +5,8 @@
  * Delegates to repository implementation for data access.
  */
 
-import type { ILikeRepository, LikeStatus } from '../../../domain/repositories/ILikeRepository';
-import type { Result } from '../../../shared/types/result';
+import type { ILikeRepository, LikeStatus } from '../../../domain/repositories/ILikeRepository.js';
+import type { Result } from '../../../shared/types/result.js';
 
 export class GetPostLikeStatus {
   constructor(private readonly likeRepository: ILikeRepository) {}

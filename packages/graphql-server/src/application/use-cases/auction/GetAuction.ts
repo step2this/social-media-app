@@ -5,8 +5,8 @@
  * Delegates to repository implementation for data access.
  */
 
-import type { IAuctionRepository, Auction } from '../../../domain/repositories/IAuctionRepository';
-import type { Result } from '../../../shared/types/result';
+import type { IAuctionRepository, Auction } from '../../../domain/repositories/IAuctionRepository.js';
+import type { Result } from '../../../shared/types/result.js';
 
 export class GetAuction {
   constructor(private readonly auctionRepository: IAuctionRepository) {}

@@ -18,7 +18,7 @@
 
 // @ts-ignore - Auction type not exported from auction-dal
 import type { Auction as DalAuction } from '@social-media-app/auction-dal';
-import type { Auction as GraphQLAuction } from '../../../schema/generated/types';
+import type { Auction as GraphQLAuction } from '../../../schema/generated/types.js';
 
 /**
  * Transform DAL Auction to GraphQL Auction

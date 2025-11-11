@@ -1,5 +1,5 @@
 import type { User, LoginRequest, RegisterRequest } from '@social-media-app/shared';
-import type { IAuthService } from '../interfaces/IAuthService';
+import type { IAuthService } from '../interfaces/IAuthService.js';
 import { useAuthStore, type AuthStore } from '../../stores/authStore.js';
 
 /**

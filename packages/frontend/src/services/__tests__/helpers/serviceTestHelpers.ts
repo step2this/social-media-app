@@ -6,12 +6,12 @@
  */
 
 import { expect } from 'vitest';
-import type { AsyncState } from '../../../graphql/types';
-import type { MockGraphQLClient } from '../../../graphql/client.mock';
+import type { AsyncState } from '../../../graphql/types.js';
+import type { MockGraphQLClient } from '../../../graphql/client.mock.js';
 import {
     wrapInGraphQLSuccess,
     wrapInGraphQLError,
-} from '../fixtures/graphqlFixtures';
+} from '../fixtures/graphqlFixtures.js';
 
 /**
  * Helper to test error scenarios with consistent assertions

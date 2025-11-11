@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { LikeServiceAdapter } from '../LikeServiceAdapter';
+import { LikeServiceAdapter } from '../LikeServiceAdapter.js';
 import { createMockLiked } from '@social-media-app/shared/test-utils/fixtures';
 
 describe('LikeServiceAdapter', () => {

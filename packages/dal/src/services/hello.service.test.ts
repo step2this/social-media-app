@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createHelloService } from './hello.service';
+import { createHelloService } from './hello.service.js';
 
 describe('HelloService', () => {
   const mockTimeProvider = () => '2024-01-01T00:00:00.000Z';

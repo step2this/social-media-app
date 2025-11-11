@@ -3,8 +3,8 @@
  * These higher-order functions eliminate code duplication in API client creation
  */
 
-import { buildRequestBody, validateWithSchema, type RetryConfig } from './httpHelpers.ts';
-import { createZodValidationError } from './httpErrors.ts';
+import { buildRequestBody, validateWithSchema, type RetryConfig } from './httpHelpers.js';
+import { createZodValidationError } from './httpErrors.js';
 
 // ============================================================================
 // Type Guards

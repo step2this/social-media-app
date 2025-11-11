@@ -12,7 +12,7 @@ import type {
   FormatTimestampFn,
   GetIconNameFn,
   GetIconColorFn
-} from './NotificationsPage.types';
+} from './NotificationsPage.types.js';
 
 /**
  * Group notifications by time periods

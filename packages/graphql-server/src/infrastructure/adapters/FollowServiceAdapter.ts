@@ -5,9 +5,9 @@
  * Uses shared adapter helpers for DRY error handling.
  */
 
-import type { IFollowRepository, FollowStatus } from '../../domain/repositories/IFollowRepository';
+import type { IFollowRepository, FollowStatus } from '../../domain/repositories/IFollowRepository.js';
 import type { FollowService } from '@social-media-app/dal';
-import type { Result } from '../../shared/types/result';
+import type { Result } from '../../shared/types/result.js';
 import { adaptServiceCall } from './shared/AdapterHelpers.js';
 
 export class FollowServiceAdapter implements IFollowRepository {

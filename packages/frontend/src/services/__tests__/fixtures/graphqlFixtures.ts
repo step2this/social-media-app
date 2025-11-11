@@ -325,7 +325,7 @@ export function createPlaceBidResponse(
  *
  * @example
  * ```typescript
- * import { createMockLikeResponse } from './likeFixtures';
+ * import { createMockLikeResponse } from './likeFixtures.js';
  *
  * const response = createLikeResponse(
  *   createMockLikeResponse({ likesCount: 43 })
@@ -346,7 +346,7 @@ export function createLikeResponse(
  *
  * @example
  * ```typescript
- * import { createMockUnlikeResponse } from './likeFixtures';
+ * import { createMockUnlikeResponse } from './likeFixtures.js';
  *
  * const response = createUnlikeResponse(
  *   createMockUnlikeResponse({ likesCount: 41 })
@@ -370,7 +370,7 @@ export function createUnlikeResponse(
  *
  * @example
  * ```typescript
- * import { createMockLikeStatus } from './likeFixtures';
+ * import { createMockLikeStatus } from './likeFixtures.js';
  *
  * const response = createLikeStatusResponse(
  *   createMockLikeStatus({ isLiked: true, likesCount: 42 })

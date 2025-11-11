@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { FEED_QUERIES } from '../helpers/feed-query-constants';
+ * import { FEED_QUERIES } from '../helpers/feed-query-constants.js';
  *
  * const result = await executor.execute(FEED_QUERIES.EXPLORE_FEED_FULL, { limit: 24 });
  * ```

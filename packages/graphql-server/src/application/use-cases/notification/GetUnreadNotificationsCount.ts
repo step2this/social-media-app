@@ -5,8 +5,8 @@
  * Delegates to repository implementation for data access.
  */
 
-import type { INotificationRepository } from '../../../domain/repositories/INotificationRepository';
-import type { Result } from '../../../shared/types/result';
+import type { INotificationRepository } from '../../../domain/repositories/INotificationRepository.js';
+import type { Result } from '../../../shared/types/result.js';
 
 export class GetUnreadNotificationsCount {
   constructor(private readonly notificationRepository: INotificationRepository) {}

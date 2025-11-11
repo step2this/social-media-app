@@ -8,9 +8,9 @@
  * Maps likesCount → likeCount for domain consistency
  */
 
-import type { ILikeRepository, LikeStatus } from '../../domain/repositories/ILikeRepository';
+import type { ILikeRepository, LikeStatus } from '../../domain/repositories/ILikeRepository.js';
 import type { LikeService } from '@social-media-app/dal';
-import type { Result } from '../../shared/types/result';
+import type { Result } from '../../shared/types/result.js';
 import { adaptServiceCall } from './shared/AdapterHelpers.js';
 
 /**

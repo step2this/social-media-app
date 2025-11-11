@@ -20,7 +20,7 @@ import {
   getPageInfo,
   hasNextPage,
   type Connection,
-} from '../helpers';
+} from '../helpers.js';
 
 describe('GraphQL Helpers - Extended Safe Utilities', () => {
   // Test data

@@ -1,6 +1,6 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, max-depth, functional/prefer-immutable-types */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { FeedService } from './feed.service';
+import { FeedService } from './feed.service.js';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import type { FeedItemEntity } from '../entities/feed-item.entity.js';
 import type { FeedPostItem } from '@social-media-app/shared';

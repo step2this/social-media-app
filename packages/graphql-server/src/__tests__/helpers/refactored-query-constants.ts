@@ -16,7 +16,7 @@
  *
  * @example
  * ```typescript
- * import { REFACTORED_QUERIES } from '../helpers/refactored-query-constants';
+ * import { REFACTORED_QUERIES } from '../helpers/refactored-query-constants.js';
  *
  * const result = await executor.execute(REFACTORED_QUERIES.COMMENTS, { postId: 'post-1', limit: 20 });
  * ```

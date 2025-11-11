@@ -12,7 +12,7 @@ export {
     expectMutationCalledWith,
     expectQueryCalledWith,
     errorScenarios,
-} from './serviceTestHelpers';
+} from './serviceTestHelpers.js';
 
 /**
  * Type definitions for Comment service mock client generic calls

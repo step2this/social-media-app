@@ -1,6 +1,6 @@
 import { useMutation, graphql } from 'react-relay';
 import { useState, useCallback } from 'react';
-import type { useFeedItemAutoReadMutation } from './__generated__/useFeedItemAutoReadMutation.graphql';
+import type { useFeedItemAutoReadMutation } from './__generated__/useFeedItemAutoReadMutation.graphql.js';
 
 /**
  * Hook to mark feed items as read using Relay mutation

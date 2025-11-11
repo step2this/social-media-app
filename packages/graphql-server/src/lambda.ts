@@ -220,21 +220,20 @@ export async function handler(
 
     // Create Lambda handler with Apollo Server integration
     // Uses APIGatewayProxyEventV2 request handler which is compatible with our context
+    // Note: Type assertion needed due to @as-integrations/aws-lambda not having proper ESM exports
+    // This causes TypeScript NodeNext to see separate ESM/CJS type declarations
     const lambdaHandler = startServerAndCreateLambdaHandler(
-      serverInstance,
+      serverInstance as any,
       handlers.createAPIGatewayProxyEventV2RequestHandler(),
       {
         // Create context for each request
         // Context includes authenticated userId, DynamoDB client, and correlation ID
         context: async ({ event: eventV2 }) => {
           try {
-            const ctx = await createContext(eventV2);
-            // Add correlation ID to context for resolvers
-            return {
-              ...ctx,
-              correlationId
-            };
+            // createContext already generates correlationId from the event
+            return await createContext(eventV2);
           } catch (error) {
+            // Use correlationId from outer scope for error logging
             logError('CONTEXT_ERROR', correlationId, error as Error, {
               service: 'graphql-server'
             });

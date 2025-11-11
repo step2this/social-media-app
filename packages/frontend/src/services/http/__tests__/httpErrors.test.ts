@@ -9,7 +9,7 @@ import {
     classifyNetworkError,
     createZodValidationError,
     extractErrorMessage
-} from '../httpErrors.ts';
+} from '../httpErrors.js';
 
 // ============================================================================
 // Error Class Tests

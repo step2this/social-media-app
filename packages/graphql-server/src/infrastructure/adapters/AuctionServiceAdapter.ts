@@ -8,7 +8,7 @@
  * Maps userId → sellerId and validates status field
  */
 
-import type { IAuctionRepository, Auction, Bid } from '../../domain/repositories/IAuctionRepository';
+import type { IAuctionRepository, Auction, Bid } from '../../domain/repositories/IAuctionRepository.js';
 import type { AuctionService } from '@social-media-app/auction-dal';
 import type { Result, PaginatedResult } from '../../shared/types/index.js';
 

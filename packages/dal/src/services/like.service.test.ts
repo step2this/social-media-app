@@ -1,6 +1,6 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, functional/prefer-immutable-types */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { LikeService, type LikeEntity } from './like.service';
+import { LikeService, type LikeEntity } from './like.service.js';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { createMockDynamoClient, type MockDynamoClient } from '@social-media-app/shared/test-utils';
 

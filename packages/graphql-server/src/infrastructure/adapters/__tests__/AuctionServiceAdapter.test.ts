@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { AuctionServiceAdapter } from '../AuctionServiceAdapter';
+import { AuctionServiceAdapter } from '../AuctionServiceAdapter.js';
 import { createMockAuction, createMockAuctions } from '@social-media-app/shared/test-utils/fixtures';
 import type { AuctionService } from '@social-media-app/auction-dal';
 

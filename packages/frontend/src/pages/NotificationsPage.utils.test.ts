@@ -12,8 +12,8 @@ import {
   formatTimestamp,
   getNotificationIcon,
   getNotificationColor
-} from './NotificationsPage.utils';
-import { createMockNotification } from '../services/__tests__/fixtures/notificationFixtures';
+} from './NotificationsPage.utils.js';
+import { createMockNotification } from '../services/__tests__/fixtures/notificationFixtures.js';
 import type { NotificationType } from '@social-media-app/shared';
 
 describe('NotificationsPage Utils', () => {

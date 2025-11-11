@@ -5,8 +5,8 @@
  * Adapter implementations handle the translation from external services.
  */
 
-import type { Result } from '../../shared/types/result';
-import type { PaginatedResult } from '../../shared/types/pagination';
+import type { Result } from '../../shared/types/result.js';
+import type { PaginatedResult } from '../../shared/types/pagination.js';
 
 export interface Comment {
   id: string;

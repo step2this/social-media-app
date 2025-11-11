@@ -1,2 +1,2 @@
-export { handlers } from './handlers';
-export { worker, startMocking, stopMocking } from './browser';
+export { handlers } from './handlers.js';
+export { worker, startMocking, stopMocking } from './browser.js';

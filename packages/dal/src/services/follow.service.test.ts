@@ -1,6 +1,6 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, functional/prefer-immutable-types */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { FollowService, type FollowEntity } from './follow.service';
+import { FollowService, type FollowEntity } from './follow.service.js';
 import { createMockDynamoClient, type MockDynamoClient } from '@social-media-app/shared/test-utils';
 
 describe('FollowService', () => {

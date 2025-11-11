@@ -6,7 +6,7 @@
  */
 
 import { expect } from 'vitest';
-import type { Result } from '../../shared/types/result';
+import type { Result } from '../../shared/types/result.js';
 
 /**
  * Asserts that a connection has the expected structure and optional length.

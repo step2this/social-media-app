@@ -5,9 +5,9 @@
  * Delegates to repository implementation for data access.
  */
 
-import type { INotificationRepository, Notification } from '../../../domain/repositories/INotificationRepository';
-import type { Result } from '../../../shared/types/result';
-import type { PaginatedResult } from '../../../shared/types/pagination';
+import type { INotificationRepository, Notification } from '../../../domain/repositories/INotificationRepository.js';
+import type { Result } from '../../../shared/types/result.js';
+import type { PaginatedResult } from '../../../shared/types/pagination.js';
 
 export class GetNotifications {
   constructor(private readonly notificationRepository: INotificationRepository) {}

@@ -7,9 +7,9 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useNotificationsPage } from './useNotificationsPage';
-import { createMockNotifications } from '../services/__tests__/fixtures/notificationFixtures';
-import type { INotificationDataService } from '../services/interfaces/INotificationDataService';
+import { useNotificationsPage } from './useNotificationsPage.js';
+import { createMockNotifications } from '../services/__tests__/fixtures/notificationFixtures.js';
+import type { INotificationDataService } from '../services/interfaces/INotificationDataService.js';
 
 // Mock notification data service
 const createMockNotificationDataService = (): INotificationDataService => ({

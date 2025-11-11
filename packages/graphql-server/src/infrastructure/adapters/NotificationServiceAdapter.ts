@@ -9,7 +9,7 @@
  * Depends on interface, not concrete class - enables clean DI
  */
 
-import type { INotificationRepository, Notification } from '../../domain/repositories/INotificationRepository';
+import type { INotificationRepository, Notification } from '../../domain/repositories/INotificationRepository.js';
 import type { Notification as DalNotification } from '@social-media-app/shared';
 import type { Result, PaginatedResult } from '../../shared/types/index.js';
 

@@ -5,9 +5,9 @@
  * Delegates to repository implementation for data access.
  */
 
-import type { ICommentRepository, Comment } from '../../../domain/repositories/ICommentRepository';
-import type { Result } from '../../../shared/types/result';
-import type { PaginatedResult } from '../../../shared/types/pagination';
+import type { ICommentRepository, Comment } from '../../../domain/repositories/ICommentRepository.js';
+import type { Result } from '../../../shared/types/result.js';
+import type { PaginatedResult } from '../../../shared/types/pagination.js';
 
 export class GetCommentsByPost {
   constructor(private readonly commentRepository: ICommentRepository) {}
