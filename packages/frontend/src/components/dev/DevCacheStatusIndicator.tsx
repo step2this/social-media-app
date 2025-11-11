@@ -107,6 +107,11 @@ export function DevCacheStatusIndicator({
       });
 
       if (!response.ok) {
+        // Don't spam console for 503 errors - dev tools are optional
+        if (response.status === 503) {
+          setError('Dev tool not available (handler not built)');
+          return;
+        }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 

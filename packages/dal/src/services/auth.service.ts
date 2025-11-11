@@ -281,21 +281,10 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
    * Refresh access token
    */
   const refreshToken = async (request: Readonly<RefreshTokenRequest>): Promise<RefreshTokenResponse> => {
-    // Debug logging
-    console.log('🔍 Looking up refresh token:', {
-      tokenLength: request.refreshToken?.length,
-      tokenPreview: request.refreshToken?.substring(0, 20) + '...',
-      queryKey: `REFRESH_TOKEN#${request.refreshToken?.substring(0, 20)}...`
-    });
-
     // Find refresh token
     const tokenQuery = await deps.dynamoClient.send(
       new QueryCommand(buildRefreshTokenQuery(request.refreshToken, deps.tableName))
     );
-
-    console.log('🔍 Query result:', {
-      itemsFound: tokenQuery.Items?.length || 0
-    });
 
     if (!tokenQuery.Items || tokenQuery.Items.length === 0) {
       throw new UnauthorizedError(
