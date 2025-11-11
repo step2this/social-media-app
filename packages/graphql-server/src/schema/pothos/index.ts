@@ -15,12 +15,21 @@ import { builder } from './builder.js';
 
 // Import types (these define the GraphQL types)
 import './types/auth.js';
+import './types/comments.js';
+import './types/social.js';
+import './types/notifications.js';
 
 // Import queries (these add fields to the Query type)
 import './queries/auth.js';
+import './queries/comments.js';
+import './queries/social.js';
+import './queries/notifications.js';
 
 // Import mutations (these add fields to the Mutation type)
 import './mutations/auth.js';
+import './mutations/comments.js';
+import './mutations/social.js';
+import './mutations/notifications.js';
 
 /**
  * Build the GraphQL schema

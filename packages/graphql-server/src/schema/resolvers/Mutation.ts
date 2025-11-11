@@ -121,106 +121,17 @@ export const Mutation: MutationResolvers = {
   // ============================================================================
   // LIKE MUTATIONS
   // ============================================================================
-
-  /**
-   * Like a post
-   * Requires authentication
-   */
-  likePost: withAuth(async (_parent, args, context) => {
-    return executeUseCase(
-      context.container.resolve('likePost'),
-      {
-        userId: UserId(context.userId),
-        postId: PostId(args.postId),
-      }
-    );
-  }),
-
-  /**
-   * Unlike a post
-   * Requires authentication
-   */
-  unlikePost: withAuth(async (_parent, args, context) => {
-    return executeUseCase(
-      context.container.resolve('unlikePost'),
-      {
-        userId: UserId(context.userId),
-        postId: PostId(args.postId),
-      }
-    );
-  }),
+  // Note: Like mutations (likePost, unlikePost) moved to Pothos schema (src/schema/pothos/mutations/social.ts)
 
   // ============================================================================
   // FOLLOW MUTATIONS
   // ============================================================================
-
-  /**
-   * Follow a user
-   * Requires authentication
-   */
-  followUser: withAuth(async (_parent, args, context) => {
-    return executeUseCase(
-      context.container.resolve('followUser'),
-      {
-        followerId: UserId(context.userId),
-        followeeId: UserId(args.userId),
-      }
-    );
-  }),
-
-  /**
-   * Unfollow a user
-   * Requires authentication
-   */
-  unfollowUser: withAuth(async (_parent, args, context) => {
-    return executeUseCase(
-      context.container.resolve('unfollowUser'),
-      {
-        followerId: UserId(context.userId),
-        followeeId: UserId(args.userId),
-      }
-    );
-  }),
+  // Note: Follow mutations (followUser, unfollowUser) moved to Pothos schema (src/schema/pothos/mutations/social.ts)
 
   // ============================================================================
   // COMMENT MUTATIONS
   // ============================================================================
-
-  /**
-   * Create a comment
-   * Requires authentication
-   *
-   * Returns a CommentParent with partial Comment data.
-   * Comment field resolver (author) will complete the Comment object.
-   */
-  createComment: withAuth(async (_parent, args, context) => {
-    const result = await executeUseCase(
-      context.container.resolve('createComment'),
-      {
-        userId: UserId(context.userId),
-        postId: PostId(args.input.postId),
-        content: args.input.content,
-      }
-    );
-
-    // Type assertion: Use case returns CommentParent (without field resolver fields).
-    // GraphQL will invoke Comment field resolver to add author.
-    return result as CommentParent;
-  }),
-
-  /**
-   * Delete a comment
-   * Requires authentication and ownership
-   */
-  deleteComment: withAuth(async (_parent, args, context) => {
-    return executeUseCase(
-      context.container.resolve('deleteComment'),
-      {
-        commentId: args.id,
-        userId: UserId(context.userId),
-      }
-    );
-  }),
+  // Note: Comment mutations (createComment, deleteComment) moved to Pothos schema (src/schema/pothos/mutations/comments.ts)
 
   // ============================================================================
   // PROFILE MUTATIONS
@@ -260,48 +171,7 @@ export const Mutation: MutationResolvers = {
   // ============================================================================
   // NOTIFICATION MUTATIONS
   // ============================================================================
-
-  /**
-   * Mark a notification as read
-   * Requires authentication and ownership
-   */
-  // @ts-ignore - DAL Notification type differs from GraphQL Notification type (status enum values differ)
-  markNotificationAsRead: withAuth(async (_parent, args, context) => {
-    return executeUseCase(
-      context.container.resolve('markNotificationAsRead'),
-      {
-        userId: UserId(context.userId),
-        notificationId: args.id,
-      }
-    );
-  }),
-
-  /**
-   * Mark all notifications as read
-   * Requires authentication
-   */
-  markAllNotificationsAsRead: withAuth(async (_parent, _args, context) => {
-    return executeUseCase(
-      context.container.resolve('markAllNotificationsAsRead'),
-      {
-        userId: UserId(context.userId),
-      }
-    );
-  }),
-
-  /**
-   * Delete a notification
-   * Requires authentication and ownership (idempotent)
-   */
-  deleteNotification: withAuth(async (_parent, args, context) => {
-    return executeUseCase(
-      context.container.resolve('deleteNotification'),
-      {
-        userId: UserId(context.userId),
-        notificationId: args.id,
-      }
-    );
-  }),
+  // Note: Notification mutations (markNotificationAsRead, markAllNotificationsAsRead, deleteNotification) moved to Pothos schema (src/schema/pothos/mutations/notifications.ts)
 
   // ============================================================================
   // FEED MUTATIONS

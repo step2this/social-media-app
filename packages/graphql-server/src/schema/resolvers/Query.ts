@@ -178,153 +178,17 @@ export const Query: QueryResolvers = {
   // ============================================================================
   // COMMENT QUERIES
   // ============================================================================
-
-  /**
-   * Get paginated comments for a post
-   *
-   * Requires authentication (enforced by withAuth HOC).
-   * Returns CommentConnection with comments for the specified post.
-   *
-   * Type Safety:
-   * - args: { postId: string; limit?: number | null; cursor?: string | null }
-   * - return: CommentConnection (non-nullable)
-   */
-  comments: withAuth(async (_parent, args, context) => {
-    if (!args.postId) {
-      throw ErrorFactory.badRequest('postId is required');
-    }
-
-    const result = await context.container
-      .resolve('getCommentsByPost')
-      .execute(args.postId, args.limit ?? 20, args.cursor ?? undefined);
-
-    if (!result.success) {
-      throw ErrorFactory.fromUseCaseError((result as { success: false; error: Error }).error);
-    }
-
-    if (!result.data) {
-      throw ErrorFactory.internalServerError('Use case returned no data');
-    }
-
-    return result.data as any;
-  }),
+  // Note: Comments queries (comments) moved to Pothos schema (src/schema/pothos/queries/comments.ts)
 
   // ============================================================================
-  // STATUS QUERIES
+  // STATUS QUERIES (SOCIAL)
   // ============================================================================
-
-  /**
-   * Check if current user follows another user
-   *
-   * Requires authentication (enforced by withAuth HOC).
-   * Returns FollowStatus indicating whether the current user follows the specified user.
-   *
-   * Type Safety:
-   * - args: { userId: string } - the user being checked (followee)
-   * - return: FollowStatus (non-nullable)
-   */
-  followStatus: withAuth(async (_parent, args, context) => {
-    const result = await context.container
-      .resolve('getFollowStatus')
-      .execute(context.userId, args.userId);
-
-    if (!result.success) {
-      throw ErrorFactory.fromUseCaseError((result as { success: false; error: Error }).error);
-    }
-
-    if (!result.data) {
-      throw ErrorFactory.internalServerError('Use case returned no data');
-    }
-
-    return result.data;
-  }),
-
-  /**
-   * Check if current user liked a post
-   *
-   * Requires authentication (enforced by withAuth HOC).
-   * Returns LikeStatus indicating whether the current user liked the specified post.
-   *
-   * Type Safety:
-   * - args: { postId: string }
-   * - return: LikeStatus (non-nullable)
-   */
-  postLikeStatus: withAuth(async (_parent, args, context) => {
-    // @ts-ignore - Container not implemented yet
-    const result = await context.container
-      .resolve('getPostLikeStatus')
-      // @ts-ignore - Args type inference issue
-      .execute(context.userId, args.postId);
-
-    if (!result.success) {
-      throw ErrorFactory.fromUseCaseError((result as { success: false; error: Error }).error);
-    }
-
-    if (!result.data) {
-      throw ErrorFactory.internalServerError('Use case returned no data');
-    }
-
-    return result.data as any;
-  }),
+  // Note: Social queries (postLikeStatus, followStatus) moved to Pothos schema (src/schema/pothos/queries/social.ts)
 
   // ============================================================================
   // NOTIFICATION QUERIES
   // ============================================================================
-
-  /**
-   * Get paginated notifications for current user
-   *
-   * Requires authentication (enforced by withAuth HOC).
-   * Returns NotificationConnection with user's notifications.
-   *
-   * Type Safety:
-   * - args: { limit?: number | null; cursor?: string | null }
-   * - return: NotificationConnection (non-nullable)
-   */
-  notifications: withAuth(async (_parent, args, context) => {
-    // @ts-ignore - Container not implemented yet
-    const result = await context.container
-      .resolve('getNotifications')
-      // @ts-ignore - Args type inference issue
-      .execute(context.userId, args.limit ?? 20, args.cursor ?? undefined);
-
-    if (!result.success) {
-      throw ErrorFactory.fromUseCaseError((result as { success: false; error: Error }).error);
-    }
-
-    if (!result.data) {
-      throw ErrorFactory.internalServerError('Use case returned no data');
-    }
-
-    return result.data as any;
-  }),
-
-  /**
-   * Get count of unread notifications
-   *
-   * Requires authentication (enforced by withAuth HOC).
-   * Returns integer count of unread notifications.
-   *
-   * Type Safety:
-   * - args: {} (no arguments)
-   * - return: Int (non-nullable)
-   */
-  unreadNotificationsCount: withAuth(async (_parent, _args, context) => {
-    // @ts-ignore - Container not implemented yet
-    const result = await context.container
-      .resolve('getUnreadNotificationsCount')
-      .execute(context.userId);
-
-    if (!result.success) {
-      throw ErrorFactory.fromUseCaseError((result as { success: false; error: Error }).error);
-    }
-
-    if (result.data === undefined || result.data === null) {
-      throw ErrorFactory.internalServerError('Use case returned no data');
-    }
-
-    return result.data;
-  }),
+  // Note: Notification queries (notifications, unreadNotificationsCount) moved to Pothos schema (src/schema/pothos/queries/notifications.ts)
 
   // ============================================================================
   // AUCTION QUERIES

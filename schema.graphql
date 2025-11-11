@@ -5,6 +5,9 @@
 
   type Query {
     # Note: Auth queries (me, profile) moved to Pothos schema
+    # Note: Comments queries (comments) moved to Pothos schema
+    # Note: Social queries (postLikeStatus, followStatus) moved to Pothos schema
+    # Note: Notifications queries (notifications, unreadNotificationsCount) moved to Pothos schema
 
     # Posts
     post(id: ID!): Post
@@ -14,21 +17,13 @@
     feed(limit: Int, cursor: String, first: Int, after: String): FeedConnection!
     exploreFeed(limit: Int, cursor: String, first: Int, after: String): PostConnection!
     followingFeed(limit: Int, cursor: String, first: Int, after: String): PostConnection!
-
-    # Social
-    postLikeStatus(postId: ID!): LikeStatus!
-    followStatus(userId: ID!): FollowStatus!
-
-    # Comments
-    comments(postId: ID!, limit: Int, cursor: String): CommentConnection!
-
-    # Notifications
-    notifications(limit: Int, cursor: String): NotificationConnection!
-    unreadNotificationsCount: Int!
   }
 
   type Mutation {
     # Note: Auth mutations (register, login, logout, refreshToken) moved to Pothos schema
+    # Note: Comments mutations (createComment, deleteComment) moved to Pothos schema
+    # Note: Social mutations (likePost, unlikePost, followUser, unfollowUser) moved to Pothos schema
+    # Note: Notifications mutations (markNotificationAsRead, markAllNotificationsAsRead, deleteNotification) moved to Pothos schema
 
     # Profile
     updateProfile(input: UpdateProfileInput!): Profile!
@@ -38,21 +33,6 @@
     createPost(input: CreatePostInput!): CreatePostPayload!
     updatePost(id: ID!, input: UpdatePostInput!): Post!
     deletePost(id: ID!): DeleteResponse!
-
-    # Social
-    likePost(postId: ID!): LikeResponse!
-    unlikePost(postId: ID!): LikeResponse!
-    followUser(userId: ID!): FollowResponse!
-    unfollowUser(userId: ID!): FollowResponse!
-
-    # Comments
-    createComment(input: CreateCommentInput!): Comment!
-    deleteComment(id: ID!): DeleteResponse!
-
-    # Notifications
-    markNotificationAsRead(id: ID!): Notification!
-    markAllNotificationsAsRead: MarkAllReadResponse!
-    deleteNotification(id: ID!): DeleteResponse!
 
     # Feed
     markFeedItemsAsRead(postIds: [ID!]!): MarkFeedReadResponse!
@@ -110,41 +90,8 @@
     comments(first: Int, after: String): CommentConnection!
   }
 
-  type Comment {
-    id: ID!
-    postId: ID!
-    userId: ID!
-    author: PublicProfile!
-    content: String!
-    createdAt: String!
-  }
-
-  type Notification {
-    id: ID!
-    userId: ID!
-    type: NotificationType!
-    title: String!
-    message: String!
-    status: NotificationStatus!
-    actor: NotificationActor
-    target: NotificationTarget
-    createdAt: String!
-    readAt: String
-  }
-
-  type NotificationActor {
-    userId: ID!
-    handle: String!
-    displayName: String
-    avatarUrl: String
-  }
-
-  type NotificationTarget {
-    type: String!
-    id: ID!
-    url: String
-    preview: String
-  }
+  # Note: Comment type moved to Pothos schema
+  # Note: Notification, NotificationActor, NotificationTarget types moved to Pothos schema
 
   type FeedItem {
     id: ID!
@@ -156,20 +103,7 @@
   # ============================================================================
   # Enums
   # ============================================================================
-
-  enum NotificationType {
-    LIKE
-    COMMENT
-    FOLLOW
-    MENTION
-    SYSTEM
-  }
-
-  enum NotificationStatus {
-    UNREAD
-    READ
-    ARCHIVED
-  }
+  # Note: NotificationType and NotificationStatus enums moved to Pothos schema
 
   # ============================================================================
   # Input Types
@@ -192,10 +126,7 @@
     caption: String
   }
 
-  input CreateCommentInput {
-    postId: ID!
-    content: String!
-  }
+  # Note: CreateCommentInput moved to Pothos schema
 
   # ============================================================================
   # Connection Types (Cursor Pagination)
@@ -218,25 +149,9 @@
     node: Post!
   }
 
-  type CommentConnection {
-    edges: [CommentEdge!]!
-    pageInfo: PageInfo!
-  }
+  # Note: CommentConnection and CommentEdge moved to Pothos schema
 
-  type CommentEdge {
-    cursor: String!
-    node: Comment!
-  }
-
-  type NotificationConnection {
-    edges: [NotificationEdge!]!
-    pageInfo: PageInfo!
-  }
-
-  type NotificationEdge {
-    cursor: String!
-    node: Notification!
-  }
+  # Note: NotificationConnection and NotificationEdge moved to Pothos schema
 
   type FeedConnection {
     edges: [FeedEdge!]!
@@ -259,37 +174,9 @@
     thumbnailUploadUrl: String!
   }
 
-  type LikeResponse {
-    success: Boolean!
-    likesCount: Int!
-    isLiked: Boolean!
-  }
-
-  type FollowResponse {
-    success: Boolean!
-    followersCount: Int!
-    followingCount: Int!
-    isFollowing: Boolean!
-  }
-
-  type DeleteResponse {
-    success: Boolean!
-  }
-
-  type LikeStatus {
-    isLiked: Boolean!
-    likesCount: Int!
-  }
-
-  type FollowStatus {
-    isFollowing: Boolean!
-    followersCount: Int!
-    followingCount: Int!
-  }
-
-  type MarkAllReadResponse {
-    updatedCount: Int!
-  }
+  # Note: LikeResponse, LikeStatus, FollowResponse, FollowStatus moved to Pothos schema
+  # Note: DeleteResponse moved to Pothos schema
+  # Note: MarkAllReadResponse moved to Pothos schema
 
   type MarkFeedReadResponse {
     updatedCount: Int!
