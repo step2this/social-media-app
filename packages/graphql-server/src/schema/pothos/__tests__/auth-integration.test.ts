@@ -147,7 +147,7 @@ describe('Pothos Auth Integration', () => {
       if (result.body.kind === 'single') {
         expect(result.body.singleResult.errors).toBeDefined();
         expect(result.body.singleResult.errors?.[0].message).toContain(
-          'authenticated'
+          'Not authorized'
         );
       }
 
@@ -173,7 +173,7 @@ describe('Pothos Auth Integration', () => {
       if (result.body.kind === 'single') {
         // Either succeeds or fails with non-auth error
         const hasAuthError = result.body.singleResult.errors?.some((e) =>
-          e.message.toLowerCase().includes('authenticated')
+          e.message.includes('Not authorized')
         );
         expect(hasAuthError).toBeFalsy();
       }
@@ -200,7 +200,7 @@ describe('Pothos Auth Integration', () => {
       if (result.body.kind === 'single') {
         // Should execute (may return null if user doesn't exist, but no auth error)
         const hasAuthError = result.body.singleResult.errors?.some((e) =>
-          e.message.toLowerCase().includes('not authenticated')
+          e.message.includes('Not authorized')
         );
         expect(hasAuthError).toBeFalsy();
       }
@@ -242,7 +242,7 @@ describe('Pothos Auth Integration', () => {
       if (result.body.kind === 'single') {
         // Should execute (may fail on use case but not on auth)
         const hasAuthError = result.body.singleResult.errors?.some((e) =>
-          e.message.toLowerCase().includes('not authenticated')
+          e.message.includes('Not authorized')
         );
         expect(hasAuthError).toBeFalsy();
       }
@@ -305,7 +305,7 @@ describe('Pothos Auth Integration', () => {
       if (result.body.kind === 'single') {
         expect(result.body.singleResult.errors).toBeDefined();
         expect(result.body.singleResult.errors?.[0].message).toContain(
-          'authenticated'
+          'Not authorized'
         );
       }
 
