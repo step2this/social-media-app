@@ -36,7 +36,10 @@ import { startStandaloneServer } from '@apollo/server/standalone';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { makeExecutableSchema } from '@graphql-tools/schema';
+import { mergeSchemas } from '@graphql-tools/schema';
 import { resolvers } from './schema/resolvers/index.js';
+import { pothosSchema } from './schema/pothos/index.js';
 import type { GraphQLContext } from './context.js';
 import { createDynamoDBClient, getTableName } from '@social-media-app/aws-utils';
 import { verifyAccessToken, extractTokenFromHeader, getJWTConfigFromEnv } from '@social-media-app/auth-utils';
@@ -119,7 +122,7 @@ async function createStandaloneContext({ req }: { req: { headers: Record<string,
  */
 async function startServer() {
   try {
-    console.log('🚀 Starting GraphQL server for LocalStack development...\n');
+    console.log('🚀 Starting GraphQL server with Pothos for LocalStack development...\n');
 
     // Verify required environment variables
     const requiredEnvVars = [
@@ -145,10 +148,21 @@ async function startServer() {
     console.log(`   AWS_REGION: ${process.env.AWS_REGION}`);
     console.log('');
 
-    // Create and start Apollo Server using standalone approach
-    const server = new ApolloServer<GraphQLContext>({
+    // Create executable schema from SDL
+    const sdlSchema = makeExecutableSchema({
       typeDefs,
       resolvers,
+    });
+
+    // Merge SDL schema with Pothos schema
+    // Pothos will take precedence for duplicate types (auth types defined in Pothos)
+    const mergedSchema = mergeSchemas({
+      schemas: [sdlSchema, pothosSchema],
+    });
+
+    // Create and start Apollo Server using merged schema
+    const server = new ApolloServer<GraphQLContext>({
+      schema: mergedSchema,
 
       // Development features (introspection, playground, stack traces)
       introspection: true,

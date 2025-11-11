@@ -52,72 +52,9 @@ import type {
  */
 export const Mutation: MutationResolvers = {
   // ============================================================================
-  // AUTH MUTATIONS (Use Case Pattern)
+  // AUTH MUTATIONS
   // ============================================================================
-
-  /**
-   * Register a new user
-   * Returns user profile with auth tokens
-   */
-  register: async (_parent, args, context) => {
-    const result = await executeUseCase(
-      context.container.resolve('register'),
-      {
-        email: args.input.email,
-        password: args.input.password,
-        username: args.input.username,
-      }
-    );
-
-    // executeUseCase handles Result type and throws appropriate errors
-    return result;
-  },
-
-  /**
-   * Login existing user
-   * Returns user profile with auth tokens
-   */
-  login: async (_parent, args, context) => {
-    const result = await executeUseCase(
-      context.container.resolve('login'),
-      {
-        email: args.input.email,
-        password: args.input.password,
-      }
-    );
-
-    return result;
-  },
-
-  /**
-   * Refresh access token using refresh token
-   * Returns user profile with new auth tokens
-   */
-  refreshToken: async (_parent, args, context) => {
-    const result = await executeUseCase(
-      context.container.resolve('refreshToken'),
-      {
-        refreshToken: args.refreshToken,
-      }
-    );
-
-    return result;
-  },
-
-  /**
-   * Logout user (idempotent)
-   * Requires authentication
-   */
-  logout: withAuth(async (_parent, _args, context) => {
-    const result = await executeUseCase(
-      context.container.resolve('logout'),
-      {
-        userId: UserId(context.userId),
-      }
-    );
-
-    return result;
-  }),
+  // Note: Auth mutations (register, login, refreshToken, logout) moved to Pothos schema (src/schema/pothos/mutations/auth.ts)
 
   // ============================================================================
   // POST MUTATIONS

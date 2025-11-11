@@ -56,37 +56,7 @@ describe('GraphQL Schema Validation', () => {
       schema = buildSchema(typeDefs);
     });
 
-    describe('Authentication Queries', () => {
-      it('should have me field returning Profile!', () => {
-        const queryType = schema.getQueryType();
-        const fields = queryType?.getFields();
-        const meField = fields?.me;
-
-        expect(meField).toBeDefined();
-        expect(meField?.type).toBeInstanceOf(GraphQLNonNull);
-        expect((meField?.type as any).ofType.name).toBe('Profile');
-      });
-    });
-
-    describe('Profile Queries', () => {
-      it('should have profile field with handle argument returning Profile', () => {
-        const queryType = schema.getQueryType();
-        const fields = queryType?.getFields();
-        const profileField = fields?.profile;
-
-        expect(profileField).toBeDefined();
-        expect((profileField?.type as any).name).toBe('PublicProfile');
-
-        const args = profileField?.args;
-        expect(args).toBeDefined();
-        expect(args?.length).toBeGreaterThan(0);
-
-        const handleArg = args?.find(arg => arg.name === 'handle');
-        expect(handleArg).toBeDefined();
-        expect(handleArg?.type).toBeInstanceOf(GraphQLNonNull);
-        expect((handleArg?.type as any).ofType).toBe(GraphQLString);
-      });
-    });
+    // Note: Auth queries (me, profile) moved to Pothos schema
 
     describe('Post Queries', () => {
       it('should have post field with id argument returning Post', () => {
@@ -237,59 +207,7 @@ describe('GraphQL Schema Validation', () => {
       schema = buildSchema(typeDefs);
     });
 
-    describe('Authentication Mutations', () => {
-      it('should have register mutation with input returning AuthPayload!', () => {
-        const mutationType = schema.getMutationType();
-        const fields = mutationType?.getFields();
-        const registerField = fields?.register;
-
-        expect(registerField).toBeDefined();
-        expect(registerField?.type).toBeInstanceOf(GraphQLNonNull);
-        expect((registerField?.type as any).ofType.name).toBe('AuthPayload');
-
-        const args = registerField?.args;
-        const inputArg = args?.find(arg => arg.name === 'input');
-        expect(inputArg).toBeDefined();
-        expect(inputArg?.type).toBeInstanceOf(GraphQLNonNull);
-        expect((inputArg?.type as any).ofType.name).toBe('RegisterInput');
-      });
-
-      it('should have login mutation with input returning AuthPayload!', () => {
-        const mutationType = schema.getMutationType();
-        const fields = mutationType?.getFields();
-        const loginField = fields?.login;
-
-        expect(loginField).toBeDefined();
-        expect(loginField?.type).toBeInstanceOf(GraphQLNonNull);
-        expect((loginField?.type as any).ofType.name).toBe('AuthPayload');
-
-        const args = loginField?.args;
-        const inputArg = args?.find(arg => arg.name === 'input');
-        expect(inputArg).toBeDefined();
-        expect(inputArg?.type).toBeInstanceOf(GraphQLNonNull);
-        expect((inputArg?.type as any).ofType.name).toBe('LoginInput');
-      });
-
-      it('should have logout mutation returning LogoutResponse!', () => {
-        const mutationType = schema.getMutationType();
-        const fields = mutationType?.getFields();
-        const logoutField = fields?.logout;
-
-        expect(logoutField).toBeDefined();
-        expect(logoutField?.type).toBeInstanceOf(GraphQLNonNull);
-        expect((logoutField?.type as any).ofType.name).toBe('LogoutResponse');
-      });
-
-      it('should have refreshToken mutation returning AuthPayload!', () => {
-        const mutationType = schema.getMutationType();
-        const fields = mutationType?.getFields();
-        const refreshField = fields?.refreshToken;
-
-        expect(refreshField).toBeDefined();
-        expect(refreshField?.type).toBeInstanceOf(GraphQLNonNull);
-        expect((refreshField?.type as any).ofType.name).toBe('AuthPayload');
-      });
-    });
+    // Note: Auth mutations (register, login, logout, refreshToken) moved to Pothos schema
 
     describe('Profile Mutations', () => {
       it('should have updateProfile mutation returning Profile!', () => {
@@ -885,42 +803,7 @@ describe('GraphQL Schema Validation', () => {
       schema = buildSchema(typeDefs);
     });
 
-    it('should have RegisterInput type', () => {
-      const registerInput = schema.getType('RegisterInput');
-      expect(registerInput).toBeDefined();
-      expect(registerInput).toBeInstanceOf(GraphQLInputObjectType);
-    });
-
-    it('should have RegisterInput with required fields (email, password, username)', () => {
-      const registerInput = schema.getType('RegisterInput') as GraphQLInputObjectType;
-      const fields = registerInput.getFields();
-
-      expect(fields.email).toBeDefined();
-      expect(fields.email.type).toBeInstanceOf(GraphQLNonNull);
-
-      expect(fields.password).toBeDefined();
-      expect(fields.password.type).toBeInstanceOf(GraphQLNonNull);
-
-      expect(fields.username).toBeDefined();
-      expect(fields.username.type).toBeInstanceOf(GraphQLNonNull);
-    });
-
-    it('should have LoginInput type', () => {
-      const loginInput = schema.getType('LoginInput');
-      expect(loginInput).toBeDefined();
-      expect(loginInput).toBeInstanceOf(GraphQLInputObjectType);
-    });
-
-    it('should have LoginInput with required fields (email, password)', () => {
-      const loginInput = schema.getType('LoginInput') as GraphQLInputObjectType;
-      const fields = loginInput.getFields();
-
-      expect(fields.email).toBeDefined();
-      expect(fields.email.type).toBeInstanceOf(GraphQLNonNull);
-
-      expect(fields.password).toBeDefined();
-      expect(fields.password.type).toBeInstanceOf(GraphQLNonNull);
-    });
+    // Note: Auth input types (RegisterInput, LoginInput) moved to Pothos schema
 
     it('should have UpdateProfileInput type', () => {
       const updateProfileInput = schema.getType('UpdateProfileInput');
@@ -1081,47 +964,7 @@ describe('GraphQL Schema Validation', () => {
       schema = buildSchema(typeDefs);
     });
 
-    it('should have AuthPayload type', () => {
-      const authPayloadType = schema.getType('AuthPayload');
-      expect(authPayloadType).toBeDefined();
-      expect(authPayloadType).toBeInstanceOf(GraphQLObjectType);
-    });
-
-    it('should have AuthPayload with user and tokens', () => {
-      const authPayloadType = schema.getType('AuthPayload') as GraphQLObjectType;
-      const fields = authPayloadType.getFields();
-
-      expect(fields.user).toBeDefined();
-      expect(fields.user.type).toBeInstanceOf(GraphQLNonNull);
-      expect((fields.user.type as any).ofType.name).toBe('Profile');
-
-      expect(fields.tokens).toBeDefined();
-      expect(fields.tokens.type).toBeInstanceOf(GraphQLNonNull);
-      expect((fields.tokens.type as any).ofType.name).toBe('AuthTokens');
-    });
-
-    it('should have AuthTokens type', () => {
-      const authTokensType = schema.getType('AuthTokens');
-      expect(authTokensType).toBeDefined();
-      expect(authTokensType).toBeInstanceOf(GraphQLObjectType);
-    });
-
-    it('should have AuthTokens with accessToken and refreshToken', () => {
-      const authTokensType = schema.getType('AuthTokens') as GraphQLObjectType;
-      const fields = authTokensType.getFields();
-
-      expect(fields.accessToken).toBeDefined();
-      expect(fields.accessToken.type).toBeInstanceOf(GraphQLNonNull);
-      expect((fields.accessToken.type as any).ofType).toBe(GraphQLString);
-
-      expect(fields.refreshToken).toBeDefined();
-      expect(fields.refreshToken.type).toBeInstanceOf(GraphQLNonNull);
-      expect((fields.refreshToken.type as any).ofType).toBe(GraphQLString);
-
-      expect(fields.expiresIn).toBeDefined();
-      expect(fields.expiresIn.type).toBeInstanceOf(GraphQLNonNull);
-      expect((fields.expiresIn.type as any).ofType).toBe(GraphQLInt);
-    });
+    // Note: Auth response types (AuthPayload, AuthTokens) moved to Pothos schema
 
     it('should have CreatePostPayload type', () => {
       const createPostPayloadType = schema.getType('CreatePostPayload');
@@ -1219,11 +1062,7 @@ describe('GraphQL Schema Validation', () => {
       expect(followStatusType).toBeInstanceOf(GraphQLObjectType);
     });
 
-    it('should have LogoutResponse type', () => {
-      const logoutResponseType = schema.getType('LogoutResponse');
-      expect(logoutResponseType).toBeDefined();
-      expect(logoutResponseType).toBeInstanceOf(GraphQLObjectType);
-    });
+    // Note: LogoutResponse type moved to Pothos schema
 
     it('should have MarkAllReadResponse type', () => {
       const markAllReadResponseType = schema.getType('MarkAllReadResponse');

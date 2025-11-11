@@ -4,11 +4,7 @@
   # ============================================================================
 
   type Query {
-    # Authentication
-    me: Profile!
-
-    # Profile
-    profile(handle: String!): PublicProfile
+    # Note: Auth queries (me, profile) moved to Pothos schema
 
     # Posts
     post(id: ID!): Post
@@ -32,11 +28,7 @@
   }
 
   type Mutation {
-    # Authentication
-    register(input: RegisterInput!): AuthPayload!
-    login(input: LoginInput!): AuthPayload!
-    logout: LogoutResponse!
-    refreshToken(refreshToken: String!): AuthPayload!
+    # Note: Auth mutations (register, login, logout, refreshToken) moved to Pothos schema
 
     # Profile
     updateProfile(input: UpdateProfileInput!): Profile!
@@ -182,19 +174,7 @@
   # ============================================================================
   # Input Types
   # ============================================================================
-
-  input RegisterInput {
-    email: String!
-    password: String!
-    username: String!
-    handle: String!
-    fullName: String!
-  }
-
-  input LoginInput {
-    email: String!
-    password: String!
-  }
+  # Note: Auth input types (RegisterInput, LoginInput) moved to Pothos schema
 
   input UpdateProfileInput {
     handle: String
@@ -271,17 +251,7 @@
   # ============================================================================
   # Response Types
   # ============================================================================
-
-  type AuthPayload {
-    user: Profile!
-    tokens: AuthTokens!
-  }
-
-  type AuthTokens {
-    accessToken: String!
-    refreshToken: String!
-    expiresIn: Int!
-  }
+  # Note: Auth response types (AuthPayload, AuthTokens, LogoutResponse) moved to Pothos schema
 
   type CreatePostPayload {
     post: Post!
@@ -315,10 +285,6 @@
     isFollowing: Boolean!
     followersCount: Int!
     followingCount: Int!
-  }
-
-  type LogoutResponse {
-    success: Boolean!
   }
 
   type MarkAllReadResponse {

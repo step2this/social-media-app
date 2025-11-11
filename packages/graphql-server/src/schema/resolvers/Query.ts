@@ -50,41 +50,7 @@ export const Query: QueryResolvers = {
   // ============================================================================
   // PHASE 1 & 2 - Direct Implementation (NEW PATTERN)
   // ============================================================================
-
-  /**
-   * Get current user's profile
-   *
-   * Requires authentication (enforced by withAuth HOC).
-   * Returns Profile with all user data including email.
-   *
-   * Type Safety:
-   * - return: Profile (non-nullable)
-   */
-  me: withAuth(async (_parent, _args, context) => {
-    const result = await executeUseCase(
-      context.container.resolve('getCurrentUserProfile'),
-      { userId: UserId(context.userId) }
-    );
-    return result as any;
-  }),
-
-  /**
-   * Get public profile by handle
-   *
-   * Public query - no authentication required.
-   * Returns PublicProfile if user exists, null otherwise.
-   *
-   * Type Safety:
-   * - args: { handle: string } (inferred from schema)
-   * - return: PublicProfile | null (nullable)
-   */
-  profile: async (_parent, args, context) => {
-    const result = await executeOptionalUseCase(
-      context.container.resolve('getProfileByHandle'),
-      { handle: Handle(args.handle) }
-    );
-    return result as any;
-  },
+  // Note: Auth queries (me, profile) moved to Pothos schema (src/schema/pothos/queries/auth.ts)
 
   /**
    * Get single post by ID

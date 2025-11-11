@@ -15,7 +15,11 @@ describe('Lambda Handler', () => {
     process.env.NODE_ENV = 'test';
     process.env.USE_LOCALSTACK = 'true';
     process.env.TABLE_NAME = 'test-table';
-    process.env.JWT_SECRET = 'test-secret';
+    process.env.JWT_SECRET = 'test-secret-key-for-access-tokens-min-32-chars';
+    process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-key-for-refresh-tokens-min-32-chars';
+    process.env.AWS_REGION = 'us-east-1';
+    process.env.AWS_ACCESS_KEY_ID = 'test';
+    process.env.AWS_SECRET_ACCESS_KEY = 'test';
 
     // Create mock API Gateway event
     mockEvent = {

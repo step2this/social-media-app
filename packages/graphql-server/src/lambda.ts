@@ -94,7 +94,7 @@ import {
   createStructuredLogger,
   logError 
 } from '@social-media-app/shared';
-import { createApolloServer } from './server.js';
+import { createApolloServerWithPothos } from './server-with-pothos.js';
 import { createContext } from './context.js';
 
 /**
@@ -121,8 +121,8 @@ function convertV1ToV2(event: APIGatewayProxyEvent): APIGatewayProxyEventV2 {
         method: event.httpMethod,
         path: event.path,
         protocol: event.requestContext.protocol,
-        sourceIp: event.requestContext.identity.sourceIp,
-        userAgent: event.requestContext.identity.userAgent || '',
+        sourceIp: event.requestContext.identity?.sourceIp || '0.0.0.0',
+        userAgent: event.requestContext.identity?.userAgent || '',
       },
       requestId: event.requestContext.requestId,
       routeKey: '$default',
@@ -136,7 +136,7 @@ function convertV1ToV2(event: APIGatewayProxyEvent): APIGatewayProxyEventV2 {
 }
 
 // Server instance will be created outside the handler for reuse across invocations (singleton pattern)
-let serverInstance: Awaited<ReturnType<typeof createApolloServer>> | null = null;
+let serverInstance: Awaited<ReturnType<typeof createApolloServerWithPothos>> | null = null;
 
 /**
  * AWS Lambda handler for GraphQL requests
@@ -204,10 +204,10 @@ export async function handler(
   try {
     // Initialize Apollo Server on first invocation (cold start)
     if (!serverInstance) {
-      logger.info('COLD_START', 'Creating Apollo Server instance');
-      serverInstance = createApolloServer();
+      logger.info('COLD_START', 'Creating Apollo Server with Pothos schema');
+      serverInstance = createApolloServerWithPothos();
       await serverInstance.start();
-      logger.info('SERVER_STARTED', 'Apollo Server started successfully');
+      logger.info('SERVER_STARTED', 'Apollo Server with Pothos started successfully');
     } else {
       logger.info('WARM_START', 'Reusing existing Apollo Server instance');
     }

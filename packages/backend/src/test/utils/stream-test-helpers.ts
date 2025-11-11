@@ -79,6 +79,7 @@ export function createTestKinesisRecord(
     },
     eventSourceARN:
       'arn:aws:kinesis:us-east-1:123456789012:stream/test-stream',
+    invokeIdentityArn: 'arn:aws:iam::123456789012:role/lambda-kinesis-role',
     ...overrides,
   };
 }
