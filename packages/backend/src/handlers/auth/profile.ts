@@ -58,8 +58,24 @@ const updateProfileHandler: AugmentedLambdaHandler = async (event) => {
   // JWT middleware guarantees userId exists
   const userId = event.userId!
 
-  // Type-safe access to validated input
-  const updateData = event.validatedBody as UpdateProfileWithHandleRequest
+  // Parse and validate body for PUT requests
+  let updateData: UpdateProfileWithHandleRequest
+  try {
+    const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body
+    updateData = UpdateProfileWithHandleRequestSchema.parse(body)
+  } catch (error) {
+    return {
+      statusCode: 400,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({
+        error: 'Validation failed',
+        details: error instanceof Error ? error.message : 'Invalid request body'
+      })
+    }
+  }
 
   // Update profile
   const updatedProfile = await profileService.updateProfile(userId, updateData)
@@ -103,11 +119,11 @@ const routingHandler: AugmentedLambdaHandler = async (event, context) => {
 /**
  * Export Middy-wrapped handler with Awilix service injection
  *
- * Note: Validation is applied conditionally based on method inside the handler
- * For PUT requests, we need validation; for GET requests, we don't
+ * Note: We don't apply validation middleware here because GET requests have no body
+ * Validation is handled manually inside updateProfileHandler for PUT requests only
  */
 export const handler = createHandler(routingHandler, {
   auth: true, // Requires JWT
-  services: ['profileService'], // Awilix injects profileService
-  validation: UpdateProfileWithHandleRequestSchema // Note: This will validate all requests, but GET ignores body
+  services: ['profileService'] // Awilix injects profileService
+  // No validation middleware - handled manually per method
 })
