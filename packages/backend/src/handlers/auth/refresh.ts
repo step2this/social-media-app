@@ -18,6 +18,13 @@ const refreshHandler: AugmentedLambdaHandler = async (event) => {
   const { authService } = event.services!
   const request = event.validatedBody as RefreshTokenRequest
 
+  // Debug logging
+  console.log('🔍 Refresh token request received:', {
+    hasToken: !!request.refreshToken,
+    tokenLength: request.refreshToken?.length,
+    tokenPreview: request.refreshToken?.substring(0, 20) + '...'
+  })
+
   const response = await authService.refreshToken(request)
 
   return {
