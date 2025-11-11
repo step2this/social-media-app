@@ -195,6 +195,13 @@ if (process.env.NODE_ENV === 'development' || process.env.USE_LOCALSTACK === 'tr
       // Send Lambda response
       sendLambdaResponse(res, result);
     } catch (error) {
+      // Silently handle missing dev handlers - they're optional monitoring tools
+      if (error.code === 'ERR_MODULE_NOT_FOUND') {
+        return res.status(503).json({
+          error: 'Dev tool not available',
+          message: 'Cache status handler not built yet'
+        });
+      }
       console.error('Cache status handler error:', error);
       res.status(500).json({
         error: 'Internal server error',
@@ -219,6 +226,13 @@ if (process.env.NODE_ENV === 'development' || process.env.USE_LOCALSTACK === 'tr
       // Send Lambda response
       sendLambdaResponse(res, result);
     } catch (error) {
+      // Silently handle missing dev handlers - they're optional monitoring tools
+      if (error.code === 'ERR_MODULE_NOT_FOUND') {
+        return res.status(503).json({
+          error: 'Dev tool not available',
+          message: 'Kinesis records handler not built yet'
+        });
+      }
       console.error('Kinesis records handler error:', error);
       res.status(500).json({
         error: 'Internal server error',
