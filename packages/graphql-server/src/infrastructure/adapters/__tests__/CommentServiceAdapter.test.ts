@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { CommentServiceAdapter } from '../CommentServiceAdapter';
+import { CommentServiceAdapter } from '../CommentServiceAdapter.js';
 import { createMockComments } from '@social-media-app/shared/test-utils/fixtures';
 
 describe('CommentServiceAdapter', () => {

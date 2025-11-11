@@ -9,7 +9,7 @@
  *
  * @example
  * ```typescript
- * import { createMockServiceContainer, createMockFeedService } from './mock-service-container';
+ * import { createMockServiceContainer, createMockFeedService } from './mock-service-container.js';
  *
  * describe('MyComponent', () => {
  *   let mockFeedService: ReturnType<typeof createMockFeedService>;
@@ -36,11 +36,11 @@
  */
 
 import { vi } from 'vitest';
-import type { IServiceContainer } from '../services/interfaces/IServiceContainer';
-import type { INavigationService } from '../services/interfaces/INavigationService';
-import type { IAuthService } from '../services/interfaces/IAuthService';
-import type { IModalService } from '../services/interfaces/IModalService';
-import type { INotificationService } from '../services/interfaces/INotificationService';
+import type { IServiceContainer } from '../services/interfaces/IServiceContainer.js';
+import type { INavigationService } from '../services/interfaces/INavigationService.js';
+import type { IAuthService } from '../services/interfaces/IAuthService.js';
+import type { IModalService } from '../services/interfaces/IModalService.js';
+import type { INotificationService } from '../services/interfaces/INotificationService.js';
 
 /**
  * Create a mock navigation service with all methods as vi.fn()

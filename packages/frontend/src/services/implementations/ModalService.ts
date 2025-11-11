@@ -1,4 +1,4 @@
-import type { IModalService } from '../interfaces/IModalService';
+import type { IModalService } from '../interfaces/IModalService.js';
 
 /**
  * Concrete implementation of modal service using internal state management

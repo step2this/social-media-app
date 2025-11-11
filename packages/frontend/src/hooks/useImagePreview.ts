@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { validateImageFile } from '../utils';
+import { validateImageFile } from '../utils/index.js';
 
 export interface UseImagePreviewReturn {
     selectedFile: File | null;

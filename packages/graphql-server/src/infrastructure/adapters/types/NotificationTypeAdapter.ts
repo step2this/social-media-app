@@ -22,7 +22,7 @@ import type {
   Notification as GraphQLNotification,
   NotificationType,
   NotificationStatus
-} from '../../../schema/generated/types';
+} from '../../../schema/generated/types.js';
 
 /**
  * Transform DAL Notification to GraphQL Notification

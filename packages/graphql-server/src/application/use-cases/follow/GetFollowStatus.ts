@@ -5,8 +5,8 @@
  * Delegates to repository implementation for data access.
  */
 
-import type { IFollowRepository, FollowStatus } from '../../../domain/repositories/IFollowRepository';
-import type { Result } from '../../../shared/types/result';
+import type { IFollowRepository, FollowStatus } from '../../../domain/repositories/IFollowRepository.js';
+import type { Result } from '../../../shared/types/result.js';
 
 export class GetFollowStatus {
   constructor(private readonly followRepository: IFollowRepository) {}

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useAuth } from './useAuth';
-import { useAuthStore } from '../stores/authStore';
-import * as apiClient from '../services/apiClient';
+import { useAuth } from './useAuth.js';
+import { useAuthStore } from '../stores/authStore.js';
+import * as apiClient from '../services/apiClient.js';
 import type { RegisterResponse, LoginResponse, User, AuthTokens } from '@social-media-app/shared';
 
 // Mock the apiClient

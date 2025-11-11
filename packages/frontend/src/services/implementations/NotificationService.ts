@@ -1,4 +1,4 @@
-import type { INotificationService } from '../interfaces/INotificationService';
+import type { INotificationService } from '../interfaces/INotificationService.js';
 
 /**
  * Notification data structure

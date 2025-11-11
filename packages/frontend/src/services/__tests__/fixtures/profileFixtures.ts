@@ -18,7 +18,7 @@ import type { Profile, PublicProfile } from '@social-media-app/shared';
 import type {
   GetProfileByHandleResponse,
   UpdateProfileResponse,
-} from '../../../graphql/operations/profiles';
+} from '../../../graphql/operations/profiles.js';
 
 /**
  * Convert undefined to null for GraphQL responses

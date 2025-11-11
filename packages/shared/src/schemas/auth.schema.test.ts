@@ -7,8 +7,8 @@ import {
   LoginRequestSchema,
   RefreshTokenRequestSchema,
   AuthTokensSchema
-} from './auth.schema';
-import { UserSchema } from './user.schema';
+} from './auth.schema.js';
+import { UserSchema } from './user.schema.js';
 
 describe('Authentication Schemas', () => {
   describe('EmailSchema', () => {

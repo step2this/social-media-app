@@ -1,7 +1,7 @@
-import type { INavigationService } from './INavigationService';
-import type { IAuthService } from './IAuthService';
-import type { IModalService } from './IModalService';
-import type { INotificationService } from './INotificationService';
+import type { INavigationService } from './INavigationService.js';
+import type { IAuthService } from './IAuthService.js';
+import type { IModalService } from './IModalService.js';
+import type { INotificationService } from './INotificationService.js';
 
 /**
  * Service container interface - provides access to all application services

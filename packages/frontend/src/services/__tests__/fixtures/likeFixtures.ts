@@ -5,7 +5,7 @@
  * Each factory provides sensible defaults with the ability to override specific fields.
  */
 
-import type { LikeResponse, LikeStatus } from '../../../graphql/operations/likes';
+import type { LikeResponse, LikeStatus } from '../../../graphql/operations/likes.js';
 
 /**
  * Create a mock like response

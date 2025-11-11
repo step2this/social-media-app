@@ -1,5 +1,5 @@
 import type { NavigateFunction } from 'react-router-dom';
-import type { INavigationService } from '../interfaces/INavigationService';
+import type { INavigationService } from '../interfaces/INavigationService.js';
 
 /**
  * Concrete implementation of navigation service using React Router

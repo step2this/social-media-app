@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { createTestImageFile, TestFiles } from '../test-utils/file-mocks';
+ * import { createTestImageFile, TestFiles } from '../test-utils/file-mocks.js';
  *
  * // Quick test files
  * const validImage = TestFiles.validJpeg();
@@ -111,7 +111,7 @@ export function createTestImageFile(
  *
  * @example
  * ```typescript
- * import { TestFiles } from '../test-utils/file-mocks';
+ * import { TestFiles } from '../test-utils/file-mocks.js';
  *
  * it('should accept valid JPEG', () => {
  *   const result = validateImageFile(TestFiles.validJpeg());

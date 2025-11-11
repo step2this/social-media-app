@@ -1,8 +1,8 @@
-import type { IServiceContainer } from './interfaces/IServiceContainer';
-import { NavigationService } from './implementations/NavigationService';
-import { AuthService, type AuthHookResult } from './implementations/AuthService';
-import { ModalService } from './implementations/ModalService';
-import { NotificationService } from './implementations/NotificationService';
+import type { IServiceContainer } from './interfaces/IServiceContainer.js';
+import { NavigationService } from './implementations/NavigationService.js';
+import { AuthService, type AuthHookResult } from './implementations/AuthService.js';
+import { ModalService } from './implementations/ModalService.js';
+import { NotificationService } from './implementations/NotificationService.js';
 import type { NavigateFunction } from 'react-router-dom';
 
 /**

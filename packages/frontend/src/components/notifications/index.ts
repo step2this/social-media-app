@@ -6,29 +6,29 @@
  */
 
 // Atomic Components
-export { NotificationAvatar } from './NotificationAvatar';
-export { NotificationContent } from './NotificationContent';
-export { NotificationThumbnail } from './NotificationThumbnail';
-export { NotificationUnreadDot } from './NotificationUnreadDot';
+export { NotificationAvatar } from './NotificationAvatar.js';
+export { NotificationContent } from './NotificationContent.js';
+export { NotificationThumbnail } from './NotificationThumbnail.js';
+export { NotificationUnreadDot } from './NotificationUnreadDot.js';
 
 // Composite Components
-export { NotificationItem } from './NotificationItem';
-export { NotificationGroup } from './NotificationGroup';
-export { NotificationsHeader } from './NotificationsHeader';
+export { NotificationItem } from './NotificationItem.js';
+export { NotificationGroup } from './NotificationGroup.js';
+export { NotificationsHeader } from './NotificationsHeader.js';
 
 // State Components
-export { NotificationsLoading } from './NotificationsLoading';
-export { NotificationsError } from './NotificationsError';
-export { NotificationsEmpty } from './NotificationsEmpty';
+export { NotificationsLoading } from './NotificationsLoading.js';
+export { NotificationsError } from './NotificationsError.js';
+export { NotificationsEmpty } from './NotificationsEmpty.js';
 
 // Container Components
-export { NotificationsList } from './NotificationsList';
-export { LoadMoreButton } from './LoadMoreButton';
+export { NotificationsList } from './NotificationsList.js';
+export { LoadMoreButton } from './LoadMoreButton.js';
 
 // Types
-export type { NotificationGroupProps } from './NotificationGroup';
-export type { NotificationsHeaderProps } from './NotificationsHeader';
-export type { NotificationsErrorProps } from './NotificationsError';
-export type { NotificationsEmptyProps } from './NotificationsEmpty';
-export type { NotificationsListProps } from './NotificationsList';
-export type { LoadMoreButtonProps } from './LoadMoreButton';
+export type { NotificationGroupProps } from './NotificationGroup.js';
+export type { NotificationsHeaderProps } from './NotificationsHeader.js';
+export type { NotificationsErrorProps } from './NotificationsError.js';
+export type { NotificationsEmptyProps } from './NotificationsEmpty.js';
+export type { NotificationsListProps } from './NotificationsList.js';
+export type { LoadMoreButtonProps } from './LoadMoreButton.js';

@@ -5,9 +5,9 @@
  * Delegates to repository implementation for data access.
  */
 
-import type { IAuctionRepository, Bid } from '../../../domain/repositories/IAuctionRepository';
-import type { Result } from '../../../shared/types/result';
-import type { PaginatedResult } from '../../../shared/types/pagination';
+import type { IAuctionRepository, Bid } from '../../../domain/repositories/IAuctionRepository.js';
+import type { Result } from '../../../shared/types/result.js';
+import type { PaginatedResult } from '../../../shared/types/pagination.js';
 
 export class GetBidHistory {
   constructor(private readonly auctionRepository: IAuctionRepository) {}

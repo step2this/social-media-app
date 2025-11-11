@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { GetPostLikeStatus } from '../GetPostLikeStatus';
-import { FakeLikeRepository } from '../../../../../__tests__/helpers/fake-repositories';
+import { GetPostLikeStatus } from '../GetPostLikeStatus.js';
+import { FakeLikeRepository } from '../../../../../__tests__/helpers/fake-repositories.js';
 import { createMockLiked } from '@social-media-app/shared/test-utils/fixtures';
 
 describe('GetPostLikeStatus', () => {

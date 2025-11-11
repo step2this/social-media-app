@@ -13,7 +13,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Notification } from '@social-media-app/shared';
-// import type { INotificationDataService } from '../services/interfaces/INotificationDataService';
+// import type { INotificationDataService } from '../services/interfaces/INotificationDataService.js';
 type INotificationDataService = any; // TODO: Create this interface
 
 /**

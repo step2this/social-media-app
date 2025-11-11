@@ -6,13 +6,13 @@
  * No mocks, no spies - just real objects with fake data.
  */
 
-import type { ICommentRepository, Comment } from '../../domain/repositories/ICommentRepository';
-import type { IFollowRepository, FollowStatus } from '../../domain/repositories/IFollowRepository';
-import type { ILikeRepository, LikeStatus } from '../../domain/repositories/ILikeRepository';
-import type { INotificationRepository, Notification } from '../../domain/repositories/INotificationRepository';
-import type { IAuctionRepository, Auction, Bid } from '../../domain/repositories/IAuctionRepository';
-import type { PaginatedResult } from '../../shared/types/pagination';
-import { success, failure, type Result } from '../../shared/types/result';
+import type { ICommentRepository, Comment } from '../../domain/repositories/ICommentRepository.js';
+import type { IFollowRepository, FollowStatus } from '../../domain/repositories/IFollowRepository.js';
+import type { ILikeRepository, LikeStatus } from '../../domain/repositories/ILikeRepository.js';
+import type { INotificationRepository, Notification } from '../../domain/repositories/INotificationRepository.js';
+import type { IAuctionRepository, Auction, Bid } from '../../domain/repositories/IAuctionRepository.js';
+import type { PaginatedResult } from '../../shared/types/pagination.js';
+import { success, failure, type Result } from '../../shared/types/result.js';
 
 /**
  * Fake Comment Repository

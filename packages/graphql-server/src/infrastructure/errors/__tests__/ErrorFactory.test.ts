@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { ErrorFactory } from '../ErrorFactory';
+import { ErrorFactory } from '../ErrorFactory.js';
 import { GraphQLError } from 'graphql';
 import {
   NotFoundError,

@@ -1,6 +1,6 @@
 import { useMutation, graphql } from 'react-relay';
 import { useState, useCallback } from 'react';
-import type { usePlaceBidMutation } from './__generated__/usePlaceBidMutation.graphql';
+import type { usePlaceBidMutation } from './__generated__/usePlaceBidMutation.graphql.js';
 
 /**
  * Input for placing a bid

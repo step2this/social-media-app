@@ -14,7 +14,7 @@
  * - Provide rich context for debugging
  */
 
-import { ErrorCode } from './ErrorCodes';
+import { ErrorCode } from './ErrorCodes.js';
 
 /**
  * Base class for all application errors

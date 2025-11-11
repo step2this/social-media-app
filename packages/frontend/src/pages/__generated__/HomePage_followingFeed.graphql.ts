@@ -45,7 +45,7 @@ export type HomePage_followingFeed$key = {
   readonly " $fragmentSpreads": FragmentRefs<"HomePage_followingFeed">;
 };
 
-import HomePageFollowingFeedPaginationQuery_graphql from './HomePageFollowingFeedPaginationQuery.graphql';
+import HomePageFollowingFeedPaginationQuery_graphql from './HomePageFollowingFeedPaginationQuery.graphql.js';
 
 const node: ReaderFragment = (function(){
 var v0 = [

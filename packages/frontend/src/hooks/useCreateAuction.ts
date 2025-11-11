@@ -1,6 +1,6 @@
 import { useMutation, graphql } from 'react-relay';
 import { useState, useCallback } from 'react';
-import type { useCreateAuctionMutation } from './__generated__/useCreateAuctionMutation.graphql';
+import type { useCreateAuctionMutation } from './__generated__/useCreateAuctionMutation.graphql.js';
 
 /**
  * Input for creating an auction

@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { TypeMapper } from '../TypeMapper';
+import { TypeMapper } from '../TypeMapper.js';
 import type { Comment as DomainComment } from '@social-media-app/shared';
 
 describe('TypeMapper', () => {

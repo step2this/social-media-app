@@ -12,7 +12,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-import { createAuthService, type AuthServiceDependencies } from '../auth.service';
+import { createAuthService, type AuthServiceDependencies } from '../auth.service.js';
 import { dalErrorScenarios } from '@social-media-app/shared/test-utils';
 import {
   ConflictError,

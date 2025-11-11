@@ -5,18 +5,18 @@ generates:
       - typescript
       - typescript-resolvers
     config:
-      contextType: "../../context#GraphQLContext"
+      contextType: "../../context.js#GraphQLContext"
       useIndexSignature: true
       maybeValue: T | null
       # Map GraphQL types to resolver return types (Parent types)
       # This tells TypeScript that resolvers can return partial objects
       # that will be completed by field resolvers
       mappers:
-        Post: "../../infrastructure/resolvers/helpers/resolverTypes#PostParent"
-        Comment: "../../infrastructure/resolvers/helpers/resolverTypes#CommentParent"
-        Auction: "../../infrastructure/resolvers/helpers/resolverTypes#AuctionParent"
-        Bid: "../../infrastructure/resolvers/helpers/resolverTypes#BidParent"
-        CreatePostPayload: "../../infrastructure/resolvers/helpers/resolverTypes#CreatePostPayloadParent"
-        PlaceBidPayload: "../../infrastructure/resolvers/helpers/resolverTypes#PlaceBidPayloadParent"
-        AuthPayload: "../../infrastructure/resolvers/helpers/resolverTypes#AuthPayloadParent"
-        AuthTokens: "../../infrastructure/resolvers/helpers/resolverTypes#AuthTokensParent"
+        Post: "../../infrastructure/resolvers/helpers/resolverTypes.js#PostParent"
+        Comment: "../../infrastructure/resolvers/helpers/resolverTypes.js#CommentParent"
+        Auction: "../../infrastructure/resolvers/helpers/resolverTypes.js#AuctionParent"
+        Bid: "../../infrastructure/resolvers/helpers/resolverTypes.js#BidParent"
+        CreatePostPayload: "../../infrastructure/resolvers/helpers/resolverTypes.js#CreatePostPayloadParent"
+        PlaceBidPayload: "../../infrastructure/resolvers/helpers/resolverTypes.js#PlaceBidPayloadParent"
+        AuthPayload: "../../infrastructure/resolvers/helpers/resolverTypes.js#AuthPayloadParent"
+        AuthTokens: "../../infrastructure/resolvers/helpers/resolverTypes.js#AuthTokensParent"

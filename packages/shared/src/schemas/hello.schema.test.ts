@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { HelloRequestSchema, HelloResponseSchema } from './hello.schema';
+import { HelloRequestSchema, HelloResponseSchema } from './hello.schema.js';
 
 describe('HelloRequestSchema', () => {
   it('should validate valid request with name', () => {

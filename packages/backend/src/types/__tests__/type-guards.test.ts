@@ -5,7 +5,7 @@ import {
   hasServices,
   hasUserId,
   hasValidatedBody
-} from '../type-guards'
+} from '../type-guards.js'
 import type { APIGatewayProxyEventV2 } from 'aws-lambda'
 
 describe('Type Guards', () => {

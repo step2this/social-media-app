@@ -34,7 +34,7 @@ import {
   classifyHttpError,
   classifyNetworkError,
   createZodValidationError
-} from './http/httpErrors.ts';
+} from './http/httpErrors.js';
 import {
   parseAuthStorage,
   createRequestHeaders,
@@ -46,14 +46,14 @@ import {
   calculateDelay,
   sleep,
   type RetryConfig
-} from './http/httpHelpers.ts';
+} from './http/httpHelpers.js';
 import {
   createHttpMethod,
   createAuthMethod,
   type SendRequestFn,
   type TokenStorage,
   type AuthMethodConfig
-} from './http/httpFactories.ts';
+} from './http/httpFactories.js';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 

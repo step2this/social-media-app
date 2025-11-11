@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { validateCaptionLength, validateTags, parseTags } from '../utils';
+import { validateCaptionLength, validateTags, parseTags } from '../utils/index.js';
 
 export interface UseCreatePostFormReturn {
   caption: string;

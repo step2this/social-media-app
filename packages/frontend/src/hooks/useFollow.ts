@@ -1,7 +1,7 @@
 import { useMutation, graphql } from 'react-relay';
 import { useState, useCallback } from 'react';
-import type { useFollowFollowUserMutation } from './__generated__/useFollowFollowUserMutation.graphql';
-import type { useFollowUnfollowUserMutation } from './__generated__/useFollowUnfollowUserMutation.graphql';
+import type { useFollowFollowUserMutation } from './__generated__/useFollowFollowUserMutation.graphql.js';
+import type { useFollowUnfollowUserMutation } from './__generated__/useFollowUnfollowUserMutation.graphql.js';
 
 /**
  * Hook for managing follow/unfollow mutations using Relay

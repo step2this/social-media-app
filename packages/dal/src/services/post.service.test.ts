@@ -1,7 +1,7 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, max-depth, functional/prefer-immutable-types */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { PostService, type PostEntity } from './post.service';
-import { ProfileService } from './profile.service';
+import { PostService, type PostEntity } from './post.service.js';
+import { ProfileService } from './profile.service.js';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import type { CreatePostRequest, UpdatePostRequest, GetUserPostsRequest } from '@social-media-app/shared';
 import { createMockDynamoClient, type MockDynamoClient } from '@social-media-app/shared/test-utils';

@@ -10,8 +10,8 @@ import {
     shouldRetryError,
     calculateDelay,
     sleep
-} from '../httpHelpers.ts';
-import { NetworkError, ApiError } from '../httpErrors.ts';
+} from '../httpHelpers.js';
+import { NetworkError, ApiError } from '../httpErrors.js';
 
 // ============================================================================
 // Test Helpers and Constants

@@ -9,7 +9,7 @@
  *   QueryExecutor,
  *   FEED_QUERIES,
  *   FeedMatchers
- * } from '../helpers';
+ * } from '../helpers.js';
  * ```
  */
 

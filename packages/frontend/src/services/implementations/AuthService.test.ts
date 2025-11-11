@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { AuthService } from './AuthService';
-import { useAuthStore } from '../../stores/authStore';
-import type { AuthHookResult } from './AuthService';
+import { AuthService } from './AuthService.js';
+import { useAuthStore } from '../../stores/authStore.js';
+import type { AuthHookResult } from './AuthService.js';
 import type { User, AuthTokens } from '@social-media-app/shared';
 
 describe('AuthService Store Subscription Pattern', () => {

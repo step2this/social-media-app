@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { FeedMatchers } from '../helpers/feed-matchers';
+ * import { FeedMatchers } from '../helpers/feed-matchers.js';
  *
  * FeedMatchers.expectPostConnection(data.exploreFeed);
  * FeedMatchers.expectPost(data.exploreFeed.edges[0].node, 'post-1');

@@ -4,11 +4,11 @@
  * Centralized export for all test fixtures
  */
 
-export * from './auction-fixtures';
-export * from './comment-fixtures';
-export * from './feed-fixtures';
-export * from './follow-fixtures';
-export * from './like-fixtures';
-export * from './notification-fixtures';
-export * from './post-fixtures';
-export * from './profile-fixtures';
+export * from './auction-fixtures.js';
+export * from './comment-fixtures.js';
+export * from './feed-fixtures.js';
+export * from './follow-fixtures.js';
+export * from './like-fixtures.js';
+export * from './notification-fixtures.js';
+export * from './post-fixtures.js';
+export * from './profile-fixtures.js';

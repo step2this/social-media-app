@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { NotificationServiceAdapter, type INotificationService } from '../NotificationServiceAdapter';
+import { NotificationServiceAdapter, type INotificationService } from '../NotificationServiceAdapter.js';
 import type { Notification } from '@social-media-app/shared';
 
 describe('NotificationServiceAdapter', () => {

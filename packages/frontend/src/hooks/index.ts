@@ -6,30 +6,30 @@
  */
 
 // Auth hooks
-export { useAuth } from './useAuth';
+export { useAuth } from './useAuth.js';
 
 // Notification hooks
-export { useNotifications } from './useNotifications';
-export { useNotificationActions } from './useNotificationActions';
-export { useNotificationsPage } from './useNotificationsPage';
-export type { UseNotificationsReturn } from './useNotifications';
-export type { UseNotificationActionsReturn } from './useNotificationActions';
-export type { UseNotificationsPageReturn } from './useNotificationsPage';
+export { useNotifications } from './useNotifications.js';
+export { useNotificationActions } from './useNotificationActions.js';
+export { useNotificationsPage } from './useNotificationsPage.js';
+export type { UseNotificationsReturn } from './useNotifications.js';
+export type { UseNotificationActionsReturn } from './useNotificationActions.js';
+export type { UseNotificationsPageReturn } from './useNotificationsPage.js';
 
 // Feed hooks
-// export { useFeed } from './useFeed';
-// export { useFeedInfiniteScroll } from './useFeedInfiniteScroll';
-// export { useHomePage } from './useHomePage';
-export { useFeedItemAutoRead } from './useFeedItemAutoRead';
+// export { useFeed } from './useFeed.js';
+// export { useFeedInfiniteScroll } from './useFeedInfiniteScroll.js';
+// export { useHomePage } from './useHomePage.js';
+export { useFeedItemAutoRead } from './useFeedItemAutoRead.js';
 
 // Social interaction hooks
-// export { useLike } from './useLike';
-export { useFollow } from './useFollow';
+// export { useLike } from './useLike.js';
+export { useFollow } from './useFollow.js';
 
 // Auction hooks
-export { useAuctions } from './useAuctions';
+export { useAuctions } from './useAuctions.js';
 
 // Utility hooks
-export { useIntersectionObserver } from './useIntersectionObserver';
-export { useImagePreview } from './useImagePreview';
-export { useCreatePostForm } from './useCreatePostForm';
+export { useIntersectionObserver } from './useIntersectionObserver.js';
+export { useImagePreview } from './useImagePreview.js';
+export { useCreatePostForm } from './useCreatePostForm.js';

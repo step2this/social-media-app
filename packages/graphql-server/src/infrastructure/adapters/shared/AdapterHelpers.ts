@@ -10,8 +10,8 @@
  * 3. Map property names (comments/notifications/auctions → items)
  */
 
-import { success, failure, type Result } from '../../../shared/types/result';
-import type { PaginatedResult } from '../../../shared/types/pagination';
+import { success, failure, type Result } from '../../../shared/types/result.js';
+import type { PaginatedResult } from '../../../shared/types/pagination.js';
 
 /**
  * Generic adapter helper for wrapping service calls with error handling.

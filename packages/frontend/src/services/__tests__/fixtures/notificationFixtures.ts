@@ -8,7 +8,7 @@
 import type {
   NotificationConnection,
   NotificationEdge,
-} from '../../interfaces/INotificationDataService';
+} from '../../interfaces/INotificationDataService.js';
 import type { Notification, NotificationType } from '@social-media-app/shared';
 
 /**

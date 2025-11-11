@@ -41,7 +41,7 @@ export type NotificationsPage_notifications$key = {
   readonly " $fragmentSpreads": FragmentRefs<"NotificationsPage_notifications">;
 };
 
-import NotificationsPageNotificationsPaginationQuery_graphql from './NotificationsPageNotificationsPaginationQuery.graphql';
+import NotificationsPageNotificationsPaginationQuery_graphql from './NotificationsPageNotificationsPaginationQuery.graphql.js';
 
 const node: ReaderFragment = {
   "argumentDefinitions": [

@@ -1,6 +1,6 @@
 /* eslint-disable max-lines-per-function, max-statements, complexity, max-depth, functional/prefer-immutable-types */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ProfileService, type ProfileEntity } from './profile.service';
+import { ProfileService, type ProfileEntity } from './profile.service.js';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import type {
   UpdateProfileWithHandleRequest,

@@ -1,6 +1,6 @@
 import { useMutation, graphql } from 'react-relay';
 import { useState, useCallback } from 'react';
-import type { useCreatePostMutation } from './__generated__/useCreatePostMutation.graphql';
+import type { useCreatePostMutation } from './__generated__/useCreatePostMutation.graphql.js';
 
 /**
  * Input for creating a post

@@ -5,7 +5,7 @@
  * Adapter implementations handle the translation from external services.
  */
 
-import type { Result } from '../../shared/types/result';
+import type { Result } from '../../shared/types/result.js';
 
 export interface LikeStatus {
   isLiked: boolean;

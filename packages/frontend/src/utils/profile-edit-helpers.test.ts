@@ -10,7 +10,7 @@ import {
   hasProfileChanges,
   type ProfileFormData,
   type ProfileValidationErrors,
-} from './profile-edit-helpers';
+} from './profile-edit-helpers.js';
 import type { Profile } from '@social-media-app/shared';
 
 describe('profile-edit-helpers', () => {

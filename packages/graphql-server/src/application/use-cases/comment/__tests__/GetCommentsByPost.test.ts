@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { GetCommentsByPost } from '../GetCommentsByPost';
-import { FakeCommentRepository } from '../../../../../__tests__/helpers/fake-repositories';
+import { GetCommentsByPost } from '../GetCommentsByPost.js';
+import { FakeCommentRepository } from '../../../../../__tests__/helpers/fake-repositories.js';
 import { createMockComments } from '@social-media-app/shared/test-utils/fixtures';
 
 describe('GetCommentsByPost', () => {

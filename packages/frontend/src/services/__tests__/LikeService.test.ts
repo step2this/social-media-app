@@ -7,20 +7,20 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import type { ILikeService } from '../interfaces/ILikeService';
-import { LikeServiceGraphQL } from '../implementations/LikeService.graphql';
-import { MockGraphQLClient } from '../../graphql/client.mock';
+import type { ILikeService } from '../interfaces/ILikeService.js';
+import { LikeServiceGraphQL } from '../implementations/LikeService.graphql.js';
+import { MockGraphQLClient } from '../../graphql/client.mock.js';
 import {
   createMockLikeResponse,
   createMockUnlikeResponse,
   createMockLikedStatus,
   createMockUnlikedStatus,
-} from './fixtures/likeFixtures';
-import { wrapInGraphQLSuccess } from './fixtures/graphqlFixtures';
+} from './fixtures/likeFixtures.js';
+import { wrapInGraphQLSuccess } from './fixtures/graphqlFixtures.js';
 import {
   expectServiceError,
   errorScenarios,
-} from './helpers/serviceTestHelpers';
+} from './helpers/serviceTestHelpers.js';
 
 // Type definitions for mock client generic calls
 interface LikePostVariables {

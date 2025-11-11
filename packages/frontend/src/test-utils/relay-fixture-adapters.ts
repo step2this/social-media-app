@@ -21,7 +21,7 @@ import {
   createLikeNotification,
   createCommentNotification,
   createFollowNotification,
-} from '../services/__tests__/fixtures/notificationFixtures';
+} from '../services/__tests__/fixtures/notificationFixtures.js';
 import type { Notification } from '@social-media-app/shared';
 
 /**

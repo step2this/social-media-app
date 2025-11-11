@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { QueryExecutor } from '../helpers/query-executor';
+ * import { QueryExecutor } from '../helpers/query-executor.js';
  *
  * const executor = new QueryExecutor(server, context);
  * const data = await executor.executeAndAssertSuccess(query, variables);

@@ -1,6 +1,6 @@
 import { useLazyLoadQuery, graphql } from 'react-relay';
 import { useMemo, useState, useCallback, useTransition } from 'react';
-import type { useAuctionsQuery } from './__generated__/useAuctionsQuery.graphql';
+import type { useAuctionsQuery } from './__generated__/useAuctionsQuery.graphql.js';
 
 /**
  * Options for useAuctions hook

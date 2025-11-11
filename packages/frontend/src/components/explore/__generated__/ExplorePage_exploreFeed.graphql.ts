@@ -45,7 +45,7 @@ export type ExplorePage_exploreFeed$key = {
   readonly " $fragmentSpreads": FragmentRefs<"ExplorePage_exploreFeed">;
 };
 
-import ExplorePageExploreFeedPaginationQuery_graphql from './ExplorePageExploreFeedPaginationQuery.graphql';
+import ExplorePageExploreFeedPaginationQuery_graphql from './ExplorePageExploreFeedPaginationQuery.graphql.js';
 
 const node: ReaderFragment = (function(){
 var v0 = [
