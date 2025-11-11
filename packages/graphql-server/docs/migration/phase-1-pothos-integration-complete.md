@@ -216,25 +216,145 @@ packages/graphql-server/src/schema/pothos/__tests__/auth-resolvers.test.ts
 
 ---
 
+## Testing Migration Strategy
+
+### Current Test Quality Assessment
+
+**Most existing tests DON'T follow best practices:**
+
+❌ **Problems Identified:**
+1. **Implementation-Dependent** - Tests call `Mutation.register()` directly instead of testing through server
+2. **Heavy Mock Usage** - Violates "no mocks" guideline
+3. **Not DRY** - Duplicated test setup everywhere
+4. **Test SDL Schema Structure** - Will break during migration (e.g., "should have RegisterInput type")
+
+✅ **What We Want:**
+- Behavioral tests that test WHAT code does, not HOW
+- Tests through `executeOperation` (real integration)
+- Real services with dependency injection
+- DRY with shared helpers
+- Tests that survive schema changes
+
+### Module-by-Module Test Migration
+
+**For each module we migrate (Posts, Comments, etc.):**
+
+1. **Audit Existing Tests**
+   - Identify which tests are valuable (test real behavior)
+   - Mark implementation-dependent tests for deletion
+   - Identify coverage gaps
+
+2. **Write New Behavioral Integration Tests**
+   - Use `auth-integration.test.ts` as template
+   - Test through `executeOperation`, not direct resolver calls
+   - Real services with dependency injection
+   - Shared test utilities
+
+3. **Delete Old SDL Resolver Tests**
+   - Remove tests that call SDL resolvers directly
+   - Remove schema structure tests
+   - Remove mock-heavy tests
+
+4. **Keep Use-Case Tests**
+   - Keep application logic tests (e.g., `Login.test.ts`, `Register.test.ts`)
+   - These test business logic, not GraphQL layer
+   - They're valuable and don't need migration
+
+### Example: Posts Module Migration
+
+**DON'T Migrate This:**
+```typescript
+// ❌ Old approach: Implementation-dependent, uses mocks
+describe('Mutation.createPost', () => {
+  it('should call postService.create', async () => {
+    const spy = vi.spyOn(postService, 'create');
+    await Mutation.createPost(null, args, context);
+    expect(spy).toHaveBeenCalled(); // Tests HOW, not WHAT
+  });
+});
+```
+
+**DO Write This Instead:**
+```typescript
+// ✅ New approach: Behavioral, no mocks, DRY
+describe('Post Operations', () => {
+  // Shared helper (DRY)
+  const createPost = async (server, caption, userId) => {
+    return await server.executeOperation({
+      query: `
+        mutation CreatePost($input: CreatePostInput!) {
+          createPost(input: $input) {
+            post { id caption }
+            uploadUrl
+          }
+        }
+      `,
+      variables: { input: { fileType: 'image/jpeg', caption } }
+    }, { contextValue: createTestContext(userId) });
+  };
+
+  it('should allow authenticated users to create posts', async () => {
+    const server = createApolloServerWithPothos();
+    await server.start();
+
+    const result = await createPost(server, 'My post', 'user-123');
+
+    // Tests WHAT happened, not HOW
+    expect(result.body.singleResult.errors).toBeUndefined();
+    expect(result.body.singleResult.data.createPost.post.caption).toBe('My post');
+
+    await server.stop();
+  });
+
+  it('should reject unauthenticated post creation', async () => {
+    const server = createApolloServerWithPothos();
+    await server.start();
+
+    const result = await createPost(server, 'Test', null);
+
+    expect(result.body.singleResult.errors?.[0].message).toContain('Not authorized');
+    await server.stop();
+  });
+});
+```
+
+### Benefits
+
+1. **Tests Survive Migration** - Work regardless of SDL vs Pothos
+2. **Real Guardrails** - Catch actual integration bugs
+3. **Better Coverage** - Test user workflows, not implementation
+4. **Maintainable** - DRY, clear, type-safe
+5. **Follow Best Practices** - No mocks, behavioral testing
+
+---
+
 ## Next Steps
 
 ### Immediate
 - ✅ Phase 1 complete - ready to merge
+- ⏭️ Remove old SDL resolver tests for Auth (`__tests__/resolvers/Auth.test.ts`)
 - ⏭️ Create pull request
 - ⏭️ Team review
 
-### Future (Phase 2)
-- ⏭️ Update existing tests to be implementation-agnostic
-- ⏭️ Migrate Posts module to Pothos
-- ⏭️ Migrate Comments module to Pothos
-- ⏭️ Migrate Likes/Follows modules to Pothos
+### Phase 2: Posts Module Migration
+1. ⏭️ Migrate Posts types and resolvers to Pothos
+2. ⏭️ Write `posts-integration.test.ts` (behavioral tests)
+3. ⏭️ Remove old SDL resolver tests for Posts
+4. ⏭️ Keep Posts use-case tests (business logic)
+5. ⏭️ Validate all tests pass
+
+### Future Phases
+- ⏭️ Repeat process for Comments module
+- ⏭️ Repeat process for Likes/Follows modules
 - ⏭️ Eventually remove SDL schema entirely
 
 ### Recommendations
-1. Review and update implementation-dependent tests
-2. Consider adding more behavioral integration tests for other modules
-3. Monitor production for any issues with merged schema
-4. Address pre-existing token uniqueness test failures
+1. Clean up tests module-by-module during migration (not all at once)
+2. Each module gets new behavioral integration tests
+3. Remove SDL resolver tests as we migrate each module
+4. Keep use-case tests (they test business logic, not GraphQL layer)
+5. Monitor production for any issues with merged schema
+6. Address pre-existing token uniqueness test failures separately
 
 ---
 
