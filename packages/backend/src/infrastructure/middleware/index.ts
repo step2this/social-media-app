@@ -91,7 +91,10 @@ export function createHandler(
 ): middy.MiddyfiedHandler {
   const middleware = middy(handler)
     .use(httpHeaderNormalizer())
-    .use(httpJsonBodyParser())
+    // Configure body parser to handle GET requests gracefully (no body expected)
+    .use(httpJsonBodyParser({
+      disableContentTypeError: true // Don't fail if Content-Type is missing/invalid
+    }))
 
   // Add JWT auth if enabled
   if (config.auth !== undefined) {
