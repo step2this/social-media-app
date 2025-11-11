@@ -54,10 +54,11 @@ export interface HandlerConfig {
  *
  * Applies a consistent middleware stack:
  * 1. HTTP header normalization (case-insensitive headers)
- * 2. JSON body parsing
+ * 2. JSON body parsing (only for POST/PUT/PATCH/DELETE methods)
  * 3. JWT authentication (if enabled)
  * 4. Zod validation (if schema provided)
- * 5. Error handling (catches and formats errors)
+ * 5. Awilix service injection (if services requested)
+ * 6. Error handling (catches and formats errors)
  *
  * @param handler - The Lambda handler function
  * @param config - Handler configuration options
@@ -91,10 +92,16 @@ export function createHandler(
 ): middy.MiddyfiedHandler {
   const middleware = middy(handler)
     .use(httpHeaderNormalizer())
-    // Configure body parser to handle GET requests gracefully (no body expected)
-    .use(httpJsonBodyParser({
-      disableContentTypeError: true // Don't fail if Content-Type is missing/invalid
-    }))
+    // Conditionally parse body only for methods that can have bodies
+    .use({
+      before: async (request) => {
+        const method = request.event.requestContext?.http?.method || request.event.httpMethod
+        // Only parse JSON body for methods that typically have request bodies
+        if (method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+          await httpJsonBodyParser().before?.(request)
+        }
+      }
+    })
 
   // Add JWT auth if enabled
   if (config.auth !== undefined) {
