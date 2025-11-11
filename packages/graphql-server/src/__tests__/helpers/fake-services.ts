@@ -338,6 +338,335 @@ export class FakeDynamoClient {
 }
 
 /**
+ * In-memory post storage
+ */
+interface StoredPost {
+  id: string;
+  userId: string;
+  content?: string;
+  imageUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+  likesCount: number;
+  commentsCount: number;
+}
+
+/**
+ * In-memory comment storage
+ */
+interface StoredComment {
+  id: string;
+  postId: string;
+  userId: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * In-memory like storage
+ */
+interface StoredLike {
+  userId: string;
+  postId: string;
+  createdAt: string;
+}
+
+/**
+ * In-memory follow storage
+ */
+interface StoredFollow {
+  followerId: string;
+  followeeId: string;
+  createdAt: string;
+}
+
+/**
+ * FakePostService - In-memory post service for testing
+ */
+export class FakePostService {
+  private posts: Map<string, StoredPost> = new Map();
+  private postIdCounter = 1;
+
+  async getPostById(postId: string): Promise<{ userId: string; createdAt: string; id: string } | null> {
+    const post = this.posts.get(postId);
+    return post ? { userId: post.userId, createdAt: post.createdAt, id: post.id } : null;
+  }
+
+  seedPost(post: Partial<StoredPost> & { userId: string }): StoredPost {
+    const postId = post.id || `post-${this.postIdCounter++}`;
+    const fullPost: StoredPost = {
+      id: postId,
+      content: post.content || 'Test post content',
+      imageUrl: post.imageUrl || null,
+      createdAt: post.createdAt || new Date().toISOString(),
+      updatedAt: post.updatedAt || new Date().toISOString(),
+      likesCount: post.likesCount || 0,
+      commentsCount: post.commentsCount || 0,
+      ...post,
+    };
+
+    this.posts.set(postId, fullPost);
+    return fullPost;
+  }
+
+  clear(): void {
+    this.posts.clear();
+    this.postIdCounter = 1;
+  }
+}
+
+/**
+ * FakeCommentService - In-memory comment service for testing
+ */
+export class FakeCommentService {
+  private comments: Map<string, StoredComment> = new Map();
+  private commentIdCounter = 1;
+
+  async createComment(
+    userId: string,
+    postId: string,
+    handle: string,
+    content: string,
+    postUserId: string,
+    postSK: string
+  ): Promise<{
+    id: string;
+    postId: string;
+    userId: string;
+    content: string;
+    createdAt: string;
+    updatedAt: string;
+  }> {
+    const commentId = `comment-${this.commentIdCounter++}`;
+    const comment: StoredComment = {
+      id: commentId,
+      postId,
+      userId,
+      content,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    this.comments.set(commentId, comment);
+    return comment;
+  }
+
+  async deleteComment(commentId: string, userId: string): Promise<boolean> {
+    const comment = this.comments.get(commentId);
+    if (!comment) {
+      return false; // Comment not found
+    }
+
+    if (comment.userId !== userId) {
+      return false; // Unauthorized
+    }
+
+    this.comments.delete(commentId);
+    return true;
+  }
+
+  clear(): void {
+    this.comments.clear();
+    this.commentIdCounter = 1;
+  }
+}
+
+/**
+ * FakeLikeService - In-memory like service for testing
+ */
+export class FakeLikeService {
+  private likes: Map<string, StoredLike> = new Map();
+  private postLikeCounts: Map<string, number> = new Map();
+
+  private getLikeKey(userId: string, postId: string): string {
+    return `${userId}#${postId}`;
+  }
+
+  async likePost(
+    userId: string,
+    postId: string,
+    postUserId: string,
+    postSK: string
+  ): Promise<{
+    success: boolean;
+    isLiked: boolean;
+    likesCount: number;
+  }> {
+    const key = this.getLikeKey(userId, postId);
+
+    // Check if already liked
+    if (this.likes.has(key)) {
+      const count = this.postLikeCounts.get(postId) || 0;
+      return {
+        success: true,
+        isLiked: true,
+        likesCount: count,
+      };
+    }
+
+    // Add like
+    this.likes.set(key, {
+      userId,
+      postId,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Increment count
+    const currentCount = this.postLikeCounts.get(postId) || 0;
+    const newCount = currentCount + 1;
+    this.postLikeCounts.set(postId, newCount);
+
+    return {
+      success: true,
+      isLiked: true,
+      likesCount: newCount,
+    };
+  }
+
+  async unlikePost(
+    userId: string,
+    postId: string,
+    postUserId: string,
+    postSK: string
+  ): Promise<{
+    success: boolean;
+    isLiked: boolean;
+    likesCount: number;
+  }> {
+    const key = this.getLikeKey(userId, postId);
+
+    // Check if not liked
+    if (!this.likes.has(key)) {
+      const count = this.postLikeCounts.get(postId) || 0;
+      return {
+        success: true,
+        isLiked: false,
+        likesCount: count,
+      };
+    }
+
+    // Remove like
+    this.likes.delete(key);
+
+    // Decrement count
+    const currentCount = this.postLikeCounts.get(postId) || 0;
+    const newCount = Math.max(0, currentCount - 1);
+    this.postLikeCounts.set(postId, newCount);
+
+    return {
+      success: true,
+      isLiked: false,
+      likesCount: newCount,
+    };
+  }
+
+  clear(): void {
+    this.likes.clear();
+    this.postLikeCounts.clear();
+  }
+}
+
+/**
+ * FakeFollowService - In-memory follow service for testing
+ */
+export class FakeFollowService {
+  private follows: Map<string, StoredFollow> = new Map();
+  private followerCounts: Map<string, number> = new Map();
+  private followingCounts: Map<string, number> = new Map();
+
+  private getFollowKey(followerId: string, followeeId: string): string {
+    return `${followerId}#${followeeId}`;
+  }
+
+  async followUser(
+    followerId: string,
+    followeeId: string
+  ): Promise<{
+    success: boolean;
+    isFollowing: boolean;
+    followersCount: number;
+    followingCount: number;
+  }> {
+    const key = this.getFollowKey(followerId, followeeId);
+
+    // Check if already following
+    if (this.follows.has(key)) {
+      return {
+        success: true,
+        isFollowing: true,
+        followersCount: this.followerCounts.get(followeeId) || 0,
+        followingCount: this.followingCounts.get(followerId) || 0,
+      };
+    }
+
+    // Add follow
+    this.follows.set(key, {
+      followerId,
+      followeeId,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Update counts
+    const followersCount = (this.followerCounts.get(followeeId) || 0) + 1;
+    const followingCount = (this.followingCounts.get(followerId) || 0) + 1;
+    this.followerCounts.set(followeeId, followersCount);
+    this.followingCounts.set(followerId, followingCount);
+
+    return {
+      success: true,
+      isFollowing: true,
+      followersCount,
+      followingCount,
+    };
+  }
+
+  async unfollowUser(
+    followerId: string,
+    followeeId: string
+  ): Promise<{
+    success: boolean;
+    isFollowing: boolean;
+    followersCount: number;
+    followingCount: number;
+  }> {
+    const key = this.getFollowKey(followerId, followeeId);
+
+    // Check if not following
+    if (!this.follows.has(key)) {
+      return {
+        success: true,
+        isFollowing: false,
+        followersCount: this.followerCounts.get(followeeId) || 0,
+        followingCount: this.followingCounts.get(followerId) || 0,
+      };
+    }
+
+    // Remove follow
+    this.follows.delete(key);
+
+    // Update counts
+    const followersCount = Math.max(0, (this.followerCounts.get(followeeId) || 0) - 1);
+    const followingCount = Math.max(0, (this.followingCounts.get(followerId) || 0) - 1);
+    this.followerCounts.set(followeeId, followersCount);
+    this.followingCounts.set(followerId, followingCount);
+
+    return {
+      success: true,
+      isFollowing: false,
+      followersCount,
+      followingCount,
+    };
+  }
+
+  clear(): void {
+    this.follows.clear();
+    this.followerCounts.clear();
+    this.followingCounts.clear();
+  }
+}
+
+/**
  * Create linked fake services
  *
  * Creates auth and profile services that share user data.
@@ -346,6 +675,10 @@ export class FakeDynamoClient {
 export function createFakeServices() {
   const authService = new FakeAuthService();
   const profileService = new FakeProfileService();
+  const postService = new FakePostService();
+  const commentService = new FakeCommentService();
+  const likeService = new FakeLikeService();
+  const followService = new FakeFollowService();
   const dynamoClient = new FakeDynamoClient();
 
   // Link services: when auth creates user, add to profile service
@@ -363,11 +696,19 @@ export function createFakeServices() {
   return {
     authService,
     profileService,
+    postService,
+    commentService,
+    likeService,
+    followService,
     dynamoClient: dynamoClient as any as DynamoDBDocumentClient,
     tableName: 'test-table',
     clear: () => {
       authService.clear();
       profileService.clear();
+      postService.clear();
+      commentService.clear();
+      likeService.clear();
+      followService.clear();
       dynamoClient.clear();
     },
   };
