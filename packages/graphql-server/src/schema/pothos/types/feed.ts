@@ -20,7 +20,9 @@ import { PageInfoType } from './comments.js';
  * Represents an item in a user's personalized feed.
  * Contains a post reference and metadata about when it was seen.
  */
-export const FeedItemType = builder.objectType('FeedItem', {
+export const FeedItemType = builder.objectRef<any>('FeedItem');
+
+FeedItemType.implement({
   fields: (t) => ({
     id: t.exposeID('id', {
       description: 'Unique identifier for the feed item',
@@ -45,7 +47,9 @@ export const FeedItemType = builder.objectType('FeedItem', {
  *
  * Edge type for Relay-style cursor pagination.
  */
-export const FeedEdgeType = builder.objectType('FeedEdge', {
+export const FeedEdgeType = builder.objectRef<any>('FeedEdge');
+
+FeedEdgeType.implement({
   fields: (t) => ({
     cursor: t.exposeString('cursor', {
       description: 'Cursor for pagination',
@@ -63,7 +67,9 @@ export const FeedEdgeType = builder.objectType('FeedEdge', {
  *
  * Relay-style connection for paginated feed items.
  */
-export const FeedConnectionType = builder.objectType('FeedConnection', {
+export const FeedConnectionType = builder.objectRef<any>('FeedConnection');
+
+FeedConnectionType.implement({
   fields: (t) => ({
     edges: t.field({
       type: [FeedEdgeType],
@@ -84,7 +90,9 @@ export const FeedConnectionType = builder.objectType('FeedConnection', {
  * Response type for markFeedItemsAsRead mutation.
  * Returns the number of feed items that were marked as read.
  */
-export const MarkFeedReadResponseType = builder.objectType('MarkFeedReadResponse', {
+export const MarkFeedReadResponseType = builder.objectRef<any>('MarkFeedReadResponse');
+
+MarkFeedReadResponseType.implement({
   fields: (t) => ({
     updatedCount: t.exposeInt('updatedCount', {
       description: 'Number of feed items marked as read',

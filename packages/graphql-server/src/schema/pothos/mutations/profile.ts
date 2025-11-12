@@ -21,7 +21,9 @@ import type { GraphQLContext } from '../../../context.js';
  *
  * Response type for getting presigned upload URLs.
  */
-export const PresignedUrlResponseType = builder.objectType('PresignedUrlResponse', {
+export const PresignedUrlResponseType = builder.objectRef<any>('PresignedUrlResponse');
+
+PresignedUrlResponseType.implement({
   fields: (t) => ({
     uploadUrl: t.exposeString('uploadUrl', {
       description: 'Presigned S3 URL for uploading a file',

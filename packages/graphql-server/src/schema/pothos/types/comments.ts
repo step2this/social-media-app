@@ -129,7 +129,9 @@ CommentType.implement({
  *
  * Edge type for Relay-style cursor pagination.
  */
-export const CommentEdgeType = builder.objectType('CommentEdge', {
+export const CommentEdgeType = builder.objectRef<any>('CommentEdge');
+
+CommentEdgeType.implement({
   fields: (t) => ({
     cursor: t.exposeString('cursor', {
       description: 'Cursor for pagination',
@@ -147,7 +149,9 @@ export const CommentEdgeType = builder.objectType('CommentEdge', {
  *
  * Pagination information for cursor-based pagination.
  */
-export const PageInfoType = builder.objectType('PageInfo', {
+export const PageInfoType = builder.objectRef<any>('PageInfo');
+
+PageInfoType.implement({
   fields: (t) => ({
     hasNextPage: t.exposeBoolean('hasNextPage', {
       description: 'Whether there are more items to fetch',
@@ -171,7 +175,9 @@ export const PageInfoType = builder.objectType('PageInfo', {
  *
  * Relay-style connection for paginated comments.
  */
-export const CommentConnectionType = builder.objectType('CommentConnection', {
+export const CommentConnectionType = builder.objectRef<any>('CommentConnection');
+
+CommentConnectionType.implement({
   fields: (t) => ({
     edges: t.field({
       type: [CommentEdgeType],
@@ -191,7 +197,9 @@ export const CommentConnectionType = builder.objectType('CommentConnection', {
  *
  * Simple success response for delete operations.
  */
-export const DeleteResponseType = builder.objectType('DeleteResponse', {
+export const DeleteResponseType = builder.objectRef<any>('DeleteResponse');
+
+DeleteResponseType.implement({
   fields: (t) => ({
     success: t.exposeBoolean('success', {
       description: 'Whether the delete operation was successful',

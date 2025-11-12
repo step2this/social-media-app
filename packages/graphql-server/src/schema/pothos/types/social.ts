@@ -19,7 +19,9 @@ import { builder } from '../builder.js';
  * Response for like/unlike mutations.
  * Includes updated like count and current like status.
  */
-export const LikeResponseType = builder.objectType('LikeResponse', {
+export const LikeResponseType = builder.objectRef<any>('LikeResponse');
+
+LikeResponseType.implement({
   fields: (t) => ({
     success: t.exposeBoolean('success', {
       description: 'Whether the operation was successful',
@@ -39,7 +41,9 @@ export const LikeResponseType = builder.objectType('LikeResponse', {
  * Current like status for a post.
  * Used by the postLikeStatus query.
  */
-export const LikeStatusType = builder.objectType('LikeStatus', {
+export const LikeStatusType = builder.objectRef<any>('LikeStatus');
+
+LikeStatusType.implement({
   fields: (t) => ({
     isLiked: t.exposeBoolean('isLiked', {
       description: 'Whether the post is liked by the current user',
@@ -56,7 +60,9 @@ export const LikeStatusType = builder.objectType('LikeStatus', {
  * Response for follow/unfollow mutations.
  * Includes updated follower counts and current follow status.
  */
-export const FollowResponseType = builder.objectType('FollowResponse', {
+export const FollowResponseType = builder.objectRef<any>('FollowResponse');
+
+FollowResponseType.implement({
   fields: (t) => ({
     success: t.exposeBoolean('success', {
       description: 'Whether the operation was successful',
@@ -79,7 +85,9 @@ export const FollowResponseType = builder.objectType('FollowResponse', {
  * Current follow status for a user relationship.
  * Used by the followStatus query.
  */
-export const FollowStatusType = builder.objectType('FollowStatus', {
+export const FollowStatusType = builder.objectRef<any>('FollowStatus');
+
+FollowStatusType.implement({
   fields: (t) => ({
     isFollowing: t.exposeBoolean('isFollowing', {
       description: 'Whether the current user follows the specified user',

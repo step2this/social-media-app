@@ -36,7 +36,9 @@ export const NotificationStatusEnum = builder.enumType('NotificationStatus', {
  *
  * Information about the user who triggered the notification.
  */
-export const NotificationActorType = builder.objectType('NotificationActor', {
+export const NotificationActorType = builder.objectRef<any>('NotificationActor');
+
+NotificationActorType.implement({
   fields: (t) => ({
     userId: t.exposeID('userId', {
       description: 'ID of the user who triggered the notification',
@@ -60,7 +62,9 @@ export const NotificationActorType = builder.objectType('NotificationActor', {
  *
  * Information about the target of the notification (e.g., a post, comment).
  */
-export const NotificationTargetType = builder.objectType('NotificationTarget', {
+export const NotificationTargetType = builder.objectRef<any>('NotificationTarget');
+
+NotificationTargetType.implement({
   fields: (t) => ({
     type: t.exposeString('type', {
       description: 'Type of the target (e.g., "post", "comment")',
@@ -84,7 +88,9 @@ export const NotificationTargetType = builder.objectType('NotificationTarget', {
  *
  * Represents a notification sent to a user.
  */
-export const NotificationType = builder.objectType('Notification', {
+export const NotificationType = builder.objectRef<any>('Notification');
+
+NotificationType.implement({
   fields: (t) => ({
     id: t.exposeID('id', {
       description: 'Unique identifier for the notification',
@@ -135,7 +141,9 @@ export const NotificationType = builder.objectType('Notification', {
  *
  * Edge type for Relay-style cursor pagination.
  */
-export const NotificationEdgeType = builder.objectType('NotificationEdge', {
+export const NotificationEdgeType = builder.objectRef<any>('NotificationEdge');
+
+NotificationEdgeType.implement({
   fields: (t) => ({
     cursor: t.exposeString('cursor', {
       description: 'Cursor for pagination',
@@ -153,7 +161,9 @@ export const NotificationEdgeType = builder.objectType('NotificationEdge', {
  *
  * Relay-style connection for paginated notifications.
  */
-export const NotificationConnectionType = builder.objectType('NotificationConnection', {
+export const NotificationConnectionType = builder.objectRef<any>('NotificationConnection');
+
+NotificationConnectionType.implement({
   fields: (t) => ({
     edges: t.field({
       type: [NotificationEdgeType],
@@ -173,7 +183,9 @@ export const NotificationConnectionType = builder.objectType('NotificationConnec
  *
  * Response for marking all notifications as read.
  */
-export const MarkAllReadResponseType = builder.objectType('MarkAllReadResponse', {
+export const MarkAllReadResponseType = builder.objectRef<any>('MarkAllReadResponse');
+
+MarkAllReadResponseType.implement({
   fields: (t) => ({
     updatedCount: t.exposeInt('updatedCount', {
       description: 'Number of notifications marked as read',

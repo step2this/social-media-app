@@ -170,7 +170,9 @@ BidType.implement({
  *
  * Edge type for Relay-style cursor pagination.
  */
-export const AuctionEdgeType = builder.objectType('AuctionEdge', {
+export const AuctionEdgeType = builder.objectRef<any>('AuctionEdge');
+
+AuctionEdgeType.implement({
   fields: (t) => ({
     cursor: t.exposeString('cursor', {
       description: 'Cursor for pagination',
@@ -188,7 +190,9 @@ export const AuctionEdgeType = builder.objectType('AuctionEdge', {
  *
  * Relay-style connection for paginated auctions.
  */
-export const AuctionConnectionType = builder.objectType('AuctionConnection', {
+export const AuctionConnectionType = builder.objectRef<any>('AuctionConnection');
+
+AuctionConnectionType.implement({
   fields: (t) => ({
     edges: t.field({
       type: [AuctionEdgeType],
@@ -209,7 +213,9 @@ export const AuctionConnectionType = builder.objectType('AuctionConnection', {
  * Note: This is NOT a Relay-style connection.
  * It's a simple list with a total count.
  */
-export const BidConnectionType = builder.objectType('BidConnection', {
+export const BidConnectionType = builder.objectRef<any>('BidConnection');
+
+BidConnectionType.implement({
   fields: (t) => ({
     bids: t.field({
       type: [BidType],
@@ -228,7 +234,9 @@ export const BidConnectionType = builder.objectType('BidConnection', {
  * Response payload for createAuction mutation.
  * Includes the created auction and presigned URL for uploading the image.
  */
-export const CreateAuctionPayloadType = builder.objectType('CreateAuctionPayload', {
+export const CreateAuctionPayloadType = builder.objectRef<any>('CreateAuctionPayload');
+
+CreateAuctionPayloadType.implement({
   fields: (t) => ({
     auction: t.field({
       type: AuctionType,
@@ -247,7 +255,9 @@ export const CreateAuctionPayloadType = builder.objectType('CreateAuctionPayload
  * Response payload for placeBid mutation.
  * Includes the created bid and updated auction.
  */
-export const PlaceBidPayloadType = builder.objectType('PlaceBidPayload', {
+export const PlaceBidPayloadType = builder.objectRef<any>('PlaceBidPayload');
+
+PlaceBidPayloadType.implement({
   fields: (t) => ({
     bid: t.field({
       type: BidType,
