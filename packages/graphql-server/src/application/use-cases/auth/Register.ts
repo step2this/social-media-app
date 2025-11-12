@@ -130,6 +130,14 @@ export class Register {
         username: input.username,
       });
 
+      // Ensure tokens are available (check this first before profile lookup)
+      if (!authResult.tokens) {
+        return {
+          success: false,
+          error: new Error('Failed to generate authentication tokens'),
+        };
+      }
+
       // Get full profile for the new user
       const profile = await this.services.profileService.getProfileById(
         authResult.user.id
@@ -139,14 +147,6 @@ export class Register {
         return {
           success: false,
           error: new Error('Failed to create user profile'),
-        };
-      }
-
-      // Ensure tokens are available
-      if (!authResult.tokens) {
-        return {
-          success: false,
-          error: new Error('Failed to generate authentication tokens'),
         };
       }
 

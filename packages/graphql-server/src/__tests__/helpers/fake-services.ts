@@ -60,6 +60,7 @@ export class FakeAuthService {
   private usersByUsername: Map<string, string> = new Map(); // username -> userId
   private tokens: Map<string, StoredToken> = new Map(); // refreshToken -> token data
   private userIdCounter = 1;
+  private tokenCounter = 0; // Add counter for unique tokens
 
   /**
    * Register a new user
@@ -107,9 +108,9 @@ export class FakeAuthService {
     this.usersByEmail.set(input.email, userId);
     this.usersByUsername.set(input.username, userId);
 
-    // Generate tokens
-    const accessToken = `access_${userId}_${Date.now()}`;
-    const refreshToken = `refresh_${userId}_${Date.now()}`;
+    // Generate tokens with counter for uniqueness
+    const accessToken = `access_${userId}_${Date.now()}_${this.tokenCounter++}`;
+    const refreshToken = `refresh_${userId}_${Date.now()}_${this.tokenCounter++}`;
 
     // Store refresh token
     this.tokens.set(refreshToken, {
@@ -150,9 +151,9 @@ export class FakeAuthService {
       throw new Error('Invalid email or password');
     }
 
-    // Generate tokens
-    const accessToken = `access_${userId}_${Date.now()}`;
-    const refreshToken = `refresh_${userId}_${Date.now()}`;
+    // Generate tokens with counter for uniqueness
+    const accessToken = `access_${userId}_${Date.now()}_${this.tokenCounter++}`;
+    const refreshToken = `refresh_${userId}_${Date.now()}_${this.tokenCounter++}`;
 
     // Store refresh token
     this.tokens.set(refreshToken, {
@@ -187,9 +188,9 @@ export class FakeAuthService {
       throw new Error('Refresh token expired');
     }
 
-    // Generate new tokens
-    const accessToken = `access_${tokenData.userId}_${Date.now()}`;
-    const newRefreshToken = `refresh_${tokenData.userId}_${Date.now()}`;
+    // Generate new tokens with counter for uniqueness
+    const accessToken = `access_${tokenData.userId}_${Date.now()}_${this.tokenCounter++}`;
+    const newRefreshToken = `refresh_${tokenData.userId}_${Date.now()}_${this.tokenCounter++}`;
 
     // Delete old token, store new one
     this.tokens.delete(input.refreshToken);
@@ -276,7 +277,14 @@ export class FakeProfileService {
     updatedAt: string;
     emailVerified: boolean;
   } | null> {
-    return this.profiles.get(userId) || null;
+    const profile = this.profiles.get(userId);
+    if (!profile) {
+      return null;
+    }
+
+    // Exclude password from returned profile (security)
+    const { password, ...profileWithoutPassword } = profile;
+    return profileWithoutPassword;
   }
 
   /**
@@ -327,6 +335,13 @@ export class FakeDynamoClient {
       GSI1PK: `REFRESH_TOKEN#${refreshToken}`,
       userId,
     });
+  }
+
+  /**
+   * Remove a token item (called when token is invalidated)
+   */
+  removeToken(refreshToken: string): void {
+    this.items.delete(refreshToken);
   }
 
   /**
@@ -398,7 +413,7 @@ export class FakePostService {
     const fullPost: StoredPost = {
       id: postId,
       content: post.content || 'Test post content',
-      imageUrl: post.imageUrl || null,
+      imageUrl: post.imageUrl || undefined,
       createdAt: post.createdAt || new Date().toISOString(),
       updatedAt: post.updatedAt || new Date().toISOString(),
       likesCount: post.likesCount || 0,
@@ -689,6 +704,33 @@ export function createFakeServices() {
     const user = (authService as any).users.get(result.user.id);
     if (user) {
       profileService.seedProfile(user);
+    }
+    // Seed token in DynamoDB if tokens were generated
+    if (result.tokens) {
+      dynamoClient.seedToken(result.tokens.refreshToken, result.user.id);
+    }
+    return result;
+  };
+
+  // Link auth service login with DynamoDB
+  const originalLogin = authService.login.bind(authService);
+  authService.login = async (input) => {
+    const result = await originalLogin(input);
+    // Seed token in DynamoDB
+    dynamoClient.seedToken(result.tokens.refreshToken, result.user.id);
+    return result;
+  };
+
+  // Link auth service refreshToken with DynamoDB
+  const originalRefreshToken = authService.refreshToken.bind(authService);
+  authService.refreshToken = async (input) => {
+    const result = await originalRefreshToken(input);
+    // Remove old token from DynamoDB
+    dynamoClient.removeToken(input.refreshToken);
+    // Add new token to DynamoDB
+    const userId = (authService as any).getUserIdFromToken(result.tokens.refreshToken);
+    if (userId) {
+      dynamoClient.seedToken(result.tokens.refreshToken, userId);
     }
     return result;
   };

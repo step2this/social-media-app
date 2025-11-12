@@ -132,7 +132,7 @@ describe('Pothos Feed Integration', () => {
               edges {
                 node {
                   id
-                  post { id }
+                  caption
                 }
               }
               pageInfo {

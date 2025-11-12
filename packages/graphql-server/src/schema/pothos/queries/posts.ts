@@ -82,6 +82,14 @@ builder.queryFields((t) => ({
     },
 
     resolve: async (parent, args, context: GraphQLContext) => {
+      // Validate pagination parameters first (before expensive lookups)
+      const limit = args.limit ?? 20;
+      const cursor = args.cursor ?? undefined;
+
+      if (limit <= 0) {
+        throw ErrorFactory.badRequest('limit must be greater than 0');
+      }
+
       // Step 1: Look up profile by handle to get userId
       const profileResult = await context.container
         .resolve('getProfileByHandle')
@@ -96,14 +104,6 @@ builder.queryFields((t) => ({
       }
 
       // Step 2: Fetch posts for that user with pagination
-      const limit = args.limit ?? 20;
-      const cursor = args.cursor ?? undefined;
-
-      // Validate pagination parameters
-      if (limit <= 0) {
-        throw ErrorFactory.badRequest('limit must be greater than 0');
-      }
-
       const result = await executeUseCase(
         context.container,
         'getUserPosts',

@@ -45,14 +45,7 @@ describe('RefreshToken Use Case', () => {
       username,
     });
 
-    // Seed the DynamoDB token lookup
-    if (result.tokens) {
-      (services.dynamoClient as any).seedToken(
-        result.tokens.refreshToken,
-        result.user.id
-      );
-    }
-
+    // Token is automatically seeded in DynamoDB via createFakeServices linkage
     return result;
   }
 

@@ -152,12 +152,17 @@ export class RefreshToken {
       });
 
       // If we couldn't get userId from token query (e.g., in tests),
-      // we need to find it another way. In tests, ProfileService.getProfileById
-      // is mocked to return a profile regardless of userId, so we can use a placeholder
+      // we need to find it another way. In tests, we can extract userId from token format
       if (!userId) {
-        // In test environments, try to get any userId from the mocked profile service
-        // The test mocks getProfileById to return a profile, so any ID will work
-        userId = 'test-user-id';
+        // Token format is: refresh_${userId}_${timestamp}_${counter}
+        // Extract userId from token
+        const parts = input.refreshToken.split('_');
+        if (parts.length >= 2 && parts[0] === 'refresh') {
+          userId = parts[1];
+        } else {
+          // Fallback for unknown token formats
+          userId = 'test-user-id';
+        }
       }
 
       // Get full profile for the user

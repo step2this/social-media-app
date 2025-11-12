@@ -7,11 +7,11 @@
 
 import { describe, it, expect } from 'vitest';
 import { LikeServiceAdapter } from '../LikeServiceAdapter.js';
-import { createMockLiked } from '@social-media-app/shared/test-utils/fixtures';
 
 describe('LikeServiceAdapter', () => {
   it('transforms service response to repository format', async () => {
-    const mockStatus = createMockLiked(42);
+    // Mock DAL format with likesCount (not likeCount)
+    const mockStatus = { isLiked: true, likesCount: 42 };
     const mockService = {
       getPostLikeStatus: async () => mockStatus,
     };
@@ -22,6 +22,7 @@ describe('LikeServiceAdapter', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.isLiked).toBe(true);
+      // Adapter transforms likesCount → likeCount
       expect(result.data.likeCount).toBe(42);
     }
   });
