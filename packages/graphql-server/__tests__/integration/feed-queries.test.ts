@@ -14,7 +14,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ApolloServer } from '@apollo/server';
-import { createApolloServer } from '../../src/server.js';
+import { createApolloServerWithPothos } from '../../src/server-with-pothos.js';
 import type { GraphQLContext } from '../../src/context.js';
 import type { PostService, ProfileService } from '@social-media-app/dal';
 
@@ -43,7 +43,7 @@ describe('GraphQL Integration - Feed Queries', () => {
   let profileService: ProfileService;
 
   beforeEach(async () => {
-    server = createApolloServer();
+    server = createApolloServerWithPothos();
     await server.start();
 
     // Create shared mock services for both contexts

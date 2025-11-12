@@ -25,7 +25,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ApolloServer } from '@apollo/server';
-import { createApolloServer } from '../../src/server.js';
+import { createApolloServerWithPothos } from '../../src/server-with-pothos.js';
 import type { GraphQLContext } from '../../src/context.js';
 
 describe('Query Limits Security', () => {
@@ -33,7 +33,7 @@ describe('Query Limits Security', () => {
   let mockContext: GraphQLContext;
 
   beforeEach(async () => {
-    server = createApolloServer();
+    server = createApolloServerWithPothos();
     await server.start();
 
     // Mock context with minimal required fields

@@ -33,12 +33,6 @@
 import { config } from 'dotenv';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { makeExecutableSchema } from '@graphql-tools/schema';
-import { mergeSchemas } from '@graphql-tools/schema';
-import { resolvers } from './schema/resolvers/index.js';
 import { pothosSchema } from './schema/pothos/index.js';
 import type { GraphQLContext } from './context.js';
 import { createDynamoDBClient, getTableName } from '@social-media-app/aws-utils';
@@ -49,14 +43,6 @@ import { createGraphQLContainer } from './infrastructure/di/awilix-container.js'
 
 // Load environment variables from project root
 config({ path: '../../.env' });
-
-// Load schema from single source of truth (root schema.graphql)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const typeDefs = readFileSync(
-  join(__dirname, '../../../schema.graphql'),
-  'utf-8'
-);
 
 const PORT = parseInt(process.env.GRAPHQL_PORT || '4000', 10);
 
@@ -148,21 +134,9 @@ async function startServer() {
     console.log(`   AWS_REGION: ${process.env.AWS_REGION}`);
     console.log('');
 
-    // Create executable schema from SDL
-    const sdlSchema = makeExecutableSchema({
-      typeDefs,
-      resolvers,
-    });
-
-    // Merge SDL schema with Pothos schema
-    // Pothos will take precedence for duplicate types (auth types defined in Pothos)
-    const mergedSchema = mergeSchemas({
-      schemas: [sdlSchema, pothosSchema],
-    });
-
-    // Create and start Apollo Server using merged schema
+    // Create and start Apollo Server using Pothos schema
     const server = new ApolloServer<GraphQLContext>({
-      schema: mergedSchema,
+      schema: pothosSchema,
 
       // Development features (introspection, playground, stack traces)
       introspection: true,

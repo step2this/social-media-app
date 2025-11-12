@@ -12,7 +12,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ApolloServer } from '@apollo/server';
-import { createApolloServer } from '../../src/server.js';
+import { createApolloServerWithPothos } from '../../src/server-with-pothos.js';
 import { PostService, ProfileService, LikeService, FollowService, CommentService } from '@social-media-app/dal';
 import { createLoaders } from '../../src/dataloaders/index.js';
 import type { GraphQLContext } from '../../src/context.js';
@@ -27,7 +27,7 @@ describe('GraphQL Integration - Field Resolution', () => {
   let mockLikeService: LikeService;
 
   beforeEach(async () => {
-    server = createApolloServer();
+    server = createApolloServerWithPothos();
     await server.start();
 
     // Create pure mock service objects (no real instantiation, no spies)

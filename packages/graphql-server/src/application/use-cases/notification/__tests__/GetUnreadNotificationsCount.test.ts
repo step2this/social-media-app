@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { GetUnreadNotificationsCount } from '../GetUnreadNotificationsCount.js';
-import { FakeNotificationRepository } from '../../../../../__tests__/helpers/fake-repositories.js';
+import { FakeNotificationRepository } from '../../../../__tests__/helpers/fake-repositories.js';
 import { createMockNotifications } from '@social-media-app/shared/test-utils/fixtures';
 
 describe('GetUnreadNotificationsCount', () => {
