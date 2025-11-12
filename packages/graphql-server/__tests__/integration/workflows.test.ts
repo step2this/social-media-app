@@ -21,6 +21,7 @@ import { ApolloServer } from '@apollo/server';
 import { createApolloServerWithPothos } from '../../src/server-with-pothos.js';
 import { PostService, CommentService, LikeService, FollowService, ProfileService } from '@social-media-app/dal';
 import { createLoaders } from '../../src/dataloaders/index.js';
+import { createGraphQLContainer } from '../../src/infrastructure/di/awilix-container.js';
 import type { GraphQLContext } from '../../src/context.js';
 import type { Post, CreatePostResponse, Comment, PublicProfile, Profile } from '@social-media-app/shared';
 
@@ -74,6 +75,7 @@ describe('GraphQL Integration - Core Workflows', () => {
 
     mockContext = {
       userId: 'test-user-123',
+      correlationId: 'test-correlation-id',
       dynamoClient: {} as any,
       tableName: 'test-table',
       services: {
@@ -93,10 +95,14 @@ describe('GraphQL Integration - Core Workflows', () => {
         likeService: mockLikeService,
         auctionService: {} as any,
       }, 'test-user-123'),
-    };
+    } as GraphQLContext;
+
+    // Create container with use cases
+    mockContext.container = createGraphQLContainer(mockContext);
 
     unauthContext = {
       userId: null,
+      correlationId: 'test-correlation-id-unauth',
       dynamoClient: {} as any,
       tableName: 'test-table',
       services: {
@@ -116,7 +122,10 @@ describe('GraphQL Integration - Core Workflows', () => {
         likeService: mockLikeService,
         auctionService: {} as any,
       }, null),
-    };
+    } as GraphQLContext;
+
+    // Create container with use cases
+    unauthContext.container = createGraphQLContainer(unauthContext);
 
     vi.clearAllMocks();
   });
@@ -171,8 +180,8 @@ describe('GraphQL Integration - Core Workflows', () => {
 
       const createResult = await server.executeOperation({
         query: `
-          mutation CreatePost($input: CreatePostInput!) {
-            createPost(input: $input) {
+          mutation CreatePost($fileType: String!, $caption: String) {
+            createPost(fileType: $fileType, caption: $caption) {
               post {
                 id
                 caption
@@ -184,7 +193,8 @@ describe('GraphQL Integration - Core Workflows', () => {
           }
         `,
         variables: {
-          input: { fileType: 'image/jpeg', caption: 'Test post' },
+          fileType: 'image/jpeg',
+          caption: 'Test post',
         },
       }, { contextValue: mockContext });
 
@@ -247,8 +257,8 @@ describe('GraphQL Integration - Core Workflows', () => {
 
       const updateResult = await server.executeOperation({
         query: `
-          mutation UpdatePost($id: ID!, $input: UpdatePostInput!) {
-            updatePost(id: $id, input: $input) {
+          mutation UpdatePost($id: ID!, $caption: String) {
+            updatePost(id: $id, caption: $caption) {
               id
               caption
             }
@@ -256,7 +266,7 @@ describe('GraphQL Integration - Core Workflows', () => {
         `,
         variables: {
           id: postId,
-          input: { caption: 'Updated caption' },
+          caption: 'Updated caption',
         },
       }, { contextValue: mockContext });
 
@@ -535,8 +545,8 @@ describe('GraphQL Integration - Core Workflows', () => {
 
       const createResult = await server.executeOperation({
         query: `
-          mutation CreateComment($input: CreateCommentInput!) {
-            createComment(input: $input) {
+          mutation CreateComment($postId: ID!, $content: String!) {
+            createComment(postId: $postId, content: $content) {
               id
               content
               userId
@@ -544,7 +554,8 @@ describe('GraphQL Integration - Core Workflows', () => {
           }
         `,
         variables: {
-          input: { postId, content: 'Great post!' },
+          postId,
+          content: 'Great post!',
         },
       }, { contextValue: mockContext });
 
