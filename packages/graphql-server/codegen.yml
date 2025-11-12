@@ -1,4 +1,7 @@
-schema: "../../schema.graphql"
+# NOTE: This codegen now uses the deprecated SDL schema file for backward compatibility
+# with legacy type adapters. Once those adapters are removed, this codegen can be deleted.
+# The Pothos schema is now the source of truth for the GraphQL schema.
+schema: "../../schema.graphql.deprecated"
 generates:
   ./src/schema/generated/types.ts:
     plugins:
