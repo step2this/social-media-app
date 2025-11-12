@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import Link from 'next/link';
+import { LoginForm } from '@/components/auth/LoginForm';
 
 export const metadata: Metadata = {
   title: 'Login',
@@ -9,11 +9,10 @@ export const metadata: Metadata = {
 export default function LoginPage() {
   return (
     <div>
-      <h2>Log In</h2>
-      <p className="info-text">Login form will be implemented in Phase 2</p>
-      <p>
-        <Link href="/register">Don&apos;t have an account? Register</Link>
-      </p>
+      <h2 style={{ marginTop: 0, marginBottom: '1.5rem', textAlign: 'center' }}>
+        Log In
+      </h2>
+      <LoginForm />
     </div>
   );
 }

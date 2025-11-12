@@ -1,16 +1,18 @@
 import { Metadata } from 'next';
-import Link from 'next/link';
+import { RegisterForm } from '@/components/auth/RegisterForm';
 
 export const metadata: Metadata = {
   title: 'Register',
+  description: 'Create a new account',
 };
 
 export default function RegisterPage() {
   return (
     <div>
-      <h2>Create Account</h2>
-      <p className="info-text">Registration form will be implemented in Phase 2</p>
-      <p><Link href="/login">Login</Link></p>
+      <h2 style={{ marginTop: 0, marginBottom: '1.5rem', textAlign: 'center' }}>
+        Create Account
+      </h2>
+      <RegisterForm />
     </div>
   );
 }
