@@ -129,7 +129,9 @@ PostType.implement({
  *
  * Edge type for Relay-style cursor pagination.
  */
-export const PostEdgeType = builder.objectType('PostEdge', {
+export const PostEdgeType = builder.objectRef<any>('PostEdge');
+
+PostEdgeType.implement({
   fields: (t) => ({
     cursor: t.exposeString('cursor', {
       description: 'Cursor for pagination',
@@ -147,7 +149,9 @@ export const PostEdgeType = builder.objectType('PostEdge', {
  *
  * Relay-style connection for paginated posts.
  */
-export const PostConnectionType = builder.objectType('PostConnection', {
+export const PostConnectionType = builder.objectRef<any>('PostConnection');
+
+PostConnectionType.implement({
   fields: (t) => ({
     edges: t.field({
       type: [PostEdgeType],
@@ -168,7 +172,9 @@ export const PostConnectionType = builder.objectType('PostConnection', {
  * Response payload for createPost mutation.
  * Includes the created post and presigned URLs for uploading images.
  */
-export const CreatePostPayloadType = builder.objectType('CreatePostPayload', {
+export const CreatePostPayloadType = builder.objectRef<CreatePostPayloadParent>('CreatePostPayload');
+
+CreatePostPayloadType.implement({
   fields: (t) => ({
     post: t.field({
       type: PostType,
