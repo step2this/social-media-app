@@ -183,6 +183,7 @@ export class FakeAuthService {
     refreshToken: string;
   }): Promise<{
     tokens: { accessToken: string; refreshToken: string };
+    userId?: string; // Optional userId for fallback scenarios
   }> {
     // Find token
     const tokenData = this.tokens.get(input.refreshToken);
@@ -210,6 +211,7 @@ export class FakeAuthService {
 
     return {
       tokens: { accessToken, refreshToken: newRefreshToken },
+      userId: tokenData.userId, // Include userId for fallback in tests
     };
   }
 

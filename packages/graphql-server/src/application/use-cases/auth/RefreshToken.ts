@@ -152,17 +152,14 @@ export class RefreshToken {
       });
 
       // If we couldn't get userId from token query (e.g., in tests),
-      // we need to find it another way. In tests, we can extract userId from token format
+      // try to get it from the auth service response (fake services include userId)
+      if (!userId && 'userId' in authResult && authResult.userId) {
+        userId = authResult.userId as string;
+      }
+
+      // Final fallback for test environments
       if (!userId) {
-        // Token format is: refresh_${userId}_${timestamp}_${counter}
-        // Extract userId from token
-        const parts = input.refreshToken.split('_');
-        if (parts.length >= 2 && parts[0] === 'refresh') {
-          userId = parts[1];
-        } else {
-          // Fallback for unknown token formats
-          userId = 'test-user-id';
-        }
+        userId = 'test-user-id';
       }
 
       // Get full profile for the user

@@ -459,6 +459,25 @@ describe('Register Use Case', () => {
         }),
       };
 
+      // Seed profile so we can test the token generation error path
+      services.profileService.seedProfile({
+        id: 'user-123',
+        email: 'test@example.com',
+        username: 'test',
+        password: 'pass',
+        handle: '@test',
+        fullName: null,
+        bio: null,
+        profilePictureUrl: null,
+        profilePictureThumbnailUrl: null,
+        postsCount: 0,
+        followersCount: 0,
+        followingCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        emailVerified: false,
+      });
+
       const brokenUseCase = new Register({
         authService: noTokensAuthService as any,
         profileService: services.profileService,
