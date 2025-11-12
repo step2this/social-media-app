@@ -92,5 +92,10 @@
     "*.{json,md,yml,yaml}": [
       "prettier --write"
     ]
+  },
+  "pnpm": {
+    "overrides": {
+      "graphql": "16.12.0"
+    }
   }
 }
