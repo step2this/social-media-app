@@ -75,7 +75,8 @@ builder.queryFields((t) => ({
       }
 
       const result = await executeUseCase(
-        context.container.resolve('getFeed'),
+        context.container,
+        'getFeed',
         {
           userId: UserId(context.userId!),
           pagination: {
@@ -136,7 +137,8 @@ builder.queryFields((t) => ({
       }
 
       const result = await executeUseCase(
-        context.container.resolve('getExploreFeed'),
+        context.container,
+        'getExploreFeed',
         {
           pagination: {
             first: limit,
@@ -202,7 +204,8 @@ builder.queryFields((t) => ({
       }
 
       const result = await executeUseCase(
-        context.container.resolve('getFollowingFeed'),
+        context.container,
+        'getFollowingFeed',
         {
           userId: UserId(context.userId!),
           pagination: {

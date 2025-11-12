@@ -13,7 +13,7 @@
 import { builder } from '../builder.js';
 import { PostType, PostConnectionType } from '../types/posts.js';
 import { executeUseCase, executeOptionalUseCase } from '../../../resolvers/helpers/resolverHelpers.js';
-import { Handle, PostId, UserId, Cursor } from '../../../shared/types/index.js';
+import { Handle, UserId, Cursor } from '../../../shared/types/index.js';
 import { ErrorFactory } from '../../../infrastructure/errors/ErrorFactory.js';
 import type { GraphQLContext } from '../../../context.js';
 
@@ -43,8 +43,9 @@ builder.queryFields((t) => ({
 
     resolve: async (parent, args, context: GraphQLContext) => {
       const result = await executeOptionalUseCase(
-        context.container.resolve('getPostById'),
-        { postId: PostId(args.id) }
+        context.container,
+        'getPostById',
+        { postId: args.id }
       );
 
       return result as any;
@@ -104,7 +105,8 @@ builder.queryFields((t) => ({
       }
 
       const result = await executeUseCase(
-        context.container.resolve('getUserPosts'),
+        context.container,
+        'getUserPosts',
         {
           userId: UserId(profileResult.data.id),
           pagination: {

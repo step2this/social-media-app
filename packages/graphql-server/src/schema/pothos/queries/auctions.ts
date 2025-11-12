@@ -13,7 +13,7 @@
 import { builder } from '../builder.js';
 import { AuctionType, AuctionConnectionType, BidConnectionType, AuctionStatusEnum } from '../types/auctions.js';
 import { executeUseCase, executeOptionalUseCase } from '../../../resolvers/helpers/resolverHelpers.js';
-import { AuctionId, UserId, Cursor } from '../../../shared/types/index.js';
+import { UserId, Cursor } from '../../../shared/types/index.js';
 import { ErrorFactory } from '../../../infrastructure/errors/ErrorFactory.js';
 import type { GraphQLContext } from '../../../context.js';
 
@@ -43,8 +43,9 @@ builder.queryFields((t) => ({
 
     resolve: async (parent, args, context: GraphQLContext) => {
       const result = await executeOptionalUseCase(
-        context.container.resolve('getAuctionById'),
-        { auctionId: AuctionId(args.id) }
+        context.container,
+        'getAuctionById',
+        { auctionId: args.id }
       );
 
       return result as any;
@@ -104,7 +105,8 @@ builder.queryFields((t) => ({
       }
 
       const result = await executeUseCase(
-        context.container.resolve('getAuctions'),
+        context.container,
+        'getAuctions',
         {
           pagination: {
             first: limit,
@@ -159,9 +161,10 @@ builder.queryFields((t) => ({
       }
 
       const result = await executeUseCase(
-        context.container.resolve('getBids'),
+        context.container,
+        'getBids',
         {
-          auctionId: AuctionId(args.auctionId),
+          auctionId: args.auctionId,
           pagination: {
             limit,
             offset,

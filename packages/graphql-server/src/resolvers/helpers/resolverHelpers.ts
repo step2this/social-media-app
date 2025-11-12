@@ -97,3 +97,58 @@ export async function executeUseCase<
   // Return successful result data
   return result.data;
 }
+
+/**
+ * Execute use case for optional results (nullable queries)
+ *
+ * Similar to executeUseCase, but for queries where null is a valid result
+ * (e.g., getting a single entity by ID that might not exist).
+ *
+ * Does not throw NOT_FOUND errors - returns null instead.
+ *
+ * @template TUseCaseName - The use case name from GraphQLContainer
+ * @template TUseCase - The use case type (inferred from container)
+ * @template TArgs - The use case arguments type (inferred from execute method)
+ *
+ * @param container - Awilix container for resolving dependencies
+ * @param useCaseName - Name of the use case to execute
+ * @param args - Arguments to pass to the use case execute method
+ *
+ * @returns The use case result data (can be null)
+ *
+ * @throws {GraphQLError} INTERNAL_SERVER_ERROR if result.success is false
+ *
+ * @example
+ * ```typescript
+ * // In a resolver for nullable query:
+ * const post = await executeOptionalUseCase(
+ *   container,
+ *   'getPostById',
+ *   { postId: PostId(args.id) }
+ * );
+ * return post; // Can be null
+ * ```
+ */
+export async function executeOptionalUseCase<
+  TUseCaseName extends keyof GraphQLContainer,
+  TUseCase extends GraphQLContainer[TUseCaseName],
+  TArgs extends Parameters<TUseCase['execute']>[0],
+>(
+  container: AwilixContainer<GraphQLContainer>,
+  useCaseName: TUseCaseName,
+  args: TArgs
+) {
+  // Resolve use case from Awilix container
+  const useCase = container.resolve(useCaseName) as TUseCase;
+
+  // Execute use case
+  const result = await useCase.execute(args);
+
+  // Handle error result
+  if (!result.success) {
+    throw ErrorFactory.internalServerError(result.error.message);
+  }
+
+  // Return result data (can be null)
+  return result.data;
+}
