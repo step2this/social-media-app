@@ -1,66 +1,35 @@
 /**
- * Apollo Server Instance with Pothos Integration
+ * Apollo Server Instance with Full Pothos Schema
  *
- * This version merges the existing SDL schema with the new Pothos schema.
- * This allows gradual migration - old and new schemas run side-by-side.
+ * Migration Complete! All modules have been migrated to Pothos:
+ * ✅ Phase 1: Auth module (register, login, logout, me, profile queries)
+ * ✅ Phase 3: Comments, Social (likes/follows), Notifications
+ * ✅ Phase 4 (Big Bang): Posts, Profile, Feed, Auctions
  *
- * Migration Strategy:
- * 1. Pothos auth module runs alongside existing auth (duplicate for testing)
- * 2. Once validated, remove auth from SDL schema
- * 3. Continue migrating other modules
- * 4. Eventually remove SDL schema entirely
+ * Benefits of Pothos:
+ * - ✅ Type-safe: TypeScript types flow into GraphQL schema
+ * - ✅ No SDL/code duplication
+ * - ✅ Built-in auth via authScopes (no manual HOC)
+ * - ✅ Field resolvers co-located with types
+ * - ✅ DataLoader integration for N+1 prevention
+ * - ✅ Refactoring support: rename a field = schema updates automatically
  */
 
 import { ApolloServer } from '@apollo/server';
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { makeExecutableSchema } from '@graphql-tools/schema';
-import { mergeSchemas } from '@graphql-tools/schema';
-import { resolvers } from './schema/resolvers/index.js';
 import { pothosSchema } from './schema/pothos/index.js';
 import type { GraphQLContext } from './context.js';
 
-// Load existing SDL schema
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const typeDefs = readFileSync(
-  join(__dirname, '../../../schema.graphql'),
-  'utf-8'
-);
-
 /**
- * Creates Apollo Server with merged SDL + Pothos schemas
+ * Creates Apollo Server with complete Pothos schema
  *
- * Schema Merging Strategy:
- * - SDL schema provides existing types and resolvers
- * - Pothos schema provides new auth types and resolvers
- * - @graphql-tools/merge handles conflicts (Pothos takes precedence)
+ * This is now the primary server instance.
+ * All GraphQL operations use the Pothos schema.
  *
- * Benefits:
- * - ✅ Gradual migration (no breaking changes)
- * - ✅ Test new schema alongside old
- * - ✅ Rollback easily if issues
- * - ✅ Continue using existing queries while migrating
- *
- * @returns Configured Apollo Server with merged schema
+ * @returns Configured Apollo Server with Pothos schema
  */
 export function createApolloServerWithPothos(): ApolloServer<GraphQLContext> {
-  // Create executable schema from SDL
-  const sdlSchema = makeExecutableSchema({
-    typeDefs,
-    resolvers,
-  });
-
-  // Merge SDL schema with Pothos schema
-  // Pothos will take precedence for duplicate types
-  const mergedSchema = mergeSchemas({
-    schemas: [sdlSchema, pothosSchema],
-  });
-
-  // Create Apollo Server with merged schema
   const server = new ApolloServer<GraphQLContext>({
-    schema: mergedSchema,
+    schema: pothosSchema,
 
     // Enable introspection for development
     introspection: process.env.NODE_ENV !== 'production',
@@ -91,36 +60,10 @@ export function createApolloServerWithPothos(): ApolloServer<GraphQLContext> {
 }
 
 /**
- * Helper: Creates Pothos-only server (for testing/future)
+ * Alias for backward compatibility
  *
- * This can be used for testing the Pothos schema in isolation,
- * or eventually replace the merged server once migration is complete.
+ * This is the same as createApolloServerWithPothos now.
  */
 export function createPothosOnlyServer(): ApolloServer<GraphQLContext> {
-  const server = new ApolloServer<GraphQLContext>({
-    schema: pothosSchema,
-
-    introspection: process.env.NODE_ENV !== 'production',
-    includeStacktraceInErrorResponses: process.env.NODE_ENV !== 'production',
-
-    formatError: (formattedError) => {
-      const message = formattedError.message.toLowerCase();
-
-      if (message.includes('exceeds maximum operation depth') ||
-          message.includes('exceeds maximum depth') ||
-          message.includes('query depth')) {
-        return {
-          ...formattedError,
-          extensions: {
-            ...formattedError.extensions,
-            code: 'GRAPHQL_VALIDATION_FAILED',
-          },
-        };
-      }
-
-      return formattedError;
-    },
-  });
-
-  return server;
+  return createApolloServerWithPothos();
 }
