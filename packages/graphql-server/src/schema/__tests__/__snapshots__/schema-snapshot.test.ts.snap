@@ -1,0 +1,423 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GraphQL Schema Snapshot > schema type structure matches snapshot (breaking change detection) 1`] = `
+{
+  "Auction": {
+    "fields": [
+      "bidCount",
+      "createdAt",
+      "currentPrice",
+      "description",
+      "endTime",
+      "id",
+      "imageUrl",
+      "reservePrice",
+      "seller",
+      "startTime",
+      "startingPrice",
+      "status",
+      "title",
+      "updatedAt",
+      "userId",
+      "winner",
+      "winnerId",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "AuctionConnection": {
+    "fields": [
+      "edges",
+      "pageInfo",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "AuctionEdge": {
+    "fields": [
+      "cursor",
+      "node",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "AuctionStatus": {
+    "fields": [
+      "ACTIVE",
+      "CANCELLED",
+      "COMPLETED",
+      "PENDING",
+    ],
+    "kind": "GraphQLEnumType",
+  },
+  "AuthPayload": {
+    "fields": [
+      "tokens",
+      "user",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "AuthTokens": {
+    "fields": [
+      "accessToken",
+      "expiresIn",
+      "refreshToken",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "Bid": {
+    "fields": [
+      "amount",
+      "auctionId",
+      "bidder",
+      "createdAt",
+      "id",
+      "userId",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "BidConnection": {
+    "fields": [
+      "bids",
+      "total",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "Boolean": {
+    "fields": [],
+    "kind": "GraphQLScalarType",
+  },
+  "Comment": {
+    "fields": [
+      "author",
+      "content",
+      "createdAt",
+      "id",
+      "postId",
+      "userId",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "CommentConnection": {
+    "fields": [
+      "edges",
+      "pageInfo",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "CommentEdge": {
+    "fields": [
+      "cursor",
+      "node",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "CreateAuctionPayload": {
+    "fields": [
+      "auction",
+      "uploadUrl",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "CreatePostPayload": {
+    "fields": [
+      "post",
+      "thumbnailUploadUrl",
+      "uploadUrl",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "DeleteResponse": {
+    "fields": [
+      "success",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "FeedConnection": {
+    "fields": [
+      "edges",
+      "pageInfo",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "FeedEdge": {
+    "fields": [
+      "cursor",
+      "node",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "FeedItem": {
+    "fields": [
+      "createdAt",
+      "id",
+      "post",
+      "readAt",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "Float": {
+    "fields": [],
+    "kind": "GraphQLScalarType",
+  },
+  "FollowResponse": {
+    "fields": [
+      "followersCount",
+      "followingCount",
+      "isFollowing",
+      "success",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "FollowStatus": {
+    "fields": [
+      "followersCount",
+      "followingCount",
+      "isFollowing",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "ID": {
+    "fields": [],
+    "kind": "GraphQLScalarType",
+  },
+  "Int": {
+    "fields": [],
+    "kind": "GraphQLScalarType",
+  },
+  "LikeResponse": {
+    "fields": [
+      "isLiked",
+      "likesCount",
+      "success",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "LikeStatus": {
+    "fields": [
+      "isLiked",
+      "likesCount",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "LogoutResponse": {
+    "fields": [
+      "success",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "MarkAllReadResponse": {
+    "fields": [
+      "updatedCount",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "MarkFeedReadResponse": {
+    "fields": [
+      "updatedCount",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "Mutation": {
+    "fields": [
+      "activateAuction",
+      "createAuction",
+      "createComment",
+      "createPost",
+      "deleteComment",
+      "deleteNotification",
+      "deletePost",
+      "followUser",
+      "getProfilePictureUploadUrl",
+      "likePost",
+      "login",
+      "logout",
+      "markAllNotificationsAsRead",
+      "markFeedItemsAsRead",
+      "markNotificationAsRead",
+      "placeBid",
+      "refreshToken",
+      "register",
+      "unfollowUser",
+      "unlikePost",
+      "updatePost",
+      "updateProfile",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "Notification": {
+    "fields": [
+      "actor",
+      "createdAt",
+      "id",
+      "message",
+      "readAt",
+      "status",
+      "target",
+      "title",
+      "type",
+      "userId",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "NotificationActor": {
+    "fields": [
+      "avatarUrl",
+      "displayName",
+      "handle",
+      "userId",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "NotificationConnection": {
+    "fields": [
+      "edges",
+      "pageInfo",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "NotificationEdge": {
+    "fields": [
+      "cursor",
+      "node",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "NotificationStatus": {
+    "fields": [
+      "ARCHIVED",
+      "READ",
+      "UNREAD",
+    ],
+    "kind": "GraphQLEnumType",
+  },
+  "NotificationTarget": {
+    "fields": [
+      "id",
+      "preview",
+      "type",
+      "url",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "NotificationType": {
+    "fields": [
+      "COMMENT",
+      "FOLLOW",
+      "LIKE",
+      "MENTION",
+      "SYSTEM",
+    ],
+    "kind": "GraphQLEnumType",
+  },
+  "PageInfo": {
+    "fields": [
+      "endCursor",
+      "hasNextPage",
+      "hasPreviousPage",
+      "startCursor",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "PlaceBidPayload": {
+    "fields": [
+      "auction",
+      "bid",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "Post": {
+    "fields": [
+      "author",
+      "caption",
+      "comments",
+      "commentsCount",
+      "createdAt",
+      "id",
+      "imageUrl",
+      "isLiked",
+      "likesCount",
+      "thumbnailUrl",
+      "updatedAt",
+      "userId",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "PostConnection": {
+    "fields": [
+      "edges",
+      "pageInfo",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "PostEdge": {
+    "fields": [
+      "cursor",
+      "node",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "PresignedUrlResponse": {
+    "fields": [
+      "uploadUrl",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "Profile": {
+    "fields": [
+      "bio",
+      "createdAt",
+      "email",
+      "emailVerified",
+      "followersCount",
+      "followingCount",
+      "fullName",
+      "handle",
+      "id",
+      "postsCount",
+      "profilePictureThumbnailUrl",
+      "profilePictureUrl",
+      "updatedAt",
+      "username",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "PublicProfile": {
+    "fields": [
+      "bio",
+      "createdAt",
+      "followersCount",
+      "followingCount",
+      "fullName",
+      "handle",
+      "id",
+      "isFollowing",
+      "postsCount",
+      "profilePictureUrl",
+      "username",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "Query": {
+    "fields": [
+      "auction",
+      "auctions",
+      "bids",
+      "comments",
+      "exploreFeed",
+      "feed",
+      "followStatus",
+      "followingFeed",
+      "me",
+      "notifications",
+      "post",
+      "postLikeStatus",
+      "profile",
+      "unreadNotificationsCount",
+      "userPosts",
+    ],
+    "kind": "GraphQLObjectType",
+  },
+  "String": {
+    "fields": [],
+    "kind": "GraphQLScalarType",
+  },
+}
+`;
