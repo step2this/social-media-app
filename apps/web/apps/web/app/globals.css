@@ -32,13 +32,3 @@ a {
   color: inherit;
   text-decoration: none;
 }
-
-/* Phase 1 placeholder styles - will be refactored in Phase 3 */
-.info-text {
-  background: #e3f2fd;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 2rem;
-  color: #1976d2;
-  font-size: 0.9rem;
-}
