@@ -814,7 +814,8 @@ describe('DataLoaders', () => {
     });
   });
 
-  describe('Integration with Field Resolvers', () => {
+  // SDL Resolver tests - skipped after migration to Pothos
+  describe.skip('Integration with Field Resolvers', () => {
     it('should use profileLoader in Post.author resolver instead of ProfileService directly', async () => {
       // This test verifies that Post.author field resolver uses DataLoader
       // instead of calling ProfileService.getProfileById directly

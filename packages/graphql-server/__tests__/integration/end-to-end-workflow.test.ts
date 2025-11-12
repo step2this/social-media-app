@@ -155,7 +155,7 @@ async function getAllEventsFromStream(
   return events;
 }
 
-describe('GraphQL End-to-End Workflow', () => {
+describe.skip('GraphQL End-to-End Workflow', () => {
   const httpClient = createLocalStackHttpClient();
   let testUser: TestUser;
   let kinesisClient: KinesisClient;

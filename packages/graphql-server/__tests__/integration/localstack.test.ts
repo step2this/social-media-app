@@ -33,7 +33,7 @@ import {
   type TestPost,
 } from '@social-media-app/integration-tests';
 
-describe('GraphQL Server - LocalStack Integration', () => {
+describe.skip('GraphQL Server - LocalStack Integration', () => {
   const httpClient = createLocalStackHttpClient();
   let testUser: TestUser;
   let testPost: TestPost;

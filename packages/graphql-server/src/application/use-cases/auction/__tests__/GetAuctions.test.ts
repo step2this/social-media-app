@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { GetAuctions } from '../GetAuctions.js';
-import { FakeAuctionRepository } from '../../../../../__tests__/helpers/fake-repositories.js';
+import { FakeAuctionRepository } from '../../../../__tests__/helpers/fake-repositories.js';
 import { createMockAuctions } from '@social-media-app/shared/test-utils/fixtures';
 
 describe('GetAuctions', () => {

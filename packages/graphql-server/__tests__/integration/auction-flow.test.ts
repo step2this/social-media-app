@@ -20,7 +20,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ApolloServer } from '@apollo/server';
-import { createApolloServer } from '../../src/server.js';
+import { createApolloServerWithPothos } from '../../src/server-with-pothos.js';
 import { ProfileService } from '@social-media-app/dal';
 import { AuctionService } from '@social-media-app/auction-dal';
 import { createLoaders } from '../../src/dataloaders/index.js';
@@ -35,7 +35,7 @@ describe('GraphQL Integration - Auction Flow', () => {
   let mockAuctionService: AuctionService;
 
   beforeEach(async () => {
-    server = createApolloServer();
+    server = createApolloServerWithPothos();
     await server.start();
 
     // Create mock service instances

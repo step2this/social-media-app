@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { GetFollowStatus } from '../GetFollowStatus.js';
-import { FakeFollowRepository } from '../../../../../__tests__/helpers/fake-repositories.js';
+import { FakeFollowRepository } from '../../../../__tests__/helpers/fake-repositories.js';
 import { createMockFollowing } from '@social-media-app/shared/test-utils/fixtures';
 
 describe('GetFollowStatus', () => {

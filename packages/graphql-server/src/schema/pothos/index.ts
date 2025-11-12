@@ -21,7 +21,6 @@ import './types/notifications.js';
 import './types/posts.js';
 import './types/feed.js';
 import './types/auctions.js';
-import './types/profile.js';
 
 // Import queries (these add fields to the Query type)
 import './queries/auth.js';
