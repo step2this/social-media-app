@@ -1,20 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-
-interface Post {
-  id: string;
-  author: {
-    username: string;
-    handle: string;
-    avatar?: string;
-  };
-  caption: string;
-  imageUrl?: string;
-  likesCount: number;
-  commentsCount: number;
-  createdAt: string;
-}
+import type { Post } from '@/lib/graphql/types';
 
 interface PostCardProps {
   post: Post;
@@ -36,7 +23,7 @@ export function PostCard({ post }: PostCardProps) {
       <div className="post-header">
         <Link href={`/profile/${post.author.handle}`}>
           <img
-            src={post.author.avatar || '/default-avatar.png'}
+            src={post.author.profilePictureUrl || '/default-avatar.png'}
             alt={post.author.username}
             className="avatar"
           />
@@ -51,11 +38,11 @@ export function PostCard({ post }: PostCardProps) {
       </div>
 
       <div className="post-content">
-        <p>{post.caption}</p>
-        {post.imageUrl && (
+        {post.caption && <p>{post.caption}</p>}
+        {post.thumbnailUrl && (
           <div className="post-media">
             <img
-              src={post.imageUrl}
+              src={post.thumbnailUrl}
               alt="Post image"
             />
           </div>
