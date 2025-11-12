@@ -11,7 +11,6 @@
  */
 
 import { builder } from '../builder.js';
-import { FeedConnectionType } from '../types/feed.js';
 import { PostConnectionType } from '../types/posts.js';
 import { executeUseCase } from '../../../resolvers/helpers/resolverHelpers.js';
 import { UserId, Cursor } from '../../../shared/types/index.js';
@@ -35,7 +34,7 @@ builder.queryFields((t) => ({
    * - first + after (Relay-style)
    */
   feed: t.field({
-    type: FeedConnectionType,
+    type: PostConnectionType,
     description: 'Get personalized feed for the authenticated user',
 
     // ✨ Built-in auth! No manual withAuth HOC needed
@@ -76,7 +75,7 @@ builder.queryFields((t) => ({
 
       const result = await executeUseCase(
         context.container,
-        'getFeed',
+        'getFollowingFeed',
         {
           userId: UserId(context.userId!),
           pagination: {

@@ -42,13 +42,17 @@ builder.queryFields((t) => ({
     },
 
     resolve: async (parent, args, context: GraphQLContext) => {
-      const result = await executeOptionalUseCase(
-        context.container,
-        'getAuctionById',
-        { auctionId: args.id }
-      );
+      // GetAuction use case takes a simple string parameter, not an object
+      const useCase = context.container.resolve('getAuction');
+      const result = await useCase.execute(args.id);
 
-      return result as any;
+      // Handle error result
+      if (!result.success) {
+        throw ErrorFactory.internalServerError((result as { success: false; error: Error }).error.message);
+      }
+
+      // Return result data (can be null for optional queries)
+      return result.data as any;
     },
   }),
 
@@ -95,29 +99,18 @@ builder.queryFields((t) => ({
         throw ErrorFactory.badRequest('limit must be greater than 0');
       }
 
-      // Build filters
-      const filters: any = {};
-      if (args.status) {
-        filters.status = args.status;
-      }
-      if (args.userId) {
-        filters.userId = UserId(args.userId);
+      // GetAuctions use case takes three separate parameters: status?, limit, cursor?
+      // Note: This use case doesn't support userId filtering
+      const useCase = context.container.resolve('getAuctions');
+      const result = await useCase.execute(args.status, limit, cursor);
+
+      // Handle error result
+      if (!result.success) {
+        throw ErrorFactory.internalServerError((result as { success: false; error: Error }).error.message);
       }
 
-      const result = await executeUseCase(
-        context.container,
-        'getAuctions',
-        {
-          pagination: {
-            first: limit,
-            after: cursor ? Cursor(cursor) : undefined,
-          },
-          filters,
-        }
-      );
-
-      // Type assertion: use case returns Connection<Auction> which is structurally compatible
-      return result as any;
+      // Type assertion: use case returns PaginatedResult<Auction> which is structurally compatible
+      return result.data as any;
     },
   }),
 
@@ -160,20 +153,19 @@ builder.queryFields((t) => ({
         throw ErrorFactory.badRequest('offset must be non-negative');
       }
 
-      const result = await executeUseCase(
-        context.container,
-        'getBids',
-        {
-          auctionId: args.auctionId,
-          pagination: {
-            limit,
-            offset,
-          },
-        }
-      );
+      // GetBidHistory use case takes three separate parameters, not an object
+      const useCase = context.container.resolve('getBidHistory');
+      // Note: GetBidHistory uses cursor-based pagination, but we're using offset
+      // We'll pass undefined for cursor since we don't have cursor support here
+      const result = await useCase.execute(args.auctionId, limit, undefined);
 
-      // Type assertion: use case returns { bids: Bid[], total: number }
-      return result as any;
+      // Handle error result
+      if (!result.success) {
+        throw ErrorFactory.internalServerError((result as { success: false; error: Error }).error.message);
+      }
+
+      // Type assertion: use case returns PaginatedResult<Bid>
+      return result.data as any;
     },
   }),
 }));

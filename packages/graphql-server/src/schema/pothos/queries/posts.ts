@@ -13,7 +13,7 @@
 import { builder } from '../builder.js';
 import { PostType, PostConnectionType } from '../types/posts.js';
 import { executeUseCase, executeOptionalUseCase } from '../../../resolvers/helpers/resolverHelpers.js';
-import { Handle, UserId, Cursor } from '../../../shared/types/index.js';
+import { Handle, UserId, Cursor, PostId } from '../../../shared/types/index.js';
 import { ErrorFactory } from '../../../infrastructure/errors/ErrorFactory.js';
 import type { GraphQLContext } from '../../../context.js';
 
@@ -45,7 +45,7 @@ builder.queryFields((t) => ({
       const result = await executeOptionalUseCase(
         context.container,
         'getPostById',
-        { postId: args.id }
+        { postId: PostId(args.id) }
       );
 
       return result as any;

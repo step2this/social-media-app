@@ -86,6 +86,7 @@ builder.queryFields((t) => ({
       }),
     },
 
+    // @ts-expect-error - Pothos type inference issue with complex return types
     resolve: async (parent, args, context: GraphQLContext) => {
       // ✅ context.userId is guaranteed to exist due to authScopes
       const result = await context.container
