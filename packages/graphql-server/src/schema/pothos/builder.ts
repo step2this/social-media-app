@@ -9,6 +9,7 @@ import SchemaBuilder from '@pothos/core';
 import ScopeAuthPlugin from '@pothos/plugin-scope-auth';
 import ValidationPlugin from '@pothos/plugin-validation';
 import ComplexityPlugin from '@pothos/plugin-complexity';
+import RelayPlugin from '@pothos/plugin-relay';
 import type { GraphQLContext } from '../../context.js';
 
 /**
@@ -29,7 +30,7 @@ export const builder = new SchemaBuilder<{
   Context: GraphQLContext;
   AuthScopes: AuthScopes;
 }>({
-  plugins: [ScopeAuthPlugin, ValidationPlugin, ComplexityPlugin],
+  plugins: [ScopeAuthPlugin, ValidationPlugin, ComplexityPlugin, RelayPlugin],
   scopeAuth: {
     authScopes: (context: GraphQLContext) => ({
       authenticated: !!context.userId,
@@ -53,6 +54,17 @@ export const builder = new SchemaBuilder<{
       // Max query breadth (fields per level)
       breadth: 50,
     },
+  },
+  relay: {
+    // Relay plugin configuration
+    // Use clientMutationId: 'optional' for flexibility (not required in all mutations)
+    clientMutationId: 'omit',
+
+    // Cursor encoding (default is base64 JSON)
+    cursorType: 'String',
+
+    // Enable branded types for node IDs
+    brandLoadedObjects: false,
   },
 } as any); // Type assertion needed for Pothos plugin config
 
