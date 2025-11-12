@@ -175,8 +175,12 @@
   }
 
   # Note: LikeResponse, LikeStatus, FollowResponse, FollowStatus moved to Pothos schema
-  # Note: DeleteResponse moved to Pothos schema
   # Note: MarkAllReadResponse moved to Pothos schema
+
+  # DeleteResponse - Still needed by SDL mutations (deletePost) until Posts module migrated
+  type DeleteResponse {
+    success: Boolean!
+  }
 
   type MarkFeedReadResponse {
     updatedCount: Int!
