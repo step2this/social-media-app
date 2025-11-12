@@ -20,7 +20,7 @@ export async function POST() {
       { success: true },
       { status: 200 }
     );
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Invalid refresh token' },
       { status: 401 }
