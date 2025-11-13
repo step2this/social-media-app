@@ -2,7 +2,8 @@
  * PostCard Component Tests
  *
  * Behavioral tests for the PostCard component.
- * Tests user interactions and UI updates without mocking internal implementation.
+ * Tests user interactions and UI updates using dependency injection.
+ * No module-level mocks - dependencies are injected via props.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -11,14 +12,6 @@ import userEvent from '@testing-library/user-event';
 import { PostCard } from '@/components/posts/PostCard';
 import { createMockPost, createMockPostWithLikes } from '../helpers/fixtures';
 import type { Post } from '@/lib/graphql/types';
-
-// Mock Server Actions at module level
-vi.mock('@/app/actions/posts', () => ({
-  likePost: vi.fn(),
-  unlikePost: vi.fn(),
-}));
-
-import { likePost, unlikePost } from '@/app/actions/posts';
 
 describe('PostCard', () => {
   beforeEach(() => {
@@ -84,23 +77,25 @@ describe('PostCard', () => {
   });
 
   describe('Like State Display', () => {
-    it('should show empty heart icon when post is not liked', () => {
+    it('should show unliked state when post is not liked', () => {
       const post = createMockPostWithLikes(10, false);
 
       render(<PostCard post={post} />);
 
-      const likeButton = screen.getByRole('button', { name: /favorite/i });
-      expect(likeButton).toBeInTheDocument();
-      expect(screen.getByText('favorite_border')).toBeInTheDocument();
+      const likeButton = screen.getByTestId('like-button');
+      expect(likeButton).toHaveAttribute('aria-label', 'Like post');
+      expect(likeButton).toHaveAttribute('aria-pressed', 'false');
       expect(screen.getByText('10')).toBeInTheDocument();
     });
 
-    it('should show filled heart icon when post is already liked', () => {
+    it('should show liked state when post is already liked', () => {
       const post = createMockPostWithLikes(10, true);
 
       render(<PostCard post={post} />);
 
-      expect(screen.getByText('favorite')).toBeInTheDocument();
+      const likeButton = screen.getByTestId('like-button');
+      expect(likeButton).toHaveAttribute('aria-label', 'Unlike post');
+      expect(likeButton).toHaveAttribute('aria-pressed', 'true');
       expect(screen.getByText('10')).toBeInTheDocument();
     });
   });
@@ -110,62 +105,62 @@ describe('PostCard', () => {
       const user = userEvent.setup();
       const post = createMockPostWithLikes(10, false);
 
-      // Mock successful like response
-      vi.mocked(likePost).mockResolvedValue({
+      const mockLike = vi.fn().mockResolvedValue({
         success: true,
         likesCount: 11,
         isLiked: true,
       });
 
-      render(<PostCard post={post} />);
+      render(<PostCard post={post} onLike={mockLike} />);
+
+      const likeButton = screen.getByTestId('like-button');
 
       // Initial state: not liked, count = 10
-      expect(screen.getByText('favorite_border')).toBeInTheDocument();
+      expect(likeButton).toHaveAttribute('aria-pressed', 'false');
       expect(screen.getByText('10')).toBeInTheDocument();
 
       // Click like button
-      const likeButton = screen.getAllByRole('button')[0];
       await user.click(likeButton);
 
       // Optimistic update: should immediately show liked state
       await waitFor(() => {
-        expect(screen.getByText('favorite')).toBeInTheDocument();
+        expect(likeButton).toHaveAttribute('aria-pressed', 'true');
         expect(screen.getByText('11')).toBeInTheDocument();
       });
 
       // Verify Server Action was called
-      expect(likePost).toHaveBeenCalledWith('post-1');
+      expect(mockLike).toHaveBeenCalledWith('post-1');
     });
 
     it('should update UI optimistically when clicking unlike', async () => {
       const user = userEvent.setup();
       const post = createMockPostWithLikes(10, true);
 
-      // Mock successful unlike response
-      vi.mocked(unlikePost).mockResolvedValue({
+      const mockUnlike = vi.fn().mockResolvedValue({
         success: true,
         likesCount: 9,
         isLiked: false,
       });
 
-      render(<PostCard post={post} />);
+      render(<PostCard post={post} onUnlike={mockUnlike} />);
+
+      const likeButton = screen.getByTestId('like-button');
 
       // Initial state: liked, count = 10
-      expect(screen.getByText('favorite')).toBeInTheDocument();
+      expect(likeButton).toHaveAttribute('aria-pressed', 'true');
       expect(screen.getByText('10')).toBeInTheDocument();
 
       // Click unlike button
-      const likeButton = screen.getAllByRole('button')[0];
       await user.click(likeButton);
 
       // Optimistic update: should immediately show unliked state
       await waitFor(() => {
-        expect(screen.getByText('favorite_border')).toBeInTheDocument();
+        expect(likeButton).toHaveAttribute('aria-pressed', 'false');
         expect(screen.getByText('9')).toBeInTheDocument();
       });
 
       // Verify Server Action was called
-      expect(unlikePost).toHaveBeenCalledWith('post-1');
+      expect(mockUnlike).toHaveBeenCalledWith('post-1');
     });
 
     it('should sync with server response after successful like', async () => {
@@ -173,15 +168,15 @@ describe('PostCard', () => {
       const post = createMockPostWithLikes(10, false);
 
       // Server returns slightly different count (race condition scenario)
-      vi.mocked(likePost).mockResolvedValue({
+      const mockLike = vi.fn().mockResolvedValue({
         success: true,
         likesCount: 12, // Server says 12, not 11
         isLiked: true,
       });
 
-      render(<PostCard post={post} />);
+      render(<PostCard post={post} onLike={mockLike} />);
 
-      const likeButton = screen.getAllByRole('button')[0];
+      const likeButton = screen.getByTestId('like-button');
       await user.click(likeButton);
 
       // Should sync to server's count
@@ -197,17 +192,15 @@ describe('PostCard', () => {
       // Mock to simulate an alert
       const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
-      // Mock failed like response
-      vi.mocked(likePost).mockResolvedValue({
+      const mockLike = vi.fn().mockResolvedValue({
         success: false,
         likesCount: 0,
         isLiked: false,
       });
 
-      render(<PostCard post={post} />);
+      render(<PostCard post={post} onLike={mockLike} />);
 
-      // Click like button
-      const likeButton = screen.getAllByRole('button')[0];
+      const likeButton = screen.getByTestId('like-button');
       await user.click(likeButton);
 
       // Should show error alert after failed mutation
@@ -223,7 +216,7 @@ describe('PostCard', () => {
       const post = createMockPostWithLikes(10, false);
 
       // Make the mutation slow
-      vi.mocked(likePost).mockImplementation(
+      const mockLike = vi.fn().mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve({
           success: true,
           likesCount: 11,
@@ -231,9 +224,9 @@ describe('PostCard', () => {
         }), 100))
       );
 
-      render(<PostCard post={post} />);
+      render(<PostCard post={post} onLike={mockLike} />);
 
-      const likeButton = screen.getAllByRole('button')[0];
+      const likeButton = screen.getByTestId('like-button');
       await user.click(likeButton);
 
       // Button should be disabled during mutation
@@ -262,7 +255,7 @@ describe('PostCard', () => {
 
       render(<PostCard post={post} />);
 
-      const commentButton = screen.getAllByRole('button')[1]; // Second button
+      const commentButton = screen.getByTestId('comment-button');
       await user.click(commentButton);
 
       expect(window.location.href).toBe('/post/post-123');

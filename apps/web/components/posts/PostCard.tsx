@@ -7,9 +7,15 @@ import { likePost, unlikePost } from '@/app/actions/posts';
 
 interface PostCardProps {
   post: Post;
+  onLike?: typeof likePost;
+  onUnlike?: typeof unlikePost;
 }
 
-export function PostCard({ post }: PostCardProps) {
+export function PostCard({
+  post,
+  onLike = likePost,
+  onUnlike = unlikePost
+}: PostCardProps) {
   const [isPending, startTransition] = useTransition();
   const [optimisticLiked, setOptimisticLiked] = useState(post.isLiked);
   const [optimisticCount, setOptimisticCount] = useState(post.likesCount);
@@ -23,8 +29,8 @@ export function PostCard({ post }: PostCardProps) {
     // Server action - runs in background
     startTransition(async () => {
       const result = newLiked
-        ? await likePost(post.id)
-        : await unlikePost(post.id);
+        ? await onLike(post.id)
+        : await onUnlike(post.id);
 
       if (!result.success) {
         // Revert on error
@@ -77,6 +83,9 @@ export function PostCard({ post }: PostCardProps) {
 
       <div className="post-actions">
         <button
+          data-testid="like-button"
+          aria-label={optimisticLiked ? 'Unlike post' : 'Like post'}
+          aria-pressed={optimisticLiked}
           className="action-button"
           onClick={handleLike}
           disabled={isPending}
@@ -85,17 +94,26 @@ export function PostCard({ post }: PostCardProps) {
             color: optimisticLiked ? '#e91e63' : undefined,
           }}
         >
-          <span className="material-icons">
+          <span className="material-icons" aria-hidden="true">
             {optimisticLiked ? 'favorite' : 'favorite_border'}
           </span>
           <span>{optimisticCount}</span>
         </button>
-        <button className="action-button" onClick={handleComment}>
-          <span className="material-icons">comment</span>
+        <button
+          data-testid="comment-button"
+          aria-label="Comment on post"
+          className="action-button"
+          onClick={handleComment}
+        >
+          <span className="material-icons" aria-hidden="true">comment</span>
           <span>{post.commentsCount}</span>
         </button>
-        <button className="action-button">
-          <span className="material-icons">share</span>
+        <button
+          data-testid="share-button"
+          aria-label="Share post"
+          className="action-button"
+        >
+          <span className="material-icons" aria-hidden="true">share</span>
         </button>
       </div>
     </article>
