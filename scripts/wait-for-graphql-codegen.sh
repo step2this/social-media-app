@@ -3,7 +3,7 @@
 
 MAX_RETRIES=30
 RETRY_DELAY=2
-GRAPHQL_URL="http://localhost:4000/graphql"
+GRAPHQL_URL="http://localhost:4000/"
 
 echo "Waiting for GraphQL server at $GRAPHQL_URL..."
 
