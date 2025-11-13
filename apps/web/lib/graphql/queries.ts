@@ -216,3 +216,25 @@ export const UNLIKE_POST = gql`
     }
   }
 `;
+
+export const CREATE_POST = gql`
+  mutation CreatePost($fileType: String!, $caption: String) {
+    createPost(fileType: $fileType, caption: $caption) {
+      post {
+        id
+        userId
+        caption
+        imageUrl
+        thumbnailUrl
+        likesCount
+        commentsCount
+        createdAt
+        updatedAt
+      }
+      uploadUrls {
+        imageUploadUrl
+        thumbnailUploadUrl
+      }
+    }
+  }
+`;

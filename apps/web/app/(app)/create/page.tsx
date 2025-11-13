@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { CreatePostForm } from '@/components/posts/CreatePostForm';
 import { logger } from '@/lib/logger';
 
 export const metadata: Metadata = {
@@ -10,10 +11,8 @@ export default function CreatePostPage() {
 
   return (
     <div>
-      <h1>Create Post</h1>
-      <p style={{ background: '#e3f2fd', padding: '1rem', borderRadius: '8px', color: '#1976d2' }}>
-        Form will be implemented in Phase 3.
-      </p>
+      <h1 className="page-title">Create Post</h1>
+      <CreatePostForm />
     </div>
   );
 }
