@@ -17,30 +17,10 @@ export function PostCard({
   onUnlike = unlikePost
 }: PostCardProps) {
   const [isPending, startTransition] = useTransition();
+  // Initialize from props ONCE - after that, local state is the source of truth
+  // This matches the pattern used by Instagram, Twitter, etc.
   const [optimisticLiked, setOptimisticLiked] = useState(post.isLiked);
   const [optimisticCount, setOptimisticCount] = useState(post.likesCount);
-
-  // Sync internal state with props when they change (after revalidation)
-  // This runs when the parent re-fetches and passes in new props
-  // BUT: Don't sync while a mutation is pending - we want to preserve optimistic updates
-  useEffect(() => {
-    console.log('[PostCard useEffect]', {
-      postId: post.id,
-      isPending,
-      'props.isLiked': post.isLiked,
-      'props.likesCount': post.likesCount,
-      'state.optimisticLiked': optimisticLiked,
-      'state.optimisticCount': optimisticCount,
-      willSync: !isPending
-    });
-
-    // Only sync if there's no pending mutation
-    // This prevents revalidation from overwriting optimistic updates
-    if (!isPending) {
-      setOptimisticLiked(post.isLiked);
-      setOptimisticCount(post.likesCount);
-    }
-  }, [post.isLiked, post.likesCount]); // NOTE: isPending is NOT a dependency - we only sync when props change
 
   const handleLike = () => {
     // Optimistic update - instant UI feedback
