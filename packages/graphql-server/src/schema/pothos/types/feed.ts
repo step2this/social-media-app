@@ -12,7 +12,7 @@
 
 import { builder } from '../builder.js';
 import { PostType } from './posts.js';
-import { PageInfoType } from './comments.js';
+// PageInfo is automatically created by Relay plugin via builder.connectionObject()
 
 /**
  * FeedItem Type
@@ -43,45 +43,22 @@ FeedItemType.implement({
 });
 
 /**
- * FeedEdge Type
+ * FeedConnection Type - Using Relay Plugin
  *
- * Edge type for Relay-style cursor pagination.
- */
-export const FeedEdgeType = builder.objectRef<any>('FeedEdge');
-
-FeedEdgeType.implement({
-  fields: (t) => ({
-    cursor: t.exposeString('cursor', {
-      description: 'Cursor for pagination',
-    }),
-    node: t.field({
-      type: FeedItemType,
-      description: 'The feed item node',
-      resolve: (parent: any) => parent.node,
-    }),
-  }),
-});
-
-/**
- * FeedConnection Type
+ * Replaces manual FeedEdge and FeedConnection definitions.
+ * The Relay plugin automatically creates both Connection and Edge types
+ * with proper Relay spec compliance.
  *
- * Relay-style connection for paginated feed items.
+ * Benefits over manual implementation:
+ * - ✅ Eliminates ~40 lines of boilerplate
+ * - ✅ Automatic cursor encoding/decoding
+ * - ✅ Standardized PageInfo structure
+ * - ✅ Relay spec compliance
+ * - ✅ Type-safe connection handling
  */
-export const FeedConnectionType = builder.objectRef<any>('FeedConnection');
-
-FeedConnectionType.implement({
-  fields: (t) => ({
-    edges: t.field({
-      type: [FeedEdgeType],
-      description: 'List of feed item edges',
-      resolve: (parent: any) => parent.edges,
-    }),
-    pageInfo: t.field({
-      type: PageInfoType,
-      description: 'Pagination information',
-      resolve: (parent: any) => parent.pageInfo,
-    }),
-  }),
+export const FeedConnectionType = builder.connectionObject({
+  type: FeedItemType,
+  name: 'FeedConnection',
 });
 
 /**
