@@ -132,6 +132,11 @@ async function startServer() {
     console.log(`   TABLE_NAME: ${process.env.TABLE_NAME}`);
     console.log(`   MEDIA_BUCKET_NAME: ${process.env.MEDIA_BUCKET_NAME || 'N/A'}`);
     console.log(`   AWS_REGION: ${process.env.AWS_REGION}`);
+
+    // Log JWT secret (masked for security)
+    const jwtSecret = process.env.JWT_SECRET || '';
+    const jwtSecretMasked = jwtSecret ? `${jwtSecret.substring(0, 10)}...${jwtSecret.substring(jwtSecret.length - 10)}` : 'NOT SET';
+    console.log(`   JWT_SECRET: ${jwtSecretMasked}`);
     console.log('');
 
     // Create and start Apollo Server using Pothos schema
@@ -141,6 +146,30 @@ async function startServer() {
       // Development features (introspection, playground, stack traces)
       introspection: true,
       includeStacktraceInErrorResponses: true,
+
+      // Request logging plugin for development
+      plugins: [
+        {
+          async requestDidStart(requestContext) {
+            const operationName = requestContext.request.operationName || 'anonymous';
+            const query = requestContext.request.query || '';
+            const operation = query.trim().split(/\s+/)[0]; // query, mutation, etc
+
+            console.log(`📨 [GraphQL] ${operation} ${operationName}`);
+
+            return {
+              async willSendResponse(context) {
+                const errors = context.response.body.kind === 'single' ? context.response.body.singleResult.errors : undefined;
+                if (errors && errors.length > 0) {
+                  console.log(`❌ [GraphQL] ${operationName} - Error:`, errors[0].message);
+                } else {
+                  console.log(`✅ [GraphQL] ${operationName} - Success`);
+                }
+              },
+            };
+          },
+        },
+      ],
 
       // Custom error formatting
       formatError: (formattedError) => {

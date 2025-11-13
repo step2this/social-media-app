@@ -1,0 +1,272 @@
+@import './design-system.css';
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--tama-gray-50);
+  color: var(--tama-gray-900);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* App Layout Styles */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--tama-gray-50);
+}
+
+.main-container {
+  flex: 1;
+  margin-left: 260px;
+  min-height: 100vh;
+}
+
+.main-content {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 260px;
+  height: 100vh;
+  background: var(--tama-white);
+  border-right: 1px solid var(--tama-gray-200);
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  padding: 1rem 0;
+  margin-bottom: 2rem;
+}
+
+.sidebar-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--tama-blue);
+}
+
+.sidebar-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-links li {
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-links a {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  color: var(--tama-gray-700);
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.sidebar-links a:hover {
+  background-color: var(--tama-gray-100);
+  color: var(--tama-gray-900);
+}
+
+.sidebar-links a.active {
+  background-color: var(--tama-blue);
+  color: var(--tama-white);
+}
+
+.sidebar-links .material-icons {
+  font-size: 24px;
+}
+
+/* Header Styles */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--tama-white);
+  border-bottom: 1px solid var(--tama-gray-200);
+  padding: 1rem 2rem;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-info img {
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+}
+
+.user-info span {
+  font-weight: 500;
+  color: var(--tama-gray-700);
+}
+
+.app-header button {
+  padding: 0.5rem 1rem;
+  background-color: var(--tama-gray-100);
+  border: 1px solid var(--tama-gray-300);
+  border-radius: 6px;
+  color: var(--tama-gray-700);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.app-header button:hover {
+  background-color: var(--tama-gray-200);
+}
+
+/* Post Card Styles */
+.post-card {
+  background: var(--tama-white);
+  border: 1px solid var(--tama-gray-200);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.post-header {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.post-header .avatar {
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+}
+
+.post-meta {
+  flex: 1;
+}
+
+.post-meta strong {
+  display: block;
+  font-weight: 600;
+  color: var(--tama-gray-900);
+}
+
+.post-meta .handle {
+  color: var(--tama-gray-500);
+  font-size: 0.9rem;
+  margin-left: 0.5rem;
+}
+
+.post-meta time {
+  display: block;
+  color: var(--tama-gray-500);
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.post-content {
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.post-content p {
+  margin-bottom: 0.75rem;
+}
+
+.post-media {
+  margin-top: 1rem;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.post-media img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.post-actions {
+  display: flex;
+  gap: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--tama-gray-200);
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: none;
+  border: none;
+  color: var(--tama-gray-600);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.action-button:hover {
+  background-color: var(--tama-gray-100);
+  color: var(--tama-gray-900);
+}
+
+.action-button .material-icons {
+  font-size: 20px;
+}
+
+.action-button span {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Utility Styles */
+.info-banner {
+  background: #e3f2fd;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  color: #1976d2;
+  font-size: 0.9rem;
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--tama-gray-900);
+  margin-bottom: 1.5rem;
+}

@@ -1,0 +1,1149 @@
+/*
+  Design System: TamaFriends - Virtual Pet Social Network
+  Fusion of Mochi's clean pixel-art aesthetic + nostalgic Tamagotchi vibes
+*/
+
+:root {
+  /* Color Palette - Mochi-inspired Monochromatic Base */
+
+  /* Core UI Colors - Clean & Minimal */
+  --tama-black: #000000;
+  --tama-white: #ffffff;
+  --tama-gray-50: #fafafa;
+  --tama-gray-100: #f5f5f5;
+  --tama-gray-200: #e5e5e5;
+  --tama-gray-300: #d4d4d4;
+  --tama-gray-400: #a3a3a3;
+  --tama-gray-500: #737373;
+  --tama-gray-600: #525252;
+  --tama-gray-700: #404040;
+  --tama-gray-800: #262626;
+  --tama-gray-900: #171717;
+
+  /* Tamagotchi-Inspired Accent Colors (Strategic Use Only) */
+  --tama-pink: #ff69b4;        /* Love/friendship actions */
+  --tama-blue: #5aacfa;        /* Mochi blue - primary interactive */
+  --tama-mint: #50e3c2;        /* Health/happiness states */
+  --tama-yellow: #f5d76e;      /* Attention/alerts */
+  --tama-orange: #ff8a65;      /* Play/activity */
+  --tama-purple: #9b59b6;      /* Special/premium features */
+
+  /* French Automotive Heritage Colors (1980s Racing & Design) */
+  --tama-racing-red: #dc143c;     /* Peugeot Cherry Red - primary motorsport */
+  --tama-electric-blue: #5aacfa;  /* Miami Blue - Peugeot performance (aliased to tama-blue) */
+  --tama-rally-yellow: #efdf00;   /* Renault Corporate Yellow - high visibility */
+  --tama-sorrento-green: #2d5a3d; /* Peugeot dark pearlescent - premium luxury */
+  --tama-navy-blue: #1e3a8a;     /* Peugeot motorsport livery - deep corporate */
+
+  /* Sophisticated Metallic Palette */
+  --tama-pearl-white: #f8f8ff;    /* Premium pearl finish */
+  --tama-champagne-metallic: #f7e7ce; /* Accessible luxury tone */
+  --tama-silver-grey: #c0c0c0;    /* Modern metallic neutral */
+  --tama-arctic-white: #f8f8ff;   /* Clean optimistic base */
+
+  /* Citroën Avant-Garde Collection */
+  --tama-rouge-delage: #dc143c;   /* Delage Red (Charleston series) */
+  --tama-jaune-helios: #efdf00;   /* Hélios Yellow - poetic French naming */
+  --tama-bleu-regate: #4682b4;    /* Regatta Blue - sophisticated nautical */
+  --tama-cuivre-tammela: #b87333; /* Tammela Copper - artisanal metallic */
+  --tama-night-grey: #374151;     /* Cormorant Grey - sophisticated dark */
+
+  /* Renault Performance Heritage */
+  --tama-bleu-olympe: #5aacfa;    /* Olympic Blue - sporting excellence */
+  --tama-rouge-grenade: #dc143c;  /* Grenade Red - warmer than Italian racing red */
+  --tama-aztec-gold: #ffd700;     /* Continental sophistication */
+
+  /* Memphis Movement Integration */
+  --tama-neon-pink: #ff10f0;      /* Bold geometric contrasts */
+  --tama-bright-lime: #39ff14;    /* Electric accent */
+  --tama-vivid-orange: #ff6600;   /* Memphis energy */
+  --tama-electric-purple: #9d00ff; /* Avant-garde statement */
+
+  /* System State Colors */
+  --success: #22c55e;
+  --warning: #eab308;
+  --error: #ef4444;
+  --info: var(--tama-blue);
+
+  /* Legacy Color Variables - TamaFriends Compatible */
+  --deep-navy: var(--tama-white);        /* Make backgrounds white instead of dark */
+  --charcoal: var(--tama-gray-50);       /* Light gray background */
+  --medium-gray: var(--tama-gray-300);   /* Border color */
+  --off-white: var(--tama-gray-700);     /* Dark text on light backgrounds */
+  /* --electric-blue deprecated - use --tama-electric-blue instead */
+  --coral-pink: var(--error);
+  --lime-green: var(--success);
+
+  /* LCD/Screen Aesthetic (Tamagotchi Homage) */
+  --lcd-bg: #2d3748;           /* Dark LCD screen background */
+  --lcd-light: #e2e8f0;        /* Light LCD screen background */
+  --lcd-green: #68d391;        /* Classic monochrome green */
+  --lcd-text: #1a202c;
+
+  /* Minimal Gradients - Used Sparingly */
+  --gradient-subtle: linear-gradient(135deg, var(--tama-gray-50) 0%, var(--tama-gray-100) 100%);
+  --gradient-dark: linear-gradient(135deg, var(--tama-gray-800) 0%, var(--tama-gray-900) 100%);
+  --gradient-primary: linear-gradient(135deg, var(--tama-blue) 0%, var(--tama-mint) 100%);
+  --gradient-accent: linear-gradient(135deg, var(--tama-pink) 0%, var(--tama-orange) 100%);
+
+  /* French Automotive Gradients & Metallic Effects */
+  --tama-metallic-gradient: conic-gradient(from 45deg, var(--tama-pearl-white), var(--tama-champagne-metallic), var(--tama-pearl-white));
+  --tama-racing-gradient: linear-gradient(135deg, var(--tama-racing-red) 0%, var(--tama-rouge-grenade) 100%);
+  --tama-performance-gradient: linear-gradient(135deg, var(--tama-electric-blue) 0%, var(--tama-bleu-olympe) 100%);
+  --tama-premium-gradient: linear-gradient(135deg, var(--tama-sorrento-green) 0%, var(--tama-champagne-metallic) 100%);
+  --tama-motorsport-gradient: linear-gradient(90deg, var(--tama-rally-yellow) 0%, var(--tama-navy-blue) 50%, var(--tama-racing-red) 100%);
+
+  /* Pearlescent & Depth Effects */
+  --tama-depth-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
+  --tama-metallic-shadow: 0 4px 16px rgba(199, 199, 199, 0.4), 0 1px 4px rgba(0,0,0,0.1);
+  --tama-racing-shadow: 0 4px 16px rgba(220, 20, 60, 0.3), 0 1px 4px rgba(0,0,0,0.2);
+  --tama-performance-shadow: 0 4px 16px rgba(90, 172, 250, 0.3), 0 1px 4px rgba(0,0,0,0.1);
+
+  /* Typography - TamaFriends Font System */
+  --font-pixel: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;      /* Headers/display - clean Helvetica */
+  --font-ui: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;         /* UI elements - clean & readable */
+  --font-body: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;       /* Body text - optimized for reading */
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;               /* Code/technical content */
+  --font-display: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;    /* Legacy compatibility */
+  --font-primary: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;    /* Legacy compatibility */
+
+  /* Font Weights */
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-black: 900;
+
+  /* Font Sizes - 14pt Typography System */
+  --text-xs: 0.75rem;     /* 12pt */
+  --text-sm: 0.8125rem;   /* 13pt */
+  --text-base: 0.875rem;  /* 14pt - primary size */
+  --text-lg: 1rem;        /* 16pt */
+  --text-xl: 1.125rem;    /* 18pt */
+  --text-2xl: 1.25rem;    /* 20pt */
+  --text-3xl: 1.5rem;     /* 24pt */
+  --text-4xl: 1.875rem;   /* 30pt */
+  --text-5xl: 2.25rem;    /* 36pt */
+
+  /* === OPTIMIZED TYPOGRAPHY (50% smaller headlines for efficiency) === */
+  --text-compact-xs: clamp(0.625rem, 0.59rem + 0.18vw, 0.75rem);     /* xs * 0.83 */
+  --text-compact-sm: clamp(0.75rem, 0.69rem + 0.25vw, 0.875rem);     /* sm * 0.85 */
+  --text-compact-base: clamp(0.875rem, 0.81rem + 0.32vw, 1rem);      /* base * 0.87 */
+  --text-compact-lg: clamp(0.9375rem, 0.87rem + 0.34vw, 1.0625rem);  /* lg * 0.83 */
+  --text-compact-xl: clamp(1rem, 0.93rem + 0.36vw, 1.125rem);        /* xl * 0.75 */
+  --text-compact-2xl: clamp(1.125rem, 1.04rem + 0.43vw, 1.25rem);    /* 2xl * 0.66 */
+  --text-compact-3xl: clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem);       /* 3xl * 0.66 */
+  --text-compact-4xl: clamp(1.5rem, 1.36rem + 0.71vw, 1.875rem);     /* 4xl * 0.62 */
+  --text-compact-5xl: clamp(1.875rem, 1.68rem + 0.98vw, 2.25rem);    /* 5xl * 0.62 */
+
+  /* Spacing System - 8px base */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  --space-20: 5rem;     /* 80px */
+  --space-24: 6rem;     /* 96px */
+
+  /* === OPTIMIZED SPACING (50% reduction for efficient screen usage) === */
+  --space-compact-1: 0.125rem;  /* 2px */
+  --space-compact-2: 0.25rem;   /* 4px */
+  --space-compact-3: 0.375rem;  /* 6px */
+  --space-compact-4: 0.5rem;    /* 8px */
+  --space-compact-6: 0.75rem;   /* 12px */
+  --space-compact-8: 1rem;      /* 16px */
+  --space-compact-12: 1.5rem;   /* 24px */
+  --space-compact-16: 2rem;     /* 32px */
+
+  /* === LAYOUT WIDTHS (Optimized - 33% reduction) === */
+  --sidebar-width-desktop: 280px;          /* Current */
+  --sidebar-width-optimized: 187px;        /* 33% narrower */
+  --sidebar-width-tablet: 80px;            /* Icon-only mode */
+
+  --rightpanel-width-desktop: 320px;       /* Current */
+  --rightpanel-width-optimized: 213px;     /* 33% narrower */
+
+  /* Border Radius - Pixel-Art Inspired (Minimal) */
+  --radius-none: 0;
+  --radius-sm: 2px;       /* Very minimal rounding */
+  --radius-md: 4px;       /* Subtle pixel-friendly rounding */
+  --radius-lg: 6px;       /* Moderate rounding */
+  --radius-xl: 8px;       /* For special elements */
+  --radius-full: 50%;     /* Circular elements only */
+
+  /* Pixel Border System - Mochi Inspired */
+  --pixel-border: none;
+  --pixel-border-thick: none;
+  --pixel-border-accent: none;
+
+  /* === OPTIMIZED BORDERS (Thinner for cleaner aesthetic) === */
+  --pixel-border-thin: none;
+  --pixel-border-thin-accent: none;
+  --pixel-border-thin-gray: none;
+
+  /* Pixel Shadow Effects - Clean 3D Depth */
+  --pixel-shadow-sm: 2px 2px 0px var(--tama-gray-300);
+  --pixel-shadow-md: 4px 4px 0px var(--tama-gray-300);
+  --pixel-shadow-lg: 6px 6px 0px var(--tama-gray-300);
+  --pixel-shadow-colored: 4px 4px 0px var(--tama-blue);
+  --pixel-shadow-hover: 3px 3px 0px var(--tama-gray-400);
+
+  /* Subtle Traditional Shadows (For Depth, Not Focus) */
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 4px 8px rgba(0, 0, 0, 0.08);
+  --shadow-modal: 0 20px 40px rgba(0, 0, 0, 0.15);
+  --shadow-glow: 0 4px 8px rgba(90, 172, 250, 0.3);
+  --shadow-neon-sm: 0 2px 4px rgba(90, 172, 250, 0.2);
+  --shadow-neon-md: 0 4px 12px rgba(90, 172, 250, 0.3);
+  --shadow-neon-lg: 0 8px 24px rgba(90, 172, 250, 0.4);
+
+  /* Animation */
+  --transition-fast: 0.15s ease-out;
+  --transition-normal: 0.25s ease-out;
+  --transition-slow: 0.4s ease-out;
+
+  /* Z-Index */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-toast: 1080;
+
+  /* Breakpoints */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+/* ===== TAMAFRIENDS COMPONENT SYSTEM ===== */
+
+/* Base Component Patterns - DRY Foundation */
+
+/* Automotive Typography Pattern */
+.tama-typography-automotive {
+  font-family: var(--font-pixel);
+  color: var(--tama-text-primary);
+  letter-spacing: 0.05em;
+}
+
+.tama-text-racing-red {
+  color: var(--tama-racing-red);
+}
+
+/* Automotive Interactive Pattern */
+.tama-interactive-automotive {
+  transition: var(--transition-fast);
+  cursor: pointer;
+}
+
+.tama-interactive-automotive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-automotive);
+}
+
+/* Base pixel-border component class */
+.tama-pixel {
+  border: var(--pixel-border);
+  box-shadow: var(--pixel-shadow-md);
+  background: var(--tama-white);
+  transition: all var(--transition-fast);
+}
+
+.tama-pixel:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--pixel-shadow-hover);
+}
+
+/* Button component system */
+.tama-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  border: var(--pixel-border);
+  border-radius: var(--radius-sm);
+  background: var(--tama-white);
+  color: var(--tama-black);
+  box-shadow: var(--pixel-shadow-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tama-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--pixel-shadow-md);
+}
+
+.tama-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: var(--pixel-shadow-sm);
+}
+
+.tama-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Button variants */
+.tama-btn--primary {
+  background: var(--tama-blue);
+  border-color: var(--tama-blue);
+  color: var(--tama-white);
+  box-shadow: var(--pixel-shadow-colored);
+}
+
+.tama-btn--secondary {
+  background: var(--tama-gray-100);
+  border-color: var(--tama-gray-400);
+  color: var(--tama-gray-800);
+}
+
+/* French Automotive Button Variants */
+.tama-btn--automotive {
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.tama-btn--automotive::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left var(--transition-slow);
+}
+
+.tama-btn--automotive:hover::before {
+  left: 100%;
+}
+
+.tama-btn--racing-red {
+  background: var(--tama-racing-gradient);
+  border-color: var(--tama-racing-red);
+  color: var(--tama-white);
+  box-shadow: var(--tama-racing-shadow);
+}
+
+.tama-btn--racing-red:hover {
+  box-shadow: var(--tama-racing-shadow), 0 8px 24px rgba(220, 20, 60, 0.4);
+  transform: translate(-1px, -1px);
+}
+
+.tama-btn--performance-blue {
+  background: var(--tama-performance-gradient);
+  border-color: var(--tama-electric-blue);
+  color: var(--tama-white);
+  box-shadow: var(--tama-performance-shadow);
+}
+
+.tama-btn--premium-metallic {
+  background: var(--tama-metallic-gradient);
+  border-color: var(--tama-champagne-metallic);
+  color: var(--tama-gray-800);
+  box-shadow: var(--tama-metallic-shadow);
+}
+
+/* Card component system */
+.tama-card {
+  background: var(--tama-white);
+  border: var(--pixel-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--pixel-shadow-md);
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.tama-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--pixel-shadow-lg);
+}
+
+.tama-card--interactive {
+  cursor: pointer;
+}
+
+/* Input component system */
+.tama-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  background: var(--tama-white);
+  border: var(--pixel-border);
+  border-radius: var(--radius-sm);
+  color: var(--tama-black);
+  transition: all var(--transition-fast);
+}
+
+.tama-input:focus {
+  outline: none;
+  border-color: var(--tama-blue);
+  box-shadow: var(--pixel-shadow-colored);
+}
+
+.tama-input::placeholder {
+  color: var(--tama-gray-500);
+}
+
+/* Left Sidebar 3D Shadow Effect */
+.left-sidebar {
+  box-shadow: var(--pixel-shadow-lg);
+}
+
+/* Account Dropdown Styles - Integrated Navigation */
+.nav-link.account-trigger {
+  justify-content: space-between;
+}
+
+.nav-icon--arrow {
+  margin-left: auto;
+  font-size: var(--text-sm);
+}
+
+/* Account Dropdown Styles - Standalone Component */
+.account-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.account-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--tama-white);
+  border: none;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--tama-black);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  gap: var(--space-2);
+}
+
+.account-trigger:hover {
+  background: var(--tama-gray-50);
+  transform: translateY(-1px);
+  box-shadow: var(--pixel-shadow-hover);
+}
+
+.account-label {
+  flex: 1;
+  text-align: left;
+  margin-left: var(--space-2);
+}
+
+.account-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: var(--space-2);
+  background: var(--tama-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--pixel-shadow-lg);
+  overflow: hidden;
+  z-index: 1000;
+  min-width: 280px;
+}
+
+/* Account menu in collapsed sidebar - position to the right */
+.account-menu--collapsed {
+  top: 0;
+  left: 100%;
+  right: auto;
+  margin-top: 0;
+  margin-left: var(--space-2);
+}
+
+.account-menu-header {
+  display: flex;
+  align-items: center;
+  padding: var(--space-4);
+  gap: var(--space-3);
+  background: var(--tama-gray-50);
+  border-bottom: 1px solid var(--tama-gray-200);
+}
+
+.account-avatar .material-icon {
+  color: var(--tama-blue);
+}
+
+.account-info {
+  flex: 1;
+}
+
+.account-name {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--tama-black);
+}
+
+.account-email {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--tama-gray-600);
+}
+
+.account-menu-divider {
+  height: 1px;
+  background: var(--tama-gray-200);
+  margin: 0 var(--space-2);
+}
+
+.account-menu-items {
+  padding: var(--space-2) 0;
+}
+
+.account-menu-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: none;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  color: var(--tama-black);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  gap: var(--space-3);
+}
+
+.account-menu-item:hover {
+  background: var(--tama-gray-100);
+}
+
+.account-menu-item--logout {
+  color: var(--error);
+}
+
+.account-menu-item--logout:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.sidebar-account {
+  margin-top: auto;
+  padding: var(--space-4);
+}
+
+/* Typography classes */
+.tama-heading {
+  font-family: var(--font-pixel);
+  font-weight: var(--weight-bold);
+  color: var(--tama-black);
+  letter-spacing: -0.02em;
+}
+
+.tama-text {
+  font-family: var(--font-body);
+  color: var(--tama-gray-700);
+  line-height: 1.5;
+}
+
+/* Pet-themed utility classes */
+.tama-pet-happy { color: var(--tama-mint); }
+.tama-pet-love { color: var(--tama-pink); }
+.tama-pet-play { color: var(--tama-orange); }
+.tama-pet-special { color: var(--tama-purple); }
+.tama-pet-alert { color: var(--tama-yellow); }
+
+/* LCD-Style Statistics Display (Wireframe Specification) */
+.stat-item--lcd {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) var(--space-5);
+  /* Subtle grid background inspired by the profile card */
+  background-image:
+    linear-gradient(0deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+  background-size: 8px 8px;
+  background-color: var(--tama-white);
+  border: 1px solid var(--tama-gray-300);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  position: relative;
+  min-width: 100px;
+  min-height: 72px;
+  flex: 1;
+}
+
+.stat-number--lcd {
+  /* Plain numbers - no effects, high contrast for readability */
+  font-family: var(--font-pixel);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  color: var(--tama-black);
+  text-shadow: none;
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-1);
+}
+
+.stats-container--metallic {
+  /* Clean container without heavy metallic effects */
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+/* Wireframe Profile Component Styles */
+.profile-display--wireframe {
+  display: grid;
+  grid-template-areas:
+    "avatar info actions"
+    "avatar info actions";
+  grid-template-columns: 200px 1fr auto;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  background: var(--tama-white);
+  border: var(--pixel-border-thick);
+  border-radius: var(--radius-lg);
+  position: relative;
+}
+
+.profile-display--ascii-borders::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    linear-gradient(90deg, var(--tama-gray-300) 1px, transparent 1px),
+    linear-gradient(var(--tama-gray-300) 1px, transparent 1px);
+  background-size: 20px 20px;
+  opacity: 0.1;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.profile-avatar-section--wireframe {
+  grid-area: avatar;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.profile-info-section--wireframe {
+  grid-area: info;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.profile-actions-section--wireframe {
+  grid-area: actions;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.avatar-container--wireframe {
+  width: 200px;
+  height: 200px;
+  border: var(--pixel-border-thick);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  position: relative;
+}
+
+.profile-username--wireframe {
+  font-family: var(--font-pixel);
+  font-size: var(--text-2xl);
+  color: var(--tama-racing-red);
+  margin-bottom: var(--space-2);
+}
+
+.profile-fullname--wireframe {
+  font-size: var(--text-lg);
+  color: var(--tama-gray-700);
+  margin-bottom: var(--space-4);
+}
+
+.profile-stats--wireframe {
+  margin: var(--space-4) 0;
+}
+
+.profile-bio--wireframe {
+  padding: var(--space-4);
+  background: var(--tama-gray-50);
+  border: var(--pixel-border);
+  border-radius: var(--radius-md);
+  font-style: italic;
+}
+
+.profile-meta--wireframe {
+  font-size: var(--text-sm);
+  color: var(--tama-gray-500);
+  margin-top: var(--space-4);
+}
+
+/* Responsive wireframe adjustments */
+.profile-display--mobile {
+  grid-template-areas:
+    "avatar"
+    "info"
+    "actions";
+  grid-template-columns: 1fr;
+  text-align: center;
+}
+
+.profile-display--mobile .avatar-container--wireframe {
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
+}
+
+.profile-display--desktop {
+  /* Enhanced spacing for desktop */
+  gap: var(--space-8);
+  padding: var(--space-8);
+}
+
+/* Layout utilities */
+.tama-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+.tama-grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.tama-flex {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Dark Mode Overrides */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --deep-navy: #0a0e27;
+    --charcoal: #1a1a2e;
+    --medium-gray: #16213e;
+    --off-white: #f8f9fa;
+  }
+}
+
+/* 80s Retro Keyframe Animations */
+@keyframes neon-pulse {
+  0%, 100% {
+    text-shadow:
+      0 0 5px var(--tama-electric-blue),
+      0 0 10px var(--tama-electric-blue),
+      0 0 15px var(--tama-electric-blue);
+  }
+  50% {
+    text-shadow:
+      0 0 2px var(--tama-electric-blue),
+      0 0 5px var(--tama-electric-blue),
+      0 0 8px var(--tama-electric-blue);
+  }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes retro-bounce {
+  0%, 20%, 53%, 80%, 100% { transform: translateY(0px); }
+  40%, 43% { transform: translateY(-15px); }
+  70% { transform: translateY(-7px); }
+  90% { transform: translateY(-2px); }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Utility Classes */
+.neon-text {
+  color: var(--tama-electric-blue);
+  text-shadow:
+    0 0 5px var(--tama-electric-blue),
+    0 0 10px var(--tama-electric-blue),
+    0 0 15px var(--tama-electric-blue);
+  animation: neon-pulse 2s ease-in-out infinite alternate;
+}
+
+.gradient-text {
+  background: var(--gradient-primary);
+  background-size: 300% 300%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 3s ease infinite;
+}
+
+.retro-card {
+  background: var(--deep-navy);
+  border: 2px solid var(--tama-electric-blue);
+  box-shadow:
+    0 0 20px rgba(0, 212, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+.retro-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(0, 212, 255, 0.2),
+    transparent
+  );
+  transition: left var(--transition-slow);
+}
+
+.retro-card:hover::before {
+  left: 100%;
+}
+
+/* Component Base Styles */
+/* Legacy btn-retro removed - use tama-btn--automotive instead */
+
+/* HomePage Components - TamaFriends Automotive Style */
+.hello-world-header {
+  text-align: center;
+  margin-bottom: var(--space-8);
+  padding: var(--space-6);
+  background: linear-gradient(135deg,
+    var(--tama-electric-blue) 0%,
+    var(--tama-rally-yellow) 100%);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-automotive);
+}
+
+.hello-form--automotive {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 400px;
+  margin: 0 auto var(--space-6);
+  padding: var(--space-6);
+  background: var(--tama-surface-elevated);
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--tama-border-metallic);
+}
+
+.tama-input--automotive {
+  padding: var(--space-3) var(--space-4);
+  border: var(--pixel-border);
+  border-radius: var(--radius-md);
+  background: var(--tama-surface-default);
+  font-family: var(--font-pixel);
+  font-size: var(--text-base);
+  color: var(--tama-text-primary);
+  transition: var(--transition-fast);
+}
+
+.tama-input--automotive:focus {
+  outline: none;
+  border-color: var(--tama-electric-blue);
+  box-shadow: 0 0 0 3px rgba(90, 172, 250, 0.2);
+  background: var(--tama-surface-elevated);
+}
+
+.tama-input--automotive::placeholder {
+  color: var(--tama-text-muted);
+  font-style: italic;
+}
+
+.hello-response--automotive {
+  background: var(--tama-surface-elevated);
+  border: 2px solid var(--tama-sorrento-green);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  margin-top: var(--space-6);
+  text-align: center;
+  box-shadow: var(--shadow-automotive);
+}
+
+.tama-heading--success {
+  color: var(--tama-sorrento-green);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.connection-success {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(45, 90, 61, 0.1),
+    transparent);
+  border-radius: var(--radius-md);
+}
+
+.tama-alert--error {
+  background: linear-gradient(135deg,
+    var(--tama-racing-red),
+    #b71c1c);
+  color: var(--tama-text-on-error);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 2px solid rgba(220, 20, 60, 0.8);
+  margin-top: var(--space-4);
+  text-align: center;
+  font-weight: 600;
+  box-shadow: var(--shadow-automotive);
+}
+
+/* Modal Components - TamaFriends Automotive Style */
+.modal-overlay--automotive {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+.modal-content--automotive {
+  background: var(--tama-surface-elevated);
+  border: 2px solid var(--tama-border-metallic);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-automotive);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin: var(--space-6) 0;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tama-form-label--automotive {
+  font-family: var(--font-pixel);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--tama-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tama-textarea {
+  resize: vertical;
+  min-height: 100px;
+  font-family: var(--font-base);
+  line-height: 1.5;
+}
+
+.tama-form-error {
+  font-family: var(--font-pixel);
+  font-size: var(--text-xs);
+  color: var(--tama-racing-red);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.modal-actions--automotive {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  padding-top: var(--space-6);
+  border-top: 2px solid var(--tama-border-subtle);
+  margin-top: var(--space-6);
+}
+
+/* Responsive modal adjustments */
+@media (max-width: 768px) {
+  .modal-content--automotive {
+    width: 95%;
+    margin: var(--space-4);
+  }
+
+  .modal-actions--automotive {
+    flex-direction: column-reverse;
+  }
+
+  .modal-actions--automotive .tama-btn {
+    width: 100%;
+  }
+}
+
+/* Modal Components - TamaFriends Style */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal-backdrop);
+  padding: var(--space-4);
+}
+
+.modal-content {
+  background: var(--tama-white);
+  border: var(--pixel-border-thick);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--pixel-shadow-lg);
+  max-width: 400px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  background: none;
+  border: none;
+  font-family: var(--font-pixel);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--tama-gray-600);
+  cursor: pointer;
+  z-index: 1;
+  width: var(--space-8);
+  height: var(--space-8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.modal-close:hover {
+  color: var(--tama-black);
+  transform: scale(1.1);
+}
+
+.modal-title {
+  font-family: var(--font-pixel);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--tama-black);
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+/* Form Components - TamaFriends Style */
+.tama-form {
+  padding: var(--space-8);
+}
+
+/* tama-form-field deprecated - use form-group instead */
+
+.tama-form-label {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--tama-black);
+  margin-bottom: var(--space-2);
+}
+
+.tama-form-error {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--error);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--error);
+  border-radius: var(--radius-sm);
+}
+
+/* tama-form-actions deprecated - use modal-actions--automotive instead */
+
+.tama-link {
+  color: var(--tama-blue);
+  text-decoration: none;
+  font-weight: var(--weight-medium);
+  transition: all var(--transition-fast);
+}
+
+.tama-link:hover {
+  color: var(--tama-black);
+  text-decoration: underline;
+}
+
+/* Responsive Design Utilities */
+@media (max-width: 640px) {
+  .hidden-mobile { display: none; }
+  .show-mobile { display: block; }
+
+  .modal-content {
+    margin: var(--space-4);
+    max-height: calc(100vh - 2rem);
+  }
+}
+
+@media (min-width: 641px) {
+  .hidden-desktop { display: none; }
+  .show-desktop { display: block; }
+}
