@@ -142,6 +142,30 @@ async function startServer() {
       introspection: true,
       includeStacktraceInErrorResponses: true,
 
+      // Request logging plugin for development
+      plugins: [
+        {
+          async requestDidStart(requestContext) {
+            const operationName = requestContext.request.operationName || 'anonymous';
+            const query = requestContext.request.query || '';
+            const operation = query.trim().split(/\s+/)[0]; // query, mutation, etc
+
+            console.log(`📨 [GraphQL] ${operation} ${operationName}`);
+
+            return {
+              async willSendResponse(context) {
+                const errors = context.response.body.kind === 'single' ? context.response.body.singleResult.errors : undefined;
+                if (errors && errors.length > 0) {
+                  console.log(`❌ [GraphQL] ${operationName} - Error:`, errors[0].message);
+                } else {
+                  console.log(`✅ [GraphQL] ${operationName} - Success`);
+                }
+              },
+            };
+          },
+        },
+      ],
+
       // Custom error formatting
       formatError: (formattedError) => {
         const message = formattedError.message.toLowerCase();
