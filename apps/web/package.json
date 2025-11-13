@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:pretty": "next dev 2>&1 | pnpm exec pino-pretty",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

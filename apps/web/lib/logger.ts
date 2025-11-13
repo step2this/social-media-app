@@ -4,10 +4,16 @@
  * Provides consistent, performant logging across the Next.js application.
  *
  * Features:
- * - Structured JSON logging in production
- * - Pretty printing in development
+ * - Structured JSON logging
  * - Child loggers with context inheritance
  * - Type-safe logging methods
+ * - Works with Next.js 15 (no worker threads)
+ *
+ * Pretty printing in development:
+ * To see pretty logs, pipe through pino-pretty:
+ * ```bash
+ * pnpm dev | pnpm exec pino-pretty
+ * ```
  *
  * Usage:
  * ```typescript
@@ -30,22 +36,13 @@ import pino from 'pino';
 
 /**
  * Create the base logger instance
+ *
+ * Note: We don't use pino-pretty transport here because it spawns
+ * worker threads that break Next.js 15's bundling. Instead, we output
+ * JSON and you can pipe through pino-pretty if you want colored logs.
  */
 export const logger = pino({
   level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
-
-  // Pretty printing in development for readability
-  transport:
-    process.env.NODE_ENV !== 'production'
-      ? {
-          target: 'pino-pretty',
-          options: {
-            colorize: true,
-            translateTime: 'HH:MM:ss',
-            ignore: 'pid,hostname',
-          },
-        }
-      : undefined,
 
   // Base context for all logs
   base: {

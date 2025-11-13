@@ -3,30 +3,46 @@
 ## How to See Logs
 
 ### Development Mode
-Logs appear in the terminal where you run `pnpm dev`:
+
+By default, logs are output as **JSON** (Next.js 15 compatibility):
 
 ```bash
-cd apps/web
-pnpm dev
+# Run with JSON logs (default)
+pnpm dev:nextjs
 ```
 
-When you interact with the app, you'll see pretty-printed logs like:
+You'll see JSON logs like:
+```json
+{"level":"info","time":1736780985,"env":"development","app":"social-media-web","msg":"Fetching explore feed"}
+{"level":"info","time":1736780985,"env":"development","app":"social-media-web","count":15,"msg":"Explore feed loaded"}
+```
+
+### Pretty Logs (Colored, Human-Readable)
+
+To see **colored, pretty-printed logs**, use the `dev:pretty` script:
+
+```bash
+# From project root (NextJS only with pretty logs)
+cd apps/web && pnpm dev:pretty
+
+# Or pipe the full dev environment through pino-pretty
+pnpm dev:nextjs 2>&1 | pnpm exec pino-pretty
+```
+
+You'll see formatted logs like:
 ```
 [14:09:45] INFO: Fetching explore feed
+    env: "development"
     app: "social-media-web"
 [14:09:45] INFO: Explore feed loaded
     app: "social-media-web"
     count: 15
 [14:09:46] INFO: Liking post
-    app: "social-media-app"
+    app: "social-media-web"
     postId: "post-123"
-[14:09:46] INFO: Server Action likePost
-    type: "server-action"
-    action: "likePost"
-    postId: "post-123"
-    likesCount: 11
-    result: "success"
 ```
+
+**Note:** We don't use pino-pretty by default because it spawns worker threads that conflict with Next.js 15's module bundling. JSON logs work everywhere; pipe through pino-pretty when you want colors.
 
 ### Production Mode
 To see JSON logs (what production looks like):
