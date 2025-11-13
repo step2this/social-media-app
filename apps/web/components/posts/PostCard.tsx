@@ -30,7 +30,11 @@ export function PostCard({ post }: PostCardProps) {
         // Revert on error
         setOptimisticLiked(!newLiked);
         setOptimisticCount(newLiked ? optimisticCount - 1 : optimisticCount + 1);
-        alert(result.message || 'Failed to update like');
+        alert('Failed to update like. Please try again.');
+      } else {
+        // Sync with server response (in case of race conditions)
+        setOptimisticLiked(result.isLiked);
+        setOptimisticCount(result.likesCount);
       }
     });
   };

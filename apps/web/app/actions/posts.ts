@@ -11,26 +11,27 @@ import { revalidatePath } from 'next/cache';
 import { getGraphQLClient } from '@/lib/graphql/client';
 import { LIKE_POST, UNLIKE_POST } from '@/lib/graphql/queries';
 
-interface MutationResponse {
+interface LikeResponse {
   success: boolean;
-  message?: string;
+  likesCount: number;
+  isLiked: boolean;
 }
 
 interface LikePostResponse {
-  likePost: MutationResponse;
+  likePost: LikeResponse;
 }
 
 interface UnlikePostResponse {
-  unlikePost: MutationResponse;
+  unlikePost: LikeResponse;
 }
 
 /**
  * Like a post
  *
  * @param postId - ID of the post to like
- * @returns Success response
+ * @returns Success response with updated counts
  */
-export async function likePost(postId: string): Promise<MutationResponse> {
+export async function likePost(postId: string): Promise<LikeResponse> {
   try {
     const client = await getGraphQLClient();
     const data = await client.request<LikePostResponse>(LIKE_POST, { postId });
@@ -43,7 +44,8 @@ export async function likePost(postId: string): Promise<MutationResponse> {
     console.error('Failed to like post:', error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to like post',
+      likesCount: 0,
+      isLiked: false,
     };
   }
 }
@@ -52,9 +54,9 @@ export async function likePost(postId: string): Promise<MutationResponse> {
  * Unlike a post
  *
  * @param postId - ID of the post to unlike
- * @returns Success response
+ * @returns Success response with updated counts
  */
-export async function unlikePost(postId: string): Promise<MutationResponse> {
+export async function unlikePost(postId: string): Promise<LikeResponse> {
   try {
     const client = await getGraphQLClient();
     const data = await client.request<UnlikePostResponse>(UNLIKE_POST, { postId });
@@ -67,7 +69,8 @@ export async function unlikePost(postId: string): Promise<MutationResponse> {
     console.error('Failed to unlike post:', error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to unlike post',
+      likesCount: 0,
+      isLiked: false,
     };
   }
 }
