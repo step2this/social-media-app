@@ -51,6 +51,14 @@
 - LikeButton component with real-time feedback
 - Tests with dependency injection pattern
 
+✅ **Phase 5.2: Profile Pages & Social Interactions** (COMPLETE) 🆕
+- Dynamic profile loading by handle
+- ProfileHeader component with user stats
+- Follow/unfollow Server Actions
+- FollowButton with optimistic updates
+- Follow status fetching
+- Own profile vs other profile handling
+
 ✅ **Production Logging & Observability** (COMPLETE) 🆕
 - Pino structured JSON logging
 - Logger utilities for Next.js and GraphQL server
@@ -125,19 +133,23 @@ social-media-app/
 - [ ] Create comment form component
 - [ ] Add comment posting functionality
 
-#### 1.2 Profile Pages
-**Files to create/update:**
-- `app/(app)/profile/[handle]/page.tsx` - Load profile data
-- `components/profile/ProfileHeader.tsx` - Profile info, follow button
-- `components/profile/ProfileTabs.tsx` - Posts/Following/Followers tabs
-- `app/actions/follows.ts` - Server Actions for follow/unfollow
+#### 1.2 Profile Pages ✅ COMPLETE
+**Files created/updated:**
+- ✅ `app/(app)/profile/[handle]/page.tsx` - Dynamic profile loading with follow status
+- ✅ `components/profile/ProfileHeader.tsx` - Profile info, stats, follow button
+- ✅ `components/profile/FollowButton.tsx` - Interactive follow button with optimistic updates
+- ✅ `app/actions/follows.ts` - Server Actions for follow/unfollow
+- ⏸️ `components/profile/ProfileTabs.tsx` - Posts/Following/Followers tabs (DEFERRED)
 
 **Tasks:**
-- [ ] Implement GET_PROFILE query
-- [ ] Add follow/unfollow mutations
-- [ ] Create profile posts grid
-- [ ] Add tabs for posts/followers/following
-- [ ] Test with different user handles
+- ✅ Implement GET_PROFILE query
+- ✅ Add follow/unfollow mutations with GraphQL
+- ✅ Add GET_FOLLOW_STATUS query
+- ✅ Implement optimistic UI updates for follow button
+- ✅ Handle own profile vs other profiles
+- ✅ Error handling for missing profiles
+- [ ] Create profile posts grid (DEFERRED)
+- [ ] Add tabs for posts/followers/following (DEFERRED)
 
 #### 1.3 Post Creation
 **Files to create/update:**
@@ -332,7 +344,7 @@ See `MIGRATION_CHECKLIST.md` for the complete checklist.
 - ✅ Phase 2: Auth & API Routes (100%)
 - ✅ Phase 3: Layout Components (100%)
 - ✅ Phase 4: GraphQL Integration (100%)
-- 🚧 Phase 5: Feature Completion (35% - likes done, comments/follows pending)
+- 🚧 Phase 5: Feature Completion (55% - likes & follows done, post creation & comments pending)
 - ✅ Production Logging (100% - Phase 1 complete)
 - ⏸️ Phase 6: Optimization & Polish (0%)
 - ⏸️ Phase 7: Deployment (0%)
