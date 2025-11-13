@@ -1,17 +1,13 @@
 /**
- * AuctionService - Data Access Layer for Auction System (Drizzle ORM)
+ * AuctionService - Data Access Layer for Auction System
  *
  * Provides ACID transaction support for concurrent bid handling using PostgreSQL.
  * Uses row-level locking (FOR UPDATE) to prevent race conditions.
  *
- * This version uses Drizzle ORM for type-safe database operations.
- *
  * @module auction-dal/services
  */
 
-import { eq, desc, and, sql } from 'drizzle-orm';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import type { Pool, PoolClient } from 'pg';
+import { Pool } from 'pg';
 import type {
   Auction,
   Bid,
@@ -23,14 +19,11 @@ import type {
   ListAuctionsResponse,
   GetBidHistoryResponse,
 } from '@social-media-app/shared';
-import * as schema from '../db/schema.js';
 
 export class AuctionService {
-  private db: NodePgDatabase<typeof schema>;
   private pool: Pool;
 
-  constructor(db: NodePgDatabase<typeof schema>, pool: Pool) {
-    this.db = db;
+  constructor(pool: Pool) {
     this.pool = pool;
   }
 
@@ -47,42 +40,49 @@ export class AuctionService {
       throw new Error('End time must be after start time');
     }
 
-    const [auction] = await this.db
-      .insert(schema.auctions)
-      .values({
+    const result = await this.pool.query(
+      `
+      INSERT INTO auctions (
+        user_id, title, description, image_url, start_price, reserve_price,
+        current_price, start_time, end_time
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $5, $7, $8)
+      RETURNING *
+    `,
+      [
         userId,
-        title: request.title,
-        description: request.description || null,
-        imageUrl: imageUrl || null,
-        startPrice: request.startPrice.toString(),
-        reservePrice: request.reservePrice?.toString() || null,
-        currentPrice: request.startPrice.toString(),
-        startTime: new Date(request.startTime),
-        endTime: new Date(request.endTime),
-      })
-      .returning();
+        request.title,
+        request.description || null,
+        imageUrl || null,
+        request.startPrice,
+        request.reservePrice || null,
+        request.startTime,
+        request.endTime,
+      ]
+    );
 
-    return this.mapRowToAuction(auction);
+    return this.mapRowToAuction(result.rows[0]);
   }
 
   /**
    * Activate an auction (change status to 'active')
    */
   async activateAuction(auctionId: string): Promise<Auction> {
-    const [auction] = await this.db
-      .update(schema.auctions)
-      .set({
-        status: 'active',
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.auctions.id, auctionId))
-      .returning();
+    const result = await this.pool.query(
+      `
+      UPDATE auctions
+      SET status = 'active', updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `,
+      [auctionId]
+    );
 
-    if (!auction) {
+    if (result.rows.length === 0) {
       throw new Error('Auction not found');
     }
 
-    return this.mapRowToAuction(auction);
+    return this.mapRowToAuction(result.rows[0]);
   }
 
   /**
@@ -90,8 +90,6 @@ export class AuctionService {
    * Uses row-level locking to prevent race conditions
    */
   async placeBid(userId: string, request: PlaceBidRequest): Promise<PlaceBidResponse> {
-    // Use raw connection for transaction with row-level locking
-    // Drizzle doesn't yet support FOR UPDATE, so we use raw SQL here
     const client = await this.pool.connect();
 
     try {
@@ -156,48 +154,63 @@ export class AuctionService {
    * Get auction details by ID
    */
   async getAuction(auctionId: string): Promise<Auction> {
-    const auction = await this.db.query.auctions.findFirst({
-      where: eq(schema.auctions.id, auctionId),
-    });
+    const result = await this.pool.query('SELECT * FROM auctions WHERE id = $1', [
+      auctionId,
+    ]);
 
-    if (!auction) {
+    if (result.rows.length === 0) {
       throw new Error('Auction not found');
     }
 
-    return this.mapRowToAuction(auction);
+    return this.mapRowToAuction(result.rows[0]);
   }
 
   /**
    * List auctions with filtering and pagination
    */
   async listAuctions(request: ListAuctionsRequest): Promise<ListAuctionsResponse> {
-    const conditions = [];
+    const conditions: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
 
     if (request.status) {
-      conditions.push(eq(schema.auctions.status, request.status));
+      conditions.push(`status = $${paramIndex++}`);
+      params.push(request.status);
     }
 
     if (request.userId) {
-      conditions.push(eq(schema.auctions.userId, request.userId));
+      conditions.push(`user_id = $${paramIndex++}`);
+      params.push(request.userId);
     }
 
-    const limit = request.limit || 24;
-    const offset = request.cursor ? parseInt(request.cursor, 10) : 0;
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    params.push(request.limit || 24);
+    const limitClause = `LIMIT $${paramIndex++}`;
 
-    const results = await this.db
-      .select()
-      .from(schema.auctions)
-      .where(whereClause)
-      .orderBy(desc(schema.auctions.createdAt))
-      .limit(limit)
-      .offset(offset);
+    let offsetClause = '';
+    if (request.cursor) {
+      offsetClause = `OFFSET $${paramIndex++}`;
+      params.push(parseInt(request.cursor, 10));
+    }
+
+    const query = `
+      SELECT * FROM auctions
+      ${whereClause}
+      ORDER BY created_at DESC
+      ${limitClause}
+      ${offsetClause}
+    `;
+
+    const result = await this.pool.query(query, params);
 
     return {
-      auctions: results.map((row) => this.mapRowToAuction(row)),
-      hasMore: results.length === limit,
-      nextCursor: results.length === limit ? String(offset + results.length) : undefined,
+      auctions: result.rows.map((row) => this.mapRowToAuction(row)),
+      hasMore: result.rows.length === (request.limit || 24),
+      nextCursor:
+        result.rows.length === (request.limit || 24)
+          ? String((parseInt(request.cursor || '0', 10) || 0) + result.rows.length)
+          : undefined,
     };
   }
 
@@ -206,24 +219,26 @@ export class AuctionService {
    */
   async getBidHistory(request: GetBidHistoryRequest): Promise<GetBidHistoryResponse> {
     // Get total count
-    const countResult = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(schema.bids)
-      .where(eq(schema.bids.auctionId, request.auctionId));
+    const countResult = await this.pool.query(
+      'SELECT COUNT(*) FROM bids WHERE auction_id = $1',
+      [request.auctionId]
+    );
 
-    const total = Number(countResult[0].count);
+    const total = parseInt(countResult.rows[0].count, 10);
 
     // Get paginated bids
-    const results = await this.db
-      .select()
-      .from(schema.bids)
-      .where(eq(schema.bids.auctionId, request.auctionId))
-      .orderBy(desc(schema.bids.createdAt))
-      .limit(request.limit)
-      .offset(request.offset);
+    const result = await this.pool.query(
+      `
+      SELECT * FROM bids
+      WHERE auction_id = $1
+      ORDER BY created_at DESC
+      LIMIT $2 OFFSET $3
+    `,
+      [request.auctionId, request.limit, request.offset]
+    );
 
     return {
-      bids: results.map((row) => this.mapRowToBid(row)),
+      bids: result.rows.map((row) => this.mapRowToBid(row)),
       total,
     };
   }
@@ -249,14 +264,16 @@ export class AuctionService {
       return auctionMap;
     }
 
-    // Use IN clause for batch loading (Drizzle doesn't support ANY yet)
-    const results = await this.db
-      .select()
-      .from(schema.auctions)
-      .where(sql`${schema.auctions.id} = ANY(${ids})`);
+    // Query with WHERE id = ANY($1) for batch loading
+    const query = `
+      SELECT * FROM auctions
+      WHERE id = ANY($1)
+    `;
+
+    const result = await this.pool.query(query, [ids]);
 
     // Convert to Map for DataLoader
-    for (const row of results) {
+    for (const row of result.rows) {
       const auction = this.mapRowToAuction(row);
       auctionMap.set(auction.id, auction);
     }
@@ -274,36 +291,36 @@ export class AuctionService {
   /**
    * Map database row to Auction entity
    */
-  private mapRowToAuction(row: typeof schema.auctions.$inferSelect): Auction {
+  private mapRowToAuction(row: any): Auction {
     return {
       id: row.id,
-      userId: row.userId,
+      userId: row.user_id,
       title: row.title,
       description: row.description || undefined,
-      imageUrl: row.imageUrl || undefined,
-      startPrice: parseFloat(row.startPrice),
-      reservePrice: row.reservePrice ? parseFloat(row.reservePrice) : undefined,
-      currentPrice: parseFloat(row.currentPrice),
-      startTime: row.startTime.toISOString(),
-      endTime: row.endTime.toISOString(),
+      imageUrl: row.image_url || undefined,
+      startPrice: parseFloat(row.start_price),
+      reservePrice: row.reserve_price ? parseFloat(row.reserve_price) : undefined,
+      currentPrice: parseFloat(row.current_price),
+      startTime: row.start_time.toISOString(),
+      endTime: row.end_time.toISOString(),
       status: row.status,
-      winnerId: row.winnerId || undefined,
-      bidCount: row.bidCount,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
+      winnerId: row.winner_id || undefined,
+      bidCount: row.bid_count,
+      createdAt: row.created_at.toISOString(),
+      updatedAt: row.updated_at.toISOString(),
     };
   }
 
   /**
    * Map database row to Bid entity
    */
-  private mapRowToBid(row: typeof schema.bids.$inferSelect | any): Bid {
+  private mapRowToBid(row: any): Bid {
     return {
       id: row.id,
-      auctionId: row.auctionId || row.auction_id,
-      userId: row.userId || row.user_id,
+      auctionId: row.auction_id,
+      userId: row.user_id,
       amount: parseFloat(row.amount),
-      createdAt: row.createdAt ? row.createdAt.toISOString() : new Date(row.created_at).toISOString(),
+      createdAt: row.created_at.toISOString(),
     };
   }
 }

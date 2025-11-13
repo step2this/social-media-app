@@ -12,7 +12,7 @@
  */
 
 import { builder } from '../builder.js';
-import { PublicProfileType, PageInfoType } from './comments.js';
+import { PublicProfileType } from './comments.js';
 import type { AuctionParent, BidParent, PlaceBidPayloadParent } from '../../../infrastructure/resolvers/helpers/resolverTypes.js';
 
 /**
@@ -166,45 +166,22 @@ BidType.implement({
 });
 
 /**
- * AuctionEdge Type
+ * AuctionConnection Type - Using Relay Plugin
  *
- * Edge type for Relay-style cursor pagination.
- */
-export const AuctionEdgeType = builder.objectRef<any>('AuctionEdge');
-
-AuctionEdgeType.implement({
-  fields: (t) => ({
-    cursor: t.exposeString('cursor', {
-      description: 'Cursor for pagination',
-    }),
-    node: t.field({
-      type: AuctionType,
-      description: 'The auction node',
-      resolve: (parent: any) => parent.node,
-    }),
-  }),
-});
-
-/**
- * AuctionConnection Type
+ * Replaces manual AuctionEdge and AuctionConnection definitions.
+ * The Relay plugin automatically creates both Connection and Edge types
+ * with proper Relay spec compliance.
  *
- * Relay-style connection for paginated auctions.
+ * Benefits over manual implementation:
+ * - ✅ Eliminates ~40 lines of boilerplate
+ * - ✅ Automatic cursor encoding/decoding
+ * - ✅ Standardized PageInfo structure
+ * - ✅ Relay spec compliance
+ * - ✅ Type-safe connection handling
  */
-export const AuctionConnectionType = builder.objectRef<any>('AuctionConnection');
-
-AuctionConnectionType.implement({
-  fields: (t) => ({
-    edges: t.field({
-      type: [AuctionEdgeType],
-      description: 'List of auction edges',
-      resolve: (parent: any) => parent.edges,
-    }),
-    pageInfo: t.field({
-      type: PageInfoType,
-      description: 'Pagination information',
-      resolve: (parent: any) => parent.pageInfo,
-    }),
-  }),
+export const AuctionConnectionType = builder.connectionObject({
+  type: AuctionType,
+  name: 'AuctionConnection',
 });
 
 /**

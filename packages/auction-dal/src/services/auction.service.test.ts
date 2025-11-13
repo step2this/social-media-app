@@ -10,8 +10,10 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { AuctionService } from './auction.service.js';
+import * as schema from '../db/schema.js';
 import type {
   CreateAuctionRequest,
   PlaceBidRequest,
@@ -19,6 +21,7 @@ import type {
 
 describe('AuctionService', () => {
   let pool: Pool;
+  let db: ReturnType<typeof drizzle>;
   let service: AuctionService;
   const testUserId = 'USER#test-user-123';
   const bidder1Id = 'USER#bidder-1';
@@ -34,7 +37,11 @@ describe('AuctionService', () => {
       password: process.env.POSTGRES_PASSWORD || 'postgres',
     });
 
-    service = new AuctionService(pool);
+    // Create Drizzle client
+    db = drizzle(pool, { schema });
+
+    // Create service with both db and pool
+    service = new AuctionService(db, pool);
   });
 
   afterAll(async () => {

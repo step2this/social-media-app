@@ -11,7 +11,7 @@
  */
 
 import { builder } from '../builder.js';
-import { PageInfoType } from './comments.js';
+// PageInfo is automatically created by Relay plugin via builder.connectionObject()
 
 /**
  * NotificationType Enum
@@ -137,45 +137,22 @@ NotificationType.implement({
 });
 
 /**
- * NotificationEdge Type
+ * NotificationConnection Type - Using Relay Plugin
  *
- * Edge type for Relay-style cursor pagination.
- */
-export const NotificationEdgeType = builder.objectRef<any>('NotificationEdge');
-
-NotificationEdgeType.implement({
-  fields: (t) => ({
-    cursor: t.exposeString('cursor', {
-      description: 'Cursor for pagination',
-    }),
-    node: t.field({
-      type: NotificationType,
-      description: 'The notification node',
-      resolve: (parent: any) => parent.node,
-    }),
-  }),
-});
-
-/**
- * NotificationConnection Type
+ * Replaces manual NotificationEdge and NotificationConnection definitions.
+ * The Relay plugin automatically creates both Connection and Edge types
+ * with proper Relay spec compliance.
  *
- * Relay-style connection for paginated notifications.
+ * Benefits over manual implementation:
+ * - ✅ Eliminates ~40 lines of boilerplate
+ * - ✅ Automatic cursor encoding/decoding
+ * - ✅ Standardized PageInfo structure
+ * - ✅ Relay spec compliance
+ * - ✅ Type-safe connection handling
  */
-export const NotificationConnectionType = builder.objectRef<any>('NotificationConnection');
-
-NotificationConnectionType.implement({
-  fields: (t) => ({
-    edges: t.field({
-      type: [NotificationEdgeType],
-      description: 'List of notification edges',
-      resolve: (parent: any) => parent.edges,
-    }),
-    pageInfo: t.field({
-      type: PageInfoType,
-      description: 'Pagination information',
-      resolve: (parent: any) => parent.pageInfo,
-    }),
-  }),
+export const NotificationConnectionType = builder.connectionObject({
+  type: NotificationType,
+  name: 'NotificationConnection',
 });
 
 /**

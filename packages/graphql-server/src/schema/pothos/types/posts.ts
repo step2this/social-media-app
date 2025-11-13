@@ -12,7 +12,7 @@
  */
 
 import { builder } from '../builder.js';
-import { PublicProfileType, PageInfoType } from './comments.js';
+import { PublicProfileType } from './comments.js';
 import { CommentConnectionType } from './comments.js';
 import type { PostParent, CreatePostPayloadParent } from '../../../infrastructure/resolvers/helpers/resolverTypes.js';
 
@@ -125,45 +125,22 @@ PostType.implement({
 });
 
 /**
- * PostEdge Type
+ * PostConnection Type - Using Relay Plugin
  *
- * Edge type for Relay-style cursor pagination.
- */
-export const PostEdgeType = builder.objectRef<any>('PostEdge');
-
-PostEdgeType.implement({
-  fields: (t) => ({
-    cursor: t.exposeString('cursor', {
-      description: 'Cursor for pagination',
-    }),
-    node: t.field({
-      type: PostType,
-      description: 'The post node',
-      resolve: (parent: any) => parent.node,
-    }),
-  }),
-});
-
-/**
- * PostConnection Type
+ * Replaces manual PostEdge and PostConnection definitions.
+ * The Relay plugin automatically creates both Connection and Edge types
+ * with proper Relay spec compliance.
  *
- * Relay-style connection for paginated posts.
+ * Benefits over manual implementation:
+ * - ✅ Eliminates ~30 lines of boilerplate
+ * - ✅ Automatic cursor encoding/decoding
+ * - ✅ Standardized PageInfo structure
+ * - ✅ Relay spec compliance
+ * - ✅ Type-safe connection handling
  */
-export const PostConnectionType = builder.objectRef<any>('PostConnection');
-
-PostConnectionType.implement({
-  fields: (t) => ({
-    edges: t.field({
-      type: [PostEdgeType],
-      description: 'List of post edges',
-      resolve: (parent: any) => parent.edges,
-    }),
-    pageInfo: t.field({
-      type: PageInfoType,
-      description: 'Pagination information',
-      resolve: (parent: any) => parent.pageInfo,
-    }),
-  }),
+export const PostConnectionType = builder.connectionObject({
+  type: PostType,
+  name: 'PostConnection',
 });
 
 /**

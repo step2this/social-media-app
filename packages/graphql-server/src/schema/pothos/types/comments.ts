@@ -125,71 +125,25 @@ CommentType.implement({
 });
 
 /**
- * CommentEdge Type
+ * CommentConnection Type - Using Relay Plugin
  *
- * Edge type for Relay-style cursor pagination.
- */
-export const CommentEdgeType = builder.objectRef<any>('CommentEdge');
-
-CommentEdgeType.implement({
-  fields: (t) => ({
-    cursor: t.exposeString('cursor', {
-      description: 'Cursor for pagination',
-    }),
-    node: t.field({
-      type: CommentType,
-      description: 'The comment node',
-      resolve: (parent: any) => parent.node,
-    }),
-  }),
-});
-
-/**
- * PageInfo Type
+ * Replaces manual CommentEdge, PageInfo, and CommentConnection definitions.
+ * The Relay plugin automatically creates Connection, Edge, and PageInfo types
+ * with proper Relay spec compliance.
  *
- * Pagination information for cursor-based pagination.
- */
-export const PageInfoType = builder.objectRef<any>('PageInfo');
-
-PageInfoType.implement({
-  fields: (t) => ({
-    hasNextPage: t.exposeBoolean('hasNextPage', {
-      description: 'Whether there are more items to fetch',
-    }),
-    hasPreviousPage: t.exposeBoolean('hasPreviousPage', {
-      description: 'Whether there are previous items to fetch',
-    }),
-    startCursor: t.exposeString('startCursor', {
-      nullable: true,
-      description: 'Cursor pointing to the first item',
-    }),
-    endCursor: t.exposeString('endCursor', {
-      nullable: true,
-      description: 'Cursor pointing to the last item',
-    }),
-  }),
-});
-
-/**
- * CommentConnection Type
+ * Benefits over manual implementation:
+ * - ✅ Eliminates ~70 lines of boilerplate
+ * - ✅ Automatic cursor encoding/decoding
+ * - ✅ Standardized PageInfo structure (Relay spec compliant)
+ * - ✅ Type-safe connection handling
+ * - ✅ Consistent with other connection types
  *
- * Relay-style connection for paginated comments.
+ * Note: PageInfo is now automatically created by the Relay plugin and shared
+ * across all connection types, ensuring consistency.
  */
-export const CommentConnectionType = builder.objectRef<any>('CommentConnection');
-
-CommentConnectionType.implement({
-  fields: (t) => ({
-    edges: t.field({
-      type: [CommentEdgeType],
-      description: 'List of comment edges',
-      resolve: (parent: any) => parent.edges,
-    }),
-    pageInfo: t.field({
-      type: PageInfoType,
-      description: 'Pagination information',
-      resolve: (parent: any) => parent.pageInfo,
-    }),
-  }),
+export const CommentConnectionType = builder.connectionObject({
+  type: CommentType,
+  name: 'CommentConnection',
 });
 
 /**

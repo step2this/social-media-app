@@ -9,6 +9,8 @@ import SchemaBuilder from '@pothos/core';
 import ScopeAuthPlugin from '@pothos/plugin-scope-auth';
 import ValidationPlugin from '@pothos/plugin-validation';
 import ComplexityPlugin from '@pothos/plugin-complexity';
+import RelayPlugin from '@pothos/plugin-relay';
+import TracingPlugin, { isRootField, wrapResolver } from '@pothos/plugin-tracing';
 import type { GraphQLContext } from '../../context.js';
 
 /**
@@ -29,7 +31,7 @@ export const builder = new SchemaBuilder<{
   Context: GraphQLContext;
   AuthScopes: AuthScopes;
 }>({
-  plugins: [ScopeAuthPlugin, ValidationPlugin, ComplexityPlugin],
+  plugins: [ScopeAuthPlugin, ValidationPlugin, ComplexityPlugin, RelayPlugin, TracingPlugin],
   scopeAuth: {
     authScopes: (context: GraphQLContext) => ({
       authenticated: !!context.userId,
@@ -53,6 +55,44 @@ export const builder = new SchemaBuilder<{
       // Max query breadth (fields per level)
       breadth: 50,
     },
+  },
+  relay: {
+    // Relay plugin configuration
+    // Use clientMutationId: 'optional' for flexibility (not required in all mutations)
+    clientMutationId: 'omit',
+
+    // Cursor encoding (default is base64 JSON)
+    cursorType: 'String',
+
+    // Enable branded types for node IDs
+    brandLoadedObjects: false,
+  },
+  tracing: {
+    // Enable tracing for root-level resolvers (queries and mutations)
+    // Skips tracing for nested resolvers to reduce overhead
+    default: (config) => isRootField(config),
+
+    // Wrap resolver with timing logic
+    wrap: (resolver, options, config) =>
+      wrapResolver(resolver, (error, duration) => {
+        // Log slow resolvers (>100ms) for performance monitoring
+        if (duration > 100) {
+          console.warn(
+            `[SLOW RESOLVER] ${config.parentType}.${config.name}: ${duration.toFixed(2)}ms`
+          );
+        }
+
+        // Could integrate with X-Ray, DataDog, NewRelic, etc. here
+        // Example: context.tracer?.recordSpan({ name: config.name, duration })
+
+        // Log errors for debugging
+        if (error) {
+          console.error(
+            `[RESOLVER ERROR] ${config.parentType}.${config.name}:`,
+            error instanceof Error ? error.message : String(error)
+          );
+        }
+      }),
   },
 } as any); // Type assertion needed for Pothos plugin config
 
