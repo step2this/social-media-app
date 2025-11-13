@@ -308,4 +308,62 @@ Result: `props.isLiked: true, props.likesCount: 0` (inconsistent!)
 
 ---
 
-**Status:** 🟢 **Fixed** - Both issues resolved
+## 🎯 Final Solution: Pure Client State Pattern (Session 3)
+
+After deeper analysis, discovered the real issue: **conflicting state management**.
+
+### The Core Problem
+
+We were trying to sync state in TWO places:
+1. `useEffect` syncing props → state (when props change)
+2. `handleLike` syncing server response → state (after mutation)
+
+This created a battle between stale props and fresh server data.
+
+### The Pattern That Works
+
+**Pure client-side state** (used by Instagram, Twitter, etc.):
+
+```typescript
+// 1. Initialize from props ONCE (on mount)
+const [optimisticLiked, setOptimisticLiked] = useState(post.isLiked);
+const [optimisticCount, setOptimisticCount] = useState(post.likesCount);
+
+// 2. Update optimistically on click
+setOptimisticLiked(true);
+setOptimisticCount(count + 1);
+
+// 3. Sync with server response
+const result = await likePost(postId);
+setOptimisticLiked(result.isLiked);
+setOptimisticCount(result.likesCount);
+
+// 4. NEVER sync with props again (removed useEffect)
+```
+
+### Why This Works
+
+- ✅ No prop syncing = no conflicts
+- ✅ Server response is authoritative
+- ✅ State persists across re-renders
+- ✅ Fresh data on navigation/refresh
+- ✅ Eventual consistency (acceptable for likes)
+
+### Trade-offs
+
+- ⚠️ Like counts may be slightly stale until page refresh
+- ⚠️ Multiple users won't see each other's likes in real-time
+- ✅ This is acceptable and matches industry patterns
+
+### Files Changed (Session 3)
+- `apps/web/components/posts/PostCard.tsx` - Removed useEffect entirely
+
+---
+
+**Status:** 🟢 **Fixed** - Pure client state pattern implemented
+
+**Commits:**
+- `6f2782a` - Added isPending guard (partial fix)
+- `838fd0e` - Removed revalidatePath (race condition fix)
+- `c763e3b` - Removed isPending from dependencies (didn't work - already tried)
+- `638a273` - Removed useEffect entirely (FINAL FIX)
