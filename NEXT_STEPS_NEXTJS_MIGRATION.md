@@ -185,9 +185,41 @@ social-media-app/
 - [ ] Change password
 - [ ] Account settings
 
-### Priority 4: Optimization & Polish (Week 4)
+### Priority 4: Production Logging & Observability (Week 3-4) 🔥 NEW
 
-#### 4.1 Loading States
+**Status:** 📋 Researched - Ready to implement
+
+**Goal:** Replace console.log with production-ready logging and monitoring
+
+#### 4.0 Logging Implementation
+**Files to create:**
+- `lib/logger.ts` - Pino logger setup
+- `instrumentation.ts` - OpenTelemetry config (Next.js 15+)
+- `sentry.client.config.ts` - Sentry client config
+- `sentry.server.config.ts` - Sentry server config
+
+**Tasks:**
+- [ ] Install Pino (`pnpm add pino pino-pretty`)
+- [ ] Create structured logger utility
+- [ ] Replace console.log in Server Actions
+- [ ] Replace console.log in API routes
+- [ ] Add OpenTelemetry instrumentation
+- [ ] Set up Sentry for error tracking
+- [ ] Configure log levels by environment
+- [ ] Test JSON output in production mode
+
+**See:** `LOGGING_OBSERVABILITY_RESEARCH.md` for detailed recommendations
+
+**Recommended Stack:**
+- **Pino** - Fast structured logging (5x faster than Winston)
+- **OpenTelemetry** - Distributed tracing (Next.js 15 built-in)
+- **Sentry** - Error tracking with session replay
+
+---
+
+### Priority 5: Optimization & Polish (Week 4)
+
+#### 5.1 Loading States
 **Files to create:**
 - `app/(app)/loading.tsx` - Loading UI
 - `components/ui/LoadingSpinner.tsx` - Spinner component
