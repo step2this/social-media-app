@@ -94,14 +94,10 @@ export interface PostQueryResponse {
   post: PostWithComments;
 }
 
-export interface UploadUrls {
-  imageUploadUrl: string;
-  thumbnailUploadUrl: string;
-}
-
 export interface CreatePostPayload {
   post: Omit<Post, 'author'> & { author?: Author };
-  uploadUrls: UploadUrls;
+  uploadUrl: string;
+  thumbnailUploadUrl: string;
 }
 
 export interface CreatePostResponse {

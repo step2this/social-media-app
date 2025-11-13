@@ -231,10 +231,8 @@ export const CREATE_POST = gql`
         createdAt
         updatedAt
       }
-      uploadUrls {
-        imageUploadUrl
-        thumbnailUploadUrl
-      }
+      uploadUrl
+      thumbnailUploadUrl
     }
   }
 `;

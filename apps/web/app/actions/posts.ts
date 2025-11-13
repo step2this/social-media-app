@@ -154,19 +154,19 @@ export async function createPost(
       caption,
     });
 
-    const { post, uploadUrls } = data.createPost;
+    const { post, uploadUrl, thumbnailUploadUrl } = data.createPost;
 
     logger.info({
       postId: post.id,
-      imageUploadUrl: uploadUrls.imageUploadUrl.substring(0, 50) + '...',
-      thumbnailUploadUrl: uploadUrls.thumbnailUploadUrl.substring(0, 50) + '...'
+      uploadUrl: uploadUrl.substring(0, 50) + '...',
+      thumbnailUploadUrl: thumbnailUploadUrl.substring(0, 50) + '...'
     }, 'Received presigned URLs');
 
     // Step 2: Upload image and thumbnail to S3
     try {
       await Promise.all([
-        uploadToS3(imageFile, uploadUrls.imageUploadUrl),
-        uploadToS3(thumbnailBlob, uploadUrls.thumbnailUploadUrl),
+        uploadToS3(imageFile, uploadUrl),
+        uploadToS3(thumbnailBlob, thumbnailUploadUrl),
       ]);
 
       logger.info({ postId: post.id }, 'Files uploaded successfully');
