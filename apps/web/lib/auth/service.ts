@@ -4,6 +4,10 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { generateAccessToken, generateRefreshToken } from '@social-media-app/auth-utils';
 
+// Log JWT secret being used (masked)
+const jwtSecret = process.env.JWT_SECRET || '';
+console.log('[NEXT] 🔑 JWT_SECRET loaded:', jwtSecret ? `${jwtSecret.substring(0, 10)}...${jwtSecret.substring(jwtSecret.length - 10)}` : 'NOT SET');
+
 // Initialize DynamoDB client
 const dynamoClient = DynamoDBDocumentClient.from(
   new DynamoDBClient({

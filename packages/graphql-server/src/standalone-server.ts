@@ -132,6 +132,11 @@ async function startServer() {
     console.log(`   TABLE_NAME: ${process.env.TABLE_NAME}`);
     console.log(`   MEDIA_BUCKET_NAME: ${process.env.MEDIA_BUCKET_NAME || 'N/A'}`);
     console.log(`   AWS_REGION: ${process.env.AWS_REGION}`);
+
+    // Log JWT secret (masked for security)
+    const jwtSecret = process.env.JWT_SECRET || '';
+    const jwtSecretMasked = jwtSecret ? `${jwtSecret.substring(0, 10)}...${jwtSecret.substring(jwtSecret.length - 10)}` : 'NOT SET';
+    console.log(`   JWT_SECRET: ${jwtSecretMasked}`);
     console.log('');
 
     // Create and start Apollo Server using Pothos schema
