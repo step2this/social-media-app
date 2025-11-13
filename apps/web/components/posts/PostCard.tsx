@@ -1,21 +1,43 @@
 'use client';
 
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import type { Post } from '@/lib/graphql/types';
+import { likePost, unlikePost } from '@/app/actions/posts';
 
 interface PostCardProps {
   post: Post;
 }
 
 export function PostCard({ post }: PostCardProps) {
+  const [isPending, startTransition] = useTransition();
+  const [optimisticLiked, setOptimisticLiked] = useState(post.isLiked);
+  const [optimisticCount, setOptimisticCount] = useState(post.likesCount);
+
   const handleLike = () => {
-    // Will be connected in Phase 4
-    console.log('Like post:', post.id);
+    // Optimistic update - instant UI feedback
+    const newLiked = !optimisticLiked;
+    setOptimisticLiked(newLiked);
+    setOptimisticCount(newLiked ? optimisticCount + 1 : optimisticCount - 1);
+
+    // Server action - runs in background
+    startTransition(async () => {
+      const result = newLiked
+        ? await likePost(post.id)
+        : await unlikePost(post.id);
+
+      if (!result.success) {
+        // Revert on error
+        setOptimisticLiked(!newLiked);
+        setOptimisticCount(newLiked ? optimisticCount - 1 : optimisticCount + 1);
+        alert(result.message || 'Failed to update like');
+      }
+    });
   };
 
   const handleComment = () => {
-    // Will be connected in Phase 4
-    console.log('Comment on post:', post.id);
+    // Navigate to post detail page for commenting
+    window.location.href = `/post/${post.id}`;
   };
 
   return (
@@ -50,9 +72,19 @@ export function PostCard({ post }: PostCardProps) {
       </div>
 
       <div className="post-actions">
-        <button className="action-button" onClick={handleLike}>
-          <span className="material-icons">favorite_border</span>
-          <span>{post.likesCount}</span>
+        <button
+          className="action-button"
+          onClick={handleLike}
+          disabled={isPending}
+          style={{
+            opacity: isPending ? 0.6 : 1,
+            color: optimisticLiked ? '#e91e63' : undefined,
+          }}
+        >
+          <span className="material-icons">
+            {optimisticLiked ? 'favorite' : 'favorite_border'}
+          </span>
+          <span>{optimisticCount}</span>
         </button>
         <button className="action-button" onClick={handleComment}>
           <span className="material-icons">comment</span>

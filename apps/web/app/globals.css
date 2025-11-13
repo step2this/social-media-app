@@ -254,6 +254,19 @@ a {
   font-weight: 500;
 }
 
+.action-button:disabled {
+  cursor: not-allowed;
+}
+
+/* Liked state - red heart */
+.action-button .material-icons:has-text('favorite') {
+  color: #e91e63;
+}
+
+.action-button:has(.material-icons:is([data-icon='favorite'])) {
+  color: #e91e63;
+}
+
 /* Utility Styles */
 .info-banner {
   background: #e3f2fd;

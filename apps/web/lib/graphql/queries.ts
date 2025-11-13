@@ -161,3 +161,25 @@ export const GET_ME = gql`
     }
   }
 `;
+
+/**
+ * Mutations
+ */
+
+export const LIKE_POST = gql`
+  mutation LikePost($postId: ID!) {
+    likePost(postId: $postId) {
+      success
+      message
+    }
+  }
+`;
+
+export const UNLIKE_POST = gql`
+  mutation UnlikePost($postId: ID!) {
+    unlikePost(postId: $postId) {
+      success
+      message
+    }
+  }
+`;
