@@ -42,9 +42,9 @@ export function PostCard({
         : await onUnlike(post.id);
 
       if (!result.success) {
-        // Revert on error
-        setOptimisticLiked(!newLiked);
-        setOptimisticCount(newLiked ? optimisticCount - 1 : optimisticCount + 1);
+        // Revert on error - restore to original prop values
+        setOptimisticLiked(post.isLiked);
+        setOptimisticCount(post.likesCount);
         alert('Failed to update like. Please try again.');
       } else {
         // Sync with server response (in case of race conditions)
