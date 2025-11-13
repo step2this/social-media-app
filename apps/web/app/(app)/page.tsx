@@ -3,6 +3,7 @@ import { PostCard } from '@/components/posts/PostCard';
 import { getGraphQLClient } from '@/lib/graphql/client';
 import { GET_FOLLOWING_FEED } from '@/lib/graphql/queries';
 import type { FeedQueryResponse, Post } from '@/lib/graphql/types';
+import { logger } from '@/lib/logger';
 
 export const metadata: Metadata = {
   title: 'Home Feed',
@@ -16,14 +17,18 @@ export default async function FeedPage() {
   let error: string | null = null;
 
   try {
+    logger.info('Fetching following feed');
+
     const client = await getGraphQLClient();
     const data = await client.request<FeedQueryResponse>(GET_FOLLOWING_FEED, {
       first: 20,
     });
 
     posts = data.followingFeed?.edges.map((edge) => edge.node) || [];
+
+    logger.info({ count: posts.length }, 'Following feed loaded');
   } catch (err) {
-    console.error('Failed to fetch feed:', err);
+    logger.error({ error: err }, 'Failed to fetch following feed');
     error = err instanceof Error ? err.message : 'Failed to load feed';
   }
 

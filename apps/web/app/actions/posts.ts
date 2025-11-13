@@ -10,6 +10,7 @@
 import { revalidatePath } from 'next/cache';
 import { getGraphQLClient } from '@/lib/graphql/client';
 import { LIKE_POST, UNLIKE_POST } from '@/lib/graphql/queries';
+import { logger, logServerAction } from '@/lib/logger';
 
 interface LikeResponse {
   success: boolean;
@@ -33,15 +34,19 @@ interface UnlikePostResponse {
  */
 export async function likePost(postId: string): Promise<LikeResponse> {
   try {
+    logger.info({ postId }, 'Liking post');
+
     const client = await getGraphQLClient();
     const data = await client.request<LikePostResponse>(LIKE_POST, { postId });
 
     // Revalidate the feed page to show updated like count
     revalidatePath('/(app)', 'layout');
 
+    logServerAction('likePost', { postId, likesCount: data.likePost.likesCount }, 'success');
     return data.likePost;
   } catch (error) {
-    console.error('Failed to like post:', error);
+    logger.error({ postId, error }, 'Failed to like post');
+    logServerAction('likePost', { postId }, 'error');
     return {
       success: false,
       likesCount: 0,
@@ -58,15 +63,19 @@ export async function likePost(postId: string): Promise<LikeResponse> {
  */
 export async function unlikePost(postId: string): Promise<LikeResponse> {
   try {
+    logger.info({ postId }, 'Unliking post');
+
     const client = await getGraphQLClient();
     const data = await client.request<UnlikePostResponse>(UNLIKE_POST, { postId });
 
     // Revalidate the feed page to show updated like count
     revalidatePath('/(app)', 'layout');
 
+    logServerAction('unlikePost', { postId, likesCount: data.unlikePost.likesCount }, 'success');
     return data.unlikePost;
   } catch (error) {
-    console.error('Failed to unlike post:', error);
+    logger.error({ postId, error }, 'Failed to unlike post');
+    logServerAction('unlikePost', { postId }, 'error');
     return {
       success: false,
       likesCount: 0,

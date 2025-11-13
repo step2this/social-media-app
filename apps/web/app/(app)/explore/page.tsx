@@ -3,6 +3,7 @@ import { PostCard } from '@/components/posts/PostCard';
 import { getGraphQLClient } from '@/lib/graphql/client';
 import { GET_EXPLORE_FEED } from '@/lib/graphql/queries';
 import type { FeedQueryResponse, Post } from '@/lib/graphql/types';
+import { logger } from '@/lib/logger';
 
 export const metadata: Metadata = {
   title: 'Explore',
@@ -16,14 +17,18 @@ export default async function ExplorePage() {
   let error: string | null = null;
 
   try {
+    logger.info('Fetching explore feed');
+
     const client = await getGraphQLClient();
     const data = await client.request<FeedQueryResponse>(GET_EXPLORE_FEED, {
       first: 20,
     });
 
     posts = data.exploreFeed?.edges.map((edge) => edge.node) || [];
+
+    logger.info({ count: posts.length }, 'Explore feed loaded');
   } catch (err) {
-    console.error('Failed to fetch explore feed:', err);
+    logger.error({ error: err }, 'Failed to fetch explore feed');
     error = err instanceof Error ? err.message : 'Failed to load posts';
   }
 

@@ -85,7 +85,7 @@ export function PostCard({
         <button
           data-testid="like-button"
           aria-label={optimisticLiked ? 'Unlike post' : 'Like post'}
-          aria-pressed={optimisticLiked}
+          aria-pressed={optimisticLiked ? 'true' : 'false'}
           className="action-button"
           onClick={handleLike}
           disabled={isPending}

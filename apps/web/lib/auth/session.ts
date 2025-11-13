@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { verifyAccessToken } from '@social-media-app/auth-utils';
+import { logger } from '@/lib/logger';
 
 export interface Session {
   userId: string;
@@ -16,7 +17,7 @@ export async function getServerSession(): Promise<Session | null> {
 
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    console.error('JWT_SECRET not configured');
+    logger.error('JWT_SECRET not configured - cannot verify session');
     return null;
   }
 
