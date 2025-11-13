@@ -26,6 +26,7 @@
     "@pothos/plugin-complexity": "^4.1.2",
     "@pothos/plugin-relay": "^4.6.2",
     "@pothos/plugin-scope-auth": "^4.1.6",
+    "@pothos/plugin-tracing": "^1.1.2",
     "@pothos/plugin-validation": "^4.2.0",
     "@social-media-app/auction-dal": "workspace:*",
     "@social-media-app/auth-utils": "workspace:*",
