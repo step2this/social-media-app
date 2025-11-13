@@ -17,25 +17,34 @@ export function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🔵 Register form submitted:', formData);
     setError(null);
     setIsSubmitting(true);
 
     try {
+      console.log('🔵 Sending registration request...');
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
+      console.log('🔵 Registration response status:', response.status);
+
       if (!response.ok) {
         const data = await response.json();
+        console.log('🔴 Registration failed:', data);
         throw new Error(data.error || 'Registration failed');
       }
+
+      const data = await response.json();
+      console.log('✅ Registration successful:', data);
 
       // Success - redirect to home
       router.push('/');
       router.refresh(); // Refresh server components
     } catch (err) {
+      console.error('🔴 Registration error:', err);
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setIsSubmitting(false);
