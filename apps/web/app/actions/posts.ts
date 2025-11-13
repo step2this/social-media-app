@@ -39,6 +39,14 @@ export async function likePost(postId: string): Promise<LikeResponse> {
     const client = await getGraphQLClient();
     const data = await client.request<LikePostResponse>(LIKE_POST, { postId });
 
+    logger.info({
+      postId,
+      response: data.likePost,
+      success: data.likePost.success,
+      likesCount: data.likePost.likesCount,
+      isLiked: data.likePost.isLiked
+    }, 'Like post response from GraphQL');
+
     // Revalidate the feed page to show updated like count
     revalidatePath('/(app)', 'layout');
 

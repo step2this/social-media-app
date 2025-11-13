@@ -23,6 +23,16 @@ export function PostCard({
   // Sync internal state with props when they change (after revalidation)
   // Only sync when not in a pending transition to avoid overwriting optimistic updates
   useEffect(() => {
+    console.log('[PostCard useEffect]', {
+      postId: post.id,
+      isPending,
+      'props.isLiked': post.isLiked,
+      'props.likesCount': post.likesCount,
+      'state.optimisticLiked': optimisticLiked,
+      'state.optimisticCount': optimisticCount,
+      willSync: !isPending
+    });
+
     if (!isPending) {
       setOptimisticLiked(post.isLiked);
       setOptimisticCount(post.likesCount);
@@ -32,6 +42,12 @@ export function PostCard({
   const handleLike = () => {
     // Optimistic update - instant UI feedback
     const newLiked = !optimisticLiked;
+    console.log('[PostCard handleLike] Optimistic update', {
+      postId: post.id,
+      newLiked,
+      newCount: newLiked ? optimisticCount + 1 : optimisticCount - 1
+    });
+
     setOptimisticLiked(newLiked);
     setOptimisticCount(newLiked ? optimisticCount + 1 : optimisticCount - 1);
 
@@ -41,12 +57,24 @@ export function PostCard({
         ? await onLike(post.id)
         : await onUnlike(post.id);
 
+      console.log('[PostCard handleLike] Server response', {
+        postId: post.id,
+        result,
+        'current props.likesCount': post.likesCount,
+        'current props.isLiked': post.isLiked
+      });
+
       if (!result.success) {
+        console.log('[PostCard handleLike] Reverting due to error');
         // Revert on error - restore to original prop values
         setOptimisticLiked(post.isLiked);
         setOptimisticCount(post.likesCount);
         alert('Failed to update like. Please try again.');
       } else {
+        console.log('[PostCard handleLike] Syncing with server response', {
+          'result.isLiked': result.isLiked,
+          'result.likesCount': result.likesCount
+        });
         // Sync with server response (in case of race conditions)
         setOptimisticLiked(result.isLiked);
         setOptimisticCount(result.likesCount);
