@@ -40,7 +40,7 @@ export function PostCard({
       setOptimisticLiked(post.isLiked);
       setOptimisticCount(post.likesCount);
     }
-  }, [post.isLiked, post.likesCount, isPending]);
+  }, [post.isLiked, post.likesCount]); // NOTE: isPending is NOT a dependency - we only sync when props change
 
   const handleLike = () => {
     // Optimistic update - instant UI feedback
