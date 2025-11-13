@@ -26,7 +26,14 @@ export default async function ExplorePage() {
 
     posts = data.exploreFeed?.edges.map((edge) => edge.node) || [];
 
-    logger.info({ count: posts.length }, 'Explore feed loaded');
+    logger.info({
+      count: posts.length,
+      samplePost: posts[0] ? {
+        id: posts[0].id,
+        likesCount: posts[0].likesCount,
+        isLiked: posts[0].isLiked
+      } : null
+    }, 'Explore feed loaded');
   } catch (err) {
     logger.error({ error: err }, 'Failed to fetch explore feed');
     error = err instanceof Error ? err.message : 'Failed to load posts';
