@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { logger } from '@/lib/logger';
 
 type Props = {
   params: Promise<{ handle: string }>;
@@ -13,10 +14,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProfilePage({ params }: Props) {
   const { handle } = await params;
+
+  logger.info({ handle }, 'Profile page accessed');
+
   return (
     <div>
       <h1>Profile: @{handle}</h1>
-      <p style={{background:'#e3f2fd',padding:'1rem',borderRadius:'8px',color:'#1976d2'}}>
+      <p style={{ background: '#e3f2fd', padding: '1rem', borderRadius: '8px', color: '#1976d2' }}>
         Profile data will be loaded in Phase 4.
       </p>
     </div>
