@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import Link from 'next/link';
 import type { Post } from '@/lib/graphql/types';
 import { likePost, unlikePost } from '@/app/actions/posts';
@@ -19,6 +19,15 @@ export function PostCard({
   const [isPending, startTransition] = useTransition();
   const [optimisticLiked, setOptimisticLiked] = useState(post.isLiked);
   const [optimisticCount, setOptimisticCount] = useState(post.likesCount);
+
+  // Sync internal state with props when they change (after revalidation)
+  // Only sync when not in a pending transition to avoid overwriting optimistic updates
+  useEffect(() => {
+    if (!isPending) {
+      setOptimisticLiked(post.isLiked);
+      setOptimisticCount(post.likesCount);
+    }
+  }, [post.isLiked, post.likesCount, isPending]);
 
   const handleLike = () => {
     // Optimistic update - instant UI feedback
