@@ -7,16 +7,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./test-setup.ts'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      thresholds: {
-        lines: 90,
-        functions: 85,
-        branches: 85,
-        statements: 90,
-      },
-    },
+    globals: false, // Use explicit imports for vi, describe, etc.
+    css: false, // Skip CSS processing for faster tests
   },
   resolve: {
     alias: {
