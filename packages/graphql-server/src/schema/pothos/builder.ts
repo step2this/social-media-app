@@ -89,7 +89,7 @@ export const builder = new SchemaBuilder<{
         if (error) {
           console.error(
             `[RESOLVER ERROR] ${config.parentType}.${config.name}:`,
-            error.message
+            error instanceof Error ? error.message : String(error)
           );
         }
       }),
