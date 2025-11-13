@@ -140,7 +140,38 @@ export const GET_PROFILE = gql`
       postsCount
       followersCount
       followingCount
+    }
+  }
+`;
+
+export const FOLLOW_USER = gql`
+  mutation FollowUser($userId: ID!) {
+    followUser(userId: $userId) {
+      success
+      followersCount
+      followingCount
       isFollowing
+    }
+  }
+`;
+
+export const UNFOLLOW_USER = gql`
+  mutation UnfollowUser($userId: ID!) {
+    unfollowUser(userId: $userId) {
+      success
+      followersCount
+      followingCount
+      isFollowing
+    }
+  }
+`;
+
+export const GET_FOLLOW_STATUS = gql`
+  query GetFollowStatus($userId: ID!) {
+    followStatus(userId: $userId) {
+      isFollowing
+      followersCount
+      followingCount
     }
   }
 `;
