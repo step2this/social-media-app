@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     console.log('📝 [API] Validation successful');
 
     const result = await registerUser(validated);
-    console.log('📝 [API] User registered:', { userId: result.user?.userId, email: result.user?.email });
+    console.log('📝 [API] User registered:', { id: result.user?.id, email: result.user?.email });
 
     // Set auth cookies if tokens are provided (auto-login after registration)
     if (result.tokens) {
