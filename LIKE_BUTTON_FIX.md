@@ -1,7 +1,8 @@
 # Like Button Fix - Flash Bug Resolution
 
 **Date:** 2025-11-13
-**Branch:** `claude/nextjs-migration-review-011CV5pwJyQPm6G9wAVahXe6`
+**Updated:** 2025-11-13 (Added race condition fix)
+**Branch:** `claude/nextjs-migration-review-011CV6DBgCYw4RgnooVfZp5j`
 **Issue:** Like count flashes 0 → 1 → 0, heart stays red
 
 ---
@@ -274,4 +275,37 @@ setTimeout(() => {
 
 ---
 
-**Status:** 🟢 **Fixed** - Ready for testing
+## 🔄 Update: Race Condition Fix (Session 2)
+
+After testing, discovered a **backend race condition**:
+
+### The Backend Race Condition
+
+The like mutation performs two separate DynamoDB operations:
+1. Create `LIKE#userId` entity (fast)
+2. Update Post's `likesCount` counter (slower)
+
+When `revalidatePath` triggered immediately after the mutation:
+- Feed re-fetches posts from GraphQL
+- `isLiked` resolver checks LIKE entity → **true** ✅ (already created)
+- `likesCount` field reads Post entity → **0** ❌ (not updated yet)
+
+Result: `props.isLiked: true, props.likesCount: 0` (inconsistent!)
+
+### The Final Solution
+
+**Removed `revalidatePath` calls entirely from like/unlike actions.**
+
+**Why this works:**
+- Optimistic updates provide instant UI feedback
+- Server response syncs the correct count immediately
+- No race condition with backend updates
+- Data refreshes on next navigation or manual refresh
+- Follows modern SPA patterns (optimistic + eventual consistency)
+
+### Files Changed (Session 2)
+- `apps/web/app/actions/posts.ts` - Removed revalidatePath calls
+
+---
+
+**Status:** 🟢 **Fixed** - Both issues resolved
