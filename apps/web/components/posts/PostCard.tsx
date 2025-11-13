@@ -22,6 +22,7 @@ export function PostCard({
 
   // Sync internal state with props when they change (after revalidation)
   // This runs when the parent re-fetches and passes in new props
+  // BUT: Don't sync while a mutation is pending - we want to preserve optimistic updates
   useEffect(() => {
     console.log('[PostCard useEffect]', {
       postId: post.id,
@@ -30,12 +31,16 @@ export function PostCard({
       'props.likesCount': post.likesCount,
       'state.optimisticLiked': optimisticLiked,
       'state.optimisticCount': optimisticCount,
-      willSync: true
+      willSync: !isPending
     });
 
-    setOptimisticLiked(post.isLiked);
-    setOptimisticCount(post.likesCount);
-  }, [post.isLiked, post.likesCount]);
+    // Only sync if there's no pending mutation
+    // This prevents revalidation from overwriting optimistic updates
+    if (!isPending) {
+      setOptimisticLiked(post.isLiked);
+      setOptimisticCount(post.likesCount);
+    }
+  }, [post.isLiked, post.likesCount, isPending]);
 
   const handleLike = () => {
     // Optimistic update - instant UI feedback

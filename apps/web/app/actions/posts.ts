@@ -47,8 +47,10 @@ export async function likePost(postId: string): Promise<LikeResponse> {
       isLiked: data.likePost.isLiked
     }, 'Like post response from GraphQL');
 
-    // Revalidate the feed page to show updated like count
-    revalidatePath('/(app)', 'layout');
+    // Revalidate pages that show posts - more targeted than revalidating entire layout
+    // This prevents unnecessary re-fetches while still updating data for next navigation
+    revalidatePath('/explore', 'page');
+    revalidatePath('/(app)/page', 'page'); // Home feed
 
     logServerAction('likePost', { postId, likesCount: data.likePost.likesCount }, 'success');
     return data.likePost;
@@ -76,8 +78,17 @@ export async function unlikePost(postId: string): Promise<LikeResponse> {
     const client = await getGraphQLClient();
     const data = await client.request<UnlikePostResponse>(UNLIKE_POST, { postId });
 
-    // Revalidate the feed page to show updated like count
-    revalidatePath('/(app)', 'layout');
+    logger.info({
+      postId,
+      response: data.unlikePost,
+      success: data.unlikePost.success,
+      likesCount: data.unlikePost.likesCount,
+      isLiked: data.unlikePost.isLiked
+    }, 'Unlike post response from GraphQL');
+
+    // Revalidate pages that show posts - more targeted than revalidating entire layout
+    revalidatePath('/explore', 'page');
+    revalidatePath('/(app)/page', 'page'); // Home feed
 
     logServerAction('unlikePost', { postId, likesCount: data.unlikePost.likesCount }, 'success');
     return data.unlikePost;
