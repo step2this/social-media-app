@@ -15,6 +15,10 @@ version: '3.8'
 #
 # To stop:
 #   docker compose -f docker-compose.signoz.yml down
+#
+# Troubleshooting:
+#   - If ClickHouse fails: docker compose -f docker-compose.signoz.yml logs clickhouse
+#   - Clean start: docker compose -f docker-compose.signoz.yml down -v && docker compose -f docker-compose.signoz.yml up -d
 
 services:
   # ClickHouse - Time-series database for traces and logs
@@ -22,18 +26,24 @@ services:
     image: clickhouse/clickhouse-server:23.11-alpine
     container_name: signoz-clickhouse
     hostname: clickhouse
+    user: "101:101"  # Run as clickhouse user to avoid permission issues
     volumes:
-      - ./docker-volumes/signoz/clickhouse:/var/lib/clickhouse
+      - clickhouse-data:/var/lib/clickhouse
     environment:
       - CLICKHOUSE_DB=signoz
     ports:
       - "9000:9000"     # Native protocol
       - "8123:8123"     # HTTP interface
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'localhost:8123/ping']
-      interval: 30s
+      interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 40s
     networks:
       - signoz
 
@@ -100,4 +110,5 @@ networks:
     driver: bridge
 
 volumes:
-  signoz-clickhouse:
+  clickhouse-data:
+    driver: local
