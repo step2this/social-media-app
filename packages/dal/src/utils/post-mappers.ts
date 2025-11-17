@@ -71,8 +71,9 @@ export const mapBasePostFields = (entity: PostEntity): BasePostFields => ({
   thumbnailUrl: entity.thumbnailUrl,
   caption: entity.caption,
   tags: [...entity.tags],
-  likesCount: entity.likesCount,
-  commentsCount: entity.commentsCount,
+  // Fallback to 0 for legacy posts that don't have likesCount/commentsCount initialized
+  likesCount: entity.likesCount ?? 0,
+  commentsCount: entity.commentsCount ?? 0,
   isPublic: entity.isPublic,
   createdAt: entity.createdAt,
   updatedAt: entity.updatedAt

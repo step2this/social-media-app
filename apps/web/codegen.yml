@@ -1,0 +1,44 @@
+# GraphQL Code Generator Configuration
+# Automatically generates TypeScript types from the Pothos GraphQL schema
+
+# Where to get the schema from
+schema: http://localhost:4000/
+
+# Where to find GraphQL operations (queries, mutations, fragments)
+documents:
+  - 'lib/graphql/queries.ts'
+  - 'components/**/*.{ts,tsx}'
+  - 'app/**/*.{ts,tsx}'
+
+# What to generate
+generates:
+  # Generate TypeScript types for all GraphQL operations
+  lib/graphql/generated.ts:
+    plugins:
+      # Base TypeScript types for schema
+      - typescript
+      # Types for operations (queries/mutations)
+      - typescript-operations
+      # Typed document nodes for better type inference
+      - typed-document-node
+    config:
+      # Ensure types match our existing patterns
+      avoidOptionals: false
+      maybeValue: T | null
+      # Use our existing scalars
+      scalars:
+        ID: string
+        DateTime: string
+      # Add helpful comments
+      addDocBlocks: true
+      # Skip __typename in generated types (cleaner)
+      skipTypename: false
+      # Make generated code more readable
+      enumsAsTypes: true
+      # Ensure compatibility with graphql-request
+      documentMode: documentNode
+
+# Hooks to run during generation
+hooks:
+  afterAllFileWrite:
+    - prettier --write

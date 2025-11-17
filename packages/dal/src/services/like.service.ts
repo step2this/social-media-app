@@ -1,5 +1,5 @@
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-import { PutCommand, GetCommand, DeleteCommand, BatchGetCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand, GetCommand, DeleteCommand, BatchGetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import type {
   LikePostResponse,
   UnlikePostResponse,
@@ -65,23 +65,51 @@ export class LikeService {
     };
 
     try {
+      // Create the like entity with conditional check
       await this.dynamoClient.send(new PutCommand({
         TableName: this.tableName,
         Item: likeEntity,
         ConditionExpression: 'attribute_not_exists(PK)'
       }));
 
+      // Atomically increment the post's likesCount
+      const updateResult = await this.dynamoClient.send(new UpdateCommand({
+        TableName: this.tableName,
+        Key: {
+          PK: `USER#${postUserId}`,
+          SK: `POST#${postId}`
+        },
+        UpdateExpression: 'SET likesCount = if_not_exists(likesCount, :zero) + :inc',
+        ExpressionAttributeValues: {
+          ':inc': 1,
+          ':zero': 0
+        },
+        ReturnValues: 'ALL_NEW'
+      }));
+
+      const newLikesCount = updateResult.Attributes?.likesCount || 1;
+
       return {
         success: true,
-        likesCount: 0, // Will be updated by stream processor
+        likesCount: newLikesCount,
         isLiked: true
       };
     } catch (error: any) {
       // If conditional check fails, user already liked this post
       if (error.name === 'ConditionalCheckFailedException' || error.__type === 'ConditionalCheckFailedException') {
+        // Fetch current like count from the post
+        const getResult = await this.dynamoClient.send(new GetCommand({
+          TableName: this.tableName,
+          Key: {
+            PK: `USER#${postUserId}`,
+            SK: `POST#${postId}`
+          },
+          ProjectionExpression: 'likesCount'
+        }));
+
         return {
           success: true,
-          likesCount: 0,
+          likesCount: getResult.Item?.likesCount || 0,
           isLiked: true
         };
       }
@@ -94,6 +122,18 @@ export class LikeService {
    * Idempotent operation - doesn't fail if already unliked
    */
   async unlikePost(userId: string, postId: string): Promise<UnlikePostResponse> {
+    // First, get the like entity to find the post owner
+    const getLikeResult = await this.dynamoClient.send(new GetCommand({
+      TableName: this.tableName,
+      Key: {
+        PK: `POST#${postId}`,
+        SK: `LIKE#${userId}`
+      }
+    }));
+
+    const likeEntity = getLikeResult.Item as LikeEntity | undefined;
+
+    // Delete the like entity
     await this.dynamoClient.send(new DeleteCommand({
       TableName: this.tableName,
       Key: {
@@ -102,9 +142,36 @@ export class LikeService {
       }
     }));
 
+    // If like existed, decrement the post's likesCount
+    if (likeEntity) {
+      const updateResult = await this.dynamoClient.send(new UpdateCommand({
+        TableName: this.tableName,
+        Key: {
+          PK: `USER#${likeEntity.postUserId}`,
+          SK: `POST#${postId}`
+        },
+        UpdateExpression: 'SET likesCount = if_not_exists(likesCount, :zero) - :dec',
+        ExpressionAttributeValues: {
+          ':dec': 1,
+          ':zero': 0
+        },
+        ConditionExpression: 'likesCount > :zero',
+        ReturnValues: 'ALL_NEW'
+      }));
+
+      const newLikesCount = updateResult.Attributes?.likesCount || 0;
+
+      return {
+        success: true,
+        likesCount: newLikesCount,
+        isLiked: false
+      };
+    }
+
+    // Like didn't exist - return current count from post
     return {
       success: true,
-      likesCount: 0, // Will be updated by stream processor
+      likesCount: 0,
       isLiked: false
     };
   }

@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { LoginForm } from '@/components/auth/LoginForm';
+import { logger } from '@/lib/logger';
 
 export const metadata: Metadata = {
   title: 'Login',
@@ -7,6 +8,8 @@ export const metadata: Metadata = {
 };
 
 export default function LoginPage() {
+  logger.info('Login page rendered');
+
   return (
     <div>
       <h2 style={{ marginTop: 0, marginBottom: '1.5rem', textAlign: 'center' }}>

@@ -140,7 +140,38 @@ export const GET_PROFILE = gql`
       postsCount
       followersCount
       followingCount
+    }
+  }
+`;
+
+export const FOLLOW_USER = gql`
+  mutation FollowUser($userId: ID!) {
+    followUser(userId: $userId) {
+      success
+      followersCount
+      followingCount
       isFollowing
+    }
+  }
+`;
+
+export const UNFOLLOW_USER = gql`
+  mutation UnfollowUser($userId: ID!) {
+    unfollowUser(userId: $userId) {
+      success
+      followersCount
+      followingCount
+      isFollowing
+    }
+  }
+`;
+
+export const GET_FOLLOW_STATUS = gql`
+  query GetFollowStatus($userId: ID!) {
+    followStatus(userId: $userId) {
+      isFollowing
+      followersCount
+      followingCount
     }
   }
 `;
@@ -158,6 +189,50 @@ export const GET_ME = gql`
       postsCount
       followersCount
       followingCount
+    }
+  }
+`;
+
+/**
+ * Mutations
+ */
+
+export const LIKE_POST = gql`
+  mutation LikePost($postId: ID!) {
+    likePost(postId: $postId) {
+      success
+      likesCount
+      isLiked
+    }
+  }
+`;
+
+export const UNLIKE_POST = gql`
+  mutation UnlikePost($postId: ID!) {
+    unlikePost(postId: $postId) {
+      success
+      likesCount
+      isLiked
+    }
+  }
+`;
+
+export const CREATE_POST = gql`
+  mutation CreatePost($fileType: String!, $caption: String) {
+    createPost(fileType: $fileType, caption: $caption) {
+      post {
+        id
+        userId
+        caption
+        imageUrl
+        thumbnailUrl
+        likesCount
+        commentsCount
+        createdAt
+        updatedAt
+      }
+      uploadUrl
+      thumbnailUploadUrl
     }
   }
 `;

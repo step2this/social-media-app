@@ -1,21 +1,73 @@
 'use client';
 
+import { useState, useTransition, useEffect } from 'react';
 import Link from 'next/link';
 import type { Post } from '@/lib/graphql/types';
+import { likePost, unlikePost } from '@/app/actions/posts';
 
 interface PostCardProps {
   post: Post;
+  onLike?: typeof likePost;
+  onUnlike?: typeof unlikePost;
 }
 
-export function PostCard({ post }: PostCardProps) {
+export function PostCard({
+  post,
+  onLike = likePost,
+  onUnlike = unlikePost
+}: PostCardProps) {
+  const [isPending, startTransition] = useTransition();
+  // Initialize from props ONCE - after that, local state is the source of truth
+  // This matches the pattern used by Instagram, Twitter, etc.
+  const [optimisticLiked, setOptimisticLiked] = useState(post.isLiked);
+  const [optimisticCount, setOptimisticCount] = useState(post.likesCount);
+
   const handleLike = () => {
-    // Will be connected in Phase 4
-    console.log('Like post:', post.id);
+    // Optimistic update - instant UI feedback
+    const newLiked = !optimisticLiked;
+    console.log('[PostCard handleLike] Optimistic update', {
+      postId: post.id,
+      newLiked,
+      newCount: newLiked ? optimisticCount + 1 : optimisticCount - 1
+    });
+
+    setOptimisticLiked(newLiked);
+    setOptimisticCount(newLiked ? optimisticCount + 1 : optimisticCount - 1);
+
+    // Server action - runs in background
+    startTransition(async () => {
+      const result = newLiked
+        ? await onLike(post.id)
+        : await onUnlike(post.id);
+
+      console.log('[PostCard handleLike] Server response', {
+        postId: post.id,
+        result,
+        'current props.likesCount': post.likesCount,
+        'current props.isLiked': post.isLiked
+      });
+
+      if (!result.success) {
+        console.log('[PostCard handleLike] Reverting due to error');
+        // Revert on error - restore to original prop values
+        setOptimisticLiked(post.isLiked);
+        setOptimisticCount(post.likesCount);
+        alert('Failed to update like. Please try again.');
+      } else {
+        console.log('[PostCard handleLike] Syncing with server response', {
+          'result.isLiked': result.isLiked,
+          'result.likesCount': result.likesCount
+        });
+        // Sync with server response (in case of race conditions)
+        setOptimisticLiked(result.isLiked);
+        setOptimisticCount(result.likesCount);
+      }
+    });
   };
 
   const handleComment = () => {
-    // Will be connected in Phase 4
-    console.log('Comment on post:', post.id);
+    // Navigate to post detail page for commenting
+    window.location.href = `/post/${post.id}`;
   };
 
   return (
@@ -50,16 +102,38 @@ export function PostCard({ post }: PostCardProps) {
       </div>
 
       <div className="post-actions">
-        <button className="action-button" onClick={handleLike}>
-          <span className="material-icons">favorite_border</span>
-          <span>{post.likesCount}</span>
+        <button
+          data-testid="like-button"
+          aria-label={optimisticLiked ? 'Unlike post' : 'Like post'}
+          aria-pressed={optimisticLiked ? 'true' : 'false'}
+          className="action-button"
+          onClick={handleLike}
+          disabled={isPending}
+          style={{
+            opacity: isPending ? 0.6 : 1,
+            color: optimisticLiked ? '#e91e63' : undefined,
+          }}
+        >
+          <span className="material-icons" aria-hidden="true">
+            {optimisticLiked ? 'favorite' : 'favorite_border'}
+          </span>
+          <span>{optimisticCount}</span>
         </button>
-        <button className="action-button" onClick={handleComment}>
-          <span className="material-icons">comment</span>
+        <button
+          data-testid="comment-button"
+          aria-label="Comment on post"
+          className="action-button"
+          onClick={handleComment}
+        >
+          <span className="material-icons" aria-hidden="true">comment</span>
           <span>{post.commentsCount}</span>
         </button>
-        <button className="action-button">
-          <span className="material-icons">share</span>
+        <button
+          data-testid="share-button"
+          aria-label="Share post"
+          className="action-button"
+        >
+          <span className="material-icons" aria-hidden="true">share</span>
         </button>
       </div>
     </article>

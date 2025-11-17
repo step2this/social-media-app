@@ -93,3 +93,35 @@ export interface PostWithComments extends Post {
 export interface PostQueryResponse {
   post: PostWithComments;
 }
+
+export interface CreatePostPayload {
+  post: Omit<Post, 'author'> & { author?: Author };
+  uploadUrl: string;
+  thumbnailUploadUrl: string;
+}
+
+export interface CreatePostResponse {
+  createPost: CreatePostPayload;
+}
+
+export interface LikePostPayload {
+  success: boolean;
+  likesCount: number;
+  isLiked: boolean;
+  error?: string;
+}
+
+export interface LikePostResponse {
+  likePost: LikePostPayload;
+}
+
+export interface UnlikePostPayload {
+  success: boolean;
+  likesCount: number;
+  isLiked: boolean;
+  error?: string;
+}
+
+export interface UnlikePostResponse {
+  unlikePost: UnlikePostPayload;
+}
