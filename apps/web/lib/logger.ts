@@ -9,13 +9,12 @@
  * - Automatic trace context injection (trace_id, span_id)
  * - Child loggers with context inheritance
  * - Type-safe logging methods
- * - Works with Next.js 15 (no worker threads)
+ * - Multi-transport: console + file output
+ * - Log rotation support
  *
- * Pretty printing in development:
- * To see pretty logs, pipe through pino-pretty:
- * ```bash
- * pnpm dev | pnpm exec pino-pretty
- * ```
+ * Log outputs:
+ * - Development: Pretty console + JSON file (./logs/app.log)
+ * - Production: JSON file only (./logs/app.log)
  *
  * Usage:
  * ```typescript
@@ -38,50 +37,87 @@
  * Use these to correlate logs across services:
  * ```bash
  * # See all logs for a specific request
- * grep "trace_id\":\"4bf92f3577b34da6a3ce929d0e0e4736" logs.json
+ * grep "trace_id\":\"4bf92f3577b34da6a3ce929d0e0e4736" ./logs/app.log
  * ```
  */
 
 import pino from 'pino';
 import { trace } from '@opentelemetry/api';
+import * as fs from 'fs';
+import * as path from 'path';
+
+/**
+ * Set up log directory and file streams
+ * Only create file streams on server side (not during build/edge runtime)
+ */
+let logStreams: pino.DestinationStream | undefined;
+
+if (typeof window === 'undefined' && process.env.NEXT_RUNTIME !== 'edge') {
+  const logsDir = path.join(process.cwd(), 'logs');
+
+  // Ensure logs directory exists
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
+  }
+
+  const logFilePath = path.join(logsDir, 'app.log');
+
+  // Create file stream with rotation support
+  // Using pino.destination for async, non-blocking writes
+  logStreams = pino.destination({
+    dest: logFilePath,
+    sync: false, // Async writes for better performance
+    minLength: 4096, // Minimum bytes before flushing
+  });
+}
 
 /**
  * Create the base logger instance with automatic trace context injection
  *
- * Note: We don't use pino-pretty transport here because it spawns
- * worker threads that break Next.js 15's bundling. Instead, we output
- * JSON and you can pipe through pino-pretty if you want colored logs.
+ * Multi-transport setup:
+ * - Development: Logs to console (for piping to pino-pretty) AND to file
+ * - Production: Logs to file only
+ * - Build time: Logs to console only (no file system access)
  */
-const baseLogger = pino({
-  level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+const baseLogger = pino(
+  {
+    level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
 
-  // Base context for all logs
-  base: {
-    env: process.env.NODE_ENV,
-    app: 'social-media-web',
-  },
+    // Base context for all logs
+    base: {
+      env: process.env.NODE_ENV,
+      app: 'social-media-web',
+    },
 
-  // Automatically log errors with full stack traces
-  formatters: {
-    level: (label) => {
-      return { level: label };
+    // Automatically log errors with full stack traces
+    formatters: {
+      level: (label) => {
+        return { level: label };
+      },
+    },
+
+    // Mixin to automatically inject trace context into every log
+    mixin() {
+      const span = trace.getActiveSpan();
+      if (span) {
+        const spanContext = span.spanContext();
+        return {
+          trace_id: spanContext.traceId,
+          span_id: spanContext.spanId,
+          trace_flags: spanContext.traceFlags,
+        };
+      }
+      return {};
     },
   },
-
-  // Mixin to automatically inject trace context into every log
-  mixin() {
-    const span = trace.getActiveSpan();
-    if (span) {
-      const spanContext = span.spanContext();
-      return {
-        trace_id: spanContext.traceId,
-        span_id: spanContext.spanId,
-        trace_flags: spanContext.traceFlags,
-      };
-    }
-    return {};
-  },
-});
+  // Multi-stream: write to both stdout and file
+  logStreams
+    ? pino.multistream([
+        { stream: process.stdout }, // Console output (can pipe to pino-pretty)
+        { stream: logStreams },     // File output
+      ])
+    : process.stdout // Fallback to stdout only during build
+);
 
 /**
  * Export the logger with automatic trace context

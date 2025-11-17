@@ -1,0 +1,77 @@
+# OpenTelemetry Collector Configuration for SigNoz
+# Receives telemetry data from Next.js and GraphQL server and exports to ClickHouse
+
+receivers:
+  # OTLP receiver for traces, metrics, and logs
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - "http://localhost:*"
+            - "http://127.0.0.1:*"
+          allowed_headers:
+            - "*"
+
+processors:
+  # Batch processor to reduce number of outgoing connections
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+
+  # Resource detection to add environment metadata
+  resourcedetection:
+    detectors: [env, system]
+    timeout: 5s
+
+  # Memory limiter to prevent OOM
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 1000
+    spike_limit_mib: 200
+
+exporters:
+  # ClickHouse exporter for traces
+  clickhousetraces:
+    datasource: tcp://clickhouse:9000/?database=signoz
+    docker_multi_node_cluster: false
+    low_cardinal_exception_grouping: false
+
+  # ClickHouse exporter for logs
+  clickhouselogsexporter:
+    dsn: tcp://clickhouse:9000/
+    timeout: 5s
+    sending_queue:
+      queue_size: 100
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+  # Console exporter for debugging (optional)
+  logging:
+    loglevel: debug
+
+service:
+  pipelines:
+    # Traces pipeline
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resourcedetection]
+      exporters: [clickhousetraces]
+
+    # Logs pipeline
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resourcedetection]
+      exporters: [clickhouselogsexporter]
+
+    # Metrics pipeline (optional for future use)
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resourcedetection]
+      exporters: [logging]

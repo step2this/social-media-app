@@ -84,3 +84,5 @@ volume/
 # Test artifacts
 test-results.json
 **/test-results.json
+# Docker volumes for SigNoz
+docker-volumes/
