@@ -1,0 +1,115 @@
+version: '3.8'
+
+# SigNoz Observability Platform - Development Setup
+# This runs SigNoz locally for viewing traces and logs from Next.js and GraphQL server
+#
+# Usage:
+#   docker compose -f docker-compose.signoz.yml up -d
+#
+# Access SigNoz UI:
+#   http://localhost:3301
+#
+# OTLP Endpoints:
+#   HTTP: http://localhost:4318
+#   gRPC: http://localhost:4317
+#
+# To stop:
+#   docker compose -f docker-compose.signoz.yml down
+#
+# Troubleshooting:
+#   - If ClickHouse fails: docker compose -f docker-compose.signoz.yml logs clickhouse
+#   - Clean start: docker compose -f docker-compose.signoz.yml down -v && docker compose -f docker-compose.signoz.yml up -d
+
+services:
+  # ClickHouse - Time-series database for traces and logs
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.11-alpine
+    platform: linux/amd64  # Force AMD64 emulation for Apple Silicon (M1/M2) compatibility
+    container_name: signoz-clickhouse
+    hostname: clickhouse
+    user: "101:101"  # Run as clickhouse user to avoid permission issues
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    environment:
+      - CLICKHOUSE_DB=signoz
+    ports:
+      - "9000:9000"     # Native protocol
+      - "8123:8123"     # HTTP interface
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks:
+      - signoz
+
+  # OTel Collector - Receives, processes, and exports telemetry data
+  otel-collector:
+    image: signoz/signoz-otel-collector:0.88.11
+    container_name: signoz-otel-collector
+    command: ['--config=/etc/otel-collector-config.yaml']
+    volumes:
+      - ./signoz-otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=host.name=signoz-host,os.type=linux
+    ports:
+      - "4317:4317"     # OTLP gRPC receiver
+      - "4318:4318"     # OTLP HTTP receiver
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - signoz
+
+  # Query Service - Backend API for SigNoz UI
+  query-service:
+    image: signoz/query-service:0.40.0
+    container_name: signoz-query-service
+    command: ['-config=/root/config/prometheus.yml']
+    volumes:
+      - ./signoz-query-service-config.yaml:/root/config/prometheus.yml
+    environment:
+      - ClickHouseUrl=tcp://clickhouse:9000
+      - STORAGE=clickhouse
+      - GODEBUG=netdns=go
+      - TELEMETRY_ENABLED=true
+      - DEPLOYMENT_TYPE=docker-standalone-amd
+    ports:
+      - "8080:8080"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'localhost:8080/api/v1/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - signoz
+
+  # Frontend - SigNoz UI
+  frontend:
+    image: signoz/frontend:0.40.0
+    container_name: signoz-frontend
+    environment:
+      - FRONTEND_API_ENDPOINT=http://query-service:8080
+    ports:
+      - "3301:3301"
+    depends_on:
+      query-service:
+        condition: service_healthy
+    networks:
+      - signoz
+
+networks:
+  signoz:
+    driver: bridge
+
+volumes:
+  clickhouse-data:
+    driver: local

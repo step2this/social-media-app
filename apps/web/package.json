@@ -6,7 +6,7 @@
     "dev": "next dev",
     "dev:pretty": "next dev 2>&1 | pnpm exec pino-pretty",
     "codegen": "graphql-codegen --config codegen.yml",
-    "codegen:watch": "graphql-codegen --config codegen.yml --watch",
+    "codegen:watch": "graphql-codegen --config codegen.yml --watch --errors-only",
     "prebuild": "pnpm codegen",
     "build": "next build",
     "start": "next start",

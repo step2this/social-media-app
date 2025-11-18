@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
     '@social-media-app/dal',
   ],
 
+  // Prevent Pino from being bundled (it needs to run in Node.js runtime)
+  // This avoids "worker threads" errors with pino-pretty and pino transports
+  serverExternalPackages: ['pino', 'pino-pretty'],
+
   // GraphQL server proxy
   async rewrites() {
     return [

@@ -1,0 +1,77 @@
+# Prometheus Configuration for Social Media App Observability
+
+global:
+  scrape_interval: 15s       # Scrape targets every 15 seconds
+  evaluation_interval: 15s   # Evaluate rules every 15 seconds
+  scrape_timeout: 10s        # Timeout after 10 seconds
+  
+  # Attach labels to all time series collected by this server
+  external_labels:
+    cluster: 'local-dev'
+    environment: 'development'
+
+# Alertmanager configuration (optional - uncomment when alerting is set up)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - 'localhost:9093'
+
+# Rule files - load alerting and recording rules
+# rule_files:
+#   - 'alerts/*.yml'
+#   - 'rules/*.yml'
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          app: 'prometheus'
+          service: 'monitoring'
+
+  # Next.js Application Metrics
+  - job_name: 'nextjs-app'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['host.docker.internal:9464']
+        labels:
+          app: 'social-media-web'
+          service: 'frontend'
+          tier: 'web'
+    # Relabel to add more context
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'nextjs-app'
+
+  # GraphQL Server Metrics
+  - job_name: 'graphql-server'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['host.docker.internal:9465']
+        labels:
+          app: 'social-media-graphql'
+          service: 'backend'
+          tier: 'api'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'graphql-server'
+
+  # Optional: Node.js exporter for system metrics
+  # Uncomment if you install node_exporter
+  # - job_name: 'node-exporter'
+  #   static_configs:
+  #     - targets: ['host.docker.internal:9100']
+  #       labels:
+  #         app: 'node-exporter'
+  #         service: 'system'
+
+# Storage configuration
+# storage:
+#   tsdb:
+#     retention.time: 15d
+#     retention.size: 10GB
