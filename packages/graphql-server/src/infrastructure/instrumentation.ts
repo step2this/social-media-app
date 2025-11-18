@@ -23,17 +23,25 @@
  * ```
  */
 
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { Resource } from '@opentelemetry/resources';
-import {
-  ATTR_SERVICE_NAME,
-  ATTR_SERVICE_VERSION,
-  ATTR_DEPLOYMENT_ENVIRONMENT,
-} from '@opentelemetry/semantic-conventions';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
-import { GraphQLInstrumentation } from '@opentelemetry/instrumentation-graphql';
-import { AwsInstrumentation } from '@opentelemetry/instrumentation-aws-sdk';
+// Use dynamic imports to handle CommonJS modules in ESM context
+// NodeNext module resolution requires this approach for proper interop
+const [
+  { NodeSDK },
+  { OTLPTraceExporter },
+  { resourceFromAttributes },
+  { SEMRESATTRS_SERVICE_NAME, SEMRESATTRS_SERVICE_VERSION, SEMRESATTRS_DEPLOYMENT_ENVIRONMENT },
+  { getNodeAutoInstrumentations },
+  { GraphQLInstrumentation },
+  { AwsInstrumentation },
+] = await Promise.all([
+  import('@opentelemetry/sdk-node'),
+  import('@opentelemetry/exporter-trace-otlp-http'),
+  import('@opentelemetry/resources'),
+  import('@opentelemetry/semantic-conventions'),
+  import('@opentelemetry/auto-instrumentations-node'),
+  import('@opentelemetry/instrumentation-graphql'),
+  import('@opentelemetry/instrumentation-aws-sdk'),
+]);
 
 // Service configuration
 const serviceName = 'social-media-graphql';
@@ -49,11 +57,12 @@ console.log(`[OpenTelemetry] Initializing instrumentation for ${serviceName}`);
 console.log(`[OpenTelemetry] Environment: ${environment}`);
 console.log(`[OpenTelemetry] OTLP Endpoint: ${otlpEndpoint}`);
 
-// Create resource with service information
-const resource = new Resource({
-  [ATTR_SERVICE_NAME]: serviceName,
-  [ATTR_SERVICE_VERSION]: serviceVersion,
-  [ATTR_DEPLOYMENT_ENVIRONMENT]: environment,
+// Create resource with service information using resourceFromAttributes
+// Note: Resource is not a constructor in OpenTelemetry v2.x, use the factory function instead
+const resource = resourceFromAttributes({
+  [SEMRESATTRS_SERVICE_NAME]: serviceName,
+  [SEMRESATTRS_SERVICE_VERSION]: serviceVersion,
+  [SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]: environment,
 });
 
 // Create OTLP trace exporter
@@ -98,28 +107,29 @@ const sdk = new NodeSDK({
   ],
 });
 
-// Start the SDK
-sdk
-  .start()
-  .then(() => {
-    console.log('[OpenTelemetry] SDK started successfully');
-    console.log('[OpenTelemetry] Instrumentation active for:');
-    console.log('  - GraphQL operations');
-    console.log('  - AWS SDK (DynamoDB, S3, etc.)');
-    console.log('  - HTTP requests');
-  })
-  .catch((error) => {
-    console.error('[OpenTelemetry] Failed to start SDK:', error);
-  });
+// Start the SDK (returns void, not a promise)
+try {
+  sdk.start();
+  console.log('[OpenTelemetry] SDK started successfully');
+  console.log('[OpenTelemetry] Instrumentation active for:');
+  console.log('  - GraphQL operations');
+  console.log('  - AWS SDK (DynamoDB, S3, etc.)');
+  console.log('  - HTTP requests');
+} catch (error) {
+  console.error('[OpenTelemetry] Failed to start SDK:', error);
+}
 
 // Handle graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('[OpenTelemetry] Shutting down...');
-  sdk
-    .shutdown()
-    .then(() => console.log('[OpenTelemetry] Shutdown complete'))
-    .catch((error) => console.error('[OpenTelemetry] Error during shutdown:', error))
-    .finally(() => process.exit(0));
+  try {
+    await sdk.shutdown();
+    console.log('[OpenTelemetry] Shutdown complete');
+  } catch (error) {
+    console.error('[OpenTelemetry] Error during shutdown:', error);
+  } finally {
+    process.exit(0);
+  }
 });
 
 // Export SDK for manual span creation if needed

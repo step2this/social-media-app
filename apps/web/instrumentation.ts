@@ -10,6 +10,7 @@
 export async function register() {
   // Only run instrumentation on the Node.js runtime (not Edge)
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    await import('./instrumentation.node');
+    const { register: registerNode } = await import('./instrumentation.node');
+    await registerNode();
   }
 }

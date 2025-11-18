@@ -30,6 +30,10 @@
  *   - No API Gateway event conversion needed
  */
 
+// CRITICAL: Import instrumentation FIRST before anything else
+// This initializes OpenTelemetry tracing for the entire application
+import './infrastructure/instrumentation.js';
+
 import { config } from 'dotenv';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
