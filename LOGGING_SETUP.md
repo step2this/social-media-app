@@ -1,6 +1,8 @@
 # Logging & Observability Setup
 
-This project uses **OpenTelemetry + Pino + SigNoz** for comprehensive logging and distributed tracing.
+This project uses **OpenTelemetry + Pino + Jaeger** for comprehensive logging and distributed tracing.
+
+> **Note**: This documentation is being updated. See `docker-compose.observability.yml` for the latest Jaeger + Prometheus + Grafana stack.
 
 ## Architecture
 
