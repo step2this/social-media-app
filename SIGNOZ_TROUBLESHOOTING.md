@@ -71,21 +71,25 @@ environment:
   - MAX_MEMORY_USAGE=2000000000  # 2GB limit
 ```
 
-#### Solution D: ARM Architecture (M1/M2 Macs)
-ClickHouse Alpine images can have issues on ARM. Use platform override:
+#### Solution D: ARM Architecture (M1/M2 Macs) ✅ APPLIED
+ClickHouse Alpine images can have issues on ARM. **This fix has been applied to docker-compose.signoz.yml:**
 
-```bash
-# Edit docker-compose.signoz.yml, change clickhouse service:
+```yaml
 clickhouse:
-  platform: linux/amd64  # Force AMD64 emulation
+  platform: linux/amd64  # Force AMD64 emulation via Rosetta 2
   image: clickhouse/clickhouse-server:23.11-alpine
   # ... rest of config
 ```
 
-Or use a different image:
+**Status**: The platform override has been added. After VS Code restart, verify containers are healthy:
+```bash
+docker compose -f docker-compose.signoz.yml ps
+```
+
+Alternative (if platform override doesn't work):
 ```yaml
 clickhouse:
-  image: clickhouse/clickhouse-server:23.11  # Non-alpine version
+  image: clickhouse/clickhouse-server:23.11  # Non-alpine version (larger but more reliable)
 ```
 
 #### Solution E: Permission Issues
