@@ -18,8 +18,8 @@ const __dirname = dirname(__filename);
 // Load .env from project root
 config({ path: resolve(__dirname, '../.env') });
 
-// Now import the builders from the package
-import { PopularPostScenario, ActiveCommunityScenario } from '@social-media-app/test-data-builders';
+// Now import the builders from the package source
+import { PopularPostScenario, ActiveCommunityScenario } from '../packages/test-data-builders/src/index.js';
 
 async function main() {
   console.log('🚀 Test Data Builder System - Scenario Test Runner\n');
