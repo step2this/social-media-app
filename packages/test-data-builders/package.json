@@ -1,0 +1,48 @@
+{
+  "name": "@social-media-app/test-data-builders",
+  "version": "0.1.0",
+  "description": "Test data builder system for generating realistic test data with DAL services",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./scenarios": {
+      "types": "./dist/scenarios/index.d.ts",
+      "import": "./dist/scenarios/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^10.1.0",
+    "awilix": "^12.0.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@social-media-app/aws-utils": "workspace:*",
+    "@social-media-app/dal": "workspace:*",
+    "@social-media-app/shared": "workspace:*",
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.6.3"
+  },
+  "keywords": [
+    "test",
+    "data",
+    "builder",
+    "testing",
+    "fixtures",
+    "seed-data"
+  ],
+  "author": "",
+  "license": "MIT"
+}

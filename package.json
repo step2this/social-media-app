@@ -80,6 +80,7 @@
     "@typescript-eslint/eslint-plugin": "^8.18.2",
     "@typescript-eslint/parser": "^8.18.2",
     "concurrently": "^8.2.2",
+    "dotenv": "^17.2.3",
     "esbuild": "^0.19.12",
     "eslint": "^9.17.0",
     "eslint-config-prettier": "^9.1.0",

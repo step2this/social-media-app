@@ -12,24 +12,18 @@
  * @module builders/base
  */
 
-import {
-  createContainer,
-  asValue,
-  InjectionMode,
-  type AwilixContainer,
-} from 'awilix';
-
-// Import DAL services
-import type { LikeService } from '../../../packages/dal/src/services/like.service';
-import type { PostService } from '../../../packages/dal/src/services/post.service';
-import type { ProfileService } from '../../../packages/dal/src/services/profile.service';
-import type { CommentService } from '../../../packages/dal/src/services/comment.service';
-import type { FollowService } from '../../../packages/dal/src/services/follow.service';
-import type { FeedService } from '../../../packages/dal/src/services/feed.service';
-
-// Import AWS utilities
-import { createDynamoDBClient, getTableName } from '../../../packages/aws-utils/src';
+import type { AwilixContainer } from 'awilix';
+import { createContainer, asValue, InjectionMode } from 'awilix';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import { createDynamoDBClient, getTableName } from '@social-media-app/aws-utils';
+
+// Import DAL service types
+import type { LikeService } from '@social-media-app/dal';
+import type { PostService } from '@social-media-app/dal';
+import type { ProfileService } from '@social-media-app/dal';
+import type { CommentService } from '@social-media-app/dal';
+import type { FollowService } from '@social-media-app/dal';
+import type { FeedService } from '@social-media-app/dal';
 
 // ============================================================================
 // Container Interface
@@ -106,19 +100,13 @@ export async function createBuilderContainer(
   const dynamoClient = config.dynamoClient || createDynamoDBClient();
   const tableName = config.tableName || getTableName();
 
-  // Import services dynamically (ESM-style)
-  // Note: Dynamic imports return promises, but we're at the top level of a sync function
-  // We'll use a synchronous require-like pattern by importing at module level instead
-  // and relying on the type-only imports above to satisfy TypeScript
-
-  // Use require() wrapped in import() for ESM compatibility
-  // This is a transitional pattern until we can make createBuilderContainer async
-  const { LikeService } = await import('../../../packages/dal/src/services/like.service.js');
-  const { PostService } = await import('../../../packages/dal/src/services/post.service.js');
-  const { ProfileService } = await import('../../../packages/dal/src/services/profile.service.js');
-  const { CommentService } = await import('../../../packages/dal/src/services/comment.service.js');
-  const { FollowService } = await import('../../../packages/dal/src/services/follow.service.js');
-  const { FeedService } = await import('../../../packages/dal/src/services/feed.service.js');
+  // Import services dynamically from the DAL package
+  const { LikeService } = await import('@social-media-app/dal');
+  const { PostService } = await import('@social-media-app/dal');
+  const { ProfileService } = await import('@social-media-app/dal');
+  const { CommentService } = await import('@social-media-app/dal');
+  const { FollowService } = await import('@social-media-app/dal');
+  const { FeedService } = await import('@social-media-app/dal');
 
   // Create service instances
   const profileService = new ProfileService(dynamoClient, tableName);
