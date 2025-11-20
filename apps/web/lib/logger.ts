@@ -9,12 +9,12 @@
  * - Automatic trace context injection (trace_id, span_id)
  * - Child loggers with context inheritance
  * - Type-safe logging methods
- * - Multi-transport: console + file output
+ * - Pretty-printed file output for easy reading
  * - Log rotation support
  *
  * Log outputs:
- * - Development: Pretty console + JSON file (./logs/app.log)
- * - Production: JSON file only (./logs/app.log)
+ * - Development: Pretty-printed file (./logs/app.log) + optional console
+ * - Production: Pretty-printed file (./logs/app.log)
  *
  * Usage:
  * ```typescript
@@ -34,90 +34,176 @@
  *
  * Distributed Tracing:
  * Every log automatically includes trace_id and span_id from OpenTelemetry.
- * Use these to correlate logs across services:
+ * View logs in the pretty-printed file:
  * ```bash
- * # See all logs for a specific request
- * grep "trace_id\":\"4bf92f3577b34da6a3ce929d0e0e4736" ./logs/app.log
+ * # View recent logs (they're already pretty-printed!)
+ * tail -f ./logs/app.log
+ *
+ * # Search for specific trace
+ * grep "4bf92f3577b34da6a3ce929d0e0e4736" ./logs/app.log
  * ```
  */
 
 import pino from 'pino';
 import { trace } from '@opentelemetry/api';
-import * as fs from 'fs';
-import * as path from 'path';
+import { createStream } from 'rotating-file-stream';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 /**
- * Set up log directory and file streams
- * Only create file streams on server side (not during build/edge runtime)
+ * Create rotating file stream with daily rotation
+ * Automatically rotates logs each day and keeps last 14 days
+ *
+ * Logs are written as JSON for:
+ * - Better searching and parsing
+ * - Smaller file size
+ * - Easier integration with log tools
+ *
+ * View pretty logs with: tail -f logs/app.log | pnpm exec pino-pretty
  */
-let logStreams: pino.DestinationStream | undefined;
-
-if (typeof window === 'undefined' && process.env.NEXT_RUNTIME !== 'edge') {
-  const logsDir = path.join(process.cwd(), 'logs');
-
+function createRotatingStream(filename: string, logsDir: string) {
   // Ensure logs directory exists
   if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir, { recursive: true });
   }
 
-  const logFilePath = path.join(logsDir, 'app.log');
+  // Create rotating file stream
+  const stream = createStream(filename, {
+    interval: '1d', // Daily rotation at midnight
+    maxFiles: 14, // Keep 14 days of logs (2 weeks)
+    path: logsDir,
+    compress: 'gzip', // Compress rotated files
 
-  // Create file stream with rotation support
-  // Using pino.destination for async, non-blocking writes
-  logStreams = pino.destination({
-    dest: logFilePath,
-    sync: false, // Async writes for better performance
-    minLength: 4096, // Minimum bytes before flushing
+    // Rotation behavior
+    immutable: false, // Allow writing to current file
+    initialRotation: false, // Don't rotate on startup
+
+    // Filename pattern: app.log, app-20241120.log.gz, etc.
+    // The 'interval' option automatically adds date suffix on rotation
   });
+
+  // Handle rotation events
+  stream.on('rotation', () => {
+    console.log(`📦 Log rotation started`);
+  });
+
+  stream.on('rotated', () => {
+    console.log(`✅ Log rotation complete`);
+  });
+
+  stream.on('error', (error) => {
+    console.error('❌ Log rotation error:', error);
+  });
+
+  return stream;
+}
+
+/**
+ * Set up log directory and rotating file stream
+ * Only create file streams on server side (not during build/edge runtime)
+ */
+let logStreams: pino.StreamEntry[] | undefined;
+
+if (typeof window === 'undefined' && process.env.NEXT_RUNTIME !== 'edge') {
+  const logsDir = path.join(process.cwd(), 'logs');
+
+  // Create rotating stream for JSON logs
+  const rotatingStream = createRotatingStream('app.log', logsDir);
+
+  // Optional: Also log to console in development
+  const consoleEnabled = process.env.CONSOLE_LOGS === 'true';
+
+  if (process.env.NODE_ENV !== 'production' && consoleEnabled) {
+    // Multi-stream: rotating JSON file + pretty console
+    logStreams = [
+      { stream: rotatingStream }, // JSON to rotating file
+      {
+        stream: pino.transport({
+          target: 'pino-pretty',
+          options: {
+            destination: 1, // stdout
+            colorize: true,
+            translateTime: 'HH:MM:ss',
+            ignore: 'pid,hostname',
+          },
+        }),
+      },
+    ];
+  } else {
+    // Single stream: rotating JSON file only
+    logStreams = [{ stream: rotatingStream }];
+  }
 }
 
 /**
  * Create the base logger instance with automatic trace context injection
  *
- * Multi-transport setup:
- * - Development: Logs to console (for piping to pino-pretty) AND to file
- * - Production: Logs to file only
- * - Build time: Logs to console only (no file system access)
+ * Log outputs:
+ * - Development: JSON to rotating file (14-day retention) + optional pretty console
+ * - Production: JSON to rotating file (14-day retention)
+ * - Build time: Console only (no file system access)
+ *
+ * To view pretty logs: tail -f logs/app.log | pnpm exec pino-pretty
  */
-const baseLogger = pino(
-  {
-    level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+const baseLogger = logStreams
+  ? pino(
+      {
+        level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
 
-    // Base context for all logs
-    base: {
-      env: process.env.NODE_ENV,
-      app: 'social-media-web',
-    },
+        // Base context for all logs
+        base: {
+          env: process.env.NODE_ENV,
+          app: 'social-media-web',
+        },
 
-    // Automatically log errors with full stack traces
-    formatters: {
-      level: (label) => {
-        return { level: label };
+        // Automatically log errors with full stack traces
+        formatters: {
+          level: (label) => {
+            return { level: label };
+          },
+        },
+
+        // Mixin to automatically inject trace context into every log
+        mixin() {
+          const span = trace.getActiveSpan();
+          if (span) {
+            const spanContext = span.spanContext();
+            return {
+              trace_id: spanContext.traceId,
+              span_id: spanContext.spanId,
+              trace_flags: spanContext.traceFlags,
+            };
+          }
+          return {};
+        },
       },
-    },
-
-    // Mixin to automatically inject trace context into every log
-    mixin() {
-      const span = trace.getActiveSpan();
-      if (span) {
-        const spanContext = span.spanContext();
-        return {
-          trace_id: spanContext.traceId,
-          span_id: spanContext.spanId,
-          trace_flags: spanContext.traceFlags,
-        };
-      }
-      return {};
-    },
-  },
-  // Multi-stream: write to both stdout and file
-  logStreams
-    ? pino.multistream([
-        { stream: process.stdout }, // Console output (can pipe to pino-pretty)
-        { stream: logStreams },     // File output
-      ])
-    : process.stdout // Fallback to stdout only during build
-);
+      pino.multistream(logStreams)
+    )
+  : // Fallback for build time (no file system access)
+    pino({
+      level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+      base: {
+        env: process.env.NODE_ENV,
+        app: 'social-media-web',
+      },
+      formatters: {
+        level: (label) => {
+          return { level: label };
+        },
+      },
+      mixin() {
+        const span = trace.getActiveSpan();
+        if (span) {
+          const spanContext = span.spanContext();
+          return {
+            trace_id: spanContext.traceId,
+            span_id: spanContext.spanId,
+            trace_flags: spanContext.traceFlags,
+          };
+        }
+        return {};
+      },
+    });
 
 /**
  * Export the logger with automatic trace context
