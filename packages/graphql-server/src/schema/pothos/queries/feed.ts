@@ -16,6 +16,7 @@ import { executeUseCase } from '../../../resolvers/helpers/resolverHelpers.js';
 import { UserId, Cursor } from '../../../shared/types/index.js';
 import { ErrorFactory } from '../../../infrastructure/errors/ErrorFactory.js';
 import type { GraphQLContext } from '../../../context.js';
+import { logger } from '../../../infrastructure/logger.js';
 
 /**
  * Feed Queries
@@ -130,10 +131,22 @@ builder.queryFields((t) => ({
       const limit = args.first ?? args.limit ?? 20;
       const cursor = args.after ?? args.cursor ?? undefined;
 
+      logger.debug({ 
+        limit,
+        cursor,
+        userId: context.userId 
+      }, '[exploreFeed] Resolver: Received exploreFeed query');
+
       // Validate pagination parameters
       if (limit <= 0) {
+        logger.warn({ limit }, '[exploreFeed] Resolver: Invalid limit parameter');
         throw ErrorFactory.badRequest('limit/first must be greater than 0');
       }
+
+      logger.debug({ 
+        limit,
+        cursorProvided: !!cursor 
+      }, '[exploreFeed] Resolver: Calling GetExploreFeed use case');
 
       const result = await executeUseCase(
         context.container,
@@ -145,6 +158,20 @@ builder.queryFields((t) => ({
           },
         }
       );
+
+      // Log result summary
+      if (result && typeof result === 'object' && 'edges' in result) {
+        const connection = result as any;
+        logger.debug({ 
+          edgeCount: connection.edges?.length || 0,
+          hasNextPage: connection.pageInfo?.hasNextPage,
+          hasPreviousPage: connection.pageInfo?.hasPreviousPage
+        }, '[exploreFeed] Resolver: Returning connection result to client');
+      } else {
+        logger.warn({ 
+          resultType: typeof result 
+        }, '[exploreFeed] Resolver: Unexpected result type from use case');
+      }
 
       // Type assertion: use case returns Connection<Post> which is structurally compatible
       return result as any;

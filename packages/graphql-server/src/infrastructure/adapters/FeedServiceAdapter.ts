@@ -18,6 +18,7 @@ import type { Post } from '../../domain/repositories/IPostRepository.js';
 import { AsyncResult, UserId, Connection, PaginationArgs } from '../../shared/types/index.js';
 import { ConnectionBuilder } from '../pagination/ConnectionBuilder.js';
 import { CursorCodec } from '../pagination/CursorCodec.js';
+import { logger } from '../logger.js';
 
 /**
  * FeedServiceAdapter - Adapts PostService to IFeedRepository
@@ -93,16 +94,32 @@ export class FeedServiceAdapter implements IFeedRepository {
    */
   async getExploreFeed(pagination: PaginationArgs, _viewerId?: UserId): AsyncResult<Connection<Post>> {
     try {
+      logger.debug({ 
+        first: pagination.first,
+        after: pagination.after 
+      }, '[FeedServiceAdapter] Fetching explore feed from PostService');
+
       const result = await this.postService.getFeedPosts(
         pagination.first || 20,
         pagination.after
       );
+
+      logger.debug({ 
+        postsCount: result.posts.length,
+        hasMore: result.hasMore,
+        firstPostId: result.posts.length > 0 ? result.posts[0].id : null,
+        lastPostId: result.posts.length > 0 ? result.posts[result.posts.length - 1].id : null
+      }, '[FeedServiceAdapter] Received data from PostService.getFeedPosts');
 
       // Transform DAL posts to domain posts (caption?: undefined → caption: null)
       const domainPosts = result.posts.map((dalPost: any) => ({
         ...dalPost,
         caption: dalPost.caption ?? null,
       } as Post));
+
+      logger.debug({ 
+        domainPostsCount: domainPosts.length 
+      }, '[FeedServiceAdapter] Transformed DAL posts to domain posts');
 
       // Build Relay Connection
       const connection = this.connectionBuilder.build<Post>({
@@ -111,12 +128,22 @@ export class FeedServiceAdapter implements IFeedRepository {
         getCursorData: (post) => ({ id: post.id, sortKey: post.createdAt }),
       });
 
+      logger.debug({ 
+        connectionEdgesCount: connection.edges.length,
+        hasNextPage: connection.pageInfo.hasNextPage,
+        hasPreviousPage: connection.pageInfo.hasPreviousPage
+      }, '[FeedServiceAdapter] Built Relay connection - returning success');
+
       return {
         success: true,
         data: connection,
       };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
+      logger.error({ 
+        error: err.message,
+        stack: err.stack 
+      }, '[FeedServiceAdapter] Error in getExploreFeed');
       return {
         success: false,
         error: err,
