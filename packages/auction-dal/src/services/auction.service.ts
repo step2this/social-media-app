@@ -11,7 +11,7 @@
 
 import { eq, desc, and, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import type { Pool, PoolClient } from 'pg';
+import type { Pool } from 'pg';
 import type {
   Auction,
   Bid,
@@ -286,7 +286,7 @@ export class AuctionService {
       currentPrice: parseFloat(row.currentPrice),
       startTime: row.startTime.toISOString(),
       endTime: row.endTime.toISOString(),
-      status: row.status,
+      status: row.status as 'pending' | 'active' | 'completed' | 'cancelled',
       winnerId: row.winnerId || undefined,
       bidCount: row.bidCount,
       createdAt: row.createdAt.toISOString(),

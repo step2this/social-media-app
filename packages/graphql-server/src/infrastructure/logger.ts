@@ -49,6 +49,7 @@ import { trace } from '@opentelemetry/api';
 import { createStream } from 'rotating-file-stream';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { graphqlEnv } from '@social-media-app/env';
 
 /**
  * Create rotating file stream with daily rotation
@@ -105,7 +106,7 @@ function createRotatingStream(filename: string, logsDir: string) {
  */
 let logStreams: pino.StreamEntry[] | undefined;
 
-const isDevelopment = process.env.NODE_ENV !== 'production';
+const isDevelopment = graphqlEnv.NODE_ENV !== 'production';
 
 if (isDevelopment) {
   const logsDir = path.join(process.cwd(), 'logs');
@@ -130,11 +131,11 @@ if (isDevelopment) {
 const baseLogger = logStreams
   ? pino(
       {
-        level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+        level: graphqlEnv.LOG_LEVEL,
 
         // Base context for all logs
         base: {
-          env: process.env.NODE_ENV || 'production',
+          env: graphqlEnv.NODE_ENV,
           app: 'social-media-graphql',
           service: 'graphql-server',
         },
@@ -164,9 +165,9 @@ const baseLogger = logStreams
     )
   : // Fallback for production (stdout only)
     pino({
-      level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+      level: graphqlEnv.LOG_LEVEL,
       base: {
-        env: process.env.NODE_ENV || 'production',
+        env: graphqlEnv.NODE_ENV,
         app: 'social-media-graphql',
         service: 'graphql-server',
       },
@@ -198,6 +199,16 @@ const baseLogger = logStreams
  * - trace_flags: Sampling decision flags
  */
 export const logger = baseLogger;
+
+// Log environment configuration on startup to verify correct loading
+logger.info({
+  LOG_LEVEL: graphqlEnv.LOG_LEVEL,
+  NODE_ENV: graphqlEnv.NODE_ENV,
+  OTEL_SERVICE_NAME: graphqlEnv.OTEL_SERVICE_NAME,
+  TABLE_NAME: graphqlEnv.TABLE_NAME,
+  USE_LOCALSTACK: graphqlEnv.USE_LOCALSTACK,
+  loggerActiveLevel: baseLogger.level,
+}, '🔍 Logger initialized with environment configuration');
 
 /**
  * Create a child logger with additional context

@@ -30,11 +30,13 @@
  *   - No API Gateway event conversion needed
  */
 
-// CRITICAL: Import instrumentation FIRST before anything else
+// CRITICAL: Import centralized environment configuration FIRST
+// This ensures LOG_LEVEL and other env vars are loaded and validated before anything else
+import { graphqlEnv } from '@social-media-app/env';
+
+// CRITICAL: Import instrumentation SECOND (after env vars, before other imports)
 // This initializes OpenTelemetry tracing for the entire application
 import './infrastructure/instrumentation.js';
-
-import { config } from 'dotenv';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 import { pothosSchema } from './schema/pothos/index.js';
@@ -46,10 +48,7 @@ import { createServices } from './services/factory.js';
 import { createGraphQLContainer } from './infrastructure/di/awilix-container.js';
 import { logger } from './infrastructure/logger.js';
 
-// Load environment variables from project root
-config({ path: '../../.env' });
-
-const PORT = parseInt(process.env.GRAPHQL_PORT || '4000', 10);
+const PORT = graphqlEnv.GRAPHQL_PORT;
 
 /**
  * Create GraphQL context from standalone server request
@@ -131,17 +130,18 @@ async function startServer() {
     }
 
     // Log configuration
-    const jwtSecret = process.env.JWT_SECRET || '';
+    const jwtSecret = graphqlEnv.JWT_SECRET;
     const jwtSecretMasked = jwtSecret ? `${jwtSecret.substring(0, 10)}...${jwtSecret.substring(jwtSecret.length - 10)}` : 'NOT SET';
-    
+
     logger.info({
-      NODE_ENV: process.env.NODE_ENV || 'development',
-      USE_LOCALSTACK: process.env.USE_LOCALSTACK || 'false',
-      LOCALSTACK_ENDPOINT: process.env.LOCALSTACK_ENDPOINT || 'N/A',
-      TABLE_NAME: process.env.TABLE_NAME,
-      MEDIA_BUCKET_NAME: process.env.MEDIA_BUCKET_NAME || 'N/A',
-      AWS_REGION: process.env.AWS_REGION,
+      NODE_ENV: graphqlEnv.NODE_ENV,
+      USE_LOCALSTACK: graphqlEnv.USE_LOCALSTACK,
+      LOCALSTACK_ENDPOINT: graphqlEnv.LOCALSTACK_ENDPOINT || 'N/A',
+      TABLE_NAME: graphqlEnv.TABLE_NAME,
+      MEDIA_BUCKET_NAME: graphqlEnv.MEDIA_BUCKET_NAME || 'N/A',
+      AWS_REGION: graphqlEnv.AWS_REGION,
       JWT_SECRET: jwtSecretMasked,
+      LOG_LEVEL: graphqlEnv.LOG_LEVEL,
     }, '📋 Server Configuration');
 
     // Create and start Apollo Server using Pothos schema

@@ -131,10 +131,10 @@ builder.queryFields((t) => ({
       const limit = args.first ?? args.limit ?? 20;
       const cursor = args.after ?? args.cursor ?? undefined;
 
-      logger.debug({ 
+      logger.debug({
         limit,
         cursor,
-        userId: context.userId 
+        userId: context.userId
       }, '[exploreFeed] Resolver: Received exploreFeed query');
 
       // Validate pagination parameters
@@ -143,9 +143,9 @@ builder.queryFields((t) => ({
         throw ErrorFactory.badRequest('limit/first must be greater than 0');
       }
 
-      logger.debug({ 
+      logger.debug({
         limit,
-        cursorProvided: !!cursor 
+        cursorProvided: !!cursor
       }, '[exploreFeed] Resolver: Calling GetExploreFeed use case');
 
       const result = await executeUseCase(
@@ -162,14 +162,14 @@ builder.queryFields((t) => ({
       // Log result summary
       if (result && typeof result === 'object' && 'edges' in result) {
         const connection = result as any;
-        logger.debug({ 
+        logger.debug({
           edgeCount: connection.edges?.length || 0,
           hasNextPage: connection.pageInfo?.hasNextPage,
           hasPreviousPage: connection.pageInfo?.hasPreviousPage
         }, '[exploreFeed] Resolver: Returning connection result to client');
       } else {
-        logger.warn({ 
-          resultType: typeof result 
+        logger.warn({
+          resultType: typeof result
         }, '[exploreFeed] Resolver: Unexpected result type from use case');
       }
 

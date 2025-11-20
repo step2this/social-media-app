@@ -7,14 +7,14 @@
  * @module auction-dal/db/client
  */
 
-import { drizzle } from 'drizzle-orm/node-postgres';
+import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema.js';
 
 /**
  * Singleton Drizzle database instance
  */
-let dbInstance: ReturnType<typeof drizzle> | null = null;
+let dbInstance: NodePgDatabase<typeof schema> | null = null;
 
 /**
  * Singleton PostgreSQL connection pool

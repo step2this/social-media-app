@@ -49,6 +49,7 @@ import { trace } from '@opentelemetry/api';
 import { createStream } from 'rotating-file-stream';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { webEnv } from '@social-media-app/env';
 
 /**
  * Create rotating file stream with daily rotation
@@ -111,9 +112,9 @@ if (typeof window === 'undefined' && process.env.NEXT_RUNTIME !== 'edge') {
   const rotatingStream = createRotatingStream('app.log', logsDir);
 
   // Optional: Also log to console in development
-  const consoleEnabled = process.env.CONSOLE_LOGS === 'true';
+  const consoleEnabled = webEnv.CONSOLE_LOGS;
 
-  if (process.env.NODE_ENV !== 'production' && consoleEnabled) {
+  if (webEnv.NODE_ENV !== 'production' && consoleEnabled) {
     // Multi-stream: rotating JSON file + pretty console
     logStreams = [
       { stream: rotatingStream }, // JSON to rotating file
@@ -148,11 +149,11 @@ if (typeof window === 'undefined' && process.env.NEXT_RUNTIME !== 'edge') {
 const baseLogger = logStreams
   ? pino(
       {
-        level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+        level: webEnv.LOG_LEVEL,
 
         // Base context for all logs
         base: {
-          env: process.env.NODE_ENV,
+          env: webEnv.NODE_ENV,
           app: 'social-media-web',
         },
 
@@ -181,9 +182,9 @@ const baseLogger = logStreams
     )
   : // Fallback for build time (no file system access)
     pino({
-      level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+      level: webEnv.LOG_LEVEL,
       base: {
-        env: process.env.NODE_ENV,
+        env: webEnv.NODE_ENV,
         app: 'social-media-web',
       },
       formatters: {

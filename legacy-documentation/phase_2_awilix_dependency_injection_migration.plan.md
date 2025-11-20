@@ -173,7 +173,7 @@ export function createAwilixContainer(): AwilixContainer<ServiceContainer> {
     }).singleton(),
 
     // Table name from environment
-    tableName: asValue(process.env.TABLE_NAME || 'social-media-app-dev')
+    tableName: asValue(process.env.TABLE_NAME || 'social-media-app')
   })
 
   // ============================================

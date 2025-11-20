@@ -270,7 +270,7 @@ console.log({
 3. **Verify GSI created:**
    ```bash
    aws dynamodb describe-table \
-     --table-name social-media-app-dev \
+     --table-name social-media-app \
      --query 'Table.GlobalSecondaryIndexes[?IndexName==`GSI4`]'
    ```
 
@@ -282,7 +282,7 @@ console.log({
 4. **Verify new feed items have GSI4 attributes:**
    ```bash
    aws dynamodb get-item \
-     --table-name social-media-app-dev \
+     --table-name social-media-app \
      --key '{"PK": {"S": "USER#..."}, "SK": {"S": "FEED#..."}}'
    ```
 

@@ -19,9 +19,9 @@ export class GetExploreFeed {
   constructor(private readonly feedRepository: IFeedRepository) {}
 
   async execute(input: GetExploreFeedInput): AsyncResult<Connection<Post>> {
-    logger.debug({ 
+    logger.debug({
       pagination: input.pagination,
-      viewerId: input.viewerId 
+      viewerId: input.viewerId
     }, '[GetExploreFeed] UseCase: Executing with input');
 
     if (!input.pagination.first || input.pagination.first <= 0) {
@@ -41,8 +41,8 @@ export class GetExploreFeed {
 
     const edgeCount = repositoryResult.data.edges.length;
     const hasNextPage = repositoryResult.data.pageInfo.hasNextPage;
-    
-    logger.debug({ 
+
+    logger.debug({
       edgeCount,
       hasNextPage,
       firstPostId: edgeCount > 0 ? repositoryResult.data.edges[0].node.id : null,

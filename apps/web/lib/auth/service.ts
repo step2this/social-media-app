@@ -20,7 +20,7 @@ const dynamoClient = DynamoDBDocumentClient.from(
   })
 );
 
-const tableName = process.env.TABLE_NAME || 'social-media-app-dev';
+const tableName = process.env.TABLE_NAME || 'social-media-app';
 
 // Create JWT provider
 const jwtProvider = {
