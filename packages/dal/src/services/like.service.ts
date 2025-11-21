@@ -1,18 +1,24 @@
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-import { PutCommand, GetCommand, DeleteCommand, BatchGetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
-import type {
-  LikePostResponse,
-  UnlikePostResponse,
-  GetPostLikeStatusResponse
-} from '@social-media-app/shared';
+import {
+  BatchGetCommand,
+  type BatchGetCommandInput,
+  DeleteCommand,
+  GetCommand,
+  PutCommand,
+  QueryCommand,
+  UpdateCommand,
+} from '@aws-sdk/lib-dynamodb';
+import { ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
+import type { LikeId, PostId, UserId } from '../entities/index.js';
+import { logDynamoDB } from '../infrastructure/logger.js';
 
 /**
- * Like entity for DynamoDB
+ * Like entity structure in DynamoDB
  */
 export interface LikeEntity {
   PK: string;       // POST#<postId>
   SK: string;       // LIKE#<userId>
-  GSI2PK: string;   // USER#<userId> (for "posts I liked" queries)
+  GSI2PK: string;   // USER#<userId>
   GSI2SK: string;   // LIKE#<postId>
   userId: string;
   postId: string;
@@ -261,8 +267,10 @@ export class LikeService {
       // Handle unprocessed keys (usually due to throttling)
       if (result.UnprocessedKeys && result.UnprocessedKeys[this.tableName]) {
         // In production, you might want to implement retry logic here
-        console.warn(`Unprocessed keys in LikeService.getLikeStatusesByPostIds:`,
-          result.UnprocessedKeys[this.tableName].Keys?.length);
+        logDynamoDB('batchGet', this.tableName, {
+          operation: 'getLikeStatusesByPostIds',
+          unprocessedCount: result.UnprocessedKeys[this.tableName].Keys?.length,
+        });
       }
     }
 

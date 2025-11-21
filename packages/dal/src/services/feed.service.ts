@@ -1,26 +1,33 @@
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import {
+  BatchGetCommand,
+  BatchWriteCommand,
+  type BatchWriteCommandInput,
+  DeleteCommand,
+  type Key,
   PutCommand,
   QueryCommand,
+  type QueryCommandInput,
   ScanCommand,
-  BatchWriteCommand,
-  UpdateCommand
+  type ScanCommandInput,
+  type UpdateCommandInput,
+  UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import type { FeedItemEntity } from '../entities/index.js';
+import { createFeedItemKeys } from '../entities/feed-item.entity.js';
 import type { PostWithAuthor } from '@social-media-app/shared';
 import { UUIDField } from '@social-media-app/shared';
 import { z } from 'zod';
-import type { FeedItemEntity } from '../entities/feed-item.entity.js';
-import { createFeedItemKeys } from '../entities/feed-item.entity.js';
-import { mapEntityToFeedPostItem } from '../utils/feed-item-mappers.js';
-import { RedisCacheService, type CachedPost, type CachedFeedResult } from './redis-cache.service.js';
-
-/**
- * Paginated result with cursor
- */
-interface PaginatedResult<T> {
-  readonly items: T[];
-  readonly nextCursor?: Record<string, unknown>;
-}
+import {
+  logDynamoDB,
+  logCache,
+  logServiceOp,
+  logSlowOp,
+  logBatch,
+  logError,
+} from '../infrastructure/logger.js';
+import { mapEntityToFeedPostItem } from '../utils/index.js';
+import type { RedisCacheService, CachedPost, CachedFeedResult } from './redis-cache.service.js';
 
 /**
  * Batch processing result
@@ -49,6 +56,19 @@ async function* paginateAll<T>(
 }
 
 /**
+ * Chunk array into groups of specified size
+ *
+ * @param arr - Array to chunk
+ * @param size - Size of each chunk
+ * @returns Array of chunks
+ */
+const chunkArray = <T>(arr: T[], size: number): T[][] =>
+  Array.from(
+    { length: Math.ceil(arr.length / size) },
+    (_, i) => arr.slice(i * size, i * size + size)
+  );
+
+/**
  * Process items in batches with controlled concurrency
  *
  * @param items - Array of items to process
@@ -75,18 +95,6 @@ const processBatches = async <T, R>(
   return results;
 };
 
-/**
- * Chunk array into groups of specified size
- *
- * @param arr - Array to chunk
- * @param size - Size of each chunk
- * @returns Array of chunks
- */
-const chunkArray = <T>(arr: T[], size: number): T[][] =>
-  Array.from(
-    { length: Math.ceil(arr.length / size) },
-    (_, i) => arr.slice(i * size, i * size + size)
-  );
 
 /**
  * Sleep for specified milliseconds
@@ -521,10 +529,9 @@ export class FeedService {
         failedIndices: result.failedIndices.map(i => chunkStartIndex + i)
       };
     } catch (error) {
-      console.error('[FeedService] Batch write chunk failed', {
+      logError('FeedService', 'writeSingleChunkWithRetry', error as Error, {
         chunkIndex,
         chunkSize: chunk.length,
-        error: error instanceof Error ? error.message : 'Unknown error'
       });
 
       // All items in chunk failed
@@ -623,18 +630,17 @@ export class FeedService {
       try {
         const cached = await this.cacheService.getUnreadFeed(params.userId, limit, params.cursor);
         if (cached.posts.length > 0) {
-          console.log('[FeedService] Cache HIT for materialized feed', {
+          logCache('get', 'hit', {
             userId: params.userId,
-            count: cached.posts.length
+            itemCount: cached.posts.length,
           });
           return this.convertCachedToResponse(cached);
         }
-        console.log('[FeedService] Cache MISS for materialized feed', { userId: params.userId });
+        logCache('get', 'miss', { userId: params.userId });
       } catch (error) {
-        console.warn('[FeedService] Cache read failure (non-blocking)', {
-          operation: 'getMaterializedFeedItems',
+        logCache('get', 'error', {
           userId: params.userId,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : 'Unknown error',
         });
       }
     }
@@ -685,15 +691,14 @@ export class FeedService {
           await this.cacheService.cachePosts(
             items.map(post => this.feedPostToCachedPost(post))
           );
-          console.log('[FeedService] Cached feed posts', {
+          logCache('set', 'success', {
             userId: params.userId,
-            count: items.length
+            itemCount: items.length,
           });
         } catch (error) {
-          console.warn('[FeedService] Cache write failure (non-blocking)', {
-            operation: 'getMaterializedFeedItems',
+          logCache('set', 'error', {
             userId: params.userId,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: error instanceof Error ? error.message : 'Unknown error',
           });
         }
       }
@@ -970,11 +975,11 @@ export class FeedService {
 
       // Performance logging
       if (deletedCount > 100 || Date.now() - startTime > 500) {
-        console.log('[FeedService] deleteFeedItemsForUser completed', {
+        logServiceOp('FeedService', 'deleteFeedItemsForUser', {
           userId: params.userId,
           authorId: params.authorId,
           deletedCount,
-          durationMs: Date.now() - startTime
+          durationMs: Date.now() - startTime,
         });
       }
 
@@ -1046,10 +1051,9 @@ export class FeedService {
     const durationMs = Date.now() - startTime;
 
     if (durationMs > 1000) {
-      console.warn(`[FeedService] Slow ${operation} detected`, {
+      logSlowOp('FeedService', operation, durationMs, 1000, {
         ...metadata,
-        durationMs,
-        note: 'Consider adding GSI4 for 99% cost reduction'
+        note: 'Consider adding GSI4 for 99% cost reduction',
       });
     }
   }
@@ -1125,10 +1129,9 @@ export class FeedService {
           await sleep(Math.pow(2, retry + 1) * 100);
         }
       } catch (error) {
-        console.error('[FeedService] Batch delete failed', {
+        logError('FeedService', 'deleteSingleChunkWithRetry', error as Error, {
           chunkSize: chunk.length,
           retries: retry,
-          error: error instanceof Error ? error.message : 'Unknown error'
         });
         break;
       }

@@ -1,10 +1,19 @@
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-import { GetCommand, UpdateCommand, QueryCommand, BatchGetCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  BatchGetCommand,
+  type BatchWriteCommandInput,
+  GetCommand,
+  PutCommand,
+  QueryCommand,
+  UpdateCommand,
+} from '@aws-sdk/lib-dynamodb';
+import type { Profile, UserId } from '../entities/index.js';
+import { logDynamoDB, logger } from '../infrastructure/logger.js';
+import type { S3Service } from './s3.service.js';
 import { S3Client } from '@aws-sdk/client-s3';
 import type {
-  Profile,
-  PublicProfile,
   UpdateProfileWithHandleRequest,
+  PublicProfile,
   GetPresignedUrlRequest,
   GetPresignedUrlResponse
 } from '@social-media-app/shared';
@@ -179,8 +188,10 @@ export class ProfileService {
       // Handle unprocessed keys (usually due to throttling)
       if (result.UnprocessedKeys && result.UnprocessedKeys[this.tableName]) {
         // In production, you might want to implement retry logic here
-        console.warn(`Unprocessed keys in ProfileService.getProfilesByIds:`,
-          result.UnprocessedKeys[this.tableName].Keys?.length);
+        logDynamoDB('batchGet', {
+          operation: 'getProfilesByIds',
+          unprocessedCount: result.UnprocessedKeys[this.tableName].Keys?.length,
+        });
       }
     }
 
@@ -238,7 +249,7 @@ export class ProfileService {
     } catch (error: any) {
       // If GSI3 doesn't exist (likely in LocalStack), allow the handle for now
       if (error.name === 'ValidationException' && error.message.includes('Index not found')) {
-        console.warn('GSI3 index not found - allowing handle update without uniqueness check');
+        logger.warn({ handle, excludeUserId, message: 'GSI3 index not found - allowing handle update without uniqueness check' });
         return true;
       }
       throw error;
@@ -263,7 +274,7 @@ export class ProfileService {
         }
       } catch (error: unknown) {
         if (isGSI3ValidationError(error)) {
-          console.warn('GSI3 index not found - allowing handle update without uniqueness check');
+          logger.warn({ userId, message: 'GSI3 index not found - allowing handle update without uniqueness check' });
           gsi3Available = false;
         } else {
           throw error;

@@ -4,6 +4,7 @@
  */
 
 import type { Redis as RedisClient } from 'ioredis';
+import { logError } from '../infrastructure/logger.js';
 
 /**
  * Cached post metadata structure
@@ -77,7 +78,7 @@ export class RedisCacheService {
 
     // Set up error handler
     this.redis.on('error', (error: Error) => {
-      console.error('Redis connection error:', error);
+      logError('RedisCacheService', 'connection', error);
     });
   }
 

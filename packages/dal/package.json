@@ -28,6 +28,7 @@
     "@aws-sdk/client-s3": "^3.911.0",
     "@aws-sdk/lib-dynamodb": "^3.911.0",
     "@aws-sdk/s3-request-presigner": "^3.911.0",
+    "@social-media-app/logger": "workspace:*",
     "@social-media-app/shared": "workspace:*",
     "ioredis": "^5.3.2",
     "lodash-es": "^4.17.21",
