@@ -9,6 +9,13 @@ import { randomUUID } from 'crypto';
 import type { Notification } from '@social-media-app/shared';
 import { NotificationTitleField, NotificationMessageField } from '@social-media-app/shared';
 import { type NotificationEntity, mapEntityToNotification } from '../utils/notification-mappers.js';
+import {
+  logDynamoDB,
+  logServiceOp,
+  logBatch,
+  logError,
+  logger
+} from '../infrastructure/logger.js';
 
 /**
  * Response type for createNotification
@@ -222,75 +229,95 @@ export class NotificationService {
   async createNotification(
     data: any
   ): Promise<CreateNotificationResponse> {
-    // Validate title and message using Zod schemas
-    const titleValidation = NotificationTitleField.safeParse(data.title);
-    if (!titleValidation.success) {
-      throw new Error(`Invalid notification title: ${titleValidation.error.message}`);
+    const startTime = Date.now();
+
+    try {
+      // Validate title and message using Zod schemas
+      const titleValidation = NotificationTitleField.safeParse(data.title);
+      if (!titleValidation.success) {
+        throw new Error(`Invalid notification title: ${titleValidation.error.message}`);
+      }
+
+      const messageValidation = NotificationMessageField.safeParse(data.message);
+      if (!messageValidation.success) {
+        throw new Error(`Invalid notification message: ${messageValidation.error.message}`);
+      }
+
+      const notificationId = randomUUID();
+      const now = new Date().toISOString();
+      const ttl = this.calculateTTL();
+
+      // Default values
+      const priority = data.priority ?? 'normal';
+      const deliveryChannels = data.deliveryChannels ?? ['in-app'];
+      const soundEnabled = data.soundEnabled ?? true;
+      const vibrationEnabled = data.vibrationEnabled ?? true;
+      const status = 'unread';
+      const isRead = false;
+
+      const notificationEntity: NotificationEntity = {
+        // Primary keys
+        PK: `USER#${data.userId}`,
+        SK: `NOTIFICATION#${now}#${notificationId}`,
+
+        // GSI1 - Notification by ID
+        GSI1PK: `NOTIFICATION#${notificationId}`,
+        GSI1SK: `USER#${data.userId}`,
+
+        // GSI2 - Sparse index for unread (only set when unread)
+        GSI2PK: `UNREAD#USER#${data.userId}`,
+        GSI2SK: `NOTIFICATION#${now}#${notificationId}`,
+
+        // Notification fields
+        id: notificationId,
+        userId: data.userId,
+        type: data.type,
+        status,
+        title: titleValidation.data, // Use validated & trimmed title
+        message: messageValidation.data, // Use validated & trimmed message
+        priority,
+        actor: data.actor,
+        target: data.target,
+        metadata: data.metadata,
+        deliveryChannels,
+        soundEnabled,
+        vibrationEnabled,
+        groupId: data.groupId,
+        expiresAt: data.expiresAt,
+        createdAt: now,
+        updatedAt: now,
+
+        // DynamoDB metadata
+        entityType: 'NOTIFICATION',
+        ttl,
+        isRead
+      };
+
+      logDynamoDB('put', { 
+        table: this.tableName, 
+        notificationId, 
+        userId: data.userId, 
+        type: data.type 
+      });
+      await this.dynamoClient.send(new PutCommand({
+        TableName: this.tableName,
+        Item: notificationEntity
+      }));
+
+      const duration = Date.now() - startTime;
+      logServiceOp('NotificationService', 'createNotification', { 
+        notificationId, 
+        userId: data.userId, 
+        type: data.type 
+      }, duration);
+
+      return {
+        notification: mapEntityToNotification(notificationEntity)
+      };
+    } catch (error) {
+      logError('NotificationService', 'createNotification', error as Error, { userId: data.userId, type: data.type });
+      throw error;
     }
-
-    const messageValidation = NotificationMessageField.safeParse(data.message);
-    if (!messageValidation.success) {
-      throw new Error(`Invalid notification message: ${messageValidation.error.message}`);
-    }
-
-    const notificationId = randomUUID();
-    const now = new Date().toISOString();
-    const ttl = this.calculateTTL();
-
-    // Default values
-    const priority = data.priority ?? 'normal';
-    const deliveryChannels = data.deliveryChannels ?? ['in-app'];
-    const soundEnabled = data.soundEnabled ?? true;
-    const vibrationEnabled = data.vibrationEnabled ?? true;
-    const status = 'unread';
-    const isRead = false;
-
-    const notificationEntity: NotificationEntity = {
-      // Primary keys
-      PK: `USER#${data.userId}`,
-      SK: `NOTIFICATION#${now}#${notificationId}`,
-
-      // GSI1 - Notification by ID
-      GSI1PK: `NOTIFICATION#${notificationId}`,
-      GSI1SK: `USER#${data.userId}`,
-
-      // GSI2 - Sparse index for unread (only set when unread)
-      GSI2PK: `UNREAD#USER#${data.userId}`,
-      GSI2SK: `NOTIFICATION#${now}#${notificationId}`,
-
-      // Notification fields
-      id: notificationId,
-      userId: data.userId,
-      type: data.type,
-      status,
-      title: titleValidation.data, // Use validated & trimmed title
-      message: messageValidation.data, // Use validated & trimmed message
-      priority,
-      actor: data.actor,
-      target: data.target,
-      metadata: data.metadata,
-      deliveryChannels,
-      soundEnabled,
-      vibrationEnabled,
-      groupId: data.groupId,
-      expiresAt: data.expiresAt,
-      createdAt: now,
-      updatedAt: now,
-
-      // DynamoDB metadata
-      entityType: 'NOTIFICATION',
-      ttl,
-      isRead
-    };
-
-    await this.dynamoClient.send(new PutCommand({
-      TableName: this.tableName,
-      Item: notificationEntity
-    }));
-
-    return {
-      notification: mapEntityToNotification(notificationEntity)
-    };
   }
 
   /**
@@ -413,6 +440,12 @@ export class NotificationService {
       queryParams.ExclusiveStartKey = exclusiveStartKey;
     }
 
+    logDynamoDB('query', { 
+      table: this.tableName, 
+      gsi: 'GSI2', 
+      userId: validatedRequest.userId,
+      unreadOnly: validatedRequest.status === 'unread'
+    });
     const result = await this.dynamoClient.send(new QueryCommand(queryParams));
 
     const notifications = (result.Items || []).map(item =>
@@ -430,6 +463,13 @@ export class NotificationService {
         'utf-8'
       ).toString('base64');
     }
+
+    logger.debug({
+      userId: validatedRequest.userId,
+      notificationsReturned: notifications.length,
+      unreadCount,
+      hasMore: !!result.LastEvaluatedKey
+    }, '[NotificationService] Notifications retrieved');
 
     return {
       notifications,
@@ -836,6 +876,8 @@ export class NotificationService {
       throw new Error(`Invalid operation. Must be one of: ${validOperations.join(', ')}`);
     }
 
+    logBatch('NotificationService', 'batchOperation', validatedRequest.notificationIds.length, validatedRequest.notificationIds.length);
+
     const failures: { readonly id: string; readonly error: string }[] = [];
     let processedCount = 0;
 
@@ -861,6 +903,13 @@ export class NotificationService {
         });
       }
     }
+
+    logger.debug({
+      operation: validatedRequest.operation,
+      totalRequested: validatedRequest.notificationIds.length,
+      processedCount,
+      failedCount: failures.length
+    }, '[NotificationService] Batch operation completed');
 
     return {
       processedCount,

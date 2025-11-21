@@ -6,6 +6,7 @@
 import { KinesisClient, PutRecordCommand, PutRecordsCommand } from '@aws-sdk/client-kinesis';
 import { FeedEventSchema, type FeedEvent } from '@social-media-app/shared';
 import { ZodError } from 'zod';
+import { logKinesis, logBatch, logError, logger } from '../infrastructure/logger.js';
 
 /**
  * Result of batch publishing operation
@@ -73,6 +74,8 @@ export class KinesisEventPublisher {
    * @throws {Error} If Kinesis publishing fails
    */
   async publishEvent(event: FeedEvent): Promise<void> {
+    const startTime = Date.now();
+
     try {
       // Validate event schema
       const validatedEvent = FeedEventSchema.parse(event);
@@ -88,10 +91,23 @@ export class KinesisEventPublisher {
       });
 
       await this.kinesisClient.send(command);
+
+      const duration = Date.now() - startTime;
+      logKinesis('publish', { 
+        eventType: validatedEvent.eventType,
+        eventId: validatedEvent.eventId,
+        partitionKey: validatedEvent.eventId,
+        duration 
+      });
     } catch (error) {
       if (error instanceof ZodError) {
         throw error; // Re-throw validation errors as-is
       }
+
+      logError('KinesisEventPublisher', 'publishEvent', error as Error, {
+        eventType: event.eventType,
+        eventId: event.eventId
+      });
 
       // Wrap Kinesis errors with context
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -127,6 +143,8 @@ export class KinesisEventPublisher {
     // Chunk into batches of 500
     const chunks = this.chunkEvents(validatedEvents, KinesisEventPublisher.MAX_BATCH_SIZE);
 
+    logBatch('KinesisEventPublisher', 'publishEventsBatch', events.length, 500);
+
     // Publish each chunk and aggregate results
     let totalSuccess = 0;
     let totalFailed = 0;
@@ -140,6 +158,23 @@ export class KinesisEventPublisher {
       if (result.failedEvents) {
         allFailedEvents.push(...result.failedEvents);
       }
+    }
+
+    // Log chunk results
+    logger.debug({
+      totalEvents: events.length,
+      chunks: chunks.length,
+      successCount: totalSuccess,
+      failedCount: totalFailed,
+      hasFailures: totalFailed > 0
+    }, '[KinesisEventPublisher] Batch publish completed');
+
+    // Log failures
+    if (totalFailed > 0) {
+      logger.warn({
+        failedCount: totalFailed,
+        failedEventIds: allFailedEvents.map(e => e.eventId).slice(0, 10) // First 10
+      }, '[KinesisEventPublisher] Some events failed to publish');
     }
 
     return {

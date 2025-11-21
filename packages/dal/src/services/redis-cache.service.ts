@@ -4,7 +4,7 @@
  */
 
 import type { Redis as RedisClient } from 'ioredis';
-import { logError } from '../infrastructure/logger.js';
+import { logError, logCache, logBatch } from '../infrastructure/logger.js';
 
 /**
  * Cached post metadata structure
@@ -115,6 +115,7 @@ export class RedisCacheService {
     }
 
     try {
+      const startTime = Date.now();
       const feedKey = `feed:unread:${userId}`;
 
       // Get posts from sorted set with scores (timestamps)
@@ -163,6 +164,17 @@ export class RedisCacheService {
       // Set next cursor to last score if we have full page
       const nextCursor = posts.length === limit ? lastScore : undefined;
 
+      const duration = Date.now() - startTime;
+      if (posts.length > 0) {
+        logCache('get', 'hit', { 
+          userId, 
+          itemCount: posts.length,
+          duration 
+        });
+      } else {
+        logCache('get', 'miss', { userId, duration });
+      }
+
       return {
         posts,
         nextCursor
@@ -199,6 +211,7 @@ export class RedisCacheService {
 
     try {
       const feedKey = `feed:unread:${userId}`;
+      logCache('delete', 'success', { userId, postId });
       await this.redis.zrem(feedKey, postId);
     } catch (error: any) {
       throw new Error(`Failed to mark post as read: ${error.message}`);
@@ -266,6 +279,8 @@ export class RedisCacheService {
 
       // Set TTL
       await this.redis.expire(postKey, this.POST_CACHE_TTL);
+
+      logCache('set', 'success', { postId, ttl: this.POST_CACHE_TTL });
     } catch (error: any) {
       throw new Error(`Failed to cache post: ${error.message}`);
     }
@@ -335,6 +350,7 @@ export class RedisCacheService {
     }
 
     try {
+      logBatch('RedisCacheService', 'cachePosts', posts.length, posts.length);
       const pipeline = this.redis.pipeline();
 
       for (const post of posts) {
@@ -370,6 +386,11 @@ export class RedisCacheService {
 
       // Execute pipeline
       await pipeline.exec();
+
+      logCache('set', 'success', { 
+        itemCount: posts.length,
+        pipelineOps: posts.length 
+      });
     } catch (error: any) {
       throw new Error(`Failed to cache posts batch: ${error.message}`);
     }
@@ -395,6 +416,7 @@ export class RedisCacheService {
     try {
       const postKey = `post:${postId}`;
       await this.redis.del(postKey);
+      logCache('delete', 'success', { postId });
     } catch (error: any) {
       throw new Error(`Failed to invalidate post cache: ${error.message}`);
     }

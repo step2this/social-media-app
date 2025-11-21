@@ -10,7 +10,7 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
 import type { LikeId, PostId, UserId } from '../entities/index.js';
-import { logDynamoDB } from '../infrastructure/logger.js';
+import { logDynamoDB, logServiceOp, logBatch, logError } from '../infrastructure/logger.js';
 
 /**
  * Like entity structure in DynamoDB
@@ -55,6 +55,7 @@ export class LikeService {
    * @param postSK - Sort key of the post entity (for efficient post lookup)
    */
   async likePost(userId: string, postId: string, postUserId: string, postSK: string): Promise<LikePostResponse> {
+    const startTime = Date.now();
     const now = new Date().toISOString();
 
     const likeEntity: LikeEntity = {
@@ -72,6 +73,7 @@ export class LikeService {
 
     try {
       // Create the like entity with conditional check
+      logDynamoDB('put', { table: this.tableName, postId, userId, conditional: true });
       await this.dynamoClient.send(new PutCommand({
         TableName: this.tableName,
         Item: likeEntity,
@@ -79,6 +81,7 @@ export class LikeService {
       }));
 
       // Atomically increment the post's likesCount
+      logDynamoDB('update', { table: this.tableName, postId, operation: 'incrementLikes' });
       const updateResult = await this.dynamoClient.send(new UpdateCommand({
         TableName: this.tableName,
         Key: {
@@ -94,6 +97,9 @@ export class LikeService {
       }));
 
       const newLikesCount = updateResult.Attributes?.likesCount || 1;
+
+      const duration = Date.now() - startTime;
+      logServiceOp('LikeService', 'likePost', { postId, userId, likesCount: newLikesCount }, duration);
 
       return {
         success: true,
@@ -119,6 +125,7 @@ export class LikeService {
           isLiked: true
         };
       }
+      logError('LikeService', 'likePost', error as Error, { userId, postId });
       throw error;
     }
   }
@@ -128,6 +135,8 @@ export class LikeService {
    * Idempotent operation - doesn't fail if already unliked
    */
   async unlikePost(userId: string, postId: string): Promise<UnlikePostResponse> {
+    const startTime = Date.now();
+
     // First, get the like entity to find the post owner
     const getLikeResult = await this.dynamoClient.send(new GetCommand({
       TableName: this.tableName,
@@ -140,6 +149,7 @@ export class LikeService {
     const likeEntity = getLikeResult.Item as LikeEntity | undefined;
 
     // Delete the like entity
+    logDynamoDB('delete', { table: this.tableName, postId, userId });
     await this.dynamoClient.send(new DeleteCommand({
       TableName: this.tableName,
       Key: {
@@ -150,6 +160,7 @@ export class LikeService {
 
     // If like existed, decrement the post's likesCount
     if (likeEntity) {
+      logDynamoDB('update', { table: this.tableName, postId, operation: 'decrementLikes' });
       const updateResult = await this.dynamoClient.send(new UpdateCommand({
         TableName: this.tableName,
         Key: {
@@ -166,6 +177,9 @@ export class LikeService {
       }));
 
       const newLikesCount = updateResult.Attributes?.likesCount || 0;
+
+      const duration = Date.now() - startTime;
+      logServiceOp('LikeService', 'unlikePost', { postId, userId, likesCount: newLikesCount }, duration);
 
       return {
         success: true,
@@ -224,6 +238,8 @@ export class LikeService {
     if (postIds.length === 0) {
       return likeStatusMap;
     }
+
+    logBatch('LikeService', 'getLikeStatusesByPostIds', postIds.length, 100);
 
     // Initialize all posts with default status (not liked)
     for (const postId of postIds) {

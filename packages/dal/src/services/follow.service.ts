@@ -5,6 +5,7 @@ import type {
   UnfollowUserResponse,
   GetFollowStatusResponse
 } from '@social-media-app/shared';
+import { logDynamoDB, logServiceOp, logError, logger } from '../infrastructure/logger.js';
 
 /**
  * Follow entity structure in DynamoDB
@@ -41,6 +42,7 @@ export class FollowService {
    * @returns Follow response with success status and counts
    */
   async followUser(followerId: string, followeeId: string): Promise<FollowUserResponse> {
+    const startTime = Date.now();
     const now = new Date().toISOString();
 
     const followEntity: FollowEntity = {
@@ -57,11 +59,20 @@ export class FollowService {
     };
 
     try {
+      logDynamoDB('put', { 
+        table: this.tableName, 
+        followerId, 
+        followeeId,
+        conditional: true 
+      });
       await this.client.send(new PutCommand({
         TableName: this.tableName,
         Item: followEntity,
         ConditionExpression: 'attribute_not_exists(PK)'
       }));
+
+      const duration = Date.now() - startTime;
+      logServiceOp('FollowService', 'followUser', { followerId, followeeId }, duration);
 
       return {
         success: true,
@@ -79,6 +90,7 @@ export class FollowService {
           isFollowing: true
         };
       }
+      logError('FollowService', 'followUser', error as Error, { followerId, followeeId });
       throw error;
     }
   }
@@ -92,6 +104,9 @@ export class FollowService {
    * @returns Unfollow response with success status and counts
    */
   async unfollowUser(followerId: string, followeeId: string): Promise<UnfollowUserResponse> {
+    const startTime = Date.now();
+
+    logDynamoDB('delete', { table: this.tableName, followerId, followeeId });
     await this.client.send(new DeleteCommand({
       TableName: this.tableName,
       Key: {
@@ -99,6 +114,9 @@ export class FollowService {
         SK: `FOLLOW#${followeeId}`
       }
     }));
+
+    const duration = Date.now() - startTime;
+    logServiceOp('FollowService', 'unfollowUser', { followerId, followeeId }, duration);
 
     // Return hardcoded counts - stream processor will update them async
     return {
@@ -146,6 +164,7 @@ export class FollowService {
    * @returns Array of followee user IDs
    */
   async getFollowingList(userId: string): Promise<string[]> {
+    logDynamoDB('query', { table: this.tableName, userId });
     const result = await this.client.send(new QueryCommand({
       TableName: this.tableName,
       KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
@@ -158,6 +177,11 @@ export class FollowService {
     if (!result.Items || result.Items.length === 0) {
       return [];
     }
+
+    logger.debug({
+      userId,
+      followingCount: result.Items?.length || 0
+    }, '[FollowService] Following list retrieved');
 
     // Extract followeeId from each follow entity
     return result.Items
@@ -196,6 +220,7 @@ export class FollowService {
    * @returns Array of follower user IDs
    */
   async getAllFollowers(userId: string): Promise<string[]> {
+    logDynamoDB('query', { table: this.tableName, gsi: 'GSI2', userId });
     const result = await this.client.send(new QueryCommand({
       TableName: this.tableName,
       IndexName: 'GSI2',
@@ -209,6 +234,11 @@ export class FollowService {
     if (!result.Items || result.Items.length === 0) {
       return [];
     }
+
+    logger.debug({
+      userId,
+      followerCount: result.Items?.length || 0
+    }, '[FollowService] Followers retrieved');
 
     // Extract followerId from each follow entity
     return result.Items
