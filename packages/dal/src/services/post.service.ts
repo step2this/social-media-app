@@ -29,6 +29,7 @@ import {
   buildUpdateExpressionFromObject,
   type PostEntity
 } from '../utils/index.js';
+import { logDynamoDB, logServiceOp, logBatch, logger } from '../infrastructure/logger.js';
 
 /**
  * Post entity for DynamoDB
@@ -62,6 +63,7 @@ export class PostService {
     imageUrl: string,
     thumbnailUrl: string
   ): Promise<Post> {
+    const startTime = Date.now();
     const postId = randomUUID();
     const now = new Date().toISOString();
 
@@ -87,6 +89,7 @@ export class PostService {
       entityType: 'POST'
     };
 
+    logDynamoDB('put', { table: this.tableName, postId, userId, userHandle });
     await this.dynamoClient.send(new PutCommand({
       TableName: this.tableName,
       Item: entity,
@@ -96,6 +99,9 @@ export class PostService {
     // Increment user's posts count
     await this.profileService.incrementPostsCount(userId);
 
+    const duration = Date.now() - startTime;
+    logServiceOp('PostService', 'createPost', { postId, userId }, duration);
+
     return mapEntityToPost(entity);
   }
 
@@ -103,6 +109,7 @@ export class PostService {
    * Get a post by ID
    */
   async getPostById(postId: string): Promise<Post | null> {
+    logDynamoDB('query', { table: this.tableName, gsi: 'GSI1', postId });
     const queryParams = buildPostByIdQuery(postId, this.tableName);
     const result = await this.dynamoClient.send(new QueryCommand(queryParams));
 
@@ -137,6 +144,8 @@ export class PostService {
       return postMap;
     }
 
+    logBatch('PostService', 'getPostsByIds', postIds.length, 25);
+
     // Since posts are stored with GSI1, we need to query for each post ID
     // This is still more efficient than individual queries due to connection pooling
     // and reduced network overhead
@@ -156,6 +165,12 @@ export class PostService {
     for (let i = 0; i < queryPromises.length; i += batchSize) {
       const batch = queryPromises.slice(i, i + batchSize);
       const results = await Promise.all(batch);
+
+      logger.debug({
+        batchNumber: Math.floor(i / batchSize) + 1,
+        batchSize: batch.length,
+        totalBatches: Math.ceil(queryPromises.length / batchSize)
+      }, '[PostService] Processing batch of post queries');
 
       // Add results to map
       for (const result of results) {
@@ -226,6 +241,8 @@ export class PostService {
    * Delete a post
    */
   async deletePost(postId: string, userId: string): Promise<boolean> {
+    const startTime = Date.now();
+
     // First, get the post to verify ownership and get the SK
     const post = await this.getPostById(postId);
     if (!post || post.userId !== userId) {
@@ -248,6 +265,7 @@ export class PostService {
 
     const entity = queryResult.Items[0] as PostEntity;
 
+    logDynamoDB('delete', { table: this.tableName, postId, userId });
     await this.dynamoClient.send(new DeleteCommand({
       TableName: this.tableName,
       Key: {
@@ -258,6 +276,9 @@ export class PostService {
 
     // Decrement user's posts count
     await this.profileService.decrementPostsCount(userId);
+
+    const duration = Date.now() - startTime;
+    logServiceOp('PostService', 'deletePost', { postId, userId }, duration);
 
     return true;
   }
@@ -307,6 +328,12 @@ export class PostService {
     limit: number = 24,
     cursor?: string
   ): Promise<PostsListResponse> {
+    logDynamoDB('query', { 
+      table: this.tableName, 
+      userId, 
+      limit,
+      hasCursor: !!cursor 
+    });
     const queryParams = buildUserPostsQuery(userId, this.tableName, {
       limit,
       cursor
@@ -321,6 +348,12 @@ export class PostService {
     const nextCursor = result.LastEvaluatedKey
       ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
       : undefined;
+
+    logger.debug({
+      userId,
+      postsReturned: posts.length,
+      hasMore: !!result.LastEvaluatedKey
+    }, '[PostService] User posts retrieved');
 
     return {
       posts,

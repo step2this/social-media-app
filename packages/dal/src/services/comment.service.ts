@@ -8,6 +8,13 @@ import type {
 } from '@social-media-app/shared';
 import { CommentContentField } from '@social-media-app/shared';
 import { type CommentEntity, mapEntityToComment } from '../utils/comment-mappers.js';
+import {
+  logDynamoDB,
+  logServiceOp,
+  logError,
+  logValidation,
+  logger
+} from '../infrastructure/logger.js';
 
 /**
  * Comment service for managing post comments
@@ -39,14 +46,21 @@ export class CommentService {
     postUserId: string,
     postSK: string
   ): Promise<CreateCommentResponse> {
-    // Validate content using Zod schema
-    const validationResult = CommentContentField.safeParse(content);
-    if (!validationResult.success) {
-      throw new Error(`Invalid comment content: ${validationResult.error.message}`);
-    }
+    const startTime = Date.now();
 
-    const commentId = randomUUID();
-    const now = new Date().toISOString();
+    try {
+      // Validate content using Zod schema
+      const validationResult = CommentContentField.safeParse(content);
+      if (!validationResult.success) {
+        logValidation('CommentService', 'content', validationResult.error.message, { 
+          userId, 
+          postId 
+        });
+        throw new Error(`Invalid comment content: ${validationResult.error.message}`);
+      }
+
+      const commentId = randomUUID();
+      const now = new Date().toISOString();
 
     const commentEntity: CommentEntity = {
       PK: `POST#${postId}`,
@@ -67,16 +81,28 @@ export class CommentService {
       postSK
     };
 
+    logDynamoDB('put', { table: this.tableName, commentId, postId, userId });
     await this.dynamoClient.send(new PutCommand({
       TableName: this.tableName,
       Item: commentEntity
     }));
 
+    const duration = Date.now() - startTime;
+    logServiceOp('CommentService', 'createComment', { 
+      commentId, 
+      postId, 
+      userId 
+    }, duration);
+
     return {
       comment: mapEntityToComment(commentEntity),
       commentsCount: 0 // Will be updated by stream processor
     };
+  } catch (error) {
+    logError('CommentService', 'createComment', error as Error, { userId, postId });
+    throw error;
   }
+}
 
   /**
    * Delete a comment
@@ -91,16 +117,20 @@ export class CommentService {
     userId: string,
     commentId: string
   ): Promise<DeleteCommentResponse> {
-    // First, get the comment to verify ownership
-    const getResult = await this.dynamoClient.send(new QueryCommand({
-      TableName: this.tableName,
-      IndexName: 'GSI1',
-      KeyConditionExpression: 'GSI1PK = :pk',
-      ExpressionAttributeValues: {
-        ':pk': `COMMENT#${commentId}`
-      },
-      Limit: 1
-    }));
+    const startTime = Date.now();
+
+    try {
+      // First, get the comment to verify ownership
+      logDynamoDB('query', { table: this.tableName, gsi: 'GSI1', commentId });
+      const getResult = await this.dynamoClient.send(new QueryCommand({
+        TableName: this.tableName,
+        IndexName: 'GSI1',
+        KeyConditionExpression: 'GSI1PK = :pk',
+        ExpressionAttributeValues: {
+          ':pk': `COMMENT#${commentId}`
+        },
+        Limit: 1
+      }));
 
     if (getResult.Items && getResult.Items.length > 0) {
       const commentEntity = getResult.Items[0] as CommentEntity;
@@ -111,6 +141,7 @@ export class CommentService {
       }
 
       // Delete the comment
+      logDynamoDB('delete', { table: this.tableName, commentId, userId });
       await this.dynamoClient.send(new DeleteCommand({
         TableName: this.tableName,
         Key: {
@@ -118,6 +149,9 @@ export class CommentService {
           SK: commentEntity.SK
         }
       }));
+
+      const duration = Date.now() - startTime;
+      logServiceOp('CommentService', 'deleteComment', { commentId, userId }, duration);
     }
 
     // Idempotent - return success even if comment doesn't exist
@@ -125,7 +159,11 @@ export class CommentService {
       success: true,
       message: 'Comment deleted successfully'
     };
+  } catch (error) {
+    logError('CommentService', 'deleteComment', error as Error, { userId, commentId });
+    throw error;
   }
+}
 
   /**
    * Get comments for a post with pagination
@@ -142,6 +180,12 @@ export class CommentService {
     cursor?: string
   ): Promise<CommentsListResponse> {
     // 1. Get total count first
+    logDynamoDB('query', { 
+      table: this.tableName, 
+      postId, 
+      limit,
+      operation: 'count'
+    });
     const countResult = await this.dynamoClient.send(new QueryCommand({
       TableName: this.tableName,
       KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
@@ -154,6 +198,12 @@ export class CommentService {
     const totalCount = countResult.Count || 0;
 
     // 2. Get paginated results (fetch limit+1 to detect hasMore)
+    logDynamoDB('query', { 
+      table: this.tableName, 
+      postId, 
+      limit,
+      hasCursor: !!cursor 
+    });
     const result = await this.dynamoClient.send(new QueryCommand({
       TableName: this.tableName,
       KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
@@ -181,6 +231,13 @@ export class CommentService {
           SK: paginatedItems[paginatedItems.length - 1].SK as string
         })
       : undefined;
+
+    logger.debug({
+      postId,
+      totalCount,
+      commentsReturned: comments.length,
+      hasMore
+    }, '[CommentService] Comments retrieved');
 
     return {
       comments,

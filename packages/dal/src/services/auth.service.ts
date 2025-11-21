@@ -29,6 +29,12 @@ import {
   buildRefreshTokenQuery,
   buildUpdateExpressionFromObject
 } from '../utils/index.js';
+import {
+  logDynamoDB,
+  logServiceOp,
+  logError,
+  logger
+} from '../infrastructure/logger.js';
 
 /**
  * User entity for DynamoDB single-table design
@@ -116,56 +122,67 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
    * Register a new user
    */
   const register = async (request: Readonly<RegisterRequest>): Promise<RegisterResponse> => {
-    const userId = deps.uuidProvider();
-    const now = deps.timeProvider();
-    const salt = deps.hashProvider.generateSalt();
-    const passwordHash = deps.hashProvider.hashPassword(request.password, salt);
-    const emailVerificationToken = deps.jwtProvider.generateRefreshToken();
+    const startTime = Date.now();
 
-    // Create user entity using factory
-    const userEntity = createUserEntity({
-      userId,
-      email: request.email,
-      username: request.username,
-      passwordHash,
-      salt,
-      emailVerificationToken,
-      createdAt: now,
-      updatedAt: now
-    });
+    try {
+      const userId = deps.uuidProvider();
+      const now = deps.timeProvider();
+      const salt = deps.hashProvider.generateSalt();
 
-    // Check if email already exists
-    const existingEmailUser = await deps.dynamoClient.send(
-      new QueryCommand(buildUserByEmailQuery(request.email, deps.tableName))
-    );
+      // Log password hashing duration
+      const hashStart = Date.now();
+      const passwordHash = deps.hashProvider.hashPassword(request.password, salt);
+      logger.debug({ hashDuration: Date.now() - hashStart }, '[AuthService] Password hashed');
 
-    if (existingEmailUser.Items && existingEmailUser.Items.length > 0) {
-      throw new ConflictError(
-        'Email already registered',
-        'email',
-        request.email
+      const emailVerificationToken = deps.jwtProvider.generateRefreshToken();
+
+      // Create user entity using factory
+      const userEntity = createUserEntity({
+        userId,
+        email: request.email,
+        username: request.username,
+        passwordHash,
+        salt,
+        emailVerificationToken,
+        createdAt: now,
+        updatedAt: now
+      });
+
+      // Check if email already exists
+      logDynamoDB('query', { table: deps.tableName, gsi: 'GSI1', email: request.email });
+      const existingEmailUser = await deps.dynamoClient.send(
+        new QueryCommand(buildUserByEmailQuery(request.email, deps.tableName))
       );
-    }
 
-    // Check if username already exists
-    const existingUsernameUser = await deps.dynamoClient.send(
-      new QueryCommand(buildUserByUsernameQuery(request.username, deps.tableName))
-    );
+      if (existingEmailUser.Items && existingEmailUser.Items.length > 0) {
+        throw new ConflictError(
+          'Email already registered',
+          'email',
+          request.email
+        );
+      }
 
-    if (existingUsernameUser.Items && existingUsernameUser.Items.length > 0) {
-      throw new ConflictError(
-        'Username already taken',
-        'username',
-        request.username
+      // Check if username already exists
+      logDynamoDB('query', { table: deps.tableName, gsi: 'GSI2', username: request.username });
+      const existingUsernameUser = await deps.dynamoClient.send(
+        new QueryCommand(buildUserByUsernameQuery(request.username, deps.tableName))
       );
-    }
 
-    // Create user
-    await deps.dynamoClient.send(new PutCommand({
-      TableName: deps.tableName,
-      Item: userEntity,
-      ConditionExpression: 'attribute_not_exists(PK)'
-    }));
+      if (existingUsernameUser.Items && existingUsernameUser.Items.length > 0) {
+        throw new ConflictError(
+          'Username already taken',
+          'username',
+          request.username
+        );
+      }
+
+      // Create user
+      logDynamoDB('put', { table: deps.tableName, userId, username: request.username, email: request.email });
+      await deps.dynamoClient.send(new PutCommand({
+        TableName: deps.tableName,
+        Item: userEntity,
+        ConditionExpression: 'attribute_not_exists(PK)'
+      }));
 
     // Generate tokens for auto-login after registration
     const accessToken = await deps.jwtProvider.generateAccessToken({
@@ -193,6 +210,10 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
 
     const tokens = createAuthTokensResponse(accessToken, refreshTokenValue);
 
+    // Success logging
+    const duration = Date.now() - startTime;
+    logServiceOp('AuthService', 'register', { userId, username: request.username, email: request.email }, duration);
+
     return {
       user: {
         id: userId,
@@ -204,39 +225,50 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
       message: 'User registered successfully. Welcome!',
       tokens // Include tokens for auto-login
     };
-  };
+  } catch (error) {
+    logError('AuthService', 'register', error as Error, { email: request.email, username: request.username });
+    throw error;
+  }
+};
 
   /**
    * Login user
    */
   const login = async (request: Readonly<LoginRequest>): Promise<LoginResponse> => {
-    // Get user by email
-    const userQuery = await deps.dynamoClient.send(
-      new QueryCommand(buildUserByEmailQuery(request.email, deps.tableName))
-    );
+    const startTime = Date.now();
 
-    if (!userQuery.Items || userQuery.Items.length === 0) {
-      throw new UnauthorizedError(
-        'Invalid email or password',
-        'invalid_credentials'
+    try {
+      // Get user by email
+      logDynamoDB('query', { table: deps.tableName, gsi: 'GSI1', email: request.email });
+      const userQuery = await deps.dynamoClient.send(
+        new QueryCommand(buildUserByEmailQuery(request.email, deps.tableName))
       );
-    }
 
-    const user = userQuery.Items[0] as UserEntity;
+      if (!userQuery.Items || userQuery.Items.length === 0) {
+        throw new UnauthorizedError(
+          'Invalid email or password',
+          'invalid_credentials'
+        );
+      }
 
-    // Verify password
-    const isValidPassword = deps.hashProvider.verifyPassword(
-      request.password,
-      user.passwordHash,
-      user.salt
-    );
+      const user = userQuery.Items[0] as UserEntity;
 
-    if (!isValidPassword) {
-      throw new UnauthorizedError(
-        'Invalid email or password',
-        'invalid_credentials'
+      // Log password verification (don't log the password itself!)
+      logger.debug({ userId: user.id }, '[AuthService] Password verification');
+
+      // Verify password
+      const isValidPassword = deps.hashProvider.verifyPassword(
+        request.password,
+        user.passwordHash,
+        user.salt
       );
-    }
+
+      if (!isValidPassword) {
+        throw new UnauthorizedError(
+          'Invalid email or password',
+          'invalid_credentials'
+        );
+      }
 
     // Generate tokens
     const accessToken = await deps.jwtProvider.generateAccessToken({
@@ -266,6 +298,9 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
 
     const tokens = createAuthTokensResponse(accessToken, refreshTokenValue);
 
+    const duration = Date.now() - startTime;
+    logServiceOp('AuthService', 'login', { userId: user.id, email: user.email }, duration);
+
     return {
       user: {
         id: user.id,
@@ -275,94 +310,112 @@ export const createAuthService = (deps: Readonly<AuthServiceDependencies>) => {
       },
       tokens
     };
-  };
+  } catch (error) {
+    logError('AuthService', 'login', error as Error, { email: request.email });
+    throw error;
+  }
+};
 
   /**
    * Refresh access token
    */
   const refreshToken = async (request: Readonly<RefreshTokenRequest>): Promise<RefreshTokenResponse> => {
-    // Find refresh token
-    const tokenQuery = await deps.dynamoClient.send(
-      new QueryCommand(buildRefreshTokenQuery(request.refreshToken, deps.tableName))
-    );
+    const startTime = Date.now();
 
-    if (!tokenQuery.Items || tokenQuery.Items.length === 0) {
-      throw new UnauthorizedError(
-        'Invalid refresh token',
-        'invalid_token'
+    try {
+      // Find refresh token
+      logDynamoDB('query', { table: deps.tableName, gsi: 'GSI1' });
+      const tokenQuery = await deps.dynamoClient.send(
+        new QueryCommand(buildRefreshTokenQuery(request.refreshToken, deps.tableName))
       );
-    }
 
-    const tokenEntity = tokenQuery.Items[0] as RefreshTokenEntity;
+      if (!tokenQuery.Items || tokenQuery.Items.length === 0) {
+        throw new UnauthorizedError(
+          'Invalid refresh token',
+          'invalid_token'
+        );
+      }
 
-    // Check if token is expired
-    if (new Date(tokenEntity.expiresAt) < new Date()) {
-      // Delete expired token
-      await deps.dynamoClient.send(new DeleteCommand({
+      const tokenEntity = tokenQuery.Items[0] as RefreshTokenEntity;
+
+      // Check if token is expired
+      if (new Date(tokenEntity.expiresAt) < new Date()) {
+        // Delete expired token
+        await deps.dynamoClient.send(new DeleteCommand({
+          TableName: deps.tableName,
+          Key: {
+            PK: tokenEntity.PK,
+            SK: tokenEntity.SK
+          }
+        }));
+        throw new UnauthorizedError(
+          'Refresh token expired',
+          'token_expired'
+        );
+      }
+
+      // Get user
+      logDynamoDB('get', { table: deps.tableName, userId: tokenEntity.userId });
+      const user = await deps.dynamoClient.send(new GetCommand({
+        TableName: deps.tableName,
+        Key: {
+          PK: `USER#${tokenEntity.userId}`,
+          SK: 'PROFILE'
+        }
+      }));
+
+      if (!user.Item) {
+        throw new NotFoundError('User', tokenEntity.userId);
+      }
+
+      const userEntity = user.Item as UserEntity;
+
+      // Generate new access token
+      const accessToken = await deps.jwtProvider.generateAccessToken({
+        userId: userEntity.id,
+        email: userEntity.email
+      });
+
+      // Generate new refresh token
+      const newRefreshTokenValue = deps.jwtProvider.generateRefreshToken();
+      const now = deps.timeProvider();
+
+      // Update refresh token
+      logDynamoDB('update', { table: deps.tableName, userId: tokenEntity.userId });
+      await deps.dynamoClient.send(new UpdateCommand({
         TableName: deps.tableName,
         Key: {
           PK: tokenEntity.PK,
           SK: tokenEntity.SK
+        },
+        UpdateExpression: 'SET hashedToken = :token, GSI1PK = :gsi1pk, #updatedAt = :updatedAt',
+        ExpressionAttributeNames: {
+          '#updatedAt': 'updatedAt'
+        },
+        ExpressionAttributeValues: {
+          ':token': newRefreshTokenValue,
+          ':gsi1pk': `REFRESH_TOKEN#${newRefreshTokenValue}`,
+          ':updatedAt': now
         }
       }));
-      throw new UnauthorizedError(
-        'Refresh token expired',
-        'token_expired'
-      );
-    }
-
-    // Get user
-    const user = await deps.dynamoClient.send(new GetCommand({
-      TableName: deps.tableName,
-      Key: {
-        PK: `USER#${tokenEntity.userId}`,
-        SK: 'PROFILE'
-      }
-    }));
-
-    if (!user.Item) {
-      throw new NotFoundError('User', tokenEntity.userId);
-    }
-
-    const userEntity = user.Item as UserEntity;
-
-    // Generate new access token
-    const accessToken = await deps.jwtProvider.generateAccessToken({
-      userId: userEntity.id,
-      email: userEntity.email
-    });
-
-    // Generate new refresh token
-    const newRefreshTokenValue = deps.jwtProvider.generateRefreshToken();
-    const now = deps.timeProvider();
-
-    // Update refresh token
-    await deps.dynamoClient.send(new UpdateCommand({
-      TableName: deps.tableName,
-      Key: {
-        PK: tokenEntity.PK,
-        SK: tokenEntity.SK
-      },
-      UpdateExpression: 'SET hashedToken = :token, GSI1PK = :gsi1pk, #updatedAt = :updatedAt',
-      ExpressionAttributeNames: {
-        '#updatedAt': 'updatedAt'
-      },
-      ExpressionAttributeValues: {
-        ':token': newRefreshTokenValue,
-        ':gsi1pk': `REFRESH_TOKEN#${newRefreshTokenValue}`,
-        ':updatedAt': now
-      }
-    }));
 
     const tokens = createAuthTokensResponse(accessToken, newRefreshTokenValue);
 
+    const duration = Date.now() - startTime;
+    logServiceOp('AuthService', 'refreshToken', { userId: userEntity.id }, duration);
+
     return { tokens };
-  };
+  } catch (error) {
+    logError('AuthService', 'refreshToken', error as Error);
+    throw error;
+  }
+};
 
   /**
    * Get user profile by ID
    */
   const getUserById = async (userId: string): Promise<User | null> => {
+    logDynamoDB('get', { table: deps.tableName, userId });
     const result = await deps.dynamoClient.send(new GetCommand({
       TableName: deps.tableName,
       Key: {
