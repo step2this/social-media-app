@@ -114,8 +114,8 @@ if (isDevelopment) {
   // Create rotating stream for JSON logs
   const rotatingStream = createRotatingStream('graphql.log', logsDir);
 
-  // Single stream: rotating JSON file
-  logStreams = [{ stream: rotatingStream }];
+  // Single stream: rotating JSON file with explicit level
+  logStreams = [{ level: graphqlEnv.LOG_LEVEL, stream: rotatingStream }];
 }
 
 /**
