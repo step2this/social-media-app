@@ -283,7 +283,8 @@ export class LikeService {
       // Handle unprocessed keys (usually due to throttling)
       if (result.UnprocessedKeys && result.UnprocessedKeys[this.tableName]) {
         // In production, you might want to implement retry logic here
-        logDynamoDB('batchGet', this.tableName, {
+        logDynamoDB('batchGet', {
+          table: this.tableName,
           operation: 'getLikeStatusesByPostIds',
           unprocessedCount: result.UnprocessedKeys[this.tableName].Keys?.length,
         });
