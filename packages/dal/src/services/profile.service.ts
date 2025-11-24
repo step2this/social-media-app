@@ -1,19 +1,16 @@
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import {
   BatchGetCommand,
-  type BatchWriteCommandInput,
   GetCommand,
-  PutCommand,
   QueryCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
-import type { Profile, UserId } from '../entities/index.js';
 import { logDynamoDB, logger } from '../infrastructure/logger.js';
-import type { S3Service } from './s3.service.js';
 import { S3Client } from '@aws-sdk/client-s3';
 import type {
   UpdateProfileWithHandleRequest,
   PublicProfile,
+  Profile,
   GetPresignedUrlRequest,
   GetPresignedUrlResponse
 } from '@social-media-app/shared';

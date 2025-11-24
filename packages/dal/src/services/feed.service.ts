@@ -1,16 +1,9 @@
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import {
-  BatchGetCommand,
   BatchWriteCommand,
-  type BatchWriteCommandInput,
-  DeleteCommand,
-  type Key,
   PutCommand,
   QueryCommand,
-  type QueryCommandInput,
   ScanCommand,
-  type ScanCommandInput,
-  type UpdateCommandInput,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import type { FeedItemEntity } from '../entities/index.js';
@@ -19,15 +12,24 @@ import type { PostWithAuthor } from '@social-media-app/shared';
 import { UUIDField } from '@social-media-app/shared';
 import { z } from 'zod';
 import {
-  logDynamoDB,
   logCache,
   logServiceOp,
   logSlowOp,
-  logBatch,
   logError,
 } from '../infrastructure/logger.js';
 import { mapEntityToFeedPostItem } from '../utils/index.js';
 import type { RedisCacheService, CachedPost, CachedFeedResult } from './redis-cache.service.js';
+
+/**
+ * Paginated result interface for feed queries
+ */
+interface PaginatedResult<T> {
+  items: T[];
+  hasMore: boolean;
+  cursor?: string;
+  nextCursor?: Record<string, unknown>;
+  totalCount?: number;
+}
 
 /**
  * Batch processing result
@@ -915,6 +917,7 @@ export class FeedService {
           PK: item.PK as string,
           SK: item.SK as string
         })),
+        hasMore: !!scanResult.LastEvaluatedKey,
         nextCursor: scanResult.LastEvaluatedKey
       };
     };
@@ -1024,6 +1027,7 @@ export class FeedService {
           PK: item.PK as string,
           SK: item.SK as string
         })),
+        hasMore: !!queryResult.LastEvaluatedKey,
         nextCursor: queryResult.LastEvaluatedKey
       };
     };

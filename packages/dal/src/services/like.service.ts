@@ -1,15 +1,16 @@
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import {
   BatchGetCommand,
-  type BatchGetCommandInput,
   DeleteCommand,
   GetCommand,
   PutCommand,
-  QueryCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
-import { ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
-import type { LikeId, PostId, UserId } from '../entities/index.js';
+import type {
+  LikePostResponse,
+  UnlikePostResponse,
+  GetPostLikeStatusResponse
+} from '@social-media-app/shared';
 import { logDynamoDB, logServiceOp, logBatch, logError } from '../infrastructure/logger.js';
 
 /**
