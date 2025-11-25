@@ -191,10 +191,8 @@ export async function handler(
 
     // Create Lambda handler with Apollo Server integration
     // Uses APIGatewayProxyEventV2 request handler which is compatible with our context
-    // Note: Type assertion needed due to @as-integrations/aws-lambda not having proper ESM exports
-    // This causes TypeScript NodeNext to see separate ESM/CJS type declarations
     const lambdaHandler = startServerAndCreateLambdaHandler(
-      serverInstance as any,
+      serverInstance,
       handlers.createAPIGatewayProxyEventV2RequestHandler(),
       {
         // Create context for each request
@@ -215,7 +213,7 @@ export async function handler(
     // Execute the GraphQL request
     // Convert V1 event to V2 format for the handler
     const eventV2 = convertV1ToV2(event);
-    const result = await lambdaHandler(eventV2, lambdaContext, {} as any);
+    const result = await lambdaHandler(eventV2, lambdaContext, {} as never);
     
     const duration = Date.now() - startTime;
     

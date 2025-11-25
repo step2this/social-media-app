@@ -12,6 +12,7 @@ import ComplexityPlugin from '@pothos/plugin-complexity';
 import RelayPlugin from '@pothos/plugin-relay';
 import TracingPlugin, { isRootField, wrapResolver } from '@pothos/plugin-tracing';
 import type { GraphQLContext } from '../../context.js';
+import { logger } from '../../infrastructure/logger.js';
 
 /**
  * Auth Scopes
@@ -75,26 +76,40 @@ export const builder = new SchemaBuilder<{
     // Wrap resolver with timing logic
     wrap: (resolver, options, config) =>
       wrapResolver(resolver, (error, duration) => {
+        const resolverName = `${config.parentType}.${config.name}`;
+
         // Log slow resolvers (>100ms) for performance monitoring
         if (duration > 100) {
-          console.warn(
-            `[SLOW RESOLVER] ${config.parentType}.${config.name}: ${duration.toFixed(2)}ms`
+          logger.warn(
+            {
+              resolver: resolverName,
+              duration: duration.toFixed(2),
+              threshold: 100,
+            },
+            'Slow resolver detected'
           );
         }
 
-        // Could integrate with X-Ray, DataDog, NewRelic, etc. here
-        // Example: context.tracer?.recordSpan({ name: config.name, duration })
-
         // Log errors for debugging
         if (error) {
-          console.error(
-            `[RESOLVER ERROR] ${config.parentType}.${config.name}:`,
-            error instanceof Error ? error.message : String(error)
+          logger.error(
+            {
+              resolver: resolverName,
+              error:
+                error instanceof Error
+                  ? {
+                      name: error.name,
+                      message: error.message,
+                      stack: error.stack,
+                    }
+                  : String(error),
+            },
+            'Resolver error'
           );
         }
       }),
   },
-} as any); // Type assertion needed for Pothos plugin config
+});
 
 /**
  * Base Query Type
