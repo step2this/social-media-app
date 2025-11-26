@@ -1,0 +1,45 @@
+{
+  "name": "@social-media-app/telemetry",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Shared OpenTelemetry infrastructure for distributed tracing and observability",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/sdk-node": "^0.208.0",
+    "@opentelemetry/sdk-trace-node": "^1.31.0",
+    "@opentelemetry/resources": "^2.2.0",
+    "@opentelemetry/semantic-conventions": "^1.38.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.67.0",
+    "@opentelemetry/instrumentation-graphql": "^0.56.0",
+    "@opentelemetry/instrumentation-aws-sdk": "^0.64.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.208.0",
+    "@vercel/otel": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "keywords": [
+    "opentelemetry",
+    "tracing",
+    "observability",
+    "distributed-tracing",
+    "telemetry"
+  ]
+}
