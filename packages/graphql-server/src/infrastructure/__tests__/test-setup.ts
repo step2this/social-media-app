@@ -28,7 +28,7 @@
  * ```
  */
 
-import { trace } from '@opentelemetry/api';
+import { trace, type Span } from '@opentelemetry/api';
 
 /**
  * Test SDK for managing OpenTelemetry test lifecycle
@@ -44,7 +44,7 @@ export class TestTelemetrySDK {
   /**
    * Get all finished spans (not available without SDK, returns empty for now)
    */
-  getSpans() {
+  getSpans(): Span[] {
     return [];
   }
 
