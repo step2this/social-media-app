@@ -20,4 +20,14 @@ export default defineConfig({
       ],
     },
   },
+  // Use server.deps.optimizer instead of deprecated deps.inline
+  server: {
+    deps: {
+      inline: [
+        '@opentelemetry/sdk-trace-node',
+        '@opentelemetry/sdk-trace-base',
+        '@opentelemetry/resources',
+      ],
+    },
+  },
 });

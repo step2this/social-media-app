@@ -28,58 +28,38 @@
  * ```
  */
 
-import { trace, type Span } from '@opentelemetry/api';
+import { trace } from '@opentelemetry/api';
 
 /**
  * Test SDK for managing OpenTelemetry test lifecycle
  *
- * Provides utilities for testing OpenTelemetry instrumentation
- * without requiring complex span exporters or collectors.
- * Uses the OpenTelemetry API directly for lightweight testing.
+ * Simplified test infrastructure that doesn't require additional packages.
+ * Uses the OpenTelemetry API directly to test trace context behavior.
  */
 export class TestTelemetrySDK {
-  private createdSpans: Span[] = [];
-
   constructor() {
-    // Minimal setup - we'll use the global tracer provider
+    // Minimal setup - global tracer is already available
   }
 
   /**
-   * Track a span for cleanup
-   */
-  trackSpan(span: Span) {
-    this.createdSpans.push(span);
-  }
-
-  /**
-   * Get all tracked spans
+   * Get all finished spans (not available without SDK, returns empty for now)
    */
   getSpans() {
-    return this.createdSpans;
+    return [];
   }
 
   /**
-   * Clear all tracked spans
+   * Clear all captured spans
    */
   clearSpans() {
-    this.createdSpans = [];
+    // No-op for simplified test setup
   }
 
   /**
    * Shutdown and clean up resources
    */
   async shutdown() {
-    // End any unclosed spans
-    this.createdSpans.forEach((span) => {
-      if (span) {
-        try {
-          span.end();
-        } catch {
-          // Span may already be ended
-        }
-      }
-    });
-    this.clearSpans();
+    // No-op for simplified test setup
   }
 }
 

@@ -101,12 +101,14 @@ function createRotatingStream(filename: string, logsDir: string) {
 
 /**
  * Set up log directory and rotating file stream
+ * In test: write JSON to stdout for test capture
  * In development: write JSON to rotating file
  * In production: write JSON to stdout for CloudWatch
  */
 let logStreams: pino.StreamEntry[] | undefined;
 
-const isDevelopment = graphqlEnv.NODE_ENV !== 'production';
+const isTest = graphqlEnv.NODE_ENV === 'test';
+const isDevelopment = graphqlEnv.NODE_ENV !== 'production' && !isTest;
 
 if (isDevelopment) {
   const logsDir = path.join(process.cwd(), 'logs');
@@ -117,6 +119,7 @@ if (isDevelopment) {
   // Single stream: rotating JSON file with explicit level
   logStreams = [{ level: graphqlEnv.LOG_LEVEL, stream: rotatingStream }];
 }
+// In test mode, logStreams remains undefined so pino writes to stdout
 
 /**
  * Create the base logger instance with automatic trace context injection
